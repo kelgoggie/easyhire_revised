@@ -25,7 +25,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-easyhire-dev-key-change-in-production-abc123xyz'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
@@ -54,7 +53,6 @@ INSTALLED_APPS = [
     'apps.messaging',
     'apps.analytics',
     'apps.admin_panel',
-    
     'apps.core',
 ]
 
@@ -97,7 +95,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'easyhire',
         'USER': 'postgres',
-        'PASSWORD': 'ezHIREdb26',
+        'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': 'localhost',
         'PORT': '5432',
     }
