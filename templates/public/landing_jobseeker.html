@@ -1,0 +1,77 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}EasyHire — Find the Best Jobs in Iloilo City{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_jobseeker.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="bg-surface min-h-screen relative overflow-hidden">
+
+    <!-- Background Shapes -->
+    <img src="{% static 'images/Background Shapes.svg' %}"
+         alt=""
+         class="absolute inset-0 w-full h-full object-cover pointer-events-none select-none z-0">
+
+    <!-- Hero Section -->
+    <section class="relative flex items-center justify-center min-h-[85vh] px-20">
+        <div class="flex items-center justify-between w-full max-w-6xl mx-auto">
+
+            <!-- Left: Text -->
+            <div class="flex flex-col gap-6 max-w-md z-10">
+                <!-- Logo + wordmark -->
+                <div class="flex items-center gap-4">
+                    <img src="{% static 'images/Logo.svg' %}"
+                         alt="EasyHire Logo"
+                         class="w-16 h-16">
+                    <span class="font-extrabold text-5xl tracking-tight">
+                        <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
+                    </span>
+                </div>
+
+                <!-- Tagline -->
+                <div class="flex flex-col gap-0.6 leading-snug">
+                    <p class="text-primary text-2xl">
+                        Build your <span class="font-bold">resume</span>.
+                    </p>
+                    <p class="text-primary text-2xl">
+                        Express your <span class="font-bold">interests</span>.
+                    </p>
+                    <p class="text-primary text-2xl mt-3 font-bold">
+                        Find the <span class="text-teal">best jobs</span> in
+                    </p>
+                    <p class="text-primary text-2xl font-bold">
+                        <span class="text-teal">Iloilo City</span> for you<span class="text-amber">.</span>
+                    </p>
+                </div>
+
+                <!-- CTA -->
+                <a href="/register/"
+                   class="bg-amber text-white font-semibold px-8 py-3 rounded-full w-fit hover:bg-amber/90 transition text-base mt-2">
+                    Join <span class="font-bold">EasyHire</span> &gt;
+                </a>
+            </div>
+
+            <!-- Right: Stacked illustrations -->
+            <div class="relative w-[560px] h-[520px] z-10 flex-shrink-0">
+                <!-- Top right: plane/trip illustration -->
+                <img src="{% static 'images/Business-Trip--Streamline-New-York.svg' %}"
+                     alt=""
+                     class="absolute top-0 right-0 w-72 drop-shadow-sm">
+
+                <!-- Bottom center-right: businessman with card -->
+                <img src="{% static 'images/Businessman-Giving-Business-Card--Streamline-New-York.svg' %}"
+                     alt=""
+                     class="absolute bottom-0 right-16 w-64 drop-shadow-sm">
+            </div>
+
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% load static %}
+<nav class="bg-surface px-8 py-3 flex items-center justify-between shadow-md relative z-50">
+    <a href="/" class="flex items-center gap-2">
+        <img src="{% static 'images/navbar_logo.svg' %}"
+             alt="EasyHire"
+             class="w-9 h-9">
+        <span class="font-bold text-xl">
+            <span class="text-primary">Easy</span><span class="text-teal">Hire</span>
+        </span>
+    </a>
+
+    <div class="flex items-center gap-8">
+        <a href="/about/" class="text-muted hover:text-primary transition text-sm">About</a>
+        <a href="/jobs/" class="text-muted hover:text-primary transition text-sm">Jobs</a>
+        <a href="/analytics/" class="text-muted hover:text-primary transition text-sm">Analytics</a>
+        <a href="/employers/" class="text-primary font-semibold hover:text-teal transition text-sm">EasyHire for Employers</a>
+        <a href="/login/"
+           class="bg-teal text-white font-semibold px-6 py-2 rounded-full hover:bg-primary transition text-sm">
+            Sign In
+        </a>
+    </div>
+</nav>

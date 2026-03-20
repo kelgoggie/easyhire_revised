@@ -1,0 +1,80 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}EasyHire for Employers{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-primary relative overflow-hidden flex flex-col">
+
+    <!-- Background shapes -->
+    <div class="absolute inset-0 pointer-events-none">
+        <img src="{% static 'images/Background Shapes.svg' %}"
+             class="absolute inset-0 w-full h-full object-cover opacity-20">
+    </div>
+
+<!-- Navbar -->
+    <nav class="relative z-10 bg-surface flex items-center justify-between px-12 py-3 shadow-sm">
+
+        <!-- Left: Logo -->
+        <a href="/employers/" class="flex items-center gap-2">
+            <img src="{% static 'images/navbar_logo.svg' %}" class="w-9 h-9">
+            <span class="font-bold text-xl">
+                <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
+            </span>
+        </a>
+
+        <!-- Right: Links + Sign In -->
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-6 text-sm text-primary/70">
+                <a href="#about" class="hover:text-primary transition">About</a>
+                <a href="#jobs" class="hover:text-primary transition">Jobs</a>
+                <a href="/analytics/" class="hover:text-primary transition">Analytics</a>
+                <a href="/" class="font-semibold text-primary hover:text-teal transition">EasyHire for Jobseekers</a>
+            </div>
+            <a href="/employers/login/"
+               class="bg-teal text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-primary transition">
+                Sign In
+            </a>
+        </div>
+
+    </nav>
+
+    <!-- Hero -->
+    <div class="relative z-10 flex-1 flex items-center px-12 py-8">
+        <div class="flex items-center justify-between w-full max-w-6xl mx-auto">
+
+            <!-- Left: Text -->
+            <div class="max-w-lg">
+                <h1 class="text-5xl font-extrabold text-white leading-tight mb-4">
+                    Find the right<br>
+                    people <span class="text-amber">faster.</span>
+                </h1>
+                <p class="text-white/70 text-base mb-3 leading-relaxed">
+                    Find the best people for your growing business.
+                </p>
+                <p class="text-white/70 text-base mb-8 leading-relaxed">
+                    Post jobs, browse matched candidates, and hire with confidence —
+                    powered by PESO Iloilo City.
+                </p>
+                <a href="/employers/register/"
+                   class="inline-block bg-amber text-white font-bold px-8 py-3 rounded-full hover:bg-amber/90 transition text-base">
+                    Join EasyHire &gt;
+                </a>
+            </div>
+
+            <!-- Right: Illustration -->
+            <div class="hidden lg:block w-96">
+                <img src="{% static 'images/Businessman-Giving-Business-Card--Streamline-New-York.svg' %}"
+                     class="w-full drop-shadow-xl">
+            </div>
+
+        </div>
+    </div>
+
+
+</main>
+{% endblock %}
+
+{% block footer %}{% endblock %}

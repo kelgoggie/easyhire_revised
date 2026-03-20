@@ -1,0 +1,134 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard — EasyHire{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_dashboard_jobseeker.html" with active="home" %}
+{% endblock %}
+
+{% block content %}
+<main class="bg-white min-h-screen py-8 px-6">
+    <div class="max-w-4xl mx-auto">
+
+        <!-- Search Bar -->
+        <div class="text-center mb-6">
+            <p class="text-primary text-sm mb-2">Search for jobs and employers on <span class="font-bold">EasyHire...</span></p>
+            <div class="relative max-w-xl mx-auto">
+                <input type="text" placeholder="Hinted search text"
+                       class="w-full bg-surface border border-taupe/30 rounded-full px-5 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition pr-12">
+                <button class="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Profile Card -->
+        <div class="bg-surface rounded-2xl p-6 mb-8 flex items-stretch gap-0 shadow-sm border border-taupe/20">
+
+            <!-- Left: Profile Info -->
+            <div class="flex-1 pr-6">
+                <h2 class="text-2xl text-primary mb-3">
+                    {{ profile.first_name }} {{ profile.middle_name|first|default:'' }}{% if profile.middle_name %}. {% endif %}<span class="font-bold">{{ profile.last_name }}</span>
+                </h2>
+
+                <!-- Tags -->
+                <div class="flex flex-wrap gap-2">
+                    {% for edu in education %}
+                    <span class="flex items-center gap-1 bg-teallight/20 text-primary text-xs px-3 py-1 rounded-full border border-teallight/40">
+                        {{ edu.course_degree | default:edu.get_level_display }}
+                    </span>
+                    {% endfor %}
+                    {% for skill in skills %}
+                    <span class="flex items-center gap-1 bg-teallight/20 text-primary text-xs px-3 py-1 rounded-full border border-teallight/40">
+                        {{ skill.name }}
+                    </span>
+                    {% endfor %}
+                    {% for cert in certifications %}
+                    <span class="flex items-center gap-1 bg-teallight/20 text-primary text-xs px-3 py-1 rounded-full border border-teallight/40">
+                        {{ cert.name }}
+                    </span>
+                    {% endfor %}
+                    {% for sector in profile.sectors.all %}
+                    <span class="flex items-center gap-1 bg-taupe/20 text-primary text-xs px-3 py-1 rounded-full border border-taupe/40">
+                        {{ sector.label }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="w-px bg-taupe/30 mx-2 self-stretch"></div>
+
+            <!-- Right: Edit Resume nudge -->
+            <div class="w-56 pl-6 flex flex-col justify-between">
+                <p class="text-primary text-base leading-snug">
+                    Update your <span class="font-bold">resume</span> to help us find the <span class="font-bold">best jobs</span> for you<span class="text-muted">...</span>
+                </p>
+                <a href="/resume/"
+                   class="mt-4 bg-teal text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-primary transition w-fit">
+                    Edit Resume &gt;
+                </a>
+            </div>
+        </div>
+
+        <!-- Jobs Grid -->
+        <div class="grid grid-cols-2 gap-6 mb-10">
+
+            <!-- Recent Jobs -->
+            <div>
+                <h3 class="text-xl text-primary mb-3">Recent <span class="font-bold">Jobs</span></h3>
+                <div class="bg-surface rounded-2xl p-5 min-h-[160px] border border-taupe/20 shadow-sm">
+                    {% if recent_jobs %}
+                        {% for job in recent_jobs %}
+                        <a href="/jobs/{{ job.id }}/" class="block mb-3 last:mb-0">
+                            <p class="font-semibold text-primary text-sm">{{ job.title }}</p>
+                            <p class="text-muted text-xs">{{ job.company.name }} · {{ job.location_display }}</p>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-sm text-center mt-10">No jobs posted yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+<!-- Jobs For You -->
+            <div>
+                <h3 class="text-xl text-primary mb-3">Jobs <span class="font-bold">For You</span></h3>
+                <div class="bg-surface rounded-2xl p-5 min-h-[160px] border border-taupe/20 shadow-sm">
+                    {% if ranked_jobs %}
+                        {% for item in ranked_jobs %}
+                        <a href="/jobs/{{ item.job.id }}/" class="block mb-3 last:mb-0">
+                            <div class="flex items-center justify-between">
+                                <p class="font-semibold text-primary text-sm">{{ item.job.title }}</p>
+                                <span class="text-teal text-xs font-bold">{{ item.score }}%</span>
+                            </div>
+                            <p class="text-muted text-xs">{{ item.job.company.name }} · {{ item.job.location_display }}</p>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-sm text-center mt-10">Complete your resume to get recommendations!</p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- How does EasyHire work? (placeholder) -->
+        <div>
+            <h3 class="text-3xl font-extrabold mb-6">
+                <span class="text-primary">How does<br></span>
+                <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary"> work?</span>
+            </h3>
+            <!-- Diagram goes here later -->
+        </div>
+
+    </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}

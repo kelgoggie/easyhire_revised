@@ -1,0 +1,172 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ company.name }} — PESO Admin{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-surface flex">
+
+    <!-- Sidebar -->
+    <aside class="w-56 bg-primary min-h-screen flex flex-col py-6 px-4 flex-shrink-0">
+        <a href="/admin-panel/" class="flex items-center gap-2 mb-8 px-2">
+            <img src="{% static 'images/navbar_logo.svg' %}" class="w-8 h-8 brightness-0 invert">
+            <span class="text-white font-bold text-sm">PESO Admin</span>
+        </a>
+        <nav class="flex flex-col gap-1 text-sm">
+            <a href="/admin-panel/" class="px-3 py-2 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition">Dashboard</a>
+            <a href="/admin-panel/employers/?status=pending"
+               class="flex items-center justify-between px-3 py-2 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition">
+                Pending
+                {% if pending_count %}<span class="bg-amber text-white text-xs px-2 py-0.5 rounded-full">{{ pending_count }}</span>{% endif %}
+            </a>
+            <a href="/admin-panel/employers/?status=verified" class="px-3 py-2 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition">Verified</a>
+            <a href="/admin-panel/employers/?status=verification_denied" class="px-3 py-2 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition">Denied</a>
+            <a href="/admin-panel/employers/?status=unverified" class="px-3 py-2 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition">Unverified</a>
+        </nav>
+        <div class="mt-auto">
+            <a href="/admin/logout/" class="px-3 py-2 text-white/40 text-xs hover:text-white transition block">Log Out</a>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="flex-1 p-8 max-w-4xl">
+
+        <a href="/admin-panel/employers/?status={{ company.verification_status }}"
+           class="text-muted text-xs hover:text-primary transition mb-4 inline-block">
+            ← Back
+        </a>
+
+        <div class="flex items-start justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-extrabold text-primary">{{ company.name }}</h1>
+                <p class="text-muted text-sm">{{ company.get_type_of_company_display }} · {{ company.nature_of_company }}</p>
+            </div>
+            <!-- Current status badge -->
+            <span class="px-3 py-1 rounded-full text-xs font-semibold
+                {% if company.verification_status == 'verified' %}bg-teal/10 text-teal border border-teal/30
+                {% elif company.verification_status == 'pending' %}bg-amber/10 text-amber border border-amber/30
+                {% elif company.verification_status == 'verification_denied' %}bg-red-50 text-red-400 border border-red-200
+                {% else %}bg-taupe/20 text-muted border border-taupe/30{% endif %}">
+                {{ company.get_verification_status_display }}
+            </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-6 mb-6">
+
+            <!-- Company info -->
+            <div class="bg-white rounded-2xl border border-taupe/20 shadow-sm p-5">
+                <h2 class="text-sm font-bold text-primary mb-3">Company Information</h2>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-muted">Main Address</span>
+                        <span class="text-primary text-right max-w-[60%]">{{ company.main_branch_address }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted">Iloilo Branch</span>
+                        <span class="text-primary text-right max-w-[60%]">
+                            {% if company.iloilo_bldg_unit %}{{ company.iloilo_bldg_unit }}, {% endif %}
+                            {{ company.iloilo_street_barangay }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted">Company Email</span>
+                        <span class="text-primary">{{ company.company_email }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted">Recruitment Email</span>
+                        <span class="text-primary">{{ company.recruitment_email }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Representative info -->
+            {% if profile %}
+            <div class="bg-white rounded-2xl border border-taupe/20 shadow-sm p-5">
+                <h2 class="text-sm font-bold text-primary mb-3">Representative</h2>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-muted">Name</span>
+                        <span class="text-primary">{{ profile.first_name }} {{ profile.last_name }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted">Position</span>
+                        <span class="text-primary">{{ profile.position }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted">Phone</span>
+                        <span class="text-primary">{{ profile.phone }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted">Email</span>
+                        <span class="text-primary">{{ profile.email }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Documents -->
+        <div class="bg-white rounded-2xl border border-taupe/20 shadow-sm p-5 mb-6">
+            <h2 class="text-sm font-bold text-primary mb-3">Submitted Documents</h2>
+            <div class="space-y-2">
+                {% for item in checklist %}
+                <div class="flex items-center justify-between py-2 border-b border-taupe/10 last:border-0">
+                    <div class="flex items-center gap-3">
+                        {% if item.uploaded %}
+                        <div class="w-5 h-5 rounded-full bg-teal/20 border border-teal flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-teal" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                            </svg>
+                        </div>
+                        {% else %}
+                        <div class="w-5 h-5 rounded-full border border-taupe/30"></div>
+                        {% endif %}
+                        <span class="text-sm {% if not item.uploaded %}text-muted{% else %}text-primary{% endif %}">
+                            {{ item.label }}
+                        </span>
+                    </div>
+                    {% if item.uploaded %}
+                    <a href="{{ item.doc.file.url }}" target="_blank"
+                       class="text-teal text-xs hover:text-primary transition">
+                        View file →
+                    </a>
+                    {% else %}
+                    <span class="text-muted text-xs">Not uploaded</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Verification action -->
+        <div class="bg-white rounded-2xl border border-taupe/20 shadow-sm p-5">
+            <h2 class="text-sm font-bold text-primary mb-4">Set Verification Status</h2>
+            <form method="POST" action="/admin-panel/employers/{{ company.id }}/verify/">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="block text-xs text-muted mb-1">Status</label>
+                    <select name="status"
+                            class="w-full bg-surface border border-taupe/30 rounded-xl px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                        <option value="unverified" {% if company.verification_status == 'unverified' %}selected{% endif %}>Unverified</option>
+                        <option value="pending" {% if company.verification_status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="verified" {% if company.verification_status == 'verified' %}selected{% endif %}>Verified</option>
+                        <option value="verification_denied" {% if company.verification_status == 'verification_denied' %}selected{% endif %}>Denied</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs text-muted mb-1">Rejection Note <span class="text-taupe">(only shown if denied)</span></label>
+                    <textarea name="rejection_note" rows="3" placeholder="Optional note to employer..."
+                              class="w-full bg-surface border border-taupe/30 rounded-xl px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none">{{ company.rejection_note }}</textarea>
+                </div>
+                <button type="submit"
+                        class="bg-primary text-white font-semibold px-8 py-2.5 rounded-full hover:bg-teal transition text-sm">
+                    Save Status
+                </button>
+            </form>
+        </div>
+
+    </div>
+</main>
+{% endblock %}
+{% block footer %}{% endblock %}

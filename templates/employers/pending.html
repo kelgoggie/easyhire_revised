@@ -1,0 +1,150 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Pending Verification — EasyHire{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-primary flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-surface flex items-center justify-between px-12 py-3 shadow-sm">
+        <a href="/employers/" class="flex items-center gap-2">
+            <img src="{% static 'images/navbar_logo.svg' %}" class="w-9 h-9">
+            <span class="text-xl">
+                <span class="font-bold text-primary">Easy</span><span class="font-bold text-teal">Hire</span>
+                <span class="text-primary/50 font-normal"> for Employers</span>
+            </span>
+        </a>
+        <div class="flex items-center gap-4">
+            <span class="text-primary/50 text-sm">{{ profile.first_name }} {{ profile.last_name }}</span>
+            <a href="/logout/"
+               class="bg-taupe/30 text-primary text-sm font-semibold px-4 py-2 rounded-full hover:bg-taupe/50 transition">
+                Log Out
+            </a>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="flex-1 px-12 py-10 max-w-4xl mx-auto w-full">
+
+        <!-- Status banner -->
+        <div class="mb-8">
+            {% if company.verification_status == 'pending' %}
+            <div class="bg-amber/20 border border-amber/40 rounded-2xl px-6 py-4 flex items-start gap-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-amber flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+                <div>
+                    <p class="text-amber font-semibold text-sm">Verification Pending</p>
+                    <p class="text-white/60 text-xs mt-1">
+                        Your account is under review by PESO Iloilo City. Please submit all required documents below to complete verification.
+                    </p>
+                </div>
+            </div>
+            {% elif company.verification_status == 'verification_denied' %}
+            <div class="bg-red-500/20 border border-red-400/40 rounded-2xl px-6 py-4 flex items-start gap-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+                <div>
+                    <p class="text-red-400 font-semibold text-sm">Verification Denied</p>
+                    <p class="text-white/60 text-xs mt-1">
+                        Your verification was denied by PESO.
+                        {% if company.rejection_note %}
+                        Reason: <span class="text-white/80">{{ company.rejection_note }}</span>
+                        {% endif %}
+                        Please re-upload the required documents and resubmit.
+                    </p>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-white/10 border border-white/20 rounded-2xl px-6 py-4">
+                <p class="text-white/60 text-sm">Your account is not yet verified. Please submit your documents below.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Company info -->
+        <div class="bg-white/10 border border-white/20 rounded-2xl px-6 py-4 mb-8 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-teal/30 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                {{ company.name|first|upper }}
+            </div>
+            <div>
+                <p class="text-white font-bold">{{ company.name }}</p>
+                <p class="text-white/50 text-xs">{{ company.get_type_of_company_display }} · {{ company.nature_of_company }}</p>
+            </div>
+        </div>
+
+        <!-- Document checklist -->
+        <div class="bg-white/10 border border-white/20 rounded-2xl p-6 mb-6">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-white font-bold text-base">Required Documents</h2>
+                <span class="text-white/40 text-xs">
+                    {{ checklist|length }} required ·
+                    {% with uploaded_count=0 %}
+                    {{ checklist|dictsortreversed:"uploaded"|length }}
+                    {% endwith %}
+                </span>
+            </div>
+
+            <div class="space-y-3">
+                {% for item in checklist %}
+                <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                    <div class="flex items-center gap-3">
+                        {% if item.uploaded %}
+                        <div class="w-6 h-6 rounded-full bg-teal/30 border border-teal flex items-center justify-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-teal" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                            </svg>
+                        </div>
+                        {% else %}
+                        <div class="w-6 h-6 rounded-full border border-white/20 flex-shrink-0"></div>
+                        {% endif %}
+                        <div>
+                            <p class="text-white text-sm {% if item.uploaded %}opacity-60{% endif %}">{{ item.label }}</p>
+                            {% if item.uploaded %}
+                            <p class="text-teal text-xs">Uploaded · <a href="{{ item.doc.file.url }}" target="_blank" class="underline hover:text-teallight">View file</a></p>
+                            {% else %}
+                            <p class="text-white/30 text-xs">Not yet uploaded</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Upload button -->
+                    <form method="POST" action="/employers/upload-document/" enctype="multipart/form-data"
+                          class="flex items-center gap-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="doc_type" value="{{ item.type }}">
+                        <label class="flex items-center gap-2 bg-white/10 border border-white/20 text-white/70 text-xs px-3 py-1.5 rounded-full cursor-pointer hover:bg-white/20 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                            </svg>
+                            {% if item.uploaded %}Replace{% else %}Upload{% endif %}
+                            <input type="file" name="file" class="hidden"
+                                   onchange="this.closest('form').submit()">
+                        </label>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- All uploaded notice -->
+        {% if all_uploaded %}
+        <div class="bg-teal/20 border border-teal/40 rounded-2xl px-6 py-4 text-center">
+            <p class="text-teal font-semibold text-sm">All documents submitted!</p>
+            <p class="text-white/50 text-xs mt-1">PESO Iloilo City will review your application within 1–3 business days. You'll receive an email once verified.</p>
+        </div>
+        {% else %}
+        <p class="text-white/30 text-xs text-center">
+            All documents must be submitted before PESO can review your account.
+        </p>
+        {% endif %}
+
+    </div>
+
+</main>
+{% endblock %}
+
+{% block footer %}{% endblock %}

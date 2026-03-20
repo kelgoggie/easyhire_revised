@@ -1,0 +1,141 @@
+{% load static %}
+<nav class="bg-surface px-8 py-3 flex items-center justify-between shadow-md relative z-50">
+
+    <!-- Left: Logo -->
+    <a href="/dashboard/" class="flex items-center gap-2">
+        <img src="{% static 'images/navbar_logo.svg' %}"
+             alt="EasyHire"
+             class="w-9 h-9">
+        <span class="font-bold text-xl">
+            <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
+        </span>
+    </a>
+
+<!-- Center: Nav Icons -->
+<div class="flex items-center gap-2">
+
+    <!-- Home — always filled green, plus outline ring if active -->
+    <a href="/dashboard/"
+       class="w-11 h-11 flex items-center justify-center rounded-xl transition bg-primary
+              {% if active == 'home' %}ring-2 ring-offset-1 ring-primary{% endif %}">
+        <img src="{% static 'images/icons/icon_home.svg' %}"
+             class="w-5 h-5 brightness-0 invert">
+    </a>
+
+    <!-- Resume -->
+    <a href="/resume/"
+       class="w-11 h-11 flex items-center justify-center rounded-xl transition
+              {% if active == 'resume' %}ring-2 ring-offset-1 ring-primary{% else %}hover:bg-taupe/30{% endif %}">
+        <img src="{% static 'images/icons/icon_resume.svg' %}"
+             class="w-5 h-5 {% if active == 'resume' %}brightness-0 saturate-0{% endif %}">
+    </a>
+
+    <!-- Jobs For You -->
+    <a href="/jobs/for-you/"
+       class="w-11 h-11 flex items-center justify-center rounded-xl transition
+              {% if active == 'jobs' %}ring-2 ring-offset-1 ring-primary{% else %}hover:bg-taupe/30{% endif %}">
+        <img src="{% static 'images/icons/icon_jobs.svg' %}"
+             class="w-5 h-5 {% if active == 'jobs' %}brightness-0 saturate-0{% endif %}">
+    </a>
+
+    <!-- Analytics -->
+    <a href="/analytics/"
+       class="w-11 h-11 flex items-center justify-center rounded-xl transition
+              {% if active == 'analytics' %}ring-2 ring-offset-1 ring-primary{% else %}hover:bg-taupe/30{% endif %}">
+        <img src="{% static 'images/icons/icon_analytics.svg' %}"
+             class="w-5 h-5 {% if active == 'analytics' %}brightness-0 saturate-0{% endif %}">
+    </a>
+
+</div>
+
+    <!-- Right: Notifications, Messages, Profile, More -->
+    <div class="flex items-center gap-2">
+
+        <!-- Notifications -->
+        <a href="/notifications/"
+           class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-taupe/30 transition relative">
+            <img src="{% static 'images/icons/icon_bell.svg' %}" class="w-5 h-5">
+            {% if unread_notifications %}
+            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full"></span>
+            {% endif %}
+        </a>
+
+        <!-- Messages -->
+        <a href="/messages/"
+           class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-taupe/30 transition relative">
+            <img src="{% static 'images/icons/icon_messages.svg' %}" class="w-5 h-5">
+            {% if unread_messages %}
+            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full"></span>
+            {% endif %}
+        </a>
+
+            <!-- Profile Avatar + More overlay -->
+            <div class="relative" id="more-menu-container">
+                <!-- Avatar -->
+                <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm cursor-pointer">
+                    <img src="{% static 'images/icons/icon_profile.svg' %}" class = "w-5 h-5">
+                    {{ request.user.jobseekerprofile.first_name|first|upper }}{{ request.user.jobseekerprofile.last_name|first|upper }}
+                </div>
+
+                <!-- Three dots badge -->
+                <button id="more-menu-btn"
+                        class="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-surface transition border border-taupe/20">
+                    <img src="{% static 'images/icons/icon_more.svg' %}" class="w-3 h-3">
+                </button>
+
+                <!-- Dropdown -->
+                <div id="more-menu-dropdown"
+                    class="absolute right-0 top-12 bg-white rounded-2xl shadow-lg py-2 w-52 z-50 border border-taupe/20 hidden">
+                <!-- User info header -->
+                <div class="px-4 py-2 mb-1 border-b border-taupe/20">
+                    <p class="font-semibold text-primary text-sm">
+                        {{ request.user.jobseekerprofile.first_name }} {{ request.user.jobseekerprofile.last_name }}
+                    </p>
+                    <p class="text-muted text-xs truncate">{{ request.user.email }}</p>
+                </div>
+
+                <a href="/profile/" class="flex items-center gap-3 px-4 py-2 text-sm text-primary hover:bg-surface transition">
+                    <img src="{% static 'images/icons/icon_profile.svg' %}" class="w-4 h-4 opacity-60">
+                    View Profile
+                </a>
+                <a href="/settings/" class="flex items-center gap-3 px-4 py-2 text-sm text-primary hover:bg-surface transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 opacity-60" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.01 7.01 0 00-1.62-.94l-.36-2.54A.484.484 0 0014 2h-4a.484.484 0 00-.48.41l-.36 2.54a7.27 7.27 0 00-1.62.94l-2.39-.96a.48.48 0 00-.59.22L2.74 8.87a.47.47 0 00.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.47.47 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.36 1.04.67 1.62.94l.36 2.54c.05.24.27.41.48.41h4c.24 0 .44-.17.47-.41l.36-2.54a7.27 7.27 0 001.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/>
+                    </svg>
+                    Account Settings
+                </a>
+                <a href="/help/" class="flex items-center gap-3 px-4 py-2 text-sm text-primary hover:bg-surface transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 opacity-60" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                    </svg>
+                    Help & Support
+                </a>
+                <hr class="my-1 border-taupe/20">
+                <a href="/logout/" class="flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-surface transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4a2 2 0 00-2 2v14a2 2 0 002 2h8v-2H4V5z"/>
+                    </svg>
+                    Log Out
+                </a>
+            </div>
+        </div>
+
+    </div>
+</nav>
+
+{% block extra_scripts %}
+<script>
+    const moreBtn = document.getElementById('more-menu-btn');
+    const moreDropdown = document.getElementById('more-menu-dropdown');
+
+    moreBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        moreDropdown.classList.toggle('hidden');
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', function() {
+        moreDropdown.classList.add('hidden');
+    });
+</script>
+{% endblock %}

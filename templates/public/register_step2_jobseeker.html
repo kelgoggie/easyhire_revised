@@ -1,0 +1,314 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Complete Your Profile — EasyHire{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_jobseeker.html" %}
+{% endblock %}
+
+{% block content %}
+
+<main class="bg-surface min-h-screen py-16 px-6">
+
+    <!-- Header -->
+    <div class="max-w-5xl mx-auto mb-8 flex items-end justify-between">
+        <div>
+            <p class="text-primary text-lg">Welcome to</p>
+            <h1 class="font-extrabold text-4xl">
+                <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
+            </h1>
+        </div>
+        <p class="text-muted text-sm">We're going to need a few more things from you.</p>
+    </div>
+
+    <!-- Form Card -->
+    <div class="max-w-5xl mx-auto bg-surface border border-taupe/40 rounded-2xl px-10 py-10 shadow-sm">
+        <form method="POST" action="/register/info/">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-2 gap-x-16 gap-y-6">
+
+                <!-- LEFT COLUMN: Personal Information -->
+                <div>
+                    <h2 class="font-bold text-primary text-lg mb-6">Personal Information</h2>
+
+                    <!-- First Name + Last Name -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">First Name*</label>
+                            <input type="text" name="first_name" required placeholder="Juan"
+                                   class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Last Name*</label>
+                            <input type="text" name="last_name" required placeholder="Value"
+                                   class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
+                    </div>
+
+                    <!-- Middle Name + Suffix -->
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="col-span-2">
+                            <label class="block text-primary text-xs font-medium mb-1">Middle Name</label>
+                            <input type="text" name="middle_name" placeholder="Value"
+                                   class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Suffix</label>
+                            <input type="text" name="suffix" placeholder="Jr./Sr./III"
+                                   class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
+                    </div>
+
+                    <!-- Civil Status -->
+                    <div class="mb-4">
+                        <label class="block text-primary text-xs font-medium mb-1">Civil Status</label>
+                        <select name="civil_status"
+                                class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                            <option value="">Select...</option>
+                            <option value="single">Single</option>
+                            <option value="married">Married</option>
+                            <option value="widowed">Widowed</option>
+                            <option value="separated">Separated</option>
+                            <option value="annulled">Annulled</option>
+                        </select>
+                    </div>
+
+                    <!-- Sex + Date of Birth -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-2">Sex*</label>
+                            <div class="flex items-center gap-6">
+                                <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+                                    <input type="radio" name="sex" value="M" checked class="accent-teal">
+                                    Male
+                                </label>
+                                <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+                                    <input type="radio" name="sex" value="F" class="accent-teal">
+                                    Female
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Date of Birth*</label>
+                            <input type="text" name="date_of_birth" id="date_of_birth"
+                                   placeholder="MM/DD/YYYY" required
+                                   pattern="\d{2}/\d{2}/\d{4}"
+                                   class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
+                    </div>
+                </div>
+
+            <!-- RIGHT COLUMN: Address + Contact -->
+            <div>
+                <h2 class="font-bold text-primary text-lg mb-6">Address</h2>
+
+                <!-- House/Unit + Street -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-primary text-xs font-medium mb-1">House/Unit No.</label>
+                        <input type="text" name="house_unit" placeholder="Value"
+                            class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                    </div>
+                    <div>
+                        <label class="block text-primary text-xs font-medium mb-1">Street*</label>
+                        <input type="text" name="street_barangay" required placeholder="Value"
+                            class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                    </div>
+                </div>
+
+                    <!-- Province -->
+                    <div class="mb-4">
+                        <label class="block text-primary text-xs font-medium mb-1">Province*</label>
+                        <select name="province" id="province_select" required
+                                class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                            <option value="">Select Province...</option>
+                        </select>
+                    </div>
+
+                    <!-- City/Municipality -->
+                    <div class="mb-4">
+                        <label class="block text-primary text-xs font-medium mb-1">City/Municipality*</label>
+                        <select name="city_municipality" id="city_select" required disabled
+                                class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:opacity-50">
+                            <option value="">Select City/Municipality...</option>
+                        </select>
+                    </div>
+
+                    <!-- Barangay -->
+                    <div class="mb-8">
+                        <label class="block text-primary text-xs font-medium mb-1">Barangay*</label>
+                        <select name="barangay" id="barangay_select" required disabled
+                                class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:opacity-50">
+                            <option value="">Select Barangay...</option>
+                        </select>
+                    </div>
+
+                <!-- Contact Information -->
+                <h2 class="font-bold text-primary text-lg mb-6">Contact Information</h2>
+
+                <!-- Phone -->
+                <div class="mb-4">
+                    <label class="block text-primary text-xs font-medium mb-1">Phone*</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted">+63</span>
+                        <input type="tel" name="phone" id="phone" required
+                            placeholder="9XX XXX XXXX"
+                            maxlength="13"
+                            class="w-full bg-white border border-taupe/40 rounded-full pl-12 pr-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                    </div>
+                    <p id="phone_error" class="text-red-500 text-xs mt-1 hidden">Please enter a valid Philippine mobile number.</p>
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label class="block text-primary text-xs font-medium mb-1">Email Address*</label>
+                    <input type="email" name="contact_email" id="contact_email" required
+                        placeholder="example@email.com"
+                        class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                    <p id="email_error" class="text-red-500 text-xs mt-1 hidden">Please enter a valid email address.</p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-between mt-10">
+                <p class="text-muted text-xs">*Required fields</p>
+                <button type="submit"
+                        class="bg-amber text-white font-semibold px-10 py-3 rounded-full hover:bg-amber/90 transition text-sm">
+                    Submit
+                </button>
+            </div>
+
+        </form>
+    </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const provinceSelect = document.getElementById('province_select');
+    const citySelect = document.getElementById('city_select');
+    const barangaySelect = document.getElementById('barangay_select');
+    const phoneInput = document.getElementById('phone');
+    const emailInput = document.getElementById('contact_email');
+
+    // Load provinces on page load
+    fetch('/api/provinces/')
+        .then(res => res.json())
+        .then(data => {
+            data.forEach(province => {
+                const option = document.createElement('option');
+                option.value = province.code;
+                option.textContent = province.name;
+                provinceSelect.appendChild(option);
+            });
+        });
+
+    // When province changes, load cities
+    provinceSelect.addEventListener('change', function() {
+        const provinceCode = this.value;
+
+        citySelect.innerHTML = '<option value="">Select City/Municipality...</option>';
+        barangaySelect.innerHTML = '<option value="">Select Barangay...</option>';
+        citySelect.disabled = true;
+        barangaySelect.disabled = true;
+
+        if (!provinceCode) return;
+
+        fetch(`/api/cities/${provinceCode}/`)
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.code;
+                    option.textContent = city.name;
+                    citySelect.appendChild(option);
+                });
+                citySelect.disabled = false;
+            });
+    });
+
+    // When city changes, load barangays
+    citySelect.addEventListener('change', function() {
+        const cityCode = this.value;
+
+        barangaySelect.innerHTML = '<option value="">Select Barangay...</option>';
+        barangaySelect.disabled = true;
+
+        if (!cityCode) return;
+
+        fetch(`/api/barangays/${cityCode}/`)
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(barangay => {
+                    const option = document.createElement('option');
+                    option.value = barangay.code;
+                    option.textContent = barangay.name;
+                    barangaySelect.appendChild(option);
+                });
+                barangaySelect.disabled = false;
+            });
+    });
+
+    // MM/DD/YYYY date formatting
+    const dateInput = document.getElementById('date_of_birth');
+    dateInput.addEventListener('input', function() {
+        let value = this.value.replace(/\D/g, '');
+        if (value.length >= 2) value = value.slice(0,2) + '/' + value.slice(2);
+        if (value.length >= 5) value = value.slice(0,5) + '/' + value.slice(5);
+        this.value = value.slice(0, 10);
+    });
+
+    // Phone validation — Philippine mobile numbers (09XX or +639XX)
+    phoneInput.addEventListener('input', function() {
+        let value = this.value.replace(/\D/g, '');
+        // Format as 9XX XXX XXXX
+        if (value.length > 10) value = value.slice(0, 10);
+        let formatted = value;
+        if (value.length >= 4) formatted = value.slice(0,3) + ' ' + value.slice(3);
+        if (value.length >= 7) formatted = value.slice(0,3) + ' ' + value.slice(3,6) + ' ' + value.slice(6);
+        this.value = formatted;
+
+        const error = document.getElementById('phone_error');
+        if (value.length > 0 && value.length < 10) {
+            error.classList.remove('hidden');
+        } else {
+            error.classList.add('hidden');
+        }
+    });
+
+    // Email validation
+    emailInput.addEventListener('blur', function() {
+        const error = document.getElementById('email_error');
+        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value);
+        if (this.value && !valid) {
+            error.classList.remove('hidden');
+        } else {
+            error.classList.add('hidden');
+        }
+    });
+
+    // Prevent form submission if validations fail
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const phoneVal = phoneInput.value.replace(/\D/g, '');
+        const emailVal = emailInput.value;
+        const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+        let hasError = false;
+
+        if (phoneVal.length > 0 && phoneVal.length < 10) {
+            document.getElementById('phone_error').classList.remove('hidden');
+            hasError = true;
+        }
+        if (emailVal && !emailValid) {
+            document.getElementById('email_error').classList.remove('hidden');
+            hasError = true;
+        }
+        if (hasError) e.preventDefault();
+    });
+</script>
+{% endblock %}

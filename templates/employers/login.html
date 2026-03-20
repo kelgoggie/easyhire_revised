@@ -1,0 +1,98 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Login — EasyHire for Employers{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-primary flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-surface flex items-center justify-between px-12 py-3 shadow-sm">
+        <a href="/employers/" class="flex items-center gap-2">
+            <img src="{% static 'images/navbar_logo.svg' %}" class="w-9 h-9">
+            <span class="text-xl">
+                <span class="font-bold text-primary">Easy</span><span class="font-bold text-teal">Hire</span>
+                <span class="text-primary/50 font-normal"> for Employers</span>
+            </span>
+        </a>
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-6 text-sm text-primary/70">
+                <a href="#about" class="hover:text-primary transition">About</a>
+                <a href="#jobs" class="hover:text-primary transition">Jobs</a>
+                <a href="/analytics/" class="hover:text-primary transition">Analytics</a>
+                <a href="/" class="font-semibold text-primary hover:text-teal transition">EasyHire for Jobseekers</a>
+            </div>
+            <a href="/employers/register/"
+               class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
+                Register
+            </a>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="flex-1 flex flex-col items-center justify-center px-4 py-12">
+
+        <!-- Illustration -->
+        <div class="w-36 h-36 mb-4">
+            <img src="{% static 'images/Businessman-Giving-Business-Card--Streamline-New-York.svg' %}"
+                 class="w-full h-full object-contain">
+        </div>
+
+        <!-- Title -->
+        <p class="text-white/60 text-base mb-1">Welcome back to</p>
+        <h1 class="text-4xl font-extrabold text-center mb-8">
+            <span class="text-white">Easy</span><span style="color: #C0C195;">Hire</span>
+            <span class="text-white"> for Employers.</span>
+        </h1>
+
+        <!-- Card -->
+        <div class="bg-surface border border-taupe/20 rounded-2xl p-8 w-full max-w-sm shadow-sm">
+
+            {% if error %}
+            <div class="bg-red-100 border border-red-300 text-red-700 text-sm rounded-xl px-4 py-3 mb-5">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/employers/login/">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    <label class="block text-primary text-xs font-medium mb-1">Email</label>
+                    <input type="email" name="email"
+                           value="{{ email|default:'' }}"
+                           placeholder="Value"
+                           class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                </div>
+
+                <div class="mb-2">
+                    <label class="block text-primary text-xs font-medium mb-1">Password</label>
+                    <input type="password" name="password"
+                           placeholder="Value"
+                           class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                </div>
+
+                <div class="flex justify-end mb-6">
+                    <a href="#" class="text-xs text-amber hover:text-amber/80 transition">Forgot password?</a>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-amber text-white font-semibold py-3 rounded-full hover:bg-amber/90 transition text-sm">
+                    Sign In
+                </button>
+            </form>
+        </div>
+
+        <p class="text-white text-sm mt-6">
+            New to EasyHire?
+            <a href="/employers/register/" class="text-white font-bold hover:text-teal transition">Click here to register.</a>
+        </p>
+
+    </div>
+
+</main>
+{% endblock %}
+
+{% block footer %}{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Register — EasyHire for Employers{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-primary flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-surface flex items-center justify-between px-12 py-3 shadow-sm">
+        <a href="/employers/" class="flex items-center gap-2">
+            <img src="{% static 'images/navbar_logo.svg' %}" class="w-9 h-9">
+            <span class="text-xl">
+                <span class="font-bold text-primary">Easy</span><span class="font-bold text-teal">Hire</span>
+                <span class="text-primary/50 font-normal"> for Employers</span>
+            </span>
+        </a>
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-6 text-sm text-primary/70">
+                <a href="#about" class="hover:text-primary transition">About</a>
+                <a href="#jobs" class="hover:text-primary transition">Jobs</a>
+                <a href="/analytics/" class="hover:text-primary transition">Analytics</a>
+                <a href="/" class="font-semibold text-primary hover:text-teal transition">EasyHire for Jobseekers</a>
+            </div>
+            <a href="/employers/login/"
+               class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
+                Sign In
+            </a>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="flex-1 flex flex-col items-center justify-center px-4 py-12">
+
+        <h1 class="text-4xl font-extrabold text-center mb-8">
+            <span class="text-white">Easy</span><span style="color: #C0C195;">Hire</span>
+            <span class="text-white"> for Employers</span>
+        </h1>
+        <p class="text-white/50 text-sm mb-8">Let's get you started.</p>
+
+        <!-- Card -->
+        <div class="bg-surface rounded-3xl p-8 w-full max-w-md shadow-xl">
+
+            {% if error %}
+            <div class="bg-red-100 border border-red-300 text-red-700 text-sm rounded-xl px-4 py-3 mb-5">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/employers/register/">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    <label class="block text-primary text-xs font-medium mb-1">Email</label>
+                    <input type="email" name="email" value="{{ email|default:'' }}" placeholder="Value"
+                           class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-primary text-xs font-medium mb-1">Password</label>
+                    <input type="password" name="password" placeholder="Value"
+                           class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-primary text-xs font-medium mb-1">Confirm password</label>
+                    <input type="password" name="confirm_password" placeholder="Value"
+                           class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                </div>
+
+                <!-- Consent -->
+                <div class="flex items-start gap-3 mb-6 bg-white border border-taupe/20 rounded-2xl px-4 py-3">
+                    <input type="checkbox" name="consent" id="consent" class="accent-teal mt-1 flex-shrink-0">
+                    <label for="consent" class="text-xs text-primary/70 leading-relaxed cursor-pointer">
+                        <span class="font-bold text-primary">I hereby consent to</span> the collection and
+                        processing of my personal information in accordance with the Data Privacy Act of 2012
+                        (Republic Act 10173). This information will be used solely for the purpose of job
+                        matching and employment facilitation through EasyHire, in partnership with PESO Iloilo City.
+                    </label>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-primary text-white font-semibold py-3 rounded-full hover:bg-primary/80 transition text-sm">
+                    Register &gt;
+                </button>
+            </form>
+        </div>
+
+        <p class="text-white/50 text-sm mt-6">
+            Already have an account?
+            <a href="/employers/login/" class="text-white font-bold hover:text-teal transition">Log in here.</a>
+        </p>
+
+    </div>
+
+</main>
+{% endblock %}
+
+{% block footer %}{% endblock %}
