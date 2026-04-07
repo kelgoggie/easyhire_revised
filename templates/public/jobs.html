@@ -1,0 +1,173 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Jobs — EasyHire{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_jobseeker.html" %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Partner Logos Bar -->
+<div class="px-16 py-3 flex items-center gap-4 border-b border-taupe/30 bg-surface">
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/peso_logo.png' %}" alt="PESO Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">PESO<br>Iloilo City</span>
+    </div>
+    <div class="w-px h-6 bg-taupe/40"></div>
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/iloilo_logo.png' %}" alt="Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">Iloilo City<br>Government</span>
+    </div>
+</div>
+
+<main class="bg-surface min-h-screen py-10 px-16">
+    <div class="max-w-6xl mx-auto">
+
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-extrabold text-primary">Open Jobs</h1>
+            <p class="text-muted text-sm mt-1">{{ total }} job{{ total|pluralize }} available in Iloilo City</p>
+        </div>
+
+        <!-- Filters -->
+        <form method="GET" action="/jobs/" class="flex flex-wrap gap-3 mb-8 items-center">
+            <!-- Search -->
+            <div class="relative flex-1 min-w-[220px]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+                </svg>
+                <input type="text" name="q" value="{{ search }}" placeholder="Search job title or company..."
+                       class="w-full bg-white border border-taupe/40 rounded-full pl-10 pr-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            </div>
+
+            <!-- Location -->
+            <select name="location"
+                    class="bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                <option value="">All Locations</option>
+                <option value="iloilo" {% if location_type == "iloilo" %}selected{% endif %}>Iloilo City</option>
+                <option value="remote" {% if location_type == "remote" %}selected{% endif %}>Remote</option>
+                <option value="overseas" {% if location_type == "overseas" %}selected{% endif %}>Overseas</option>
+            </select>
+
+            <!-- Sector -->
+            <select name="sector"
+                    class="bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                <option value="">All Sectors</option>
+                {% for s in sectors %}
+                    {% if sector == s.id|stringformat:"s" %}
+                        <option value="{{ s.id }}" selected>{{ s.label }}</option>
+                    {% else %}
+                        <option value="{{ s.id }}">{{ s.label }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+
+            <button type="submit"
+                    class="bg-primary text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-teal transition">
+                Search
+            </button>
+
+            {% if search or location_type or sector %}
+                <a href="/jobs/" class="text-sm text-muted hover:text-primary transition">Clear filters</a>
+            {% endif %}
+        </form>
+
+        <!-- Job Cards -->
+        {% if jobs %}
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {% for job in jobs %}
+                <a href="/jobs/{{ job.pk }}/"
+                   class="bg-white border border-taupe/20 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/40 transition flex flex-col gap-3">
+
+                    <!-- Company + Title -->
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-teal/20 border border-teal/30 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
+                            {{ job.company.name|first|upper }}
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-bold text-primary text-sm leading-tight truncate">{{ job.title }}</p>
+                            <p class="text-muted text-xs truncate">{{ job.company.name }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Location + Slots -->
+                    <div class="flex items-center gap-3 text-xs text-muted">
+                        <span class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            {{ job.location_display }}
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
+                            </svg>
+                            {{ job.slots }} slot{{ job.slots|pluralize }}
+                        </span>
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="flex flex-wrap gap-1.5 mt-auto">
+                        {% if job.education_requirement %}
+                        <span class="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                            {{ job.education_requirement.get_level_display }}
+                        </span>
+                        {% endif %}
+                        {% for skill in job.skill_requirements.all|slice:":2" %}
+                        <span class="bg-teal/10 text-teal text-xs px-2 py-0.5 rounded-full">
+                            {{ skill.name }}
+                        </span>
+                        {% endfor %}
+                        {% if job.experience_requirement and job.experience_requirement.years_required > 0 %}
+                        <span class="bg-amber/10 text-amber text-xs px-2 py-0.5 rounded-full">
+                            {{ job.experience_requirement.years_required }} yr{{ job.experience_requirement.years_required|pluralize }} exp
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Posted date -->
+                    <p class="text-taupe text-xs">Posted {{ job.created_at|timesince }} ago</p>
+
+                </a>
+                {% endfor %}
+            </div>
+
+        {% else %}
+            <div class="flex flex-col items-center justify-center py-24 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-taupe mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-primary font-semibold mb-1">No jobs found</p>
+                <p class="text-muted text-sm">Try adjusting your filters or check back later.</p>
+                <a href="/jobs/" class="mt-4 text-teal text-sm font-semibold hover:underline">Clear filters</a>
+            </div>
+        {% endif %}
+
+        <!-- Join EasyHire CTA -->
+        {% if not request.user.is_authenticated %}
+        <div class="mt-16 bg-primary rounded-2xl px-10 py-10 flex items-center justify-between">
+            <div>
+                <h2 class="text-white font-extrabold text-2xl mb-2">Find jobs matched just for you.</h2>
+                <p class="text-white/70 text-sm">Join EasyHire and let our algorithm match you with the best opportunities in Iloilo City.</p>
+            </div>
+            <a href="/register/"
+               class="bg-amber text-white font-bold px-8 py-3 rounded-full hover:bg-amber/90 transition text-sm flex-shrink-0 ml-8">
+                Join EasyHire &gt;
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}

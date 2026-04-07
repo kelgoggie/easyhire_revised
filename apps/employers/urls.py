@@ -13,7 +13,7 @@ urlpatterns = [
     path('employers/jobs/<int:job_id>/', views.job_detail, name='job_detail'),
     path('employers/jobs/<int:job_id>/edit/', views.job_edit, name='job_edit'),
     path('employers/jobs/<int:job_id>/delete/', views.job_delete, name='job_delete'),
-    path('employers/candidates/', views.candidates, name='candidates'),
-    path('employers/candidates/<int:jobseeker_id>/', views.candidate_detail, name='candidate_detail'),
+    path('employers/jobs/<int:job_id>/candidates/', views.candidates, name='candidates'),
     path('employers/candidates/<int:jobseeker_id>/like/', views.candidate_like, name='candidate_like'),
+    path('employers/profile/', views.company_profile, name='company_profile'),
 ]

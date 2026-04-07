@@ -40,14 +40,16 @@
             <span class="text-white"> for Employers.</span>
         </h1>
 
+        {% if errors %}
+        <div class="bg-red-500/20 border border-red-400/40 text-red-200 text-sm rounded-xl px-4 py-3 mb-6">
+            {% for field, msg in errors.items %}
+            <p>{{ msg }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <form method="POST" action="/employers/register/info/">
             {% csrf_token %}
-
-            {% if error %}
-            <div class="bg-red-500/20 border border-red-400/40 text-red-200 text-sm rounded-xl px-4 py-3 mb-6">
-                {{ error }}
-            </div>
-            {% endif %}
 
             <!-- Business Information -->
             <div class="mb-8">
@@ -95,7 +97,7 @@
                     <div>
                         <label class="block text-white/70 text-xs mb-1">Nature of Company*</label>
                         <input type="text" name="nature_of_company" value="{{ form.nature_of_company|default:'' }}"
-                               placeholder="Value"
+                               placeholder="e.g. Hospital, University, Retail"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
 
@@ -117,16 +119,9 @@
                         </div>
                     </div>
 
-                    <!-- Company Email -->
-                    <div>
-                        <label class="block text-white/70 text-xs mb-1">Company Email*</label>
-                        <input type="email" name="company_email" value="{{ form.company_email|default:'' }}" placeholder="Value"
-                               class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
-                    </div>
-
-                    <!-- Recruitment Email -->
-                    <div>
-                        <label class="block text-white/70 text-xs mb-1">Recruitment Email*</label>
+                    <!-- Recruitment Email (spans full width) -->
+                    <div class="col-span-2">
+                        <label class="block text-white/70 text-xs mb-1">Company / Recruitment Email*</label>
                         <input type="email" name="recruitment_email" value="{{ form.recruitment_email|default:'' }}" placeholder="Value"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
@@ -138,29 +133,31 @@
             <div class="mb-10">
                 <h2 class="text-white font-bold text-lg mb-4">Representative Information</h2>
 
+                <!-- First / Last / Middle / Suffix -->
                 <div class="grid grid-cols-4 gap-4 mb-4">
-                    <div class="col-span-1">
+                    <div>
                         <label class="block text-white/70 text-xs mb-1">First Name*</label>
                         <input type="text" name="first_name" value="{{ form.first_name|default:'' }}" placeholder="Value"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
-                    <div class="col-span-1">
-                        <label class="block text-white/70 text-xs mb-1">Middle Name</label>
-                        <input type="text" name="middle_name" value="{{ form.middle_name|default:'' }}" placeholder="Value"
-                               class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
-                    </div>
-                    <div class="col-span-1">
+                    <div>
                         <label class="block text-white/70 text-xs mb-1">Last Name*</label>
                         <input type="text" name="last_name" value="{{ form.last_name|default:'' }}" placeholder="Value"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
-                    <div class="col-span-1">
+                    <div>
+                        <label class="block text-white/70 text-xs mb-1">Middle Name</label>
+                        <input type="text" name="middle_name" value="{{ form.middle_name|default:'' }}" placeholder="Value"
+                               class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
+                    </div>
+                    <div>
                         <label class="block text-white/70 text-xs mb-1">Suffix</label>
                         <input type="text" name="suffix" value="{{ form.suffix|default:'' }}" placeholder="Value"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
                 </div>
 
+                <!-- Position / Phone / Email -->
                 <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-white/70 text-xs mb-1">Position*</label>
@@ -169,11 +166,18 @@
                     </div>
                     <div>
                         <label class="block text-white/70 text-xs mb-1">Phone*</label>
-                        <input type="tel" name="phone" value="{{ form.phone|default:'' }}" placeholder="Value"
-                               class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
+                        <input type="tel" name="phone" value="{{ form.phone|default:'' }}"
+                               placeholder="09XXXXXXXXX"
+                               class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition
+                                      {% if errors.phone %}border-red-400{% endif %}">
+                        {% if errors.phone %}
+                        <p class="text-red-300 text-xs mt-1">{{ errors.phone }}</p>
+                        {% else %}
+                        <p class="text-white/30 text-xs mt-1">Format: 09XXXXXXXXX or +639XXXXXXXXX</p>
+                        {% endif %}
                     </div>
                     <div>
-                        <label class="block text-white/70 text-xs mb-1">Email*</label>
+                        <label class="block text-white/70 text-xs mb-1">Representative Email*</label>
                         <input type="email" name="rep_email" value="{{ form.rep_email|default:'' }}" placeholder="Value"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>

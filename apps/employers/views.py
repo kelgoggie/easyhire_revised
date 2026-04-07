@@ -295,13 +295,26 @@ def job_delete(request, job_id):
     return redirect('/employers/jobs/')
 
     
+@employer_required
+def job_detail(request, job_id):
+    profile = request.user.employer_profile
+    company = profile.company
+    job = get_object_or_404(JobPosting, id=job_id, company=company)
+
+    return render(request, 'employers/job_detail.html', {
+        'company': company,
+        'job': job,
+        'unread_notifications': False,
+        'unread_messages': False,
+    })
 
 
 @employer_required
-def candidates(request):
+def candidates(request, job_id):
     from apps.matching.engine import get_ranked_jobseekers
     profile = request.user.employer_profile
     company = profile.company
+    job = get_object_or_404(JobPosting, id=job_id, company=company)
     tab = request.GET.get('tab', 'recommended')
 
     liked_ids = list(CandidateInteraction.objects.filter(
@@ -315,20 +328,11 @@ def candidates(request):
     elif tab == 'applicants':
         ranked = []
     else:
-        # Get the company's most recent open job to rank against
-        from apps.jobs.models import JobPosting
-        job = JobPosting.objects.filter(
-            company=company, status='open'
-        ).first()
-        if job:
-            ranked = get_ranked_jobseekers(job)
-        else:
-            from apps.jobseekers.models import JobseekerProfile
-            jobseekers_raw = JobseekerProfile.objects.filter(profile_complete=True)
-            ranked = [{'profile': js, 'score': None, 'breakdown': {}} for js in jobseekers_raw]
+        ranked = get_ranked_jobseekers(job)
 
     return render(request, 'employers/candidates.html', {
         'company': company,
+        'job': job,
         'ranked': ranked,
         'liked_ids': liked_ids,
         'tab': tab,
@@ -336,6 +340,36 @@ def candidates(request):
         'unread_messages': False,
     })
 
+
+@employer_required
+def company_profile(request):
+    profile = request.user.employer_profile
+    company = profile.company
+    from apps.jobseekers.models import Sector
+    sectors = Sector.objects.all()
+
+    if request.method == 'POST':
+        company.description = request.POST.get('description', '')
+        company.nature_of_company = request.POST.get('nature_of_company', '')
+        company.main_branch_address = request.POST.get('main_branch_address', '')
+        company.iloilo_bldg_unit = request.POST.get('iloilo_bldg_unit', '')
+        company.iloilo_street_barangay = request.POST.get('iloilo_street_barangay', '')
+        company.company_email = request.POST.get('company_email', '')
+        company.recruitment_email = request.POST.get('recruitment_email', '')
+        company.save()
+
+        sector_ids = request.POST.getlist('sectors')
+        company.sector_badges.set(sector_ids)
+
+        return redirect('/employers/profile/')
+
+    return render(request, 'employers/company_profile.html', {
+        'company': company,
+        'profile': profile,
+        'sectors': sectors,
+        'unread_notifications': False,
+        'unread_messages': False,
+    })
 
 @employer_required
 def candidate_detail(request, jobseeker_id):

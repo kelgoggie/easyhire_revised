@@ -1,7 +1,7 @@
 {% extends "base/base.html" %}
 {% load static %}
 
-{% block title %}Recommended Jobseekers — EasyHire{% endblock %}
+{% block title %}Recommended Candidates — EasyHire{% endblock %}
 
 {% block navbar %}
     {% include "base/navbar_dashboard_employer.html" with active="candidates" %}
@@ -11,31 +11,23 @@
 <main class="bg-primary min-h-screen py-8 px-12">
     <div class="max-w-6xl mx-auto">
 
-        <!-- Header row: title + search -->
-        <div class="flex items-start gap-6 mb-1">
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-6">
             <div>
-                <h1 class="text-3xl font-extrabold text-white">Recommended <span class="text-teal">Jobseekers</span></h1>
-                <p class="text-white/40 text-sm mt-1">Displaying results based on Job Requirements</p>
+                <a href="/employers/jobs/{{ job.id }}/" class="text-white/40 hover:text-white transition text-xs mb-1 inline-block">← {{ job.title }}</a>
+                <h1 class="text-3xl font-extrabold text-white">Recommended <span class="text-teal">Candidates</span></h1>
+                <p class="text-white/40 text-sm mt-1">Displaying results based on job requirements for <span class="text-white/60 font-semibold">{{ job.title }}</span></p>
             </div>
-            <div class="relative flex-1 mt-1">
-                <input type="text" placeholder="Hinted search text"
-                       class="w-full bg-white/10 border border-white/20 rounded-full px-5 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition pr-12">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white/30 absolute right-4 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                </svg>
-            </div>
-        </div>
 
-        <!-- Sort + Tabs row -->
-        <div class="flex items-center justify-between mb-6 mt-4">
-            <button class="flex items-center gap-2 text-white/60 text-sm hover:text-white transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
-                </svg>
-                Sort by...
-            </button>
-            <div class="flex items-center gap-2">
-                <a href="/employers/candidates/?tab=liked"
+            <!-- Sort + Tabs -->
+            <div class="flex items-center gap-4 mt-2">
+                <button class="flex items-center gap-2 text-white/60 text-sm hover:text-white transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
+                    </svg>
+                    Sort by...
+                </button>
+                <a href="/employers/jobs/{{ job.id }}/candidates/?tab=liked"
                    class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
                           {% if tab == 'liked' %}bg-white text-primary{% else %}bg-white/10 text-white/60 hover:bg-white/20{% endif %}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
@@ -43,7 +35,7 @@
                     </svg>
                     Candidates You Like
                 </a>
-                <a href="/employers/candidates/?tab=applicants"
+                <a href="/employers/jobs/{{ job.id }}/candidates/?tab=applicants"
                    class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
                           {% if tab == 'applicants' %}bg-white text-primary{% else %}bg-white/10 text-white/60 hover:bg-white/20{% endif %}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
@@ -63,38 +55,50 @@
                  onclick="window.location.href='/employers/candidates/{{ js.id }}/'">
 
                 <!-- Name + Match % -->
-                <div class="flex items-center justify-between mb-3">
-                    <p class="text-primary font-bold text-sm">{{ js.first_name }} {{ js.last_name }}</p>
+                <div class="flex items-start justify-between mb-2">
+                    <p class="text-primary font-bold text-sm leading-tight">
+                        {{ js.first_name }}<br>{{ js.last_name }}
+                    </p>
                     {% if item.score is not None %}
-                    <p class="text-teal text-xs font-semibold">{{ item.score }}<span class="text-muted">%</span></p>
+                    <span class="text-teal text-sm font-bold flex-shrink-0 ml-2">
+                        {{ item.score }}<span class="text-muted text-xs">%</span>
+                    </span>
                     {% else %}
-                    <p class="text-muted text-xs">—%</p>
+                    <span class="text-muted text-xs flex-shrink-0 ml-2">—%</span>
                     {% endif %}
                 </div>
 
-                <!-- Tags -->
-                <div class="flex flex-col gap-1.5 mb-4 flex-1">
-                    {% for edu in js.education_set.all|slice:":1" %}
+                <!-- Candidate tags -->
+                <div class="flex flex-col gap-1.5 flex-1 mb-4">
+                    {% for edu in js.educations.all|slice:":1" %}
                     <span class="flex items-center gap-1 bg-teal/10 text-teal text-xs px-2 py-0.5 rounded-full border border-teal/20 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+                        </svg>
                         {{ edu.get_level_display }}
                     </span>
                     {% endfor %}
-                    {% for skill in js.skill_set.all|slice:":2" %}
+                    {% for skill in js.skills.all|slice:":2" %}
                     <span class="flex items-center gap-1 bg-blue-50 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-200 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
+                        </svg>
                         {{ skill.name }}
                     </span>
                     {% endfor %}
-                    {% if js.workexperience_set.exists %}
+                    {% if js.experiences.exists %}
                     <span class="flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2 py-0.5 rounded-full border border-purple-200 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/>
+                        </svg>
                         Experience
                     </span>
                     {% endif %}
-                    {% for cert in js.certification_set.all|slice:":1" %}
+                    {% for cert in js.certifications.all|slice:":1" %}
                     <span class="flex items-center gap-1 bg-amber/10 text-amber text-xs px-2 py-0.5 rounded-full border border-amber/20 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l2.39 7.26H22l-6.19 4.5 2.39 7.26L12 15.51l-6.2 5.51 2.39-7.26L2 9.26h7.61z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 1l2.39 7.26H22l-6.19 4.5 2.39 7.26L12 15.51l-6.2 5.51 2.39-7.26L2 9.26h7.61z"/>
+                        </svg>
                         {{ cert.name }}
                     </span>
                     {% endfor %}
@@ -102,10 +106,12 @@
 
                 <!-- Actions -->
                 <div class="flex items-center justify-between mt-auto pt-3 border-t border-taupe/10">
+
+                    <!-- Like -->
                     <form method="POST" action="/employers/candidates/{{ js.id }}/like/"
                           onclick="event.stopPropagation()">
                         {% csrf_token %}
-                        <input type="hidden" name="next" value="/employers/candidates/?tab={{ tab }}">
+                        <input type="hidden" name="next" value="/employers/jobs/{{ job.id }}/candidates/?tab={{ tab }}">
                         <button type="submit"
                                 class="w-8 h-8 flex items-center justify-center rounded-full border transition
                                        {% if js.id in liked_ids %}text-amber border-amber/30{% else %}border-taupe/30 text-taupe hover:border-amber hover:text-amber{% endif %}">
@@ -115,6 +121,8 @@
                             </svg>
                         </button>
                     </form>
+
+                    <!-- Eye — view resume -->
                     <a href="/employers/candidates/{{ js.id }}/"
                        onclick="event.stopPropagation()"
                        class="w-8 h-8 flex items-center justify-center rounded-full border border-taupe/30 text-taupe hover:border-teal hover:text-teal transition">
@@ -122,12 +130,14 @@
                             <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8a3 3 0 100 6 3 3 0 000-6z"/>
                         </svg>
                     </a>
+
                 </div>
 
             </div>
             {% endwith %}
             {% endfor %}
         </div>
+
         {% else %}
         <div class="bg-surface border border-taupe/20 rounded-2xl p-12 text-center shadow-sm">
             <p class="text-muted text-sm">

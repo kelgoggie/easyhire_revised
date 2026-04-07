@@ -1,0 +1,187 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Jobs For You — EasyHire{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_dashboard_jobseeker.html" with active="jobs" %}
+{% endblock %}
+
+{% block content %}
+<main class="bg-white min-h-screen py-8 px-6">
+    <div class="max-w-5xl mx-auto">
+
+        <!-- Header: Liked Jobs | Jobs For You | Hidden Jobs -->
+        <div class="flex items-center justify-center gap-4 mb-4">
+            <a href="/jobs/for-you/?tab=liked"
+               class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
+                      {% if tab == 'liked' %}bg-primary text-white{% else %}bg-surface text-primary hover:bg-taupe/20{% endif %}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24"
+                     {% if tab == 'liked' %}fill="white"{% else %}fill="currentColor"{% endif %}>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+                Liked Jobs
+            </a>
+
+            <h1 class="text-3xl font-extrabold text-primary">Jobs <span class="text-teal">For You</span></h1>
+
+            <a href="/jobs/for-you/?tab=hidden"
+               class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
+                      {% if tab == 'hidden' %}bg-primary text-white{% else %}bg-surface text-primary hover:bg-taupe/20{% endif %}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24"
+                     {% if tab == 'hidden' %}fill="white"{% else %}fill="currentColor"{% endif %}>
+                    <path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+                Hidden Jobs
+            </a>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-b border-taupe/20 mb-4"></div>
+
+        <!-- Sort -->
+        <div class="flex items-center mb-6">
+            <button class="flex items-center gap-2 text-primary/60 text-sm hover:text-primary transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
+                </svg>
+                Sort by...
+            </button>
+        </div>
+
+        <!-- Incomplete profile nudge -->
+        {% if not profile.profile_complete and tab != 'liked' and tab != 'hidden' %}
+        <div class="bg-amber/10 border border-amber/30 rounded-2xl px-6 py-5 mb-6 flex items-center justify-between">
+            <div>
+                <p class="text-primary font-semibold text-sm">Your resume is incomplete</p>
+                <p class="text-muted text-xs mt-1">Complete your resume to get personalized job recommendations.</p>
+            </div>
+            <a href="/resume/"
+               class="bg-amber text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-amber/90 transition flex-shrink-0">
+                Complete Resume
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Job Cards Grid -->
+        {% if ranked_jobs %}
+        <div class="grid grid-cols-4 gap-4">
+            {% for item in ranked_jobs %}
+            <div class="bg-surface border border-taupe/20 rounded-2xl p-5 shadow-sm flex flex-col hover:shadow-md hover:border-teal/30 transition cursor-pointer"
+                 onclick="window.location.href='/jobs/{{ item.job.id }}/'">
+
+                <!-- Title + Match % -->
+                <div class="flex items-start justify-between mb-1">
+                    <h2 class="text-primary font-extrabold text-base leading-tight">{{ item.job.title }}</h2>
+                    {% if item.score is not None %}
+                    <span class="text-teal text-sm font-bold flex-shrink-0 ml-2">
+                        {{ item.score }}<span class="text-muted text-xs">%</span>
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Company + Location -->
+                <p class="text-primary font-semibold text-xs mb-0.5">{{ item.job.company.name }}</p>
+                <p class="text-muted text-xs mb-3">{{ item.job.location_display }}</p>
+
+                <!-- Requirement tags -->
+                <div class="flex flex-col gap-1.5 flex-1 mb-4">
+                    {% if item.job.education_requirement %}
+                    <span class="flex items-center gap-1 bg-teal/10 text-teal text-xs px-2 py-0.5 rounded-full border border-teal/20 w-fit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+                        </svg>
+                        {{ item.job.education_requirement.get_level_display }}
+                    </span>
+                    {% endif %}
+                    {% for skill in item.job.skill_requirements.all|slice:":2" %}
+                    <span class="flex items-center gap-1 bg-blue-50 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-200 w-fit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
+                        </svg>
+                        {{ skill.name }}
+                    </span>
+                    {% endfor %}
+                    {% if item.job.experience_requirement %}
+                    <span class="flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2 py-0.5 rounded-full border border-purple-200 w-fit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/>
+                        </svg>
+                        {{ item.job.experience_requirement.years_required }} yr{{ item.job.experience_requirement.years_required|pluralize }} exp
+                    </span>
+                    {% endif %}
+                    {% for cert in item.job.certification_requirements.all|slice:":1" %}
+                    <span class="flex items-center gap-1 bg-amber/10 text-amber text-xs px-2 py-0.5 rounded-full border border-amber/20 w-fit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 1l2.39 7.26H22l-6.19 4.5 2.39 7.26L12 15.51l-6.2 5.51 2.39-7.26L2 9.26h7.61z"/>
+                        </svg>
+                        {{ cert.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+
+                <!-- Actions: star + trash -->
+                <div class="flex items-center justify-between mt-auto pt-3 border-t border-taupe/10">
+
+                    <!-- Like/Star -->
+                    <form method="POST" action="/jobs/{{ item.job.id }}/save/"
+                          onclick="event.stopPropagation()">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="/jobs/for-you/?tab={{ tab }}">
+                        <button type="submit"
+                                class="w-8 h-8 flex items-center justify-center rounded-full border transition
+                                       {% if item.job.id in liked_ids %}text-amber border-amber/30{% else %}border-taupe/30 text-taupe hover:border-amber hover:text-amber{% endif %}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
+                                 {% if item.job.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                            </svg>
+                        </button>
+                    </form>
+
+                    <!-- Hide/Trash -->
+                    <form method="POST" action="/jobs/{{ item.job.id }}/hide/"
+                          onclick="event.stopPropagation()">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="/jobs/for-you/?tab={{ tab }}">
+                        <button type="submit"
+                                class="w-8 h-8 flex items-center justify-center rounded-full border transition
+                                       {% if item.job.id in hidden_ids %}bg-red-50 border-red-200 text-red-400{% else %}border-taupe/30 text-taupe hover:border-red-300 hover:text-red-400{% endif %}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
+                    </form>
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="bg-surface border border-taupe/20 rounded-2xl p-12 text-center shadow-sm">
+            <p class="text-muted text-sm">
+                {% if tab == 'liked' %}You haven't liked any jobs yet.
+                {% elif tab == 'hidden' %}You haven't hidden any jobs.
+                {% else %}No open jobs available right now. Check back soon!{% endif %}
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Return to top -->
+        <div class="text-right mt-8 mb-4">
+            <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;"
+               class="text-muted text-sm hover:text-primary transition flex items-center gap-1 justify-end">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>
+                </svg>
+                Return to the top
+            </a>
+        </div>
+
+    </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}

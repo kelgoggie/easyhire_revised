@@ -28,6 +28,7 @@ class JobseekerLoginView(View):
         if not user.is_active:
             return render(request, self.template_name, {'error': 'inactive'})
 
+        logout(request)
         login(request, user)
         return redirect('/dashboard/')
 
@@ -96,7 +97,11 @@ class RegisterStep2JobseekerView(View):
             house_unit=request.POST.get('house_unit', ''),
             street_barangay=request.POST.get('street_barangay', ''),
             city_municipality=request.POST.get('city_municipality', ''),
+            city_code=request.POST.get('city_municipality', ''),
             province=request.POST.get('province', ''),
+            province_code=request.POST.get('province_code', '063000000'),
+            barangay=request.POST.get('barangay', ''),
+            barangay_code=request.POST.get('barangay', ''),
             phone=request.POST.get('phone', ''),
             contact_email=request.POST.get('contact_email', ''),
             profile_complete=False,
@@ -132,6 +137,7 @@ class EmployerLoginView(View):
                 'error': 'This account has been deactivated.', 'email': email,
             })
 
+        logout(request)
         login(request, user)
 
         try:
@@ -203,7 +209,6 @@ class EmployerRegisterStep2View(View):
             'nature_of_company': 'Nature of company',
             'main_branch_address': 'Main branch address',
             'iloilo_street_barangay': 'Iloilo branch street/barangay',
-            'company_email': 'Company email',
             'recruitment_email': 'Recruitment email',
             'first_name': 'First name',
             'last_name': 'Last name',
@@ -230,63 +235,68 @@ class EmployerRegisterStep2View(View):
                 'form': request.POST,
             })
 
-        # Create user
-        email = request.session['employer_reg_email']
-        password = request.session['employer_reg_password']
-        user = User.objects.create_user(
-            email=email,
-            password=password,
-            user_type=User.EMPLOYER,
-            consented_to_terms=True,
-            consented_at=timezone.now(),
-        )
+        try:
+            # Create user
+            email = request.session['employer_reg_email']
+            password = request.session['employer_reg_password']
+            user = User.objects.create_user(
+                email=email,
+                password=password,
+                user_type=User.EMPLOYER,
+                consented_to_terms=True,
+                consented_at=timezone.now(),
+            )
 
-        # Create company with unique slug
-        company_name = request.POST.get('company_name')
-        slug = slugify(company_name)
-        base_slug = slug
-        counter = 1
-        while Company.objects.filter(slug=slug).exists():
-            slug = f"{base_slug}-{counter}"
-            counter += 1
+            # Create company with unique slug
+            company_name = request.POST.get('company_name')
+            slug = slugify(company_name)
+            base_slug = slug
+            counter = 1
+            while Company.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
 
-        company = Company.objects.create(
-            name=company_name,
-            slug=slug,
-            type_of_company=request.POST.get('type_of_company'),
-            nature_of_company=request.POST.get('nature_of_company'),
-            main_branch_address=request.POST.get('main_branch_address'),
-            iloilo_bldg_unit=request.POST.get('iloilo_bldg_unit', ''),
-            iloilo_street_barangay=request.POST.get('iloilo_street_barangay'),
-            company_email=request.POST.get('company_email'),
-            recruitment_email=request.POST.get('recruitment_email'),
-            verification_status=Company.PENDING,
-        )
+            company = Company.objects.create(
+                name=company_name,
+                slug=slug,
+                type_of_company=request.POST.get('type_of_company'),
+                nature_of_company=request.POST.get('nature_of_company'),
+                main_branch_address=request.POST.get('main_branch_address'),
+                iloilo_bldg_unit=request.POST.get('iloilo_bldg_unit', ''),
+                iloilo_street_barangay=request.POST.get('iloilo_street_barangay'),
+                company_email=request.POST.get('recruitment_email'),
+                recruitment_email=request.POST.get('recruitment_email'),
+                verification_status=Company.PENDING,
+            )
 
-        sector_ids = request.POST.getlist('sectors')
-        if sector_ids:
-            company.sector_badges.set(sector_ids)
+            sector_ids = request.POST.getlist('sectors')
+            if sector_ids:
+                company.sector_badges.set(sector_ids)
 
-        # Create employer profile
-        EmployerProfile.objects.create(
-            user=user,
-            company=company,
-            first_name=request.POST.get('first_name'),
-            middle_name=request.POST.get('middle_name', ''),
-            last_name=request.POST.get('last_name'),
-            suffix=request.POST.get('suffix', ''),
-            position=request.POST.get('position'),
-            phone=phone_clean,
-            email=request.POST.get('rep_email'),
-            sex='M',  # not collected at registration
-        )
+            EmployerProfile.objects.create(
+                user=user,
+                company=company,
+                first_name=request.POST.get('first_name'),
+                middle_name=request.POST.get('middle_name', ''),
+                last_name=request.POST.get('last_name'),
+                suffix=request.POST.get('suffix', ''),
+                position=request.POST.get('position'),
+                phone=phone_clean,
+                email=request.POST.get('rep_email'),
+                sex='M',
+            )
 
-        # Clean session and log in
-        del request.session['employer_reg_email']
-        del request.session['employer_reg_password']
-        login(request, user)
+            del request.session['employer_reg_email']
+            del request.session['employer_reg_password']
+            login(request, user)
+            return redirect('/employers/pending/')
 
-        return redirect('/employers/pending/')
+        except Exception as e:
+            return render(request, self.template_name, {
+                'errors': {'system': str(e)},
+                'sectors': sectors,
+                'form': request.POST,
+            })
 
 
 # ── Shared ─────────────────────────────────────────────────────────────────────

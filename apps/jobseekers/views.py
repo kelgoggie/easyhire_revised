@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from apps.jobs.models import JobPosting
@@ -7,6 +7,7 @@ from apps.jobseekers.models import (
     Certification, WorkExperience, Sector
 )
 from datetime import datetime
+
 
 
 @login_required
@@ -62,11 +63,25 @@ def resume(request):
         profile.street_barangay = request.POST.get('street_barangay', '')
         province_code = request.POST.get('province', '')
         city_code = request.POST.get('city_municipality', '')
-        profile.province_code = province_code
+        profile.province = 'Iloilo'
+        profile.province_code = '063000000'
         profile.city_code = city_code
 
+        from apps.core.models import CityMunicipality, Barangay
+        try:
+            profile.city_municipality = CityMunicipality.objects.get(code=city_code).name
+        except CityMunicipality.DoesNotExist:
+            profile.city_municipality = ''
+        barangay_code = request.POST.get('barangay', '')
+        profile.barangay_code = barangay_code
+        from apps.core.models import Province, CityMunicipality, Barangay
+        try:
+            profile.barangay = Barangay.objects.get(code=barangay_code).name
+        except Barangay.DoesNotExist:
+            profile.barangay = ''
+
         # Save human-readable names
-        from apps.core.models import Province, CityMunicipality
+        from apps.core.models import Province, CityMunicipality, Barangay
         try:
             profile.province = Province.objects.get(code=province_code).name
         except Province.DoesNotExist:
@@ -128,6 +143,7 @@ def resume(request):
         start_years = request.POST.getlist('exp_start_year')
         end_months = request.POST.getlist('exp_end_month')
         end_years = request.POST.getlist('exp_end_year')
+        companies = request.POST.getlist('exp_company')
         exp_is_currents = request.POST.getlist('exp_is_current')
         for i, position in enumerate(positions):
             if not position:
@@ -135,6 +151,7 @@ def resume(request):
             WorkExperience.objects.create(
                 profile=profile,
                 position=position,
+                company=companies[i] if i < len(companies) else '',
                 description=descriptions[i] if i < len(descriptions) else '',
                 month_started=start_months[i] if i < len(start_months) else '',
                 year_started=start_years[i] if i < len(start_years) and start_years[i] else None,
@@ -168,3 +185,78 @@ def resume(request):
         'unread_notifications': False,
         'unread_messages': False,
     })
+
+@login_required
+def recommended_jobs(request):
+    if not request.user.is_jobseeker:
+        return redirect('/employers/dashboard/')
+
+    try:
+        profile = request.user.jobseeker_profile
+    except:
+        return redirect('/register/info/')
+
+    from apps.matching.engine import get_ranked_jobs
+
+    if profile.profile_complete:
+        ranked_jobs = get_ranked_jobs(profile)
+    else:
+        ranked_jobs = []
+
+    return render(request, 'jobseekers/recommended_jobs.html', {
+        'profile': profile,
+        'ranked_jobs': ranked_jobs,
+        'unread_notifications': False,
+        'unread_messages': False,
+    })
+
+@login_required
+def job_save(request, job_id):
+    if request.method != 'POST':
+        return redirect('/jobs/for-you/')
+    from apps.jobseekers.models import JobInteraction
+    from apps.jobs.models import JobPosting
+    profile = request.user.jobseeker_profile
+    job = get_object_or_404(JobPosting, id=job_id)
+
+    existing = JobInteraction.objects.filter(jobseeker=profile, job=job).first()
+    if existing:
+        if existing.interaction_type == JobInteraction.LIKED:
+            existing.delete()  # toggle off
+        else:
+            existing.interaction_type = JobInteraction.LIKED
+            existing.save()  # switch from hidden to liked
+    else:
+        JobInteraction.objects.create(
+            jobseeker=profile,
+            job=job,
+            interaction_type=JobInteraction.LIKED
+        )
+
+    return redirect(request.POST.get('next', '/jobs/for-you/'))
+
+
+@login_required
+def job_hide(request, job_id):
+    if request.method != 'POST':
+        return redirect('/jobs/for-you/')
+    from apps.jobseekers.models import JobInteraction
+    from apps.jobs.models import JobPosting
+    profile = request.user.jobseeker_profile
+    job = get_object_or_404(JobPosting, id=job_id)
+
+    existing = JobInteraction.objects.filter(jobseeker=profile, job=job).first()
+    if existing:
+        if existing.interaction_type == JobInteraction.HIDDEN:
+            existing.delete()  # toggle off
+        else:
+            existing.interaction_type = JobInteraction.HIDDEN
+            existing.save()  # switch from liked to hidden
+    else:
+        JobInteraction.objects.create(
+            jobseeker=profile,
+            job=job,
+            interaction_type=JobInteraction.HIDDEN
+        )
+
+    return redirect(request.POST.get('next', '/jobs/for-you/'))

@@ -8,13 +8,7 @@
 {% block content %}
 <main class="min-h-screen bg-primary relative overflow-hidden flex flex-col">
 
-    <!-- Background shapes -->
-    <div class="absolute inset-0 pointer-events-none">
-        <img src="{% static 'images/Background Shapes.svg' %}"
-             class="absolute inset-0 w-full h-full object-cover opacity-20">
-    </div>
-
-<!-- Navbar -->
+    <!-- Navbar -->
     <nav class="relative z-10 bg-surface flex items-center justify-between px-12 py-3 shadow-sm">
 
         <!-- Left: Logo -->
@@ -41,12 +35,36 @@
 
     </nav>
 
+    <!-- Partner Logos Bar -->
+    <div class="relative z-10 px-16 py-3 flex items-center gap-4 border-b border-white/10">
+        <!-- PESO Logo -->
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden">
+                <img src="{% static 'images/peso_logo.png' %}" alt="PESO Iloilo" class="w-full h-full object-contain" onerror="this.style.display='none'">
+            </div>
+            <span class="text-xs text-white/60 font-medium leading-tight">PESO<br>Iloilo City</span>
+        </div>
+
+        <div class="w-px h-6 bg-white/20"></div>
+
+        <!-- Iloilo City Logo -->
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden">
+                <img src="{% static 'images/iloilo_logo.png' %}" alt="Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+            </div>
+            <span class="text-xs text-white/60 font-medium leading-tight">Iloilo City<br>Government</span>
+        </div>
+
+        <div class="w-px h-6 bg-white/20"></div>
+
+    </div>
+
     <!-- Hero -->
-    <div class="relative z-10 flex-1 flex items-center px-12 py-8">
-        <div class="flex items-center justify-between w-full max-w-6xl mx-auto">
+    <div class="relative z-10 flex-1 flex items-center px-16 py-8">
+        <div class="flex items-center justify-between w-full max-w-6xl mx-auto gap-12">
 
             <!-- Left: Text -->
-            <div class="max-w-lg">
+            <div class="w-[38%] shrink-0">
                 <h1 class="text-5xl font-extrabold text-white leading-tight mb-4">
                     Find the right<br>
                     people <span class="text-amber">faster.</span>
@@ -64,17 +82,39 @@
                 </a>
             </div>
 
-            <!-- Right: Illustration -->
-            <div class="hidden lg:block w-96">
-                <img src="{% static 'images/Businessman-Giving-Business-Card--Streamline-New-York.svg' %}"
-                     class="w-full drop-shadow-xl">
+            <!-- Right: Image Grid -->
+            <div class="flex gap-4 flex-1 items-center justify-end">
+
+                <!-- Image 1 — taller, left -->
+                <div class="w-56 h-80 rounded-2xl bg-white/10 border-2 border-dashed border-white/30 flex flex-col items-center justify-center gap-2 overflow-hidden">
+                    <img src="" alt="PESO Photo 1"
+                         class="w-full h-full object-cover hidden"
+                         id="peso-img-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="text-xs text-white/40 text-center px-4">PESO Facebook photo 1</span>
+                </div>
+
+                <!-- Image 2 — shorter, right -->
+                <div class="w-56 h-64 rounded-2xl bg-white/10 border-2 border-dashed border-white/30 flex flex-col items-center justify-center gap-2 overflow-hidden">
+                    <img src="" alt="PESO Photo 2"
+                         class="w-full h-full object-cover hidden"
+                         id="peso-img-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="text-xs text-white/40 text-center px-4">PESO Facebook photo 2</span>
+                </div>
+
             </div>
 
         </div>
     </div>
 
-
 </main>
 {% endblock %}
 
-{% block footer %}{% endblock %}
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}

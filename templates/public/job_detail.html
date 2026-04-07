@@ -1,0 +1,138 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ job.title }} — EasyHire{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_jobseeker.html" %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Partner Logos Bar -->
+<div class="px-16 py-3 flex items-center gap-4 border-b border-taupe/30 bg-surface">
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/peso_logo.png' %}" alt="PESO Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">PESO<br>Iloilo City</span>
+    </div>
+    <div class="w-px h-6 bg-taupe/40"></div>
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/iloilo_logo.png' %}" alt="Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">Iloilo City<br>Government</span>
+    </div>
+</div>
+
+<main class="bg-surface min-h-screen py-10 px-16">
+    <div class="max-w-4xl mx-auto">
+
+        <!-- Back -->
+        <a href="/jobs/" class="flex items-center gap-2 text-muted text-sm hover:text-primary transition mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Back to Jobs
+        </a>
+
+        <!-- Header Card -->
+        <div class="bg-white border border-taupe/20 rounded-2xl p-8 shadow-sm mb-6">
+            <div class="flex items-start gap-5">
+                <div class="w-16 h-16 rounded-2xl bg-teal/20 border border-teal/30 flex items-center justify-center text-primary font-extrabold text-2xl flex-shrink-0">
+                    {{ job.company.name|first|upper }}
+                </div>
+                <div class="flex-1">
+                    <h1 class="text-2xl font-extrabold text-primary mb-1">{{ job.title }}</h1>
+                    <p class="text-muted text-sm mb-4">{{ job.company.name }}</p>
+                    <div class="flex flex-wrap gap-4 text-sm text-muted">
+                        <span class="flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            {{ job.location_display }}
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
+                            </svg>
+                            {{ job.slots }} slot{{ job.slots|pluralize }} available
+                        </span>
+                        {% if job.salary_min or job.salary_max %}
+                        <span class="flex items-center gap-1.5 text-teal font-semibold">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            ₱{% if job.salary_min %}{{ job.salary_min|floatformat:0 }}{% endif %}{% if job.salary_min and job.salary_max %} – {% endif %}{% if job.salary_max %}{{ job.salary_max|floatformat:0 }}{% endif %} / month
+                        </span>
+                        {% endif %}
+                        <span class="flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            Posted {{ job.created_at|timesince }} ago
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6">
+
+            <!-- Left: Description -->
+            <div class="col-span-2 flex flex-col gap-6">
+
+                <!-- Description -->
+                <div class="bg-white border border-taupe/20 rounded-2xl p-6 shadow-sm">
+                    <h2 class="font-bold text-primary text-base mb-4">Job Description</h2>
+                    <p class="text-primary text-sm leading-relaxed whitespace-pre-line">{{ job.description }}</p>
+                </div>
+
+            </div>
+
+            <!-- Right: Requirements -->
+            <div class="flex flex-col gap-4">
+
+                {% if job.education_requirement %}
+                <div class="bg-white border border-taupe/20 rounded-2xl p-5 shadow-sm">
+                    <h3 class="font-bold text-primary text-sm mb-3">Education</h3>
+                    <p class="text-sm text-primary">{{ job.education_requirement.get_level_display }}</p>
+                    {% if job.education_requirement.course_degree %}
+                    <p class="text-xs text-muted mt-1">{{ job.education_requirement.course_degree }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if job.experience_requirement %}
+                <div class="bg-white border border-taupe/20 rounded-2xl p-5 shadow-sm">
+                    <h3 class="font-bold text-primary text-sm mb-3">Experience</h3>
+                    {% if job.experience_requirement.years_required == 0 %}
+                        <p class="text-sm text-primary">No experience required</p>
+                    {% else %}
+                        <p class="text-sm text-primary">{{ job.experience_requirement.years_required }} year{{ job.experience_requirement.years_required|pluralize }} minimum</p>
+                    {% endif %}
+                    {% if job.experience_requirement.description %}
+                        <p class="text-xs text-muted mt-1">{{ job.experience_requirement.description }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if job.skill_requirements.all %}
+                <div class="bg-white border border-taupe/20 rounded-2xl p-5 shadow-sm">
+                    <h3 class="font-bold text-primary text-sm mb-3">Skills</h3>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for skill in job.skill_requirements.all %}
+                        <span class="text-xs px-2 py-0.5 rounded-full {% if skill.is_required %}bg-teal/10 text-teal{% else %}bg-taupe/20 text-muted{% endif %}">
+                            {{ skill.name }}{% if not skill.is_required %} <span class="opacity-60">(preferred)</span>{% endif %}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if job.certification_requirements.all %}
+                <div class="bg-white border border-taupe/20 rounded-2xl p-5 shadow-sm">
+                    <h3 class="font-bold text-primary text-sm mb-3">Certifications</h3>
+                    <div class="flex f

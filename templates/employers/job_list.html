@@ -81,13 +81,21 @@
                                 <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                             </svg>
                         </button>
-                        <div class="absolute right-0 top-9 bg-white rounded-xl shadow-lg py-1 w-36 hidden group-hover:block z-50 border border-taupe/20">
-                            <a href="/employers/jobs/{{ job.id }}/edit/" class="block px-4 py-2 text-sm text-primary hover:bg-surface transition">Edit</a>
-                            <form method="POST" action="/employers/jobs/{{ job.id }}/delete/">
-                                {% csrf_token %}
-                                <button type="submit" onclick="return confirm('Delete this job post?')"
-                                        class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-surface transition">
-                                    Delete
+                            <div class="absolute right-0 top-9 bg-white rounded-xl shadow-lg py-1 w-40 hidden group-hover:block z-50 border border-taupe/20">
+                                <a href="/employers/jobs/{{ job.id }}/"
+                                class="block px-4 py-2 text-sm text-primary hover:bg-surface transition">View</a>
+                                <a href="/employers/jobs/{{ job.id }}/candidates/"
+                                class="block px-4 py-2 text-sm text-primary hover:bg-surface transition">View Candidates</a>
+                                <a href="/employers/jobs/{{ job.id }}/edit/"
+                                class="block px-4 py-2 text-sm text-primary hover:bg-surface transition">Edit</a>
+                                <form method="POST" action="/employers/jobs/{{ job.id }}/delete/">
+                                    {% csrf_token %}
+                                    <button type="submit" onclick="return confirm('Delete this job post?')"
+                                            class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-surface transition">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
                                 </button>
                             </form>
                         </div>

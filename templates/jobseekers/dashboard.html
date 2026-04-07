@@ -8,6 +8,24 @@
 {% endblock %}
 
 {% block content %}
+
+<!-- Partner Logos Bar -->
+<div class="px-16 py-3 flex items-center gap-4 border-b border-taupe/30 bg-surface">
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/peso_logo.png' %}" alt="PESO Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">PESO<br>Iloilo City</span>
+    </div>
+    <div class="w-px h-6 bg-taupe/40"></div>
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/iloilo_logo.png' %}" alt="Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">Iloilo City<br>Government</span>
+    </div>
+</div>
+
 <main class="bg-white min-h-screen py-8 px-6">
     <div class="max-w-4xl mx-auto">
 

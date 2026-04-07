@@ -9,7 +9,24 @@
 
 {% block content %}
 
-<main class="bg-surface min-h-screen py-16 px-6">
+<!-- Partner Logos Bar -->
+<div class="px-16 py-3 flex items-center gap-4 border-b border-taupe/30 bg-surface">
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/peso_logo.png' %}" alt="PESO Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">PESO<br>Iloilo City</span>
+    </div>
+    <div class="w-px h-6 bg-taupe/40"></div>
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/iloilo_logo.png' %}" alt="Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">Iloilo City<br>Government</span>
+    </div>
+</div>
+
+<main class="bg-surface min-h-screen py-10 px-6">
 
     <!-- Header -->
     <div class="max-w-5xl mx-auto mb-8 flex items-end justify-between">
@@ -24,7 +41,7 @@
 
     <!-- Form Card -->
     <div class="max-w-5xl mx-auto bg-surface border border-taupe/40 rounded-2xl px-10 py-10 shadow-sm">
-        <form method="POST" action="/register/info/">
+        <form method="POST" action="/register/info/" id="reg-form">
             {% csrf_token %}
 
             <div class="grid grid-cols-2 gap-x-16 gap-y-6">
@@ -37,12 +54,12 @@
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block text-primary text-xs font-medium mb-1">First Name*</label>
-                            <input type="text" name="first_name" required placeholder="Juan"
+                            <input type="text" name="first_name" id="first_name" required placeholder="Juan"
                                    class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                         </div>
                         <div>
                             <label class="block text-primary text-xs font-medium mb-1">Last Name*</label>
-                            <input type="text" name="last_name" required placeholder="Value"
+                            <input type="text" name="last_name" id="last_name" required placeholder="Dela Cruz"
                                    class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                         </div>
                     </div>
@@ -51,13 +68,21 @@
                     <div class="grid grid-cols-3 gap-4 mb-4">
                         <div class="col-span-2">
                             <label class="block text-primary text-xs font-medium mb-1">Middle Name</label>
-                            <input type="text" name="middle_name" placeholder="Value"
+                            <input type="text" name="middle_name" id="middle_name" placeholder="Value"
                                    class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                         </div>
                         <div>
                             <label class="block text-primary text-xs font-medium mb-1">Suffix</label>
-                            <input type="text" name="suffix" placeholder="Jr./Sr./III"
-                                   class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            <select name="suffix"
+                                    class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                                <option value="">None</option>
+                                <option value="Jr.">Jr.</option>
+                                <option value="Sr.">Sr.</option>
+                                <option value="II">II</option>
+                                <option value="III">III</option>
+                                <option value="IV">IV</option>
+                                <option value="V">V</option>
+                            </select>
                         </div>
                     </div>
 
@@ -93,45 +118,44 @@
                         <div>
                             <label class="block text-primary text-xs font-medium mb-1">Date of Birth*</label>
                             <input type="text" name="date_of_birth" id="date_of_birth"
-                                   placeholder="MM/DD/YYYY" required
-                                   pattern="\d{2}/\d{2}/\d{4}"
-                                   class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                   placeholder="MM/DD/YYYY" required autocomplete="off"
+                                   class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition cursor-pointer">
+                            <p id="dob_error" class="text-red-500 text-xs mt-1 hidden"></p>
                         </div>
                     </div>
                 </div>
 
-            <!-- RIGHT COLUMN: Address + Contact -->
-            <div>
-                <h2 class="font-bold text-primary text-lg mb-6">Address</h2>
+                <!-- RIGHT COLUMN: Address + Contact -->
+                <div>
+                    <h2 class="font-bold text-primary text-lg mb-6">Address</h2>
 
-                <!-- House/Unit + Street -->
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-primary text-xs font-medium mb-1">House/Unit No.</label>
-                        <input type="text" name="house_unit" placeholder="Value"
-                            class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                    <!-- House/Unit + Street -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">House/Unit No.</label>
+                            <input type="text" name="house_unit" placeholder="Value"
+                                class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Street <span class="text-muted font-normal">(optional)</span></label>
+                            <input type="text" name="street_barangay" placeholder="Value"
+                                class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-primary text-xs font-medium mb-1">Street*</label>
-                        <input type="text" name="street_barangay" required placeholder="Value"
-                            class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                    </div>
-                </div>
 
-                    <!-- Province -->
+                    <!-- Province — locked to Iloilo -->
                     <div class="mb-4">
                         <label class="block text-primary text-xs font-medium mb-1">Province*</label>
-                        <select name="province" id="province_select" required
-                                class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
-                            <option value="">Select Province...</option>
-                        </select>
+                        <input type="text" value="Iloilo" readonly
+                               class="w-full bg-taupe/10 border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-muted cursor-not-allowed">
+                        <input type="hidden" name="province" value="Iloilo">
                     </div>
 
                     <!-- City/Municipality -->
                     <div class="mb-4">
                         <label class="block text-primary text-xs font-medium mb-1">City/Municipality*</label>
-                        <select name="city_municipality" id="city_select" required disabled
-                                class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:opacity-50">
+                        <select name="city_municipality" id="city_select" required
+                                class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
                             <option value="">Select City/Municipality...</option>
                         </select>
                     </div>
@@ -145,37 +169,40 @@
                         </select>
                     </div>
 
-                <!-- Contact Information -->
-                <h2 class="font-bold text-primary text-lg mb-6">Contact Information</h2>
+                    <!-- Contact Information -->
+                    <h2 class="font-bold text-primary text-lg mb-6">Contact Information</h2>
 
-                <!-- Phone -->
-                <div class="mb-4">
-                    <label class="block text-primary text-xs font-medium mb-1">Phone*</label>
-                    <div class="relative">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted">+63</span>
-                        <input type="tel" name="phone" id="phone" required
-                            placeholder="9XX XXX XXXX"
-                            maxlength="13"
-                            class="w-full bg-white border border-taupe/40 rounded-full pl-12 pr-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                    <!-- Phone -->
+                    <div class="mb-4">
+                        <label class="block text-primary text-xs font-medium mb-1">Phone*</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted">+63</span>
+                            <input type="tel" name="phone" id="phone" required
+                                placeholder="9XX XXX XXXX"
+                                maxlength="13"
+                                class="w-full bg-white border border-taupe/40 rounded-full pl-12 pr-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
+                        <p id="phone_error" class="text-red-500 text-xs mt-1 hidden">Please enter a valid Philippine mobile number.</p>
                     </div>
-                    <p id="phone_error" class="text-red-500 text-xs mt-1 hidden">Please enter a valid Philippine mobile number.</p>
+
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-primary text-xs font-medium mb-1">Email Address*</label>
+                        <input type="email" name="contact_email" id="contact_email" required
+                            placeholder="example@email.com"
+                            value="{{ session_email|default:'' }}"
+                            class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        <p id="email_error" class="text-red-500 text-xs mt-1 hidden">Please enter a valid email address.</p>
+                    </div>
                 </div>
 
-                <!-- Email -->
-                <div>
-                    <label class="block text-primary text-xs font-medium mb-1">Email Address*</label>
-                    <input type="email" name="contact_email" id="contact_email" required
-                        placeholder="example@email.com"
-                        class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                    <p id="email_error" class="text-red-500 text-xs mt-1 hidden">Please enter a valid email address.</p>
-                </div>
             </div>
 
             <!-- Footer -->
             <div class="flex items-center justify-between mt-10">
                 <p class="text-muted text-xs">*Required fields</p>
-                <button type="submit"
-                        class="bg-amber text-white font-semibold px-10 py-3 rounded-full hover:bg-amber/90 transition text-sm">
+                <button type="submit" id="submit-btn"
+                        class="bg-amber text-white font-semibold px-10 py-3 rounded-full hover:bg-amber/90 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                     Submit
                 </button>
             </div>
@@ -183,6 +210,34 @@
         </form>
     </div>
 </main>
+
+<!-- Calendar Picker -->
+<div id="cal-backdrop" class="fixed inset-0 z-40 hidden" onclick="closeCal()"></div>
+<div id="cal-popup" class="absolute z-50 bg-white border border-taupe/40 rounded-2xl shadow-xl p-4 hidden" style="width:280px">
+    <div class="flex items-center justify-between mb-3">
+        <button type="button" onclick="prevMonth()" class="text-muted hover:text-primary px-2 text-lg">&#8249;</button>
+        <span id="cal-label" class="text-sm font-semibold text-primary"></span>
+        <button type="button" onclick="nextMonth()" class="text-muted hover:text-primary px-2 text-lg">&#8250;</button>
+    </div>
+    <!-- Year selector -->
+    <div class="flex justify-center mb-3">
+        <select id="cal-year" onchange="goToYear(this.value)"
+                class="text-xs border border-taupe/40 rounded-full px-3 py-1 text-primary focus:outline-none focus:border-teal">
+        </select>
+    </div>
+    <div class="grid grid-cols-7 gap-1 mb-1">
+        <span class="text-center text-xs text-muted font-medium">Su</span>
+        <span class="text-center text-xs text-muted font-medium">Mo</span>
+        <span class="text-center text-xs text-muted font-medium">Tu</span>
+        <span class="text-center text-xs text-muted font-medium">We</span>
+        <span class="text-center text-xs text-muted font-medium">Th</span>
+        <span class="text-center text-xs text-muted font-medium">Fr</span>
+        <span class="text-center text-xs text-muted font-medium">Sa</span>
+    </div>
+    <div id="cal-grid" class="grid grid-cols-7 gap-1"></div>
+    <p id="cal-error" class="text-red-500 text-xs mt-2 text-center hidden"></p>
+</div>
+
 {% endblock %}
 
 {% block footer %}
@@ -191,124 +246,248 @@
 
 {% block extra_scripts %}
 <script>
-    const provinceSelect = document.getElementById('province_select');
     const citySelect = document.getElementById('city_select');
     const barangaySelect = document.getElementById('barangay_select');
     const phoneInput = document.getElementById('phone');
     const emailInput = document.getElementById('contact_email');
+    const dateInput = document.getElementById('date_of_birth');
 
-    // Load provinces on page load
-    fetch('/api/provinces/')
+    // ── Province locked: load Iloilo cities directly ──
+    const ILOILO_PROVINCE_CODE = '063000000';
+    fetch(`/api/cities/${ILOILO_PROVINCE_CODE}/`)
         .then(res => res.json())
         .then(data => {
-            data.forEach(province => {
+            data.forEach(city => {
                 const option = document.createElement('option');
-                option.value = province.code;
-                option.textContent = province.name;
-                provinceSelect.appendChild(option);
+                option.value = city.code;
+                option.textContent = city.name;
+                citySelect.appendChild(option);
             });
         });
 
-    // When province changes, load cities
-    provinceSelect.addEventListener('change', function() {
-        const provinceCode = this.value;
-
-        citySelect.innerHTML = '<option value="">Select City/Municipality...</option>';
-        barangaySelect.innerHTML = '<option value="">Select Barangay...</option>';
-        citySelect.disabled = true;
-        barangaySelect.disabled = true;
-
-        if (!provinceCode) return;
-
-        fetch(`/api/cities/${provinceCode}/`)
-            .then(res => res.json())
-            .then(data => {
-                data.forEach(city => {
-                    const option = document.createElement('option');
-                    option.value = city.code;
-                    option.textContent = city.name;
-                    citySelect.appendChild(option);
-                });
-                citySelect.disabled = false;
-            });
-    });
-
-    // When city changes, load barangays
     citySelect.addEventListener('change', function() {
-        const cityCode = this.value;
-
         barangaySelect.innerHTML = '<option value="">Select Barangay...</option>';
         barangaySelect.disabled = true;
-
-        if (!cityCode) return;
-
-        fetch(`/api/barangays/${cityCode}/`)
+        if (!this.value) return;
+        fetch(`/api/barangays/${this.value}/`)
             .then(res => res.json())
             .then(data => {
-                data.forEach(barangay => {
+                data.forEach(b => {
                     const option = document.createElement('option');
-                    option.value = barangay.code;
-                    option.textContent = barangay.name;
+                    option.value = b.code;
+                    option.textContent = b.name;
                     barangaySelect.appendChild(option);
                 });
                 barangaySelect.disabled = false;
             });
     });
 
-    // MM/DD/YYYY date formatting
-    const dateInput = document.getElementById('date_of_birth');
-    dateInput.addEventListener('input', function() {
-        let value = this.value.replace(/\D/g, '');
-        if (value.length >= 2) value = value.slice(0,2) + '/' + value.slice(2);
-        if (value.length >= 5) value = value.slice(0,5) + '/' + value.slice(5);
-        this.value = value.slice(0, 10);
+    // ── Auto-capitalize names ──
+    ['first_name', 'last_name', 'middle_name'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', function() {
+            const pos = this.selectionStart;
+            this.value = this.value.replace(/\b\w/g, c => c.toUpperCase());
+            this.setSelectionRange(pos, pos);
+        });
     });
 
-    // Phone validation — Philippine mobile numbers (09XX or +639XX)
+    // ── Calendar popup ──
+    let calYear, calMonth;
+    const today = new Date();
+    const maxDate = new Date(today.getFullYear() - 15, today.getMonth(), today.getDate());
+
+    function openCal() {
+        const existing = dateInput.value;
+        if (existing && existing.length === 10) {
+            const parts = existing.split('/');
+            calMonth = parseInt(parts[0]) - 1;
+            calYear = parseInt(parts[2]);
+        } else {
+            calYear = maxDate.getFullYear();
+            calMonth = maxDate.getMonth();
+        }
+        populateYearSelect();
+        renderCal();
+
+        const rect = dateInput.getBoundingClientRect();
+        const popup = document.getElementById('cal-popup');
+        popup.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+        popup.style.left = (rect.left + window.scrollX) + 'px';
+        popup.style.position = 'absolute';
+        popup.classList.remove('hidden');
+        document.getElementById('cal-backdrop').classList.remove('hidden');
+    }
+
+    function closeCal() {
+        document.getElementById('cal-popup').classList.add('hidden');
+        document.getElementById('cal-backdrop').classList.add('hidden');
+    }
+
+    function populateYearSelect() {
+        const sel = document.getElementById('cal-year');
+        sel.innerHTML = '';
+        const minYear = 1940;
+        const maxYear = maxDate.getFullYear();
+        for (let y = maxYear; y >= minYear; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            if (y === calYear) opt.selected = true;
+            sel.appendChild(opt);
+        }
+    }
+
+    function goToYear(y) {
+        calYear = parseInt(y);
+        if (calYear === maxDate.getFullYear() && calMonth > maxDate.getMonth()) {
+            calMonth = maxDate.getMonth();
+        }
+        renderCal();
+    }
+
+    function prevMonth() {
+        calMonth--;
+        if (calMonth < 0) { calMonth = 11; calYear--; }
+        renderCal();
+    }
+
+    function nextMonth() {
+        const newMonth = calMonth + 1 > 11 ? 0 : calMonth + 1;
+        const newYear = calMonth + 1 > 11 ? calYear + 1 : calYear;
+        if (newYear > maxDate.getFullYear() || (newYear === maxDate.getFullYear() && newMonth > maxDate.getMonth())) return;
+        calMonth = newMonth;
+        calYear = newYear;
+        renderCal();
+    }
+
+    function renderCal() {
+        const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        document.getElementById('cal-label').textContent = `${months[calMonth]} ${calYear}`;
+        document.getElementById('cal-year').value = calYear;
+
+        const grid = document.getElementById('cal-grid');
+        grid.innerHTML = '';
+
+        const firstDay = new Date(calYear, calMonth, 1).getDay();
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+        // Selected date
+        let selDay = null;
+        if (dateInput.value.length === 10) {
+            const p = dateInput.value.split('/');
+            if (parseInt(p[0]) - 1 === calMonth && parseInt(p[2]) === calYear) {
+                selDay = parseInt(p[1]);
+            }
+        }
+
+        for (let i = 0; i < firstDay; i++) {
+            grid.appendChild(document.createElement('div'));
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const cellDate = new Date(calYear, calMonth, d);
+            const isDisabled = cellDate > maxDate;
+            const isSelected = d === selDay;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = d;
+            btn.className = [
+                'text-center text-xs rounded-full w-8 h-8 mx-auto transition',
+                isDisabled ? 'text-taupe cursor-not-allowed opacity-40' :
+                isSelected ? 'bg-teal text-white font-semibold' :
+                'hover:bg-teal/20 text-primary cursor-pointer'
+            ].join(' ');
+
+            if (!isDisabled) {
+                btn.onclick = () => {
+                    const mm = String(calMonth + 1).padStart(2, '0');
+                    const dd = String(d).padStart(2, '0');
+                    dateInput.value = `${mm}/${dd}/${calYear}`;
+                    document.getElementById('dob_error').classList.add('hidden');
+                    closeCal();
+                    checkSubmit();
+                };
+            }
+            grid.appendChild(btn);
+        }
+    }
+
+    dateInput.addEventListener('click', openCal);
+    dateInput.addEventListener('keydown', e => e.preventDefault());
+
+    // ── Phone formatting ──
     phoneInput.addEventListener('input', function() {
         let value = this.value.replace(/\D/g, '');
-        // Format as 9XX XXX XXXX
         if (value.length > 10) value = value.slice(0, 10);
         let formatted = value;
         if (value.length >= 4) formatted = value.slice(0,3) + ' ' + value.slice(3);
         if (value.length >= 7) formatted = value.slice(0,3) + ' ' + value.slice(3,6) + ' ' + value.slice(6);
         this.value = formatted;
-
         const error = document.getElementById('phone_error');
-        if (value.length > 0 && value.length < 10) {
-            error.classList.remove('hidden');
-        } else {
-            error.classList.add('hidden');
-        }
+        error.classList.toggle('hidden', value.length === 0 || value.length === 10);
+        checkSubmit();
     });
 
-    // Email validation
+    // ── Email validation ──
     emailInput.addEventListener('blur', function() {
         const error = document.getElementById('email_error');
         const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value);
-        if (this.value && !valid) {
-            error.classList.remove('hidden');
-        } else {
-            error.classList.add('hidden');
-        }
+        error.classList.toggle('hidden', !this.value || valid);
+    });
+    emailInput.addEventListener('input', checkSubmit);
+
+    // ── Submit guard ──
+    function checkSubmit() {
+        const btn = document.getElementById('submit-btn');
+        const phoneVal = phoneInput.value.replace(/\D/g, '');
+        const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value);
+        const dobFilled = dateInput.value.length === 10;
+        const firstFilled = document.getElementById('first_name').value.trim();
+        const lastFilled = document.getElementById('last_name').value.trim();
+        const cityFilled = citySelect.value;
+        const barangayFilled = !barangaySelect.disabled && barangaySelect.value;
+        const allGood = phoneVal.length === 10 && emailValid && dobFilled && firstFilled && lastFilled && cityFilled && barangayFilled;
+        btn.disabled = !allGood;
+    }
+
+    document.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('change', checkSubmit);
     });
 
-    // Prevent form submission if validations fail
-    document.querySelector('form').addEventListener('submit', function(e) {
+    // ── Age gate on submit ──
+    document.getElementById('reg-form').addEventListener('submit', function(e) {
         const phoneVal = phoneInput.value.replace(/\D/g, '');
-        const emailVal = emailInput.value;
-        const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+        const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value);
         let hasError = false;
 
         if (phoneVal.length > 0 && phoneVal.length < 10) {
             document.getElementById('phone_error').classList.remove('hidden');
             hasError = true;
         }
-        if (emailVal && !emailValid) {
+        if (emailInput.value && !emailValid) {
             document.getElementById('email_error').classList.remove('hidden');
             hasError = true;
         }
+
+        // Age gate
+        if (dateInput.value.length === 10) {
+            const p = dateInput.value.split('/');
+            const dob = new Date(parseInt(p[2]), parseInt(p[0]) - 1, parseInt(p[1]));
+            if (dob > maxDate) {
+                const err = document.getElementById('dob_error');
+                err.textContent = 'You must be at least 15 years old to register.';
+                err.classList.remove('hidden');
+                hasError = true;
+            }
+        }
+
         if (hasError) e.preventDefault();
     });
+
+    // Run once on load to set initial submit state
+    checkSubmit();
 </script>
 {% endblock %}

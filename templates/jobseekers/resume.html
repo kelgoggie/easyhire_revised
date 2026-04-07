@@ -81,14 +81,18 @@
                                        placeholder="Street/Barangay"
                                        class="resume-field bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                             </div>
-                            <select name="province" id="resume_province"
-                                    class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition mb-2">
-                                <option value="">Province...</option>
-                            </select>
-                            <select name="city_municipality" id="resume_city"
-                                    class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                                <option value="">City/Municipality...</option>
-                            </select>
+                                <input type="text" value="Iloilo" readonly
+                                    class="w-full bg-taupe/10 border border-taupe/40 rounded-lg px-3 py-2 text-sm text-muted cursor-not-allowed mb-2">
+                                <input type="hidden" name="province" value="Iloilo">
+                                <input type="hidden" name="province_code" value="063000000">
+                                <select name="city_municipality" id="resume_city"
+                                        class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition mb-2">
+                                    <option value="">City/Municipality...</option>
+                                </select>
+                                <select name="barangay" id="resume_barangay"
+                                        class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+                                    <option value="">Barangay...</option>
+                                </select>
                         </div>
                     </div>
 
@@ -301,12 +305,16 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-taupe flex-shrink-0 mt-1" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4zm-7.5 0l1.5-1.66c.44-.49 1.02-.84 1.7-.84 1.03 0 1.8.73 1.8 1.65 0 .47-.18.88-.44 1.21L16 7.5H12.5V6zm-7 0c-.26-.33-.44-.74-.44-1.21C5 3.87 5.77 3.14 6.8 3.14c.68 0 1.26.35 1.7.84L10 5.64V7.5H6.5L5.5 6z"/>
                     </svg>
-                    <div class="flex-1" id="experience-container">
-                        {% for exp in experiences %}
+                    {% for exp in experiences %}
                         <div class="exp-row grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-taupe/10 last:border-0">
                             <div>
                                 <label class="block text-xs font-medium text-primary mb-1">Position</label>
                                 <input type="text" name="exp_position" value="{{ exp.position }}" placeholder="Value"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-primary mb-1">Company</label>
+                                <input type="text" name="exp_company" value="{{ exp.company|default:'' }}" placeholder="Value"
                                        class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                             </div>
                             <div class="row-span-3">
@@ -376,6 +384,11 @@
                             <div>
                                 <label class="block text-xs font-medium text-primary mb-1">Position</label>
                                 <input type="text" name="exp_position" placeholder="Value"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-primary mb-1">Company</label>
+                                <input type="text" name="exp_company" placeholder="Value"
                                        class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                             </div>
                             <div class="row-span-3">
@@ -502,20 +515,26 @@
     }
 
     function lockForm() {
-        getAllFields().forEach(f => {
-            // Keep email readonly always
-            if (f.name === 'contact_email') return;
-            f.setAttribute('disabled', true);
-            f.classList.add('opacity-70', 'cursor-not-allowed');
-        });
-        document.querySelectorAll('.add-remove-btn').forEach(b => b.setAttribute('disabled', true));
-        formActions.classList.add('hidden');
-        editBtn.innerHTML = 'Edit Resume';
-    }
+            getAllFields().forEach(f => {
+                if (f.name === 'contact_email') return;
+                if (f.id === 'resume_city' || f.id === 'resume_barangay') return;
+                f.setAttribute('disabled', true);
+                f.classList.add('opacity-70', 'cursor-not-allowed');
+            });
+            // Visually lock city/barangay without disabling
+            ['resume_city', 'resume_barangay'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.add('opacity-70', 'pointer-events-none');
+                }
+            });
+            document.querySelectorAll('.add-remove-btn').forEach(b => b.setAttribute('disabled', true));
+            formActions.classList.add('hidden');
+            editBtn.innerHTML = 'Edit Resume';
+        }
 
     function unlockForm() {
         getAllFields().forEach(f => {
-            // Don't unlock "date ended" fields if current checkbox is checked
             if (f.name === 'exp_end_month' || f.name === 'exp_end_year' || f.name === 'edu_end') {
                 const row = f.closest('.exp-row, .education-row');
                 if (row) {
@@ -525,6 +544,13 @@
             }
             f.removeAttribute('disabled');
             f.classList.remove('opacity-70', 'cursor-not-allowed');
+        });
+        // Unlock city/barangay pointer events
+        ['resume_city', 'resume_barangay'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('opacity-70', 'pointer-events-none');
+            }
         });
         document.querySelectorAll('.add-remove-btn').forEach(b => b.removeAttribute('disabled'));
         formActions.classList.remove('hidden');
@@ -726,49 +752,51 @@
         }
     }
 
-    // ── Province/City cascade ──────────────────────────────────────
-    const provinceSelect = document.getElementById('resume_province');
+    // ── City/Barangay cascade (province locked to Iloilo) ──────────
     const citySelect = document.getElementById('resume_city');
+    const barangaySelect = document.getElementById('resume_barangay');
+    const ILOILO_CODE = '063000000';
+    const savedCityCode = '{{ profile.city_code }}';
+    const savedBarangayCode = '{{ profile.barangay_code }}';
 
-    fetch('/api/provinces/')
+    // Load Iloilo cities on page load
+    fetch(`/api/cities/${ILOILO_CODE}/`)
         .then(res => res.json())
-        .then(data => {
-            data.forEach(p => {
+        .then(cities => {
+            cities.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = p.code;
-                opt.textContent = p.name;
-                provinceSelect.appendChild(opt);
+                opt.value = c.code;
+                opt.textContent = c.name;
+                citySelect.appendChild(opt);
             });
-            const savedProvinceCode = '{{ profile.province_code }}';
-            if (savedProvinceCode) {
-                provinceSelect.value = savedProvinceCode;
-                fetch(`/api/cities/${savedProvinceCode}/`)
+            if (savedCityCode) {
+                citySelect.value = savedCityCode;
+                // Load barangays for saved city
+                fetch(`/api/barangays/${savedCityCode}/`)
                     .then(res => res.json())
-                    .then(cities => {
-                        citySelect.innerHTML = '<option value="">City/Municipality...</option>';
-                        cities.forEach(c => {
+                    .then(barangays => {
+                        barangays.forEach(b => {
                             const opt = document.createElement('option');
-                            opt.value = c.code;
-                            opt.textContent = c.name;
-                            citySelect.appendChild(opt);
+                            opt.value = b.code;
+                            opt.textContent = b.name;
+                            barangaySelect.appendChild(opt);
                         });
-                        const savedCityCode = '{{ profile.city_code }}';
-                        if (savedCityCode) citySelect.value = savedCityCode;
+                        if (savedBarangayCode) barangaySelect.value = savedBarangayCode;
                     });
             }
         });
 
-    provinceSelect.addEventListener('change', function() {
-        citySelect.innerHTML = '<option value="">City/Municipality...</option>';
+    citySelect.addEventListener('change', function() {
+        barangaySelect.innerHTML = '<option value="">Barangay...</option>';
         if (!this.value) return;
-        fetch(`/api/cities/${this.value}/`)
+        fetch(`/api/barangays/${this.value}/`)
             .then(res => res.json())
             .then(data => {
-                data.forEach(c => {
+                data.forEach(b => {
                     const opt = document.createElement('option');
-                    opt.value = c.code;
-                    opt.textContent = c.name;
-                    citySelect.appendChild(opt);
+                    opt.value = b.code;
+                    opt.textContent = b.name;
+                    barangaySelect.appendChild(opt);
                 });
             });
     });
