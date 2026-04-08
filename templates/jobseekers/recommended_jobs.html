@@ -7,13 +7,17 @@
     {% include "base/navbar_dashboard_jobseeker.html" with active="jobs" %}
 {% endblock %}
 
+{% block partner_logos %}
+    {% include "base/partner_logos.html" %}
+{% endblock %}
+
 {% block content %}
 <main class="bg-white min-h-screen py-8 px-6">
     <div class="max-w-5xl mx-auto">
 
-        <!-- Header: Liked Jobs | Jobs For You | Hidden Jobs -->
+        <!-- Header tabs -->
         <div class="flex items-center justify-center gap-4 mb-4">
-            <a href="/jobs/for-you/?tab=liked"
+            <a href="/jobs/for-you/?tab=liked&sort={{ sort }}"
                class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
                       {% if tab == 'liked' %}bg-primary text-white{% else %}bg-surface text-primary hover:bg-taupe/20{% endif %}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24"
@@ -25,7 +29,7 @@
 
             <h1 class="text-3xl font-extrabold text-primary">Jobs <span class="text-teal">For You</span></h1>
 
-            <a href="/jobs/for-you/?tab=hidden"
+            <a href="/jobs/for-you/?tab=hidden&sort={{ sort }}"
                class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
                       {% if tab == 'hidden' %}bg-primary text-white{% else %}bg-surface text-primary hover:bg-taupe/20{% endif %}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24"
@@ -39,18 +43,63 @@
         <!-- Divider -->
         <div class="border-b border-taupe/20 mb-4"></div>
 
-        <!-- Sort -->
-        <div class="flex items-center mb-6">
-            <button class="flex items-center gap-2 text-primary/60 text-sm hover:text-primary transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
+        <!-- Search + Sort + All Jobs -->
+        <form method="GET" action="/jobs/for-you/" class="flex flex-wrap items-center gap-3 mb-6">
+            <input type="hidden" name="tab" value="{{ tab }}">
+
+            <!-- Sort button with dropdown -->
+            <div class="relative" id="sort-dropdown-wrapper">
+                <button type="button"
+                        onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
+                        class="flex items-center gap-2 text-primary/60 text-sm hover:text-primary transition px-3 py-2 rounded-full border border-taupe/30 bg-surface">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
+                    </svg>
+                    Sort by:
+                    {% if sort == 'date_new' %}Newest{% elif sort == 'date_old' %}Oldest{% elif sort == 'nearest' %}Nearest{% else %}Best Match{% endif %}
+                </button>
+                <div id="sort-menu" class="hidden absolute left-0 top-full mt-1 bg-white border border-taupe/30 rounded-xl shadow-lg z-20 w-44 py-1">
+                    <a href="?tab={{ tab }}&sort=match&q={{ search }}"
+                       class="block px-4 py-2 text-sm {% if sort == 'match' or not sort %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">
+                        Best Match
+                    </a>
+                    <a href="?tab={{ tab }}&sort=date_new&q={{ search }}"
+                       class="block px-4 py-2 text-sm {% if sort == 'date_new' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">
+                        Recently Posted
+                    </a>
+                    <a href="?tab={{ tab }}&sort=date_old&q={{ search }}"
+                       class="block px-4 py-2 text-sm {% if sort == 'date_old' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">
+                        Oldest First
+                    </a>
+                    <a href="?tab={{ tab }}&sort=nearest&q={{ search }}"
+                       class="block px-4 py-2 text-sm {% if sort == 'nearest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">
+                        Nearest to Me
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="relative flex-1 min-w-[200px]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
                 </svg>
-                Sort by...
+                <input type="text" name="q" value="{{ search|default:'' }}"
+                       placeholder="Search jobs..."
+                       class="w-full bg-surface border border-taupe/30 rounded-full pl-9 pr-4 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            </div>
+
+            <button type="submit"
+                    class="bg-primary text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-teal transition">
+                Search
             </button>
-        </div>
+
+            {% if search %}
+                <a href="/jobs/for-you/?tab={{ tab }}&sort={{ sort }}" class="text-sm text-muted hover:text-primary transition">Clear</a>
+            {% endif %}
+        </form>
 
         <!-- Incomplete profile nudge -->
-        {% if not profile.profile_complete and tab != 'liked' and tab != 'hidden' %}
+        {% if not profile.profile_complete and tab == 'for_you' %}
         <div class="bg-amber/10 border border-amber/30 rounded-2xl px-6 py-5 mb-6 flex items-center justify-between">
             <div>
                 <p class="text-primary font-semibold text-sm">Your resume is incomplete</p>
@@ -67,15 +116,17 @@
         {% if ranked_jobs %}
         <div class="grid grid-cols-4 gap-4">
             {% for item in ranked_jobs %}
+
+            <!-- Job Detail Modal trigger -->
             <div class="bg-surface border border-taupe/20 rounded-2xl p-5 shadow-sm flex flex-col hover:shadow-md hover:border-teal/30 transition cursor-pointer"
-                 onclick="window.location.href='/jobs/{{ item.job.id }}/'">
+                 onclick="openJobModal('{{ item.job.id }}')">
 
                 <!-- Title + Match % -->
                 <div class="flex items-start justify-between mb-1">
                     <h2 class="text-primary font-extrabold text-base leading-tight">{{ item.job.title }}</h2>
                     {% if item.score is not None %}
                     <span class="text-teal text-sm font-bold flex-shrink-0 ml-2">
-                        {{ item.score }}<span class="text-muted text-xs">%</span>
+                        {{ item.score }}<span class="text-muted text-xs">/100</span>
                     </span>
                     {% endif %}
                 </div>
@@ -87,32 +138,40 @@
                 <!-- Requirement tags -->
                 <div class="flex flex-col gap-1.5 flex-1 mb-4">
                     {% if item.job.education_requirement %}
-                    <span class="flex items-center gap-1 bg-teal/10 text-teal text-xs px-2 py-0.5 rounded-full border border-teal/20 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                    <span class="flex items-center gap-1 bg-teal/10 text-teal text-xs px-2 py-0.5 rounded-full border border-teal/20 w-fit max-w-full truncate">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
                         </svg>
-                        {{ item.job.education_requirement.get_level_display }}
+                        <span class="truncate">
+                            {{ item.job.education_requirement.get_level_display }}
+                            {% if item.job.education_requirement.course_degree %}
+                                — {{ item.job.education_requirement.course_degree }}
+                            {% endif %}
+                        </span>
                     </span>
                     {% endif %}
+
                     {% for skill in item.job.skill_requirements.all|slice:":2" %}
                     <span class="flex items-center gap-1 bg-blue-50 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-200 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
                         </svg>
                         {{ skill.name }}
                     </span>
                     {% endfor %}
+
                     {% if item.job.experience_requirement %}
                     <span class="flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2 py-0.5 rounded-full border border-purple-200 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/>
                         </svg>
                         {{ item.job.experience_requirement.years_required }} yr{{ item.job.experience_requirement.years_required|pluralize }} exp
                     </span>
                     {% endif %}
+
                     {% for cert in item.job.certification_requirements.all|slice:":1" %}
                     <span class="flex items-center gap-1 bg-amber/10 text-amber text-xs px-2 py-0.5 rounded-full border border-amber/20 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 1l2.39 7.26H22l-6.19 4.5 2.39 7.26L12 15.51l-6.2 5.51 2.39-7.26L2 9.26h7.61z"/>
                         </svg>
                         {{ cert.name }}
@@ -120,14 +179,15 @@
                     {% endfor %}
                 </div>
 
+                <!-- Posted date -->
+                <p class="text-taupe text-xs mb-3">Posted {{ item.job.created_at|timesince }} ago</p>
+
                 <!-- Actions: star + trash -->
                 <div class="flex items-center justify-between mt-auto pt-3 border-t border-taupe/10">
-
-                    <!-- Like/Star -->
                     <form method="POST" action="/jobs/{{ item.job.id }}/save/"
                           onclick="event.stopPropagation()">
                         {% csrf_token %}
-                        <input type="hidden" name="next" value="/jobs/for-you/?tab={{ tab }}">
+                        <input type="hidden" name="next" value="/jobs/for-you/?tab={{ tab }}&sort={{ sort }}">
                         <button type="submit"
                                 class="w-8 h-8 flex items-center justify-center rounded-full border transition
                                        {% if item.job.id in liked_ids %}text-amber border-amber/30{% else %}border-taupe/30 text-taupe hover:border-amber hover:text-amber{% endif %}">
@@ -138,11 +198,10 @@
                         </button>
                     </form>
 
-                    <!-- Hide/Trash -->
                     <form method="POST" action="/jobs/{{ item.job.id }}/hide/"
                           onclick="event.stopPropagation()">
                         {% csrf_token %}
-                        <input type="hidden" name="next" value="/jobs/for-you/?tab={{ tab }}">
+                        <input type="hidden" name="next" value="/jobs/for-you/?tab={{ tab }}&sort={{ sort }}">
                         <button type="submit"
                                 class="w-8 h-8 flex items-center justify-center rounded-full border transition
                                        {% if item.job.id in hidden_ids %}bg-red-50 border-red-200 text-red-400{% else %}border-taupe/30 text-taupe hover:border-red-300 hover:text-red-400{% endif %}">
@@ -151,7 +210,6 @@
                             </svg>
                         </button>
                     </form>
-
                 </div>
             </div>
             {% endfor %}
@@ -162,24 +220,191 @@
             <p class="text-muted text-sm">
                 {% if tab == 'liked' %}You haven't liked any jobs yet.
                 {% elif tab == 'hidden' %}You haven't hidden any jobs.
+                {% elif tab == 'all' %}No open jobs available right now.
                 {% else %}No open jobs available right now. Check back soon!{% endif %}
             </p>
         </div>
         {% endif %}
 
-        <!-- Return to top -->
-        <div class="text-right mt-8 mb-4">
-            <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;"
-               class="text-muted text-sm hover:text-primary transition flex items-center gap-1 justify-end">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>
-                </svg>
-                Return to the top
-            </a>
-        </div>
-
     </div>
 </main>
+
+<!-- Job Detail Modal -->
+<div id="job-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" onclick="closeJobModal()"></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto z-10">
+
+        <!-- Modal Header -->
+        <div class="sticky top-0 bg-white border-b border-taupe/20 px-6 py-4 flex items-start justify-between rounded-t-2xl">
+            <div>
+                <h2 id="modal-title" class="text-xl font-extrabold text-primary"></h2>
+                <p id="modal-company" class="text-sm text-muted mt-0.5"></p>
+            </div>
+            <button onclick="closeJobModal()" class="text-muted hover:text-primary transition ml-4 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="px-6 py-5" id="modal-body">
+            <div class="flex items-center justify-center py-8">
+                <div class="w-6 h-6 border-2 border-teal border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="sticky bottom-0 bg-white border-t border-taupe/20 px-6 py-4 flex items-center justify-between rounded-b-2xl">
+            <div id="modal-score" class="text-sm text-muted"></div>
+            <div class="flex gap-3" id="modal-actions"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Sticky Return to Top -->
+<div class="fixed bottom-6 right-6 z-40">
+    <button onclick="window.scrollTo({top:0,behavior:'smooth'})"
+            class="bg-primary text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center hover:bg-teal transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>
+        </svg>
+    </button>
+</div>
+
+<!-- Job data for modal -->
+
+<script>
+    const jobDataList = {{ jobs_json| safe }};
+    const postedMap = {{ posted_map| safe }};
+    const jobData = {};
+
+    jobDataList.forEach(job => {
+        if (postedMap[job.id]) {
+            const d = new Date(postedMap[job.id]);
+            const now = new Date();
+            const days = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+            job.posted = days === 0 ? 'today' : days === 1 ? '1 day ago' : `${days} days ago`;
+        } else {
+            job.posted = '';
+        }
+        jobData[job.id] = job;
+    });
+
+function openJobModal(jobId) {
+    const modal = document.getElementById('job-modal');
+    const job = jobData[jobId];
+    if (!job) return;
+
+    document.getElementById('modal-title').textContent = job.title;
+    document.getElementById('modal-company').textContent = job.company + ' · ' + job.location;
+
+    // Score
+    const scoreEl = document.getElementById('modal-score');
+    scoreEl.innerHTML = job.score !== null
+        ? `Match: <span class="text-teal font-bold">${job.score}/100</span>`
+        : '';
+
+    // Body
+    let body = '';
+
+    // Description
+    body += `<div class="mb-5">
+        <h3 class="text-sm font-bold text-primary mb-2">Job Description</h3>
+        <p class="text-sm text-primary/80 leading-relaxed whitespace-pre-line">${job.description}</p>
+    </div>`;
+
+    // Requirements
+    body += `<div class="mb-5">
+        <h3 class="text-sm font-bold text-primary mb-3">Requirements</h3>
+        <div class="flex flex-col gap-2">`;
+
+    if (job.education) {
+        body += `<div class="flex items-center gap-2">
+            <span class="bg-teal/10 text-teal text-xs px-2 py-0.5 rounded-full border border-teal/20">${job.education}</span>
+        </div>`;
+    }
+    if (job.experience !== null && job.experience > 0) {
+        body += `<div class="flex items-center gap-2">
+            <span class="bg-purple-50 text-purple-400 text-xs px-2 py-0.5 rounded-full border border-purple-200">${job.experience} yr${job.experience !== 1 ? 's' : ''} experience</span>
+        </div>`;
+    } else if (job.experience === 0) {
+        body += `<div class="flex items-center gap-2">
+            <span class="bg-purple-50 text-purple-400 text-xs px-2 py-0.5 rounded-full border border-purple-200">No experience required</span>
+        </div>`;
+    }
+    if (job.skills.length > 0) {
+        body += `<div class="flex flex-wrap gap-1.5">`;
+        job.skills.forEach(s => {
+            body += `<span class="bg-blue-50 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-200">${s}</span>`;
+        });
+        body += `</div>`;
+    }
+    if (job.certs.length > 0) {
+        body += `<div class="flex flex-wrap gap-1.5">`;
+        job.certs.forEach(c => {
+            body += `<span class="bg-amber/10 text-amber text-xs px-2 py-0.5 rounded-full border border-amber/20">${c}</span>`;
+        });
+        body += `</div>`;
+    }
+
+    body += `</div></div>`;
+
+    // Meta
+    body += `<p class="text-xs text-muted">Posted ${job.posted} · ${job.slots} slot${job.slots !== 1 ? 's' : ''} available</p>`;
+
+    document.getElementById('modal-body').innerHTML = body;
+
+    // Actions
+    const tab = '{{ tab }}';
+    const sort = '{{ sort }}';
+    document.getElementById('modal-actions').innerHTML = `
+        <form method="POST" action="/jobs/${jobId}/save/">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="/jobs/for-you/?tab=${tab}&sort=${sort}">
+            <button type="submit" class="flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition
+                ${job.liked ? 'text-amber border-amber/30 bg-amber/5' : 'border-taupe/30 text-primary hover:border-amber hover:text-amber'}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
+                     ${job.liked ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="2"'}>
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                ${job.liked ? 'Liked' : 'Like'}
+            </button>
+        </form>
+        <form method="POST" action="/jobs/${jobId}/hide/">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="/jobs/for-you/?tab=${tab}&sort=${sort}">
+            <button type="submit" class="flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition
+                ${job.hidden ? 'bg-red-50 border-red-200 text-red-400' : 'border-taupe/30 text-primary hover:border-red-300 hover:text-red-400'}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+                ${job.hidden ? 'Unhide' : 'Hide'}
+            </button>
+        </form>
+    `;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeJobModal() {
+    const modal = document.getElementById('job-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.style.overflow = '';
+}
+
+// Close sort dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('sort-dropdown-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('sort-menu').classList.add('hidden');
+    }
+});
+</script>
+
 {% endblock %}
 
 {% block footer %}

@@ -46,6 +46,8 @@ class JobseekerProfile(models.Model):
     province = models.CharField(max_length=100, default="Iloilo")
     province_code = models.CharField(max_length=20, blank=True)
     city_code = models.CharField(max_length=20, blank=True)
+    barangay_code = models.CharField(max_length=20, blank=True)
+    barangay = models.CharField(max_length=200, blank=True)
     contact_email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20)
     job_search_query = models.CharField(max_length=255, blank=True)
