@@ -5,6 +5,11 @@
 
 {% block navbar %}{% endblock %}
 
+
+{% block partner_logos %}
+    {% include "base/partner_logos.html" %}
+{% endblock %}
+
 {% block content %}
 <main class="min-h-screen bg-primary flex flex-col">
 
@@ -63,7 +68,7 @@
                     <!-- Name of Company -->
                     <div>
                         <label class="block text-white/70 text-xs mb-1">Name of Company*</label>
-                        <input type="text" name="company_name" value="{{ form.company_name|default:'' }}" placeholder="Value"
+                        <input type="text" name="company_name" value="{{ form.company_name|default:'' }}" placeholder="Name of Company"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
 
@@ -73,7 +78,7 @@
                         <select name="type_of_company"
                                 class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white text-sm focus:outline-none focus:border-teal transition">
                             <option value="" class="text-primary">Select...</option>
-                            <option value="local" class="text-primary" {% if form.type_of_company == 'local' %}selected{% endif %}>Local</option>
+                            <option value="local" class="text-primary" {% if form.type_of_company == 'local' %}selected{% endif %}>Local (Iloilo City)</option>
                             <option value="overseas" class="text-primary" {% if form.type_of_company == 'overseas' %}selected{% endif %}>Overseas</option>
                             <option value="bpo" class="text-primary" {% if form.type_of_company == 'bpo' %}selected{% endif %}>BPO</option>
                         </select>
@@ -104,25 +109,37 @@
                     <!-- Main Branch Address -->
                     <div>
                         <label class="block text-white/70 text-xs mb-1">Main Branch Address*</label>
-                        <input type="text" name="main_branch_address" value="{{ form.main_branch_address|default:'' }}" placeholder="Value"
+                        <input type="text" name="main_branch_address" value="{{ form.main_branch_address|default:'' }}" placeholder="Main Branch Address"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
 
                     <!-- Iloilo Branch Address -->
                     <div>
-                        <label class="block text-white/70 text-xs mb-1 font-semibold">Iloilo Branch Address</label>
+                        <label class="block text-white/70 text-xs mb-1 font-semibold">Iloilo City Address</label>
                         <div class="grid grid-cols-2 gap-2">
                             <input type="text" name="iloilo_bldg_unit" value="{{ form.iloilo_bldg_unit|default:'' }}" placeholder="Bldg/Unit No."
-                                   class="bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
-                            <input type="text" name="iloilo_street_barangay" value="{{ form.iloilo_street_barangay|default:'' }}" placeholder="Street/Barangay*"
-                                   class="bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
+                                class="bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
+                            <input type="text" name="iloilo_street" value="{{ form.iloilo_street|default:'' }}" placeholder="Street (optional)"
+                                class="bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
+                            <div class="col-span-2">
+                                <select name="iloilo_barangay" id="iloilo_barangay"
+                                        class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white text-sm focus:outline-none focus:border-teal transition">
+                                    <option value="">Select Barangay...</option>
+                                </select>
+                                <input type="hidden" name="iloilo_barangay_name" id="iloilo_barangay_name">
+                            </div>
+                            <div class="col-span-2">
+                                <input type="text" value="Iloilo City" readonly
+                                    class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-white/40 text-sm cursor-not-allowed">
+                                <input type="hidden" name="iloilo_city" value="Iloilo City">
+                            </div>
                         </div>
                     </div>
 
                     <!-- Recruitment Email (spans full width) -->
                     <div class="col-span-2">
                         <label class="block text-white/70 text-xs mb-1">Company / Recruitment Email*</label>
-                        <input type="email" name="recruitment_email" value="{{ form.recruitment_email|default:'' }}" placeholder="Value"
+                        <input type="email" name="recruitment_email" value="{{ form.recruitment_email|default:'' }}" placeholder="recruitment-hr@gmail.com"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
 
@@ -137,22 +154,22 @@
                 <div class="grid grid-cols-4 gap-4 mb-4">
                     <div>
                         <label class="block text-white/70 text-xs mb-1">First Name*</label>
-                        <input type="text" name="first_name" value="{{ form.first_name|default:'' }}" placeholder="Value"
+                        <input type="text" name="first_name" value="{{ form.first_name|default:'' }}" placeholder="Mary Jane"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
                     <div>
                         <label class="block text-white/70 text-xs mb-1">Last Name*</label>
-                        <input type="text" name="last_name" value="{{ form.last_name|default:'' }}" placeholder="Value"
+                        <input type="text" name="last_name" value="{{ form.last_name|default:'' }}" placeholder="dela Cruz"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
                     <div>
                         <label class="block text-white/70 text-xs mb-1">Middle Name</label>
-                        <input type="text" name="middle_name" value="{{ form.middle_name|default:'' }}" placeholder="Value"
+                        <input type="text" name="middle_name" value="{{ form.middle_name|default:'' }}" placeholder="Mariano"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
                     <div>
                         <label class="block text-white/70 text-xs mb-1">Suffix</label>
-                        <input type="text" name="suffix" value="{{ form.suffix|default:'' }}" placeholder="Value"
+                        <input type="text" name="suffix" value="{{ form.suffix|default:'' }}" placeholder="Jr./Sr./III"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
                 </div>
@@ -168,6 +185,8 @@
                         <label class="block text-white/70 text-xs mb-1">Phone*</label>
                         <input type="tel" name="phone" value="{{ form.phone|default:'' }}"
                                placeholder="09XXXXXXXXX"
+                                maxlength="13"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13)"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition
                                       {% if errors.phone %}border-red-400{% endif %}">
                         {% if errors.phone %}
@@ -178,7 +197,7 @@
                     </div>
                     <div>
                         <label class="block text-white/70 text-xs mb-1">Representative Email*</label>
-                        <input type="email" name="rep_email" value="{{ form.rep_email|default:'' }}" placeholder="Value"
+                        <input type="email" name="rep_email" value="{{ form.rep_email|default:'' }}" placeholder="maryjane@gmail.com"
                                class="w-full bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-teal transition">
                     </div>
                 </div>
@@ -196,6 +215,42 @@
     </div>
 
 </main>
+
+<script>
+const iloiloBarangaySelect = document.getElementById('iloilo_barangay');
+const ILOILO_CITY_CODE = '063022000';
+const savedBarangayCode = '{{ form.iloilo_barangay|default:"" }}';
+
+fetch(`/api/barangays/${ILOILO_CITY_CODE}/`)
+    .then(res => res.json())
+    .then(barangays => {
+        barangays.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.code;
+            opt.textContent = b.name;
+            opt.className = 'bg-white text-primary';
+            iloiloBarangaySelect.appendChild(opt);
+        });
+        if (savedBarangayCode) {
+            iloiloBarangaySelect.value = savedBarangayCode;
+            document.getElementById('iloilo_barangay_name').value =
+                iloiloBarangaySelect.options[iloiloBarangaySelect.selectedIndex].text;
+        }
+    });
+
+iloiloBarangaySelect.addEventListener('change', function() {
+    document.getElementById('iloilo_barangay_name').value =
+        this.options[this.selectedIndex].text;
+});
+
+document.querySelector('form').addEventListener('submit', function() {
+    const sel = document.getElementById('iloilo_barangay');
+    document.getElementById('iloilo_barangay_name').value =
+        sel.options[sel.selectedIndex].text;
+});
+
+</script>
+
 {% endblock %}
 
 {% block footer %}{% endblock %}

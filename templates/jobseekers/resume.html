@@ -27,8 +27,10 @@
         <form method="POST" action="/resume/" enctype="multipart/form-data" id="resume-form">
             {% csrf_token %}
 
-            <!-- Resume Card (always open) -->
+            <!-- ── TOP CARD: Personal Info + Contact + Bio + Sectors ── -->
             <div class="bg-white/60 border border-taupe/30 rounded-2xl p-6 mb-4 shadow-sm">
+
+                <!-- Name + Edit + Upload -->
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-2xl text-primary">
                         {{ profile.first_name }}
@@ -62,8 +64,10 @@
                            class="resume-field flex-1 bg-white border border-taupe/30 rounded-full px-4 py-2 text-sm text-primary placeholder-taupe/70 focus:outline-none focus:border-teal transition">
                 </div>
 
-                <!-- Address + Contact -->
-                <div class="grid grid-cols-2 gap-6">
+                <!-- Address + Contact (2 col) -->
+                <div class="grid grid-cols-2 gap-6 mb-4">
+
+                    <!-- Address -->
                     <div class="flex items-start gap-3">
                         <div class="mt-1 w-10 h-10 flex-shrink-0 flex items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-taupe" viewBox="0 0 24 24" fill="currentColor">
@@ -75,7 +79,7 @@
                             <div class="grid grid-cols-2 gap-2 mb-2">
                                 <input type="text" name="house_unit" value="{{ profile.house_unit|default:'' }}" placeholder="House/Unit No."
                                        class="resume-field bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                <input type="text" name="street_barangay" value="{{ profile.street_barangay|default:'' }}" placeholder="Street/Barangay"
+                                <input type="text" name="street_barangay" value="{{ profile.street_barangay|default:'' }}" placeholder="Street"
                                        class="resume-field bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                             </div>
                             <input type="text" value="Iloilo" readonly class="w-full bg-taupe/10 border border-taupe/40 rounded-lg px-3 py-2 text-sm text-muted cursor-not-allowed mb-2">
@@ -91,6 +95,8 @@
                             </select>
                         </div>
                     </div>
+
+                    <!-- Contact -->
                     <div class="flex items-start gap-3">
                         <div class="mt-1 w-10 h-10 flex-shrink-0 flex items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-taupe" viewBox="0 0 24 24" fill="currentColor">
@@ -102,428 +108,24 @@
                             <input type="tel" name="phone" value="{{ profile.phone|default:'' }}" placeholder="Phone"
                                    class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition mb-2">
                             <input type="email" name="contact_email" value="{{ profile.contact_email|default:request.user.email }}" placeholder="Email"
-                                   class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition mb-2">
+                                   class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Education (collapsible) -->
-            <div class="bg-white/60 border border-taupe/30 rounded-2xl mb-4 shadow-sm overflow-hidden">
-                <button type="button" onclick="toggleSection('education')"
-                        class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
-                    <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
-                        </svg>
-                        <span class="font-bold text-primary text-sm">Education</span>
-                        <span class="text-muted text-xs" id="education-summary">
-                            {% if education %}{{ education|length }} entr{{ education|length|pluralize:"y,ies" }}{% else %}No entries{% endif %}
-                        </span>
-                    </div>
-                    <svg id="education-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
-                    </svg>
-                </button>
-                <div id="education-body" class="hidden px-6 pb-6">
-                    <div class="flex items-start gap-4">
-                        <div class="flex-1" id="education-container">
-                            {% for edu in education %}
-                            <div class="education-row grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-taupe/10 last:border-0">
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Educational Level*</label>
-                                    <select name="edu_level" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                                        <option value="">Select...</option>
-                                        <option value="elementary" {% if edu.level == 'elementary' %}selected{% endif %}>Elementary</option>
-                                        <option value="junior_high" {% if edu.level == 'junior_high' %}selected{% endif %}>High School / Junior High School</option>
-                                        <option value="senior_high" {% if edu.level == 'senior_high' %}selected{% endif %}>Senior High School</option>
-                                        <option value="vocational" {% if edu.level == 'vocational' %}selected{% endif %}>Vocational / TESDA</option>
-                                        <option value="associate" {% if edu.level == 'associate' %}selected{% endif %}>Associate Degree</option>
-                                        <option value="bachelor" {% if edu.level == 'bachelor' %}selected{% endif %}>Bachelor's Degree</option>
-                                        <option value="master" {% if edu.level == 'master' %}selected{% endif %}>Master's Degree</option>
-                                        <option value="doctorate" {% if edu.level == 'doctorate' %}selected{% endif %}>Doctorate</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Course/Degree/Strand</label>
-                                    <input type="text" name="edu_course" value="{{ edu.course_degree|default:'' }}" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Years Attended*</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="number" name="edu_start" value="{{ edu.year_started|default:'' }}" placeholder="From" min="1950" max="2099"
-                                               class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                        <input type="number" name="edu_end" value="{{ edu.year_ended|default:'' }}" placeholder="To" min="1950" max="2099"
-                                               {% if edu.is_current %}disabled{% endif %}
-                                               class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition disabled:opacity-40">
-                                    </div>
-                                </div>
-                                <div class="flex items-end pb-1">
-                                    <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
-                                        <input type="checkbox" name="edu_is_current" value="{{ forloop.counter0 }}" {% if edu.is_current %}checked{% endif %} class="accent-teal edu-current-cb">
-                                        I'm still attending this institution.
-                                    </label>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <div class="education-row grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Educational Level*</label>
-                                    <select name="edu_level" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                                        <option value="">Select...</option>
-                                        <option value="elementary">Elementary</option>
-                                        <option value="junior_high">High School / Junior High School</option>
-                                        <option value="senior_high">Senior High School</option>
-                                        <option value="vocational">Vocational / TESDA</option>
-                                        <option value="associate">Associate Degree</option>
-                                        <option value="bachelor">Bachelor's Degree</option>
-                                        <option value="master">Master's Degree</option>
-                                        <option value="doctorate">Doctorate</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Course/Degree/Strand</label>
-                                    <input type="text" name="edu_course" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Years Attended*</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="number" name="edu_start" placeholder="From" min="1950" max="2099"
-                                               class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                        <input type="number" name="edu_end" placeholder="To" min="1950" max="2099"
-                                               class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                    </div>
-                                </div>
-                                <div class="flex items-end pb-1">
-                                    <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
-                                        <input type="checkbox" name="edu_is_current" value="0" class="accent-teal edu-current-cb">
-                                        I'm still attending this institution.
-                                    </label>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-end gap-2 mt-2">
-                        <span class="text-taupe text-sm font-semibold">Education</span>
-                        <button type="button" onclick="addRow('education')" class="add-remove-btn w-8 h-8 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition text-lg font-bold">+</button>
-                        <button type="button" onclick="removeRow('education')" class="add-remove-btn w-8 h-8 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                        </button>
-                    </div>
+                <!-- Bio -->
+                <div class="mb-4 pt-4 border-t border-taupe/20">
+                    <p class="text-sm font-semibold text-primary mb-2">Bio <span class="text-muted font-normal text-xs">(optional)</span></p>
+                    <textarea name="bio" rows="2" placeholder="Write a short introduction about yourself..."
+                              class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none">{{ profile.bio }}</textarea>
                 </div>
-            </div>
 
-            <!-- Certifications (collapsible) -->
-            <div class="bg-white/60 border border-taupe/30 rounded-2xl mb-4 shadow-sm overflow-hidden">
-                <button type="button" onclick="toggleSection('certification')"
-                        class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
-                    <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 1l2.39 7.26H22l-6.19 4.5 2.39 7.26L12 15.51l-6.2 5.51 2.39-7.26L2 9.26h7.61z"/>
-                        </svg>
-                        <span class="font-bold text-primary text-sm">Certifications</span>
-                        <span class="text-muted text-xs" id="certification-summary">
-                            {% if certifications %}{{ certifications|length }} entr{{ certifications|length|pluralize:"y,ies" }}{% else %}No entries{% endif %}
-                        </span>
-                    </div>
-                    <svg id="certification-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
-                    </svg>
-                </button>
-                <div id="certification-body" class="hidden px-6 pb-6">
-                    <div class="flex items-start gap-4">
-                        <div class="flex-1" id="certification-container">
-                            {% for cert in certifications %}
-                            <div class="cert-row grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-taupe/10 last:border-0">
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Certification</label>
-                                    <input type="text" name="cert_name" value="{{ cert.name }}" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Issuing Organization</label>
-                                    <input type="text" name="cert_org" value="{{ cert.issuing_org|default:'' }}" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Year Received</label>
-                                    <input type="number" name="cert_year" value="{{ cert.year_received|default:'' }}" placeholder="Value" min="1950" max="2099"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                            </div>
-                            {% empty %}
-                            <div class="cert-row grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Certification</label>
-                                    <input type="text" name="cert_name" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Issuing Organization</label>
-                                    <input type="text" name="cert_org" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Year Received</label>
-                                    <input type="number" name="cert_year" placeholder="Value" min="1950" max="2099"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-end gap-2 mt-2">
-                        <span class="text-taupe text-sm font-semibold">Certifications</span>
-                        <button type="button" onclick="addRow('certification')" class="add-remove-btn w-8 h-8 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition text-lg font-bold">+</button>
-                        <button type="button" onclick="removeRow('certification')" class="add-remove-btn w-8 h-8 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Skills (collapsible) -->
-            <div class="bg-white/60 border border-taupe/30 rounded-2xl mb-4 shadow-sm overflow-hidden">
-                <button type="button" onclick="toggleSection('skill')"
-                        class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
-                    <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
-                        </svg>
-                        <span class="font-bold text-primary text-sm">Skills</span>
-                        <span class="text-muted text-xs" id="skill-summary">
-                            {% if skills %}{{ skills|length }} skill{{ skills|length|pluralize }}{% else %}No entries{% endif %}
-                        </span>
-                    </div>
-                    <svg id="skill-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
-                    </svg>
-                </button>
-                <div id="skill-body" class="hidden px-6 pb-6">
-                    <div class="flex items-start gap-4">
-                        <div class="flex-1" id="skill-container">
-                            <label class="block text-xs font-medium text-primary mb-2">
-                                Skill* <span class="text-muted font-normal">(i.e. "Excellent communication skills", "Microsoft Word", "Repairing household electrical issues")</span>
-                            </label>
-                            {% for skill in skills %}
-                            <div class="skill-row mb-2">
-                                <input type="text" name="skill_name" value="{{ skill.name }}" placeholder="Value"
-                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                            </div>
-                            {% empty %}
-                            <div class="skill-row mb-2">
-                                <input type="text" name="skill_name" placeholder="Value"
-                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-end gap-2 mt-2">
-                        <span class="text-taupe text-sm font-semibold">Skills</span>
-                        <button type="button" onclick="addRow('skill')" class="add-remove-btn w-8 h-8 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition text-lg font-bold">+</button>
-                        <button type="button" onclick="removeRow('skill')" class="add-remove-btn w-8 h-8 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Work Experience (collapsible) -->
-            <div class="bg-white/60 border border-taupe/30 rounded-2xl mb-4 shadow-sm overflow-hidden">
-                <button type="button" onclick="toggleSection('experience')"
-                        class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
-                    <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/>
-                        </svg>
-                        <span class="font-bold text-primary text-sm">Work Experience</span>
-                        <span class="text-muted text-xs" id="experience-summary">
-                            {% if experiences %}{{ experiences|length }} entr{{ experiences|length|pluralize:"y,ies" }}{% else %}No entries{% endif %}
-                        </span>
-                    </div>
-                    <svg id="experience-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
-                    </svg>
-                </button>
-                <div id="experience-body" class="hidden px-6 pb-6">
-                    <div class="flex items-start gap-4">
-                        <div class="flex-1" id="experience-container">
-                            {% for exp in experiences %}
-                            <div class="exp-row grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-taupe/10 last:border-0">
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Position</label>
-                                    <input type="text" name="exp_position" value="{{ exp.position }}" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Company</label>
-                                    <input type="text" name="exp_company" value="{{ exp.company|default:'' }}" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div class="row-span-2">
-                                    <label class="block text-xs font-medium text-primary mb-1">Description</label>
-                                    <textarea name="exp_description" rows="5" placeholder="Value"
-                                              class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none">{{ exp.description|default:'' }}</textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Date Started</label>
-                                    <div class="flex gap-2">
-                                        <select name="exp_start_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                                            <option value="">Select month...</option>
-                                            <option value="1" {% if exp.month_started == '1' %}selected{% endif %}>January</option>
-                                            <option value="2" {% if exp.month_started == '2' %}selected{% endif %}>February</option>
-                                            <option value="3" {% if exp.month_started == '3' %}selected{% endif %}>March</option>
-                                            <option value="4" {% if exp.month_started == '4' %}selected{% endif %}>April</option>
-                                            <option value="5" {% if exp.month_started == '5' %}selected{% endif %}>May</option>
-                                            <option value="6" {% if exp.month_started == '6' %}selected{% endif %}>June</option>
-                                            <option value="7" {% if exp.month_started == '7' %}selected{% endif %}>July</option>
-                                            <option value="8" {% if exp.month_started == '8' %}selected{% endif %}>August</option>
-                                            <option value="9" {% if exp.month_started == '9' %}selected{% endif %}>September</option>
-                                            <option value="10" {% if exp.month_started == '10' %}selected{% endif %}>October</option>
-                                            <option value="11" {% if exp.month_started == '11' %}selected{% endif %}>November</option>
-                                            <option value="12" {% if exp.month_started == '12' %}selected{% endif %}>December</option>
-                                        </select>
-                                        <select name="exp_start_year" class="resume-field w-24 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                                            <option value="">Year...</option>
-                                            {% for y in year_range %}
-                                            <option value="{{ y }}" {% if exp.year_started == y %}selected{% endif %}>{{ y }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Date Ended</label>
-                                    <div class="flex gap-2">
-                                        <select name="exp_end_month" {% if exp.is_current %}disabled{% endif %}
-                                                class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:opacity-40">
-                                            <option value="">Select month...</option>
-                                            <option value="1" {% if exp.month_ended == '1' %}selected{% endif %}>January</option>
-                                            <option value="2" {% if exp.month_ended == '2' %}selected{% endif %}>February</option>
-                                            <option value="3" {% if exp.month_ended == '3' %}selected{% endif %}>March</option>
-                                            <option value="4" {% if exp.month_ended == '4' %}selected{% endif %}>April</option>
-                                            <option value="5" {% if exp.month_ended == '5' %}selected{% endif %}>May</option>
-                                            <option value="6" {% if exp.month_ended == '6' %}selected{% endif %}>June</option>
-                                            <option value="7" {% if exp.month_ended == '7' %}selected{% endif %}>July</option>
-                                            <option value="8" {% if exp.month_ended == '8' %}selected{% endif %}>August</option>
-                                            <option value="9" {% if exp.month_ended == '9' %}selected{% endif %}>September</option>
-                                            <option value="10" {% if exp.month_ended == '10' %}selected{% endif %}>October</option>
-                                            <option value="11" {% if exp.month_ended == '11' %}selected{% endif %}>November</option>
-                                            <option value="12" {% if exp.month_ended == '12' %}selected{% endif %}>December</option>
-                                        </select>
-                                        <select name="exp_end_year" {% if exp.is_current %}disabled{% endif %}
-                                                class="resume-field w-24 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:opacity-40">
-                                            <option value="">Year...</option>
-                                            {% for y in year_range %}
-                                            <option value="{{ y }}" {% if exp.year_ended == y %}selected{% endif %}>{{ y }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <label class="flex items-center gap-2 text-sm text-primary cursor-pointer mt-2">
-                                        <input type="checkbox" name="exp_is_current" value="{{ forloop.counter0 }}"
-                                               {% if exp.is_current %}checked{% endif %}
-                                               class="accent-teal exp-current-cb">
-                                        I'm still employed under this position.
-                                    </label>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <div class="exp-row grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Position</label>
-                                    <input type="text" name="exp_position" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Company</label>
-                                    <input type="text" name="exp_company" placeholder="Value"
-                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                </div>
-                                <div class="row-span-2">
-                                    <label class="block text-xs font-medium text-primary mb-1">Description</label>
-                                    <textarea name="exp_description" rows="5" placeholder="Value"
-                                              class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Date Started</label>
-                                    <div class="flex gap-2">
-                                        <select name="exp_start_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                                            <option value="">Select month...</option>
-                                            <option value="1">January</option><option value="2">February</option>
-                                            <option value="3">March</option><option value="4">April</option>
-                                            <option value="5">May</option><option value="6">June</option>
-                                            <option value="7">July</option><option value="8">August</option>
-                                            <option value="9">September</option><option value="10">October</option>
-                                            <option value="11">November</option><option value="12">December</option>
-                                        </select>
-                                        <select name="exp_start_year" class="resume-field w-24 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                                            <option value="">Year...</option>
-                                            {% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-primary mb-1">Date Ended</label>
-                                    <div class="flex gap-2">
-                                        <select name="exp_end_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                                            <option value="">Select month...</option>
-                                            <option value="1">January</option><option value="2">February</option>
-                                            <option value="3">March</option><option value="4">April</option>
-                                            <option value="5">May</option><option value="6">June</option>
-                                            <option value="7">July</option><option value="8">August</option>
-                                            <option value="9">September</option><option value="10">October</option>
-                                            <option value="11">November</option><option value="12">December</option>
-                                        </select>
-                                        <select name="exp_end_year" class="resume-field w-24 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                                            <option value="">Year...</option>
-                                            {% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
-                                        </select>
-                                    </div>
-                                    <label class="flex items-center gap-2 text-sm text-primary cursor-pointer mt-2">
-                                        <input type="checkbox" name="exp_is_current" value="0" class="accent-teal exp-current-cb">
-                                        I'm still employed under this position.
-                                    </label>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-end gap-2 mt-2">
-                        <span class="text-taupe text-sm font-semibold">Experience</span>
-                        <button type="button" onclick="addRow('experience')" class="add-remove-btn w-8 h-8 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition text-lg font-bold">+</button>
-                        <button type="button" onclick="removeRow('experience')" class="add-remove-btn w-8 h-8 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sectors (collapsible) -->
-            <div class="bg-white/60 border border-taupe/30 rounded-2xl mb-6 shadow-sm overflow-hidden">
-                <button type="button" onclick="toggleSection('sector')"
-                        class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
-                    <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                        </svg>
-                        <span class="font-bold text-primary text-sm">Sectors</span>
-                        <span class="text-muted text-xs" id="sector-summary">
-                            {% with count=profile.sectors.count %}
-                                {% if count %}{{ count }} selected{% else %}None selected{% endif %}
-                            {% endwith %}
-                        </span>
-                    </div>
-                    <svg id="sector-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
-                    </svg>
-                </button>
-                <div id="sector-body" class="hidden px-6 pb-6">
-                    <p class="text-muted text-xs mb-4">Select all that apply to ensure a smooth and inclusive job search. You may skip this section if none apply.</p>
-                    <div class="flex flex-wrap gap-3">
+                <!-- Sectors -->
+                <div>
+                    <p class="text-sm font-semibold text-primary mb-2">Sectors <span class="text-muted font-normal text-xs">(select all that apply)</span></p>
+                    <div class="flex flex-wrap gap-2">
                         {% for sector in sectors %}
-                        <label class="resume-field flex items-center gap-2 bg-white border border-taupe/30 rounded-full px-4 py-1.5 text-sm text-primary cursor-pointer hover:border-teal transition">
+                        <label class="resume-field flex items-center gap-2 bg-white border border-taupe/30 rounded-full px-3 py-1 text-xs text-primary cursor-pointer hover:border-teal transition">
                             <input type="checkbox" name="sectors" value="{{ sector.id }}"
                                    {% if sector in profile.sectors.all %}checked{% endif %}
                                    class="accent-teal">
@@ -532,7 +134,323 @@
                         {% endfor %}
                     </div>
                 </div>
-            </div>
+
+            </div><!-- end top card -->
+
+            <!-- ── ROW 1: Education | Experience ── -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+
+                <!-- Education -->
+                <div class="bg-white/60 border border-taupe/30 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('education')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Education</span>
+                            <span class="text-muted text-xs" id="education-summary">
+                                {% if education %}{{ education|length }} entr{{ education|length|pluralize:"y,ies" }}{% else %}No entries{% endif %}
+                            </span>
+                        </div>
+                        <svg id="education-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="education-body" class="hidden px-4 pb-4">
+                        <div id="education-container">
+                            {% for edu in education %}
+                            <div class="education-row grid grid-cols-1 gap-2 mb-3 pb-3 border-b border-taupe/10 last:border-0">
+                                <select name="edu_level" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+                                    <option value="">Level...</option>
+                                    <option value="elementary" {% if edu.level == 'elementary' %}selected{% endif %}>Elementary</option>
+                                    <option value="junior_high" {% if edu.level == 'junior_high' %}selected{% endif %}>High School / JHS</option>
+                                    <option value="senior_high" {% if edu.level == 'senior_high' %}selected{% endif %}>Senior High School</option>
+                                    <option value="vocational" {% if edu.level == 'vocational' %}selected{% endif %}>Vocational / TESDA</option>
+                                    <option value="associate" {% if edu.level == 'associate' %}selected{% endif %}>Associate Degree</option>
+                                    <option value="bachelor" {% if edu.level == 'bachelor' %}selected{% endif %}>Bachelor's Degree</option>
+                                    <option value="master" {% if edu.level == 'master' %}selected{% endif %}>Master's Degree</option>
+                                    <option value="doctorate" {% if edu.level == 'doctorate' %}selected{% endif %}>Doctorate</option>
+                                </select>
+                                <input type="text" name="edu_course" value="{{ edu.course_degree|default:'' }}" placeholder="Course/Degree/Strand"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <input type="text" name="edu_institution" value="{{ edu.institution|default:'' }}" placeholder="Institution"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <div class="flex gap-2">
+                                    <input type="number" name="edu_start" value="{{ edu.year_started|default:'' }}" placeholder="From" min="1950" max="2099"
+                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                    <input type="number" name="edu_end" value="{{ edu.year_ended|default:'' }}" placeholder="To" min="1950" max="2099"
+                                           {% if edu.is_current %}disabled{% endif %}
+                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition disabled:opacity-40">
+                                </div>
+                                <label class="flex items-center gap-2 text-xs text-primary cursor-pointer">
+                                    <input type="checkbox" name="edu_is_current" value="{{ forloop.counter0 }}" {% if edu.is_current %}checked{% endif %} class="accent-teal edu-current-cb">
+                                    Still attending
+                                </label>
+                            </div>
+                            {% empty %}
+                            <div class="education-row grid grid-cols-1 gap-2 mb-3">
+                                <select name="edu_level" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+                                    <option value="">Level...</option>
+                                    <option value="elementary">Elementary</option>
+                                    <option value="junior_high">High School / JHS</option>
+                                    <option value="senior_high">Senior High School</option>
+                                    <option value="vocational">Vocational / TESDA</option>
+                                    <option value="associate">Associate Degree</option>
+                                    <option value="bachelor">Bachelor's Degree</option>
+                                    <option value="master">Master's Degree</option>
+                                    <option value="doctorate">Doctorate</option>
+                                </select>
+                                <input type="text" name="edu_course" placeholder="Course/Degree/Strand"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <input type="text" name="edu_institution" placeholder="Institution"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <div class="flex gap-2">
+                                    <input type="number" name="edu_start" placeholder="From" min="1950" max="2099"
+                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                    <input type="number" name="edu_end" placeholder="To" min="1950" max="2099"
+                                           class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                </div>
+                                <label class="flex items-center gap-2 text-xs text-primary cursor-pointer">
+                                    <input type="checkbox" name="edu_is_current" value="0" class="accent-teal edu-current-cb">
+                                    Still attending
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="flex items-center justify-end gap-2 mt-2">
+                            <span class="text-taupe text-xs font-semibold">Education</span>
+                            <button type="button" onclick="addRow('education')" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition font-bold">+</button>
+                            <button type="button" onclick="removeRow('education')" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Work Experience -->
+                <div class="bg-white/60 border border-taupe/30 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('experience')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Work Experience</span>
+                            <span class="text-muted text-xs" id="experience-summary">
+                                {% if experiences %}{{ experiences|length }} entr{{ experiences|length|pluralize:"y,ies" }}{% else %}No entries{% endif %}
+                            </span>
+                        </div>
+                        <svg id="experience-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="experience-body" class="hidden px-4 pb-4">
+                        <div id="experience-container">
+                            {% for exp in experiences %}
+                            <div class="exp-row grid grid-cols-1 gap-2 mb-3 pb-3 border-b border-taupe/10 last:border-0">
+                                <input type="text" name="exp_position" value="{{ exp.position }}" placeholder="Position"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <input type="text" name="exp_company" value="{{ exp.company|default:'' }}" placeholder="Company"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <textarea name="exp_description" rows="3" placeholder="Description"
+                                          class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none">{{ exp.description|default:'' }}</textarea>
+                                <div class="flex gap-2 flex-wrap">
+                                    <select name="exp_start_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                                        <option value="">Month...</option>
+                                        <option value="1" {% if exp.month_started == '1' %}selected{% endif %}>Jan</option>
+                                        <option value="2" {% if exp.month_started == '2' %}selected{% endif %}>Feb</option>
+                                        <option value="3" {% if exp.month_started == '3' %}selected{% endif %}>Mar</option>
+                                        <option value="4" {% if exp.month_started == '4' %}selected{% endif %}>Apr</option>
+                                        <option value="5" {% if exp.month_started == '5' %}selected{% endif %}>May</option>
+                                        <option value="6" {% if exp.month_started == '6' %}selected{% endif %}>Jun</option>
+                                        <option value="7" {% if exp.month_started == '7' %}selected{% endif %}>Jul</option>
+                                        <option value="8" {% if exp.month_started == '8' %}selected{% endif %}>Aug</option>
+                                        <option value="9" {% if exp.month_started == '9' %}selected{% endif %}>Sep</option>
+                                        <option value="10" {% if exp.month_started == '10' %}selected{% endif %}>Oct</option>
+                                        <option value="11" {% if exp.month_started == '11' %}selected{% endif %}>Nov</option>
+                                        <option value="12" {% if exp.month_started == '12' %}selected{% endif %}>Dec</option>
+                                    </select>
+                                    <select name="exp_start_year" class="resume-field w-20 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                                        <option value="">Year...</option>
+                                        {% for y in year_range %}<option value="{{ y }}" {% if exp.year_started == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+                                    </select>
+                                    <span class="text-muted text-xs self-center">→</span>
+                                    <select name="exp_end_month" {% if exp.is_current %}disabled{% endif %}
+                                            class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition disabled:opacity-40">
+                                        <option value="">Month...</option>
+                                        <option value="1" {% if exp.month_ended == '1' %}selected{% endif %}>Jan</option>
+                                        <option value="2" {% if exp.month_ended == '2' %}selected{% endif %}>Feb</option>
+                                        <option value="3" {% if exp.month_ended == '3' %}selected{% endif %}>Mar</option>
+                                        <option value="4" {% if exp.month_ended == '4' %}selected{% endif %}>Apr</option>
+                                        <option value="5" {% if exp.month_ended == '5' %}selected{% endif %}>May</option>
+                                        <option value="6" {% if exp.month_ended == '6' %}selected{% endif %}>Jun</option>
+                                        <option value="7" {% if exp.month_ended == '7' %}selected{% endif %}>Jul</option>
+                                        <option value="8" {% if exp.month_ended == '8' %}selected{% endif %}>Aug</option>
+                                        <option value="9" {% if exp.month_ended == '9' %}selected{% endif %}>Sep</option>
+                                        <option value="10" {% if exp.month_ended == '10' %}selected{% endif %}>Oct</option>
+                                        <option value="11" {% if exp.month_ended == '11' %}selected{% endif %}>Nov</option>
+                                        <option value="12" {% if exp.month_ended == '12' %}selected{% endif %}>Dec</option>
+                                    </select>
+                                    <select name="exp_end_year" {% if exp.is_current %}disabled{% endif %}
+                                            class="resume-field w-20 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition disabled:opacity-40">
+                                        <option value="">Year...</option>
+                                        {% for y in year_range %}<option value="{{ y }}" {% if exp.year_ended == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                                <label class="flex items-center gap-2 text-xs text-primary cursor-pointer">
+                                    <input type="checkbox" name="exp_is_current" value="{{ forloop.counter0 }}"
+                                           {% if exp.is_current %}checked{% endif %}
+                                           class="accent-teal exp-current-cb">
+                                    Still employed here
+                                </label>
+                            </div>
+                            {% empty %}
+                            <div class="exp-row grid grid-cols-1 gap-2 mb-3">
+                                <input type="text" name="exp_position" placeholder="Position"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <input type="text" name="exp_company" placeholder="Company"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <textarea name="exp_description" rows="3" placeholder="Description"
+                                          class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none"></textarea>
+                                <div class="flex gap-2 flex-wrap">
+                                    <select name="exp_start_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                                        <option value="">Month...</option>
+                                        <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                                        <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                                        <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                                        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                                    </select>
+                                    <select name="exp_start_year" class="resume-field w-20 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                                        <option value="">Year...</option>
+                                        {% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+                                    </select>
+                                    <span class="text-muted text-xs self-center">→</span>
+                                    <select name="exp_end_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                                        <option value="">Month...</option>
+                                        <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                                        <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                                        <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                                        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                                    </select>
+                                    <select name="exp_end_year" class="resume-field w-20 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                                        <option value="">Year...</option>
+                                        {% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                                <label class="flex items-center gap-2 text-xs text-primary cursor-pointer">
+                                    <input type="checkbox" name="exp_is_current" value="0" class="accent-teal exp-current-cb">
+                                    Still employed here
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="flex items-center justify-end gap-2 mt-2">
+                            <span class="text-taupe text-xs font-semibold">Experience</span>
+                            <button type="button" onclick="addRow('experience')" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition font-bold">+</button>
+                            <button type="button" onclick="removeRow('experience')" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- end education | experience row -->
+
+            <!-- ── ROW 2: Skills | Certifications ── -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+
+                <!-- Skills -->
+                <div class="bg-white/60 border border-taupe/30 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('skill')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Skills</span>
+                            <span class="text-muted text-xs" id="skill-summary">
+                                {% if skills %}{{ skills|length }} skill{{ skills|length|pluralize }}{% else %}No entries{% endif %}
+                            </span>
+                        </div>
+                        <svg id="skill-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="skill-body" class="hidden px-4 pb-4">
+                        <div id="skill-container" class="grid grid-cols-3 gap-2 mb-2">
+                            {% for skill in skills %}
+                            <div class="skill-row">
+                                <input type="text" name="skill_name" value="{{ skill.name }}" placeholder="Skill"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            </div>
+                            {% empty %}
+                            <div class="skill-row">
+                                <input type="text" name="skill_name" placeholder="Skill"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="flex items-center justify-end gap-2 mt-2">
+                            <span class="text-taupe text-xs font-semibold">Skills</span>
+                            <button type="button" onclick="addRow('skill')" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition font-bold">+</button>
+                            <button type="button" onclick="removeRow('skill')" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Certifications -->
+                <div class="bg-white/60 border border-taupe/30 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('certification')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 1l2.39 7.26H22l-6.19 4.5 2.39 7.26L12 15.51l-6.2 5.51 2.39-7.26L2 9.26h7.61z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Certifications</span>
+                            <span class="text-muted text-xs" id="certification-summary">
+                                {% if certifications %}{{ certifications|length }} entr{{ certifications|length|pluralize:"y,ies" }}{% else %}No entries{% endif %}
+                            </span>
+                        </div>
+                        <svg id="certification-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="certification-body" class="hidden px-4 pb-4">
+                        <div id="certification-container">
+                            {% for cert in certifications %}
+                            <div class="cert-row grid grid-cols-1 gap-2 mb-3 pb-3 border-b border-taupe/10 last:border-0">
+                                <input type="text" name="cert_name" value="{{ cert.name }}" placeholder="Certification name"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <input type="text" name="cert_org" value="{{ cert.issuing_org|default:'' }}" placeholder="Issuing organization"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <input type="number" name="cert_year" value="{{ cert.year_received|default:'' }}" placeholder="Year received" min="1950" max="2099"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            </div>
+                            {% empty %}
+                            <div class="cert-row grid grid-cols-1 gap-2 mb-3">
+                                <input type="text" name="cert_name" placeholder="Certification name"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <input type="text" name="cert_org" placeholder="Issuing organization"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                <input type="number" name="cert_year" placeholder="Year received" min="1950" max="2099"
+                                       class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="flex items-center justify-end gap-2 mt-2">
+                            <span class="text-taupe text-xs font-semibold">Certifications</span>
+                            <button type="button" onclick="addRow('certification')" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition font-bold">+</button>
+                            <button type="button" onclick="removeRow('certification')" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- end skills | certifications row -->
 
             <!-- Submit + Cancel -->
             <div id="form-actions" class="text-center mb-4 hidden">
@@ -608,14 +526,14 @@
     }
 
     function expandAllSections() {
-        ['education', 'certification', 'skill', 'experience', 'sector'].forEach(name => {
+        ['education', 'experience', 'skill', 'certification'].forEach(name => {
             document.getElementById(`${name}-body`).classList.remove('hidden');
             document.getElementById(`${name}-chevron`).style.transform = 'rotate(180deg)';
         });
     }
 
     function collapseAllSections() {
-        ['education', 'certification', 'skill', 'experience', 'sector'].forEach(name => {
+        ['education', 'experience', 'skill', 'certification'].forEach(name => {
             document.getElementById(`${name}-body`).classList.add('hidden');
             document.getElementById(`${name}-chevron`).style.transform = '';
         });
@@ -678,7 +596,7 @@
     editBtn.addEventListener('click', () => {
         showConfirm(
             'Edit your resume?',
-            'You can make changes and save them when you\'re done.',
+            "You can make changes and save them when you're done.",
             'Yes, edit',
             unlockForm
         );
@@ -730,116 +648,6 @@
     });
 
     // ── Add / Remove rows ──────────────────────────────────────────
-    const templates = {
-        education: `
-        <div class="education-row grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-taupe/10">
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Educational Level*</label>
-                <select name="edu_level" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                    <option value="">Select...</option>
-                    <option value="elementary">Elementary</option>
-                    <option value="junior_high">High School / Junior High School</option>
-                    <option value="senior_high">Senior High School</option>
-                    <option value="vocational">Vocational / TESDA</option>
-                    <option value="associate">Associate Degree</option>
-                    <option value="bachelor">Bachelor\'s Degree</option>
-                    <option value="master">Master\'s Degree</option>
-                    <option value="doctorate">Doctorate</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Course/Degree/Strand</label>
-                <input type="text" name="edu_course" placeholder="Value" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Years Attended*</label>
-                <div class="flex items-center gap-2">
-                    <input type="number" name="edu_start" placeholder="From" min="1950" max="2099" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                    <input type="number" name="edu_end" placeholder="To" min="1950" max="2099" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                </div>
-            </div>
-            <div class="flex items-end pb-1">
-                <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
-                    <input type="checkbox" name="edu_is_current" class="accent-teal edu-current-cb">
-                    I'm still attending this institution.
-                </label>
-            </div>
-        </div>`,
-
-        certification: `
-        <div class="cert-row grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-taupe/10">
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Certification</label>
-                <input type="text" name="cert_name" placeholder="Value" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Issuing Organization</label>
-                <input type="text" name="cert_org" placeholder="Value" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Year Received</label>
-                <input type="number" name="cert_year" placeholder="Value" min="1950" max="2099" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-            </div>
-        </div>`,
-
-        skill: `
-        <div class="skill-row mb-2">
-            <input type="text" name="skill_name" placeholder="Value" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-        </div>`,
-
-        experience: `
-        <div class="exp-row grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-taupe/10">
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Position</label>
-                <input type="text" name="exp_position" placeholder="Value" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Company</label>
-                <input type="text" name="exp_company" placeholder="Value" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-            </div>
-            <div class="row-span-2">
-                <label class="block text-xs font-medium text-primary mb-1">Description</label>
-                <textarea name="exp_description" rows="5" placeholder="Value" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none"></textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Date Started</label>
-                <div class="flex gap-2">
-                    <select name="exp_start_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                        <option value="">Select month...</option>
-                        <option value="1">January</option><option value="2">February</option><option value="3">March</option>
-                        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
-                        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
-                        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-                    </select>
-                    <select name="exp_start_year" class="resume-field w-24 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                        <option value="">Year...</option>
-                        ${yearOptions()}
-                    </select>
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-primary mb-1">Date Ended</label>
-                <div class="flex gap-2">
-                    <select name="exp_end_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                        <option value="">Select month...</option>
-                        <option value="1">January</option><option value="2">February</option><option value="3">March</option>
-                        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
-                        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
-                        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-                    </select>
-                    <select name="exp_end_year" class="resume-field w-24 bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-                        <option value="">Year...</option>
-                        ${yearOptions()}
-                    </select>
-                </div>
-                <label class="flex items-center gap-2 text-sm text-primary cursor-pointer mt-2">
-                    <input type="checkbox" name="exp_is_current" class="accent-teal exp-current-cb">
-                    I'm still employed under this position.
-                </label>
-            </div>
-        </div>`
-    };
-
     function yearOptions() {
         let opts = '';
         for (let y = new Date().getFullYear(); y >= 1950; y--) {
@@ -848,25 +656,97 @@
         return opts;
     }
 
+    const templates = {
+        education: `
+        <div class="education-row grid grid-cols-1 gap-2 mb-3 pb-3 border-b border-taupe/10">
+            <select name="edu_level" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+                <option value="">Level...</option>
+                <option value="elementary">Elementary</option>
+                <option value="junior_high">High School / JHS</option>
+                <option value="senior_high">Senior High School</option>
+                <option value="vocational">Vocational / TESDA</option>
+                <option value="associate">Associate Degree</option>
+                <option value="bachelor">Bachelor's Degree</option>
+                <option value="master">Master's Degree</option>
+                <option value="doctorate">Doctorate</option>
+            </select>
+            <input type="text" name="edu_course" placeholder="Course/Degree/Strand" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            <input type="text" name="edu_institution" placeholder="Institution" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            <div class="flex gap-2">
+                <input type="number" name="edu_start" placeholder="From" min="1950" max="2099" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                <input type="number" name="edu_end" placeholder="To" min="1950" max="2099" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            </div>
+            <label class="flex items-center gap-2 text-xs text-primary cursor-pointer">
+                <input type="checkbox" name="edu_is_current" class="accent-teal edu-current-cb"> Still attending
+            </label>
+        </div>`,
+
+        experience: `
+        <div class="exp-row grid grid-cols-1 gap-2 mb-3 pb-3 border-b border-taupe/10">
+            <input type="text" name="exp_position" placeholder="Position" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            <input type="text" name="exp_company" placeholder="Company" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            <textarea name="exp_description" rows="3" placeholder="Description" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none"></textarea>
+            <div class="flex gap-2 flex-wrap">
+                <select name="exp_start_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                    <option value="">Month...</option>
+                    <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                    <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                    <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                    <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                </select>
+                <select name="exp_start_year" class="resume-field w-20 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                    <option value="">Year...</option>${yearOptions()}
+                </select>
+                <span class="text-muted text-xs self-center">→</span>
+                <select name="exp_end_month" class="resume-field flex-1 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                    <option value="">Month...</option>
+                    <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                    <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                    <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                    <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                </select>
+                <select name="exp_end_year" class="resume-field w-20 bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
+                    <option value="">Year...</option>${yearOptions()}
+                </select>
+            </div>
+            <label class="flex items-center gap-2 text-xs text-primary cursor-pointer">
+                <input type="checkbox" name="exp_is_current" class="accent-teal exp-current-cb"> Still employed here
+            </label>
+        </div>`,
+
+        skill: `<div class="skill-row"><input type="text" name="skill_name" placeholder="Skill" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-2 py-1.5 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition"></div>`,
+
+        certification: `
+        <div class="cert-row grid grid-cols-1 gap-2 mb-3 pb-3 border-b border-taupe/10">
+            <input type="text" name="cert_name" placeholder="Certification name" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            <input type="text" name="cert_org" placeholder="Issuing organization" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            <input type="number" name="cert_year" placeholder="Year received" min="1950" max="2099" class="resume-field w-full bg-white border border-taupe/30 rounded-lg px-3 py-2 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+        </div>`,
+    };
+
     const containerMap = {
         education: 'education-container',
-        certification: 'certification-container',
-        skill: 'skill-container',
         experience: 'experience-container',
+        skill: 'skill-container',
+        certification: 'certification-container',
     };
 
     const rowClass = {
         education: 'education-row',
-        certification: 'cert-row',
-        skill: 'skill-row',
         experience: 'exp-row',
+        skill: 'skill-row',
+        certification: 'cert-row',
     };
 
     function addRow(type) {
         const container = document.getElementById(containerMap[type]);
         const div = document.createElement('div');
         div.innerHTML = templates[type];
-        container.appendChild(div.firstElementChild);
+        if (type === 'skill') {
+            container.appendChild(div.firstElementChild);
+        } else {
+            container.appendChild(div.firstElementChild);
+        }
         updateCheckboxValues(type);
         setTimeout(initAutocompletes, 50);
     }
@@ -878,11 +758,8 @@
             rows[rows.length - 1].remove();
         } else if (rows.length === 1) {
             rows[0].querySelectorAll('input, select, textarea').forEach(el => {
-                if (el.type === 'checkbox' || el.type === 'radio') {
-                    el.checked = false;
-                } else {
-                    el.value = '';
-                }
+                if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
+                else el.value = '';
                 el.removeAttribute('disabled');
             });
         }

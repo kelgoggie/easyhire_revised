@@ -251,22 +251,6 @@
                 </div>
             </div>
 
-            <!-- Applicants by Barangay -->
-            <h2 class="text-base font-bold text-primary mb-3">Applicants by Barangay <span class="text-muted font-normal text-sm">(Iloilo City)</span></h2>
-            <div class="bg-white border border-taupe/20 rounded-2xl p-6 shadow-sm mb-8">
-                {% if barangay_data %}
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {% for item in barangay_data %}
-                    <div class="flex items-center justify-between bg-surface rounded-xl px-4 py-2">
-                        <span class="text-xs text-primary truncate">{{ item.barangay }}</span>
-                        <span class="text-xs font-bold text-primary ml-2 flex-shrink-0">{{ item.count }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-sm">No barangay data yet.</p>
-                {% endif %}
-            </div>
 
         </div>
 
@@ -327,11 +311,6 @@
                 </div>
             </div>
 
-            <!-- Row 5: Applicants by Barangay -->
-            <div class="bg-white border border-taupe/20 rounded-2xl p-6 shadow-sm mb-8">
-                <h3 class="font-bold text-primary text-sm mb-4">Applicants by Barangay (Top 20)</h3>
-                <canvas id="barangayChart" height="280"></canvas>
-            </div>
 
         </div>
     </div>
@@ -384,8 +363,8 @@
     const skillLabels = [{% for s in common_skills %}'{{ s.name }}'{% if not forloop.last %},{% endif %}{% endfor %}];
     const skillCounts = [{% for s in common_skills %}{{ s.count }}{% if not forloop.last %},{% endif %}{% endfor %}];
 
-    const barangayLabels = [{% for item in barangay_data %}'{{ item.barangay }}'{% if not forloop.last %},{% endif %}{% endfor %}];
-    const barangayCounts = [{% for item in barangay_data %}{{ item.count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+    
 
     // ── Colors ─────────────────────────────────────────────────────
     const primary = '#1A2F5A';
@@ -525,9 +504,6 @@
 
         // Common skills horizontal bar
         makeBarH('skillsChart', skillLabels, skillCounts, teal);
-
-        // Barangay horizontal bar
-        makeBarH('barangayChart', barangayLabels, barangayCounts, primary);
     }
 </script>
 {% endblock %}

@@ -50,7 +50,9 @@ class Company(models.Model):
 
     # Iloilo branch address (required for PESO partnership)
     iloilo_bldg_unit = models.CharField(max_length=100, blank=True)
-    iloilo_street_barangay = models.CharField(max_length=200)
+    iloilo_street = models.CharField(max_length=200, blank=True)
+    iloilo_barangay_code = models.CharField(max_length=20, blank=True)
+    iloilo_barangay_name = models.CharField(max_length=200, blank=True)
     iloilo_city = models.CharField(max_length=100, default="Iloilo City")
     iloilo_province = models.CharField(max_length=100, default="Iloilo")
 

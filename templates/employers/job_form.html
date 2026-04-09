@@ -7,219 +7,536 @@
     {% include "base/navbar_dashboard_employer.html" with active="jobs" %}
 {% endblock %}
 
+{% block partner_logos %}
+    {% include "base/partner_logos.html" %}
+{% endblock %}
+
 {% block content %}
-<main class="bg-primary min-h-screen py-8 px-12">
+<main class="bg-surface min-h-screen py-8 px-12">
     <div class="max-w-4xl mx-auto">
 
         <!-- Header -->
-        <div class="flex items-center gap-4 mb-6">
-            <a href="/employers/jobs/" class="text-white/40 hover:text-white transition text-sm">← Back</a>
-            <h1 class="text-3xl font-extrabold text-white">{{ action }} <span class="text-teal">Job Post</span></h1>
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-4">
+                <a href="/employers/jobs/" class="text-muted/40 hover:text-muted transition text-sm">← Back</a>
+                <h1 class="text-3xl font-extrabold text-primary">{{ action }} <span class="text-teal">Job Post</span></h1>
+            </div>
         </div>
 
-        <form method="POST">
+        <form method="POST" id="job-form">
             {% csrf_token %}
 
-            <!-- Basic Info -->
-            <div class="bg-surface border border-taupe/20 rounded-2xl p-6 mb-4 shadow-sm">
-                <h2 class="text-primary font-bold text-base mb-4">Basic Information</h2>
-                <div class="grid grid-cols-2 gap-4">
+            <!-- ── ROW 1: Basic Info | Location ── -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
 
-                    <div class="col-span-2">
-                        <label class="block text-primary text-xs font-medium mb-1">Job Title*</label>
-                        <input type="text" name="title"
-                               value="{{ job.title|default:'' }}"
-                               {% if job %}disabled{% endif %}
-                               placeholder="e.g. Customer Service Representative"
-                               class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition {% if job %}opacity-60 cursor-not-allowed{% endif %}">
-                        {% if job %}<p class="text-muted text-xs mt-1">Title cannot be changed after creation.</p>{% endif %}
-                    </div>
-
-                    <div class="col-span-2">
-                        <label class="block text-primary text-xs font-medium mb-1">Description*</label>
-                        <textarea name="description" rows="4" placeholder="Describe the role, responsibilities, and requirements..."
-                                  class="w-full bg-white border border-taupe/30 rounded-2xl px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none">{{ job.description|default:'' }}</textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-primary text-xs font-medium mb-1">Status</label>
-                        <select name="status" class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
-                            <option value="open" {% if job.status == 'open' %}selected{% endif %}>Open</option>
-                            <option value="closed" {% if job.status == 'closed' %}selected{% endif %}>Closed</option>
-                            <option value="draft" {% if job.status == 'draft' %}selected{% endif %}>Draft</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Location -->
-            <div class="bg-surface border border-taupe/20 rounded-2xl p-6 mb-4 shadow-sm">
-                <h2 class="text-primary font-bold text-base mb-4">Location</h2>
-                <div class="grid grid-cols-2 gap-4">
-
-                    <div class="col-span-2">
-                        <label class="block text-primary text-xs font-medium mb-1">Location Type</label>
-                        <select name="location_type" id="location_type"
-                                class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
-                            <option value="iloilo" {% if not job or job.location_type == 'iloilo' %}selected{% endif %}>Iloilo City</option>
-                            <option value="overseas" {% if job.location_type == 'overseas' %}selected{% endif %}>Overseas</option>
-                            <option value="remote" {% if job.location_type == 'remote' %}selected{% endif %}>Remote</option>
-                        </select>
-                    </div>
-
-                    <div id="iloilo_fields" class="col-span-2 grid grid-cols-2 gap-4">
+                <!-- Basic Info -->
+                <div class="bg-white border border-taupe/20 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('basic')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Basic Information</span>
+                        </div>
+                        <svg id="basic-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform rotate-180" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="basic-body" class="px-6 pb-6 space-y-3">
                         <div>
-                            <label class="block text-primary text-xs font-medium mb-1">Bldg/Unit No.</label>
-                            <input type="text" name="bldg_unit" value="{{ job.bldg_unit|default:'' }}" placeholder="Optional"
-                                   class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            <label class="block text-primary text-xs font-medium mb-1">Job Title*</label>
+                            <input type="text" name="title"
+                                   value="{{ job.title|default:'' }}"
+                                   {% if job %}disabled{% endif %}
+                                   placeholder="e.g. Customer Service Representative"
+                                   class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition {% if job %}opacity-60 cursor-not-allowed{% endif %}">
+                            {% if job %}<p class="text-muted text-xs mt-1">Title cannot be changed after creation.</p>{% endif %}
                         </div>
                         <div>
-                            <label class="block text-primary text-xs font-medium mb-1">Street/Barangay</label>
-                            <input type="text" name="street_barangay" value="{{ job.street_barangay|default:'' }}" placeholder="Optional"
-                                   class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            <label class="block text-primary text-xs font-medium mb-1">Description*</label>
+                            <textarea name="description" rows="5" placeholder="Describe the role, responsibilities, and requirements..."
+                                      class="job-field w-full bg-white border border-taupe/30 rounded-2xl px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition resize-none">{{ job.description|default:'' }}</textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-primary text-xs font-medium mb-1">Status</label>
+                                <select name="status" class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                                    <option value="open" {% if job.status == 'open' %}selected{% endif %}>Open</option>
+                                    <option value="closed" {% if job.status == 'closed' %}selected{% endif %}>Closed</option>
+                                    <option value="draft" {% if job.status == 'draft' %}selected{% endif %}>Draft</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-primary text-xs font-medium mb-1">Slots Available</label>
+                                <input type="number" name="slots" min="1"
+                                       value="{{ job.slots|default:1 }}"
+                                       class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                            </div>
                         </div>
                     </div>
-
-                    <div id="overseas_fields" class="col-span-2 hidden">
-                        <label class="block text-primary text-xs font-medium mb-1">Overseas Address</label>
-                        <input type="text" name="overseas_address" value="{{ job.overseas_address|default:'' }}" placeholder="e.g. Dubai, UAE"
-                               class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- Requirements -->
-            <div class="bg-surface border border-taupe/20 rounded-2xl p-6 mb-4 shadow-sm">
-                <h2 class="text-primary font-bold text-base mb-4">Requirements</h2>
-
-                <!-- Education -->
-                <div class="mb-5">
-                    <label class="block text-primary text-xs font-semibold mb-2">Education</label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <select name="edu_level"
-                                class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
-                            <option value="">No requirement</option>
-                            <option value="elementary" {% if job.education_requirement.level == 'elementary' %}selected{% endif %}>Elementary</option>
-                            <option value="junior_high" {% if job.education_requirement.level == 'junior_high' %}selected{% endif %}>High School / Junior High School</option>
-                            <option value="senior_high" {% if job.education_requirement.level == 'senior_high' %}selected{% endif %}>Senior High School</option>
-                            <option value="vocational" {% if job.education_requirement.level == 'vocational' %}selected{% endif %}>Vocational / TESDA</option>
-                            <option value="associate" {% if job.education_requirement.level == 'associate' %}selected{% endif %}>Associate Degree</option>
-                            <option value="bachelor" {% if job.education_requirement.level == 'bachelor' %}selected{% endif %}>Bachelor's Degree</option>
-                            <option value="master" {% if job.education_requirement.level == 'master' %}selected{% endif %}>Master's Degree</option>
-                            <option value="doctorate" {% if job.education_requirement.level == 'doctorate' %}selected{% endif %}>Doctorate</option>
-                        </select>
-                        <input type="text" name="edu_course"
-                               value="{% if job.education_requirement %}{{ job.education_requirement.course_degree }}{% endif %}"
-                               placeholder="Course/Degree (optional)"
-                               class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                    </div>
                 </div>
 
-                <!-- Experience -->
-                <div class="mb-5">
-                    <label class="block text-primary text-xs font-semibold mb-2">Experience</label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="number" name="exp_years" min="0"
-                               value="{% if job.experience_requirement %}{{ job.experience_requirement.years_required }}{% endif %}"
-                               placeholder="Years required (0 = no experience needed)"
-                               class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                        <input type="text" name="exp_description"
-                               value="{% if job.experience_requirement %}{{ job.experience_requirement.description }}{% endif %}"
-                               placeholder="Details (optional)"
-                               class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                <!-- Location -->
+                <div class="bg-white border border-taupe/20 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('location')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Location</span>
+                            <span class="text-muted text-xs">{{ job.location_display|default:"Not set" }}</span>
+                        </div>
+                        <svg id="location-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform rotate-180" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="location-body" class="px-6 pb-6 space-y-3">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Location Type</label>
+                            <select name="location_type" id="location_type"
+                                    class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                                <option value="iloilo" {% if not job or job.location_type == 'iloilo' %}selected{% endif %}>Local (Iloilo City)</option>
+                                <option value="overseas" {% if job.location_type == 'overseas' %}selected{% endif %}>Overseas</option>
+                                <option value="remote" {% if job.location_type == 'remote' %}selected{% endif %}>Remote</option>
+                            </select>
+                        </div>
+
+                        <!-- Iloilo fields -->
+                        <div id="iloilo_fields" class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-primary text-xs font-medium mb-1">Bldg/Unit No.</label>
+                                    <input type="text" name="bldg_unit"
+                                        value="{% if job %}{{ job.bldg_unit|default:'' }}{% else %}{{ company.iloilo_bldg_unit|default:'' }}{% endif %}"
+                                        placeholder="Optional"
+                                        class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                </div>
+                                <div>
+                                    <label class="block text-primary text-xs font-medium mb-1">Street <span class="text-muted font-normal">(optional)</span></label>
+                                    <input type="text" name="street"
+                                        value="{% if job %}{{ job.street|default:'' }}{% else %}{{ company.iloilo_street|default:'' }}{% endif %}"
+                                        placeholder="e.g. R. Mapa Street"
+                                        class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-primary text-xs font-medium mb-1">Barangay</label>
+                                <select name="job_barangay" id="job_barangay"
+                                        class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                                    <option value="">Select barangay...</option>
+                                </select>
+                                <input type="hidden" name="job_barangay_name" id="job_barangay_name">
+                            </div>
+                            <div>
+                                <label class="block text-primary text-xs font-medium mb-1">City/Municipality</label>
+                                <input type="text" value="Iloilo City" readonly
+                                    class="w-full bg-taupe/10 border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-muted cursor-not-allowed">
+                                <input type="hidden" name="city" value="Iloilo City">
+                            </div>
+                        </div>
+
+                        <!-- Overseas field -->
+                        <div id="overseas_fields" class="hidden">
+                            <label class="block text-primary text-xs font-medium mb-1">Overseas Address</label>
+                            <input type="text" name="overseas_address" value="{{ job.overseas_address|default:'' }}" placeholder="e.g. Dubai, UAE"
+                                   class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
                     </div>
                 </div>
+
+            </div><!-- end row 1 -->
+
+            <!-- ── ROW 2: Education | Experience ── -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+
+                <!-- Education Requirement -->
+                <div class="bg-white border border-taupe/20 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('education')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Education</span>
+                            <span class="text-muted text-xs">
+                                {% if job.education_requirement %}{{ job.education_requirement.get_level_display }}{% else %}Not set{% endif %}
+                            </span>
+                        </div>
+                        <svg id="education-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform rotate-180" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="education-body" class="px-6 pb-6 space-y-3">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Education Level</label>
+                            <select name="edu_level" class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition">
+                                <option value="">No requirement</option>
+                                <option value="elementary" {% if job.education_requirement.level == 'elementary' %}selected{% endif %}>Elementary</option>
+                                <option value="junior_high" {% if job.education_requirement.level == 'junior_high' %}selected{% endif %}>High School / Junior High</option>
+                                <option value="senior_high" {% if job.education_requirement.level == 'senior_high' %}selected{% endif %}>Senior High School</option>
+                                <option value="vocational" {% if job.education_requirement.level == 'vocational' %}selected{% endif %}>Vocational / TESDA</option>
+                                <option value="associate" {% if job.education_requirement.level == 'associate' %}selected{% endif %}>Associate Degree</option>
+                                <option value="bachelor" {% if job.education_requirement.level == 'bachelor' %}selected{% endif %}>Bachelor's Degree</option>
+                                <option value="master" {% if job.education_requirement.level == 'master' %}selected{% endif %}>Master's Degree</option>
+                                <option value="doctorate" {% if job.education_requirement.level == 'doctorate' %}selected{% endif %}>Doctorate</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Course/Degree <span class="text-muted font-normal">(optional)</span></label>
+                            <input type="text" name="edu_course"
+                                   value="{% if job.education_requirement %}{{ job.education_requirement.course_degree }}{% endif %}"
+                                   placeholder="e.g. BS Computer Science"
+                                   class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Experience Requirement -->
+                <div class="bg-white border border-taupe/20 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('experience')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Experience</span>
+                            <span class="text-muted text-xs">
+                                {% if job.experience_requirement %}{{ job.experience_requirement.display_experience }}{% else %}Not set{% endif %}
+                            </span>
+                        </div>
+                        <svg id="experience-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform rotate-180" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="experience-body" class="px-6 pb-6 space-y-3">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Months Required</label>
+                            <input type="number" name="exp_months" min="0"
+                                value="{% if job.experience_requirement %}{{ job.experience_requirement.months_required }}{% endif %}"
+                                placeholder="0 = no experience needed"
+                                class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            <p class="text-muted text-xs mt-1">e.g. 6 = 6 months, 12 = 1 year</p>
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Preferred Position/Role</label>
+                            <input type="text" name="exp_preferred_position"
+                                value="{% if job.experience_requirement %}{{ job.experience_requirement.preferred_position }}{% endif %}"
+                                placeholder="e.g. Welder, Cashier, Nurse"
+                                id="exp-position-input"
+                                class="job-field w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                        </div>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" name="any_experience_accepted"
+                                id="any-exp-cb"
+                                {% if not job or not job.experience_requirement or job.experience_requirement.any_experience_accepted %}checked{% endif %}
+                                class="accent-teal w-4 h-4">
+                            <span class="text-sm text-primary">Any experience is allowed</span>
+                        </label>
+                        <p class="text-muted text-xs -mt-1 ml-7">If unchecked, the preferred position will be used for matching.</p>
+                    </div>
+                </div>
+
+            </div><!-- end row 2 -->
+
+            <!-- ── ROW 3: Skills | Certifications ── -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
 
                 <!-- Skills -->
-                <div class="mb-5">
-                    <label class="block text-primary text-xs font-semibold mb-2">Skills</label>
-                    <div id="skill-container" class="space-y-2">
-                        {% if job %}
-                            {% for skill in job.skill_requirements.all %}
-                            <div class="skill-row flex gap-2">
-                                <input type="text" name="skill_name" value="{{ skill.name }}"
-                                       class="flex-1 bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                            </div>
-                            {% empty %}
-                            <div class="skill-row flex gap-2">
-                                <input type="text" name="skill_name" placeholder="e.g. Microsoft Word"
-                                       class="flex-1 bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                        <div class="skill-row flex gap-2">
-                            <input type="text" name="skill_name" placeholder="e.g. Microsoft Word"
-                                   class="flex-1 bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                <div class="bg-white border border-taupe/20 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('skills')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Skills</span>
+                            <span class="text-muted text-xs" id="skills-summary">
+                                {% with count=job.skill_requirements.count %}
+                                    {% if count %}{{ count }} skill{{ count|pluralize }}{% else %}No entries{% endif %}
+                                {% endwith %}
+                            </span>
                         </div>
-                        {% endif %}
-                    </div>
-                    <div class="flex gap-2 mt-2">
-                        <button type="button" onclick="addSkill()"
-                                class="text-teal text-xs font-semibold hover:text-primary transition">+ Add skill</button>
-                        <button type="button" onclick="removeSkill()"
-                                class="text-muted text-xs hover:text-red-400 transition">− Remove last</button>
+                        <svg id="skills-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform rotate-180" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="skills-body" class="px-6 pb-6">
+                        <div id="skill-container" class="grid grid-cols-2 gap-2 mb-3">
+                            {% if job %}
+                                {% for skill in job.skill_requirements.all %}
+                                <div class="skill-row">
+                                    <input type="text" name="skill_name" value="{{ skill.name }}"
+                                           class="job-field w-full bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                </div>
+                                {% empty %}
+                                <div class="skill-row">
+                                    <input type="text" name="skill_name" placeholder="e.g. Microsoft Word"
+                                           class="job-field w-full bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                            <div class="skill-row">
+                                <input type="text" name="skill_name" placeholder="e.g. Microsoft Word"
+                                       class="job-field w-full bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center justify-end gap-2">
+                            <span class="text-taupe text-xs font-semibold">Skills</span>
+                            <button type="button" onclick="addSkill()" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition font-bold">+</button>
+                            <button type="button" onclick="removeSkill()" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Certifications -->
-                <div>
-                    <label class="block text-primary text-xs font-semibold mb-2">Certifications</label>
-                    <div id="cert-container" class="space-y-2">
-                        {% if job %}
-                            {% for cert in job.certification_requirements.all %}
-                            <div class="cert-row grid grid-cols-2 gap-2">
-                                <input type="text" name="cert_name" value="{{ cert.name }}" placeholder="Certification name"
-                                       class="bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                                <input type="text" name="cert_org" value="{{ cert.issuing_org }}" placeholder="Issuing org (optional)"
-                                       class="bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                            </div>
-                            {% empty %}
+                <div class="bg-white border border-taupe/20 rounded-2xl shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('certifications')"
+                            class="w-full flex items-center justify-between px-6 py-4 hover:bg-taupe/5 transition">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-taupe" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 1l2.39 7.26H22l-6.19 4.5 2.39 7.26L12 15.51l-6.2 5.51 2.39-7.26L2 9.26h7.61z"/>
+                            </svg>
+                            <span class="font-bold text-primary text-sm">Certifications</span>
+                            <span class="text-muted text-xs" id="certifications-summary">
+                                {% with count=job.certification_requirements.count %}
+                                    {% if count %}{{ count }} certification{{ count|pluralize }}{% else %}No entries{% endif %}
+                                {% endwith %}
+                            </span>
+                        </div>
+                        <svg id="certifications-chevron" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted transition-transform rotate-180" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                    <div id="certifications-body" class="px-6 pb-6">
+                        <div id="cert-container" class="space-y-2 mb-3">
+                            {% if job %}
+                                {% for cert in job.certification_requirements.all %}
+                                <div class="cert-row grid grid-cols-2 gap-2">
+                                    <input type="text" name="cert_name" value="{{ cert.name }}" placeholder="Certification name"
+                                           class="job-field bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                    <input type="text" name="cert_org" value="{{ cert.issuing_org }}" placeholder="Issuing org (optional)"
+                                           class="job-field bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                </div>
+                                {% empty %}
+                                <div class="cert-row grid grid-cols-2 gap-2">
+                                    <input type="text" name="cert_name" placeholder="Certification name"
+                                           class="job-field bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                    <input type="text" name="cert_org" placeholder="Issuing org (optional)"
+                                           class="job-field bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                </div>
+                                {% endfor %}
+                            {% else %}
                             <div class="cert-row grid grid-cols-2 gap-2">
                                 <input type="text" name="cert_name" placeholder="Certification name"
-                                       class="bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                       class="job-field bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                                 <input type="text" name="cert_org" placeholder="Issuing org (optional)"
-                                       class="bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                                       class="job-field bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
                             </div>
-                            {% endfor %}
-                        {% else %}
-                        <div class="cert-row grid grid-cols-2 gap-2">
-                            <input type="text" name="cert_name" placeholder="Certification name"
-                                   class="bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
-                            <input type="text" name="cert_org" placeholder="Issuing org (optional)"
-                                   class="bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                            {% endif %}
                         </div>
-                        {% endif %}
-                    </div>
-                    <div class="flex gap-2 mt-2">
-                        <button type="button" onclick="addCert()"
-                                class="text-teal text-xs font-semibold hover:text-primary transition">+ Add certification</button>
-                        <button type="button" onclick="removeCert()"
-                                class="text-muted text-xs hover:text-red-400 transition">− Remove last</button>
+                        <div class="flex items-center justify-end gap-2">
+                            <span class="text-taupe text-xs font-semibold">Certifications</span>
+                            <button type="button" onclick="addCert()" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-primary hover:bg-surface transition font-bold">+</button>
+                            <button type="button" onclick="removeCert()" class="add-remove-btn w-7 h-7 rounded-full bg-white border border-taupe/30 flex items-center justify-center text-muted hover:bg-red-50 hover:text-red-400 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Submit -->
-            <div class="flex justify-end gap-3 mb-8">
+            </div><!-- end row 3 -->
+
+            <!-- Form Actions -->
+            <div id="form-actions" class="text-center mb-8">
+                <button type="button" id="save-confirm-btn"
+                        class="bg-amber text-white font-semibold px-16 py-3 rounded-full hover:bg-amber/90 transition text-sm">
+                    {% if job %}Save Changes{% else %}Create Job Post{% endif %}
+                </button>
+                {% if job %}
+                <button type="button" id="cancel-btn"
+                        class="ml-4 bg-taupe/30 text-primary font-semibold px-8 py-3 rounded-full hover:bg-taupe/50 transition text-sm">
+                    Cancel
+                </button>
+                {% else %}
                 <a href="/employers/jobs/"
-                   class="bg-taupe/30 text-primary font-semibold px-8 py-3 rounded-full hover:bg-taupe/50 transition text-sm">
+                   class="ml-4 bg-taupe/30 text-primary font-semibold px-8 py-3 rounded-full hover:bg-taupe/50 transition text-sm">
                     Cancel
                 </a>
-                <button type="submit"
-                        class="bg-amber text-white font-semibold px-12 py-3 rounded-full hover:bg-amber/90 transition text-sm">
-                    {{ action }} Job Post
-                </button>
+                {% endif %}
             </div>
 
         </form>
     </div>
 </main>
+
+<!-- Confirmation Modal -->
+<div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10 text-center">
+        <p id="confirm-message" class="text-primary font-semibold text-base mb-2"></p>
+        <p id="confirm-subtext" class="text-muted text-sm mb-6"></p>
+        <div class="flex gap-3 justify-center">
+            <button id="confirm-yes" class="bg-amber text-white font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition text-sm"></button>
+            <button onclick="closeConfirm()" class="bg-taupe/30 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-taupe/50 transition text-sm">Go back</button>
+        </div>
+    </div>
+</div>
+
+<!-- Success Toast -->
+<div id="success-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="bg-primary text-white text-sm font-semibold px-6 py-3 rounded-full shadow-lg flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-teal" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+        </svg>
+        Job post saved successfully!
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    // Location type toggle
+
+    // ── Autocomplete ───────────────────────────────────────────────
+    function createAutocomplete(inputEl, endpoint) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative';
+        inputEl.parentNode.insertBefore(wrapper, inputEl);
+        wrapper.appendChild(inputEl);
+
+        const dropdown = document.createElement('ul');
+        dropdown.className = 'absolute left-0 right-0 bg-white border border-taupe/30 rounded-xl shadow-lg z-50 mt-1 hidden max-h-48 overflow-y-auto';
+        wrapper.appendChild(dropdown);
+
+        let debounceTimer;
+
+        inputEl.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const query = this.value.trim();
+            if (query.length < 2) { dropdown.classList.add('hidden'); return; }
+            debounceTimer = setTimeout(() => {
+                fetch(`${endpoint}?q=${encodeURIComponent(query)}`)
+                    .then(r => r.json())
+                    .then(results => {
+                        dropdown.innerHTML = '';
+                        if (!results.length) { dropdown.classList.add('hidden'); return; }
+                        results.forEach(item => {
+                            const li = document.createElement('li');
+                            li.textContent = item;
+                            li.className = 'px-4 py-2 text-sm text-primary hover:bg-surface cursor-pointer';
+                            li.addEventListener('mousedown', function(e) {
+                                e.preventDefault();
+                                inputEl.value = item;
+                                dropdown.classList.add('hidden');
+                            });
+                            dropdown.appendChild(li);
+                        });
+                        dropdown.classList.remove('hidden');
+                    });
+            }, 250);
+        });
+
+        inputEl.addEventListener('blur', () => {
+            setTimeout(() => dropdown.classList.add('hidden'), 150);
+        });
+    }
+
+    function initAutocompletes() {
+        document.querySelectorAll('input[name="skill_name"]').forEach(el => {
+            if (!el.dataset.autocomplete) {
+                el.dataset.autocomplete = 'true';
+                createAutocomplete(el, '/api/autocomplete/skills/');
+            }
+        });
+        document.querySelectorAll('input[name="cert_name"]').forEach(el => {
+            if (!el.dataset.autocomplete) {
+                el.dataset.autocomplete = 'true';
+                createAutocomplete(el, '/api/autocomplete/certifications/');
+            }
+        });
+        document.querySelectorAll('input[name="edu_course"]').forEach(el => {
+            if (!el.dataset.autocomplete) {
+                el.dataset.autocomplete = 'true';
+                createAutocomplete(el, '/api/autocomplete/degrees/');
+            }
+        });
+    }
+
+    initAutocompletes();
+
+    // ── Confirmation modal ─────────────────────────────────────────
+    function showConfirm(message, subtext, yesLabel, onYes) {
+        document.getElementById('confirm-message').textContent = message;
+        document.getElementById('confirm-subtext').textContent = subtext;
+        document.getElementById('confirm-yes').textContent = yesLabel;
+        document.getElementById('confirm-yes').onclick = () => { closeConfirm(); onYes(); };
+        const modal = document.getElementById('confirm-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeConfirm() {
+        const modal = document.getElementById('confirm-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    // ── Collapsible sections ───────────────────────────────────────
+    function toggleSection(name) {
+        const body = document.getElementById(`${name}-body`);
+        const chevron = document.getElementById(`${name}-chevron`);
+        const isHidden = body.classList.contains('hidden');
+        body.classList.toggle('hidden', !isHidden);
+        chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+    }
+
+    function expandAll() {
+        ['basic', 'location', 'education', 'experience', 'skills', 'certifications'].forEach(name => {
+            document.getElementById(`${name}-body`).classList.remove('hidden');
+            document.getElementById(`${name}-chevron`).style.transform = 'rotate(180deg)';
+        });
+    }
+
+    // ── Cancel button ──────────────────────────────────────────────
+    const cancelBtn = document.getElementById('cancel-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            showConfirm(
+                'Discard changes?',
+                'Any unsaved changes will be lost.',
+                'Yes, discard',
+                () => window.location.href = '/employers/jobs/'
+            );
+        });
+    }
+
+    // ── Save confirmation ──────────────────────────────────────────
+    document.getElementById('save-confirm-btn').addEventListener('click', () => {
+        {% if job %}
+        showConfirm(
+            'Save changes?',
+            'This will update the job post immediately.',
+            'Yes, save changes',
+            () => document.getElementById('job-form').submit()
+        );
+        {% else %}
+        showConfirm(
+            'Create this job post?',
+            'The job will be visible to jobseekers right away.',
+            'Yes, create',
+            () => document.getElementById('job-form').submit()
+        );
+        {% endif %}
+    });
+
+    expandAll();
+
+    // ── Location type toggle ───────────────────────────────────────
     const locationType = document.getElementById('location_type');
     const iloiloFields = document.getElementById('iloilo_fields');
     const overseasFields = document.getElementById('overseas_fields');
@@ -239,35 +556,105 @@
     locationType.addEventListener('change', updateLocationFields);
     updateLocationFields();
 
-    // Skills
+    // ── Skills ────────────────────────────────────────────────────
     function addSkill() {
         const container = document.getElementById('skill-container');
         const div = document.createElement('div');
-        div.className = 'skill-row flex gap-2';
+        div.className = 'skill-row';
         div.innerHTML = `<input type="text" name="skill_name" placeholder="e.g. Microsoft Word"
-                               class="flex-1 bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">`;
+                               class="job-field w-full bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">`;
         container.appendChild(div);
+        initAutocompletes();
     }
+
     function removeSkill() {
         const rows = document.querySelectorAll('.skill-row');
         if (rows.length > 1) rows[rows.length - 1].remove();
+        else rows[0].querySelector('input').value = '';
     }
 
-    // Certifications
+    // ── Experience fields graying out ──────────────────────────────
+    const anyExpCb = document.getElementById('any-exp-cb');
+    const expPositionInput = document.getElementById('exp-position-input');
+
+    function updateExpFields() {
+        if (anyExpCb.checked) {
+            expPositionInput.setAttribute('disabled', true);
+            expPositionInput.classList.add('opacity-40', 'cursor-not-allowed');
+        } else {
+            expPositionInput.removeAttribute('disabled');
+            expPositionInput.classList.remove('opacity-40', 'cursor-not-allowed');
+        }
+    }
+
+    if (anyExpCb) {
+        anyExpCb.addEventListener('change', updateExpFields);
+        updateExpFields();
+    }
+
+    // ── Certifications ────────────────────────────────────────────
     function addCert() {
         const container = document.getElementById('cert-container');
         const div = document.createElement('div');
         div.className = 'cert-row grid grid-cols-2 gap-2';
         div.innerHTML = `
             <input type="text" name="cert_name" placeholder="Certification name"
-                   class="bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+                   class="job-field bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
             <input type="text" name="cert_org" placeholder="Issuing org (optional)"
-                   class="bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">`;
+                   class="job-field bg-white border border-taupe/30 rounded-full px-3 py-2 text-xs text-primary placeholder-taupe focus:outline-none focus:border-teal transition">`;
         container.appendChild(div);
+        initAutocompletes();
     }
+
     function removeCert() {
         const rows = document.querySelectorAll('.cert-row');
         if (rows.length > 1) rows[rows.length - 1].remove();
+        else rows[0].querySelectorAll('input').forEach(i => i.value = '');
     }
+
+    // ── Success toast ──────────────────────────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('saved') === '1') {
+        const toast = document.getElementById('success-toast');
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // ── Barangay dropdown ──────────────────────────────────────────
+    const jobBarangaySelect = document.getElementById('job_barangay');
+    const ILOILO_CITY_CODE = '063022000';
+    const savedJobBarangayCode = '{{ job.barangay_code|default:"" }}';
+
+    if (jobBarangaySelect) {
+        fetch(`/api/barangays/${ILOILO_CITY_CODE}/`)
+            .then(res => res.json())
+            .then(barangays => {
+                barangays.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.code;
+                    opt.textContent = b.name;
+                    jobBarangaySelect.appendChild(opt);
+                });
+                if (savedJobBarangayCode) {
+                    jobBarangaySelect.value = savedJobBarangayCode;
+                    document.getElementById('job_barangay_name').value =
+                        jobBarangaySelect.options[jobBarangaySelect.selectedIndex].text;
+                }
+            });
+
+        jobBarangaySelect.addEventListener('change', function() {
+            document.getElementById('job_barangay_name').value =
+                this.options[this.selectedIndex].text;
+        });
+
+        document.querySelector('form').addEventListener('submit', function() {
+            const sel = document.getElementById('job_barangay');
+            document.getElementById('job_barangay_name').value =
+                sel.options[sel.selectedIndex].text;
+        });
+    }
+
 </script>
 {% endblock %}
+
+{% block footer %}{% endblock %}

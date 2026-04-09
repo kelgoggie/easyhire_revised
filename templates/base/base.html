@@ -9,28 +9,27 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- EasyHire Brand Colors (Iloilo-themed) -->
-    <script>
-                tailwind.config = {
+<script>
+    tailwind.config = {
         theme: {
             extend: {
-            colors: {
-                primary:   '#1A2F5A',   // navy
-                accent:    '#2B5BA8',   // iloilo blue
-                teal:      '#5B8DD9',   // sky blue (replaces old teal)
-                teallight: '#A8C3F0',   // lighter sky
-                amber:     '#D4A017',   // iloilo gold (replaces old amber)
-                muted:     '#6B7B8D',   // slate
-                surface:   '#F4F6FA',   // cloud white
-                taupe:     '#B8C5D6',   // steel blue-grey
-                olive:     '#C0C195',   // kept for employer "Hire" text
-            },
-            fontFamily: {
-                sans: ['Inter', 'sans-serif'],
-            },
+                colors: {
+                    primary:   '#2D4A3E',   // dark forest green
+                    teal:      '#4A9B8E',   // teal accent
+                    teallight: '#8BBDB7',   // light teal
+                    amber:     '#E8A838',   // amber CTA
+                    muted:     '#595959',   // dark grey
+                    surface:   '#F5F2EB',   // warm off-white
+                    taupe:     '#C4B9B0',   // taupe
+                    olive:     '#C0C195',   // olive
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                },
             }
         }
-        }
-    </script>
+    }
+</script>
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -39,7 +38,6 @@
 </head>
 <body class="font-sans">
     {% block navbar %}{% endblock %}
-
     {% block partner_logos %}{% endblock %}
     {% block content %}{% endblock %}
     {% block footer %}{% endblock %}

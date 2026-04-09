@@ -2,7 +2,7 @@ from django.shortcuts import render
 import json
 
 
-def analytics(request):
+def get_analytics_context(request):
     from django.utils import timezone
     from datetime import timedelta
     from django.db.models import Count
@@ -131,7 +131,7 @@ def analytics(request):
             for row in qs
         ]
 
-    return render(request, 'public/analytics.html', {
+    return {
         'total_applicants': total_applicants,
         'men': men,
         'women': women,
@@ -156,5 +156,10 @@ def analytics(request):
         'common_skills': common_skills,
         'barangay_data': barangay_data,
         'placements': 0,
-        'is_authenticated': request.user.is_authenticated,
-    })
+    }
+
+
+def analytics(request):
+    context = get_analytics_context(request)
+    context['is_authenticated'] = request.user.is_authenticated
+    return render(request, 'public/analytics.html', context)

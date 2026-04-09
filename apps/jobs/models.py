@@ -36,7 +36,9 @@ class JobPosting(models.Model):
     )
     # Used when location_type is ILOILO
     bldg_unit = models.CharField(max_length=100, blank=True)
-    street_barangay = models.CharField(max_length=200, blank=True)
+    street = models.CharField(max_length=200, blank=True)
+    barangay_code = models.CharField(max_length=20, blank=True)
+    barangay_name = models.CharField(max_length=200, blank=True)
     city = models.CharField(max_length=100, default="Iloilo City",
         help_text="Locked to Iloilo City for local jobs.")
     # Used when location_type is OVERSEAS
@@ -65,7 +67,7 @@ class JobPosting(models.Model):
             return "Remote"
         if self.location_type == self.OVERSEAS:
             return self.overseas_address
-        parts = [self.bldg_unit, self.street_barangay, self.city]
+        parts = [self.bldg_unit, self.street, self.barangay_name, self.city]
         return ", ".join(p for p in parts if p)
 
     @property
@@ -144,13 +146,61 @@ class JobExperienceRequirement(models.Model):
     job = models.OneToOneField(
         JobPosting, on_delete=models.CASCADE, related_name="experience_requirement"
     )
-    years_required = models.PositiveIntegerField(default=0,
-        help_text="Minimum years of experience required. Set to 0 for no experience needed.")
+    months_required = models.PositiveIntegerField(default=0,
+        help_text="Minimum months of experience required. Set to 0 for no experience needed.")
     description = models.TextField(blank=True,
-        help_text="Optional detail — e.g. 'at least 2 years in a retail environment'.")
+        help_text="Optional detail — e.g. 'at least 6 months in a retail environment'.")
+    any_experience_accepted = models.BooleanField(default=True,
+        help_text="If selected, any work experience counts as long as duration is met.")
+    preferred_position = models.CharField(max_length=200, blank=True,
+        help_text="Preferred previous position/role. Used for fuzzy matching if any_experience_accepted is False.")
+
 
     class Meta:
         db_table = "job_experience_requirements"
 
     def __str__(self):
-        return f"{self.years_required} yr(s) — {self.job.title}"
+        return f"{self.display_experience} — {self.job.title}"
+
+    @property
+    def display_experience(self):
+        if self.months_required == 0:
+            return "No experience required"
+        years = self.months_required // 12
+        months = self.months_required % 12
+        parts = []
+        if years:
+            parts.append(f"{years} year{'s' if years != 1 else ''}")
+        if months:
+            parts.append(f"{months} month{'s' if months != 1 else ''}")
+        return ", ".join(parts)
+
+
+class Application(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_ACCEPTED = "accepted"
+    STATUS_REJECTED = "rejected"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACCEPTED, "Accepted"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    jobseeker = models.ForeignKey(
+        "jobseekers.JobseekerProfile", on_delete=models.CASCADE,
+        related_name="applications"
+    )
+    job = models.ForeignKey(
+        JobPosting, on_delete=models.CASCADE,
+        related_name="applications"
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "applications"
+        unique_together = ("jobseeker", "job")
+
+    def __str__(self):
+        return f"{self.jobseeker} → {self.job}"

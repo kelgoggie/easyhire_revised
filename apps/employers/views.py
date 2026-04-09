@@ -121,21 +121,41 @@ from apps.jobs.models import (
 
 @employer_required
 def job_list(request):
+    from apps.jobseekers.models import JobInteraction
+    from django.db.models import Count, Q
     profile = request.user.employer_profile
     company = profile.company
     query = request.GET.get('q', '')
-    jobs = JobPosting.objects.filter(company=company)
+    status_filter = request.GET.get('status', '')
+    sort = request.GET.get('sort', 'newest')
+
+    jobs = JobPosting.objects.filter(company=company).annotate(
+        liked_by_count=Count(
+            'jobseeker_interactions',
+            filter=Q(jobseeker_interactions__interaction_type='liked')
+        )
+    )
+
     if query:
         jobs = jobs.filter(title__icontains=query)
+    if status_filter:
+        jobs = jobs.filter(status=status_filter)
+    if sort == 'oldest':
+        jobs = jobs.order_by('created_at')
+    elif sort == 'most_liked':
+        jobs = jobs.order_by('-liked_by_count')
+    else:
+        jobs = jobs.order_by('-created_at')
 
     return render(request, 'employers/job_list.html', {
         'company': company,
         'jobs': jobs,
         'query': query,
+        'status_filter': status_filter,
+        'sort': sort,
         'unread_notifications': False,
         'unread_messages': False,
     })
-
 
 @employer_required
 def job_create(request):
@@ -150,7 +170,9 @@ def job_create(request):
             description=request.POST.get('description', ''),
             location_type=request.POST.get('location_type', 'iloilo'),
             bldg_unit=request.POST.get('bldg_unit', ''),
-            street_barangay=request.POST.get('street_barangay', ''),
+            street=request.POST.get('street', ''),
+            barangay_code=request.POST.get('job_barangay', ''),
+            barangay_name=request.POST.get('job_barangay_name', ''),
             overseas_address=request.POST.get('overseas_address', ''),
             slots=request.POST.get('slots') or 1,
             salary_min=request.POST.get('salary_min') or None,
@@ -188,14 +210,15 @@ def job_create(request):
                 )
 
         # Experience
-        years = request.POST.get('exp_years')
-        if years:
+        months = request.POST.get('exp_months')
+        if months:
             JobExperienceRequirement.objects.create(
                 job=job,
-                years_required=years,
+                months_required=months,
                 description=request.POST.get('exp_description', ''),
+                any_experience_accepted='any_experience_accepted' in request.POST,
+                preferred_position=request.POST.get('exp_preferred_position', ''),
             )
-
         return redirect('/employers/jobs/')
 
     return render(request, 'employers/job_form.html', {
@@ -206,17 +229,6 @@ def job_create(request):
         'unread_messages': False,
     })
 
-
-@employer_required
-def job_detail(request, job_id):
-    profile = request.user.employer_profile
-    job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
-    return render(request, 'employers/job_detail.html', {
-        'job': job,
-        'company': profile.company,
-        'unread_notifications': False,
-        'unread_messages': False,
-    })
 
 
 @employer_required
@@ -229,7 +241,9 @@ def job_edit(request, job_id):
         job.description = request.POST.get('description', '')
         job.location_type = request.POST.get('location_type', 'iloilo')
         job.bldg_unit = request.POST.get('bldg_unit', '')
-        job.street_barangay = request.POST.get('street_barangay', '')
+        job.street = request.POST.get('street', '')
+        job.barangay_code = request.POST.get('job_barangay', '')
+        job.barangay_name = request.POST.get('job_barangay_name', '')
         job.overseas_address = request.POST.get('overseas_address', '')
         job.slots = request.POST.get('slots') or 1
         job.salary_min = request.POST.get('salary_min') or None
@@ -267,12 +281,14 @@ def job_edit(request, job_id):
 
         # Experience
         JobExperienceRequirement.objects.filter(job=job).delete()
-        years = request.POST.get('exp_years')
-        if years:
+        months = request.POST.get('exp_months')
+        if months:
             JobExperienceRequirement.objects.create(
                 job=job,
-                years_required=years,
+                months_required=months,
                 description=request.POST.get('exp_description', ''),
+                any_experience_accepted='any_experience_accepted' in request.POST,
+                preferred_position=request.POST.get('exp_preferred_position', ''),
             )
 
         return redirect('/employers/jobs/')
@@ -312,21 +328,46 @@ def job_detail(request, job_id):
 @employer_required
 def candidates(request, job_id):
     from apps.matching.engine import get_ranked_jobseekers
+    from apps.jobseekers.models import JobInteraction
     profile = request.user.employer_profile
     company = profile.company
     job = get_object_or_404(JobPosting, id=job_id, company=company)
     tab = request.GET.get('tab', 'recommended')
 
     liked_ids = list(CandidateInteraction.objects.filter(
-        company=company
+        company=company, job=job
     ).values_list('jobseeker_id', flat=True))
 
-    if tab == 'liked':
+    
+    # Jobseekers who liked this job
+    liked_by_jobseeker_ids = list(JobInteraction.objects.filter(
+        job=job, interaction_type=JobInteraction.LIKED
+    ).values_list('jobseeker_id', flat=True))
+
+    liked_by_count = len(liked_by_jobseeker_ids)
+
+    if tab == 'liked_by':
+        from apps.jobseekers.models import JobseekerProfile
+        from apps.matching.engine import compute_match_score
+        jobseekers_raw = JobseekerProfile.objects.filter(id__in=liked_by_jobseeker_ids)
+        ranked = []
+        for js in jobseekers_raw:
+            score_data = compute_match_score(job, js)
+            ranked.append({
+                'profile': js,
+                'score': score_data['total'],
+                'breakdown': score_data['breakdown'],
+            })
+        ranked.sort(key=lambda x: x['score'], reverse=True)
+
+    elif tab == 'liked':
         from apps.jobseekers.models import JobseekerProfile
         jobseekers_raw = JobseekerProfile.objects.filter(id__in=liked_ids)
         ranked = [{'profile': js, 'score': None, 'breakdown': {}} for js in jobseekers_raw]
+
     elif tab == 'applicants':
         ranked = []
+
     else:
         ranked = get_ranked_jobseekers(job)
 
@@ -335,11 +376,11 @@ def candidates(request, job_id):
         'job': job,
         'ranked': ranked,
         'liked_ids': liked_ids,
+        'liked_by_count': liked_by_count,
         'tab': tab,
         'unread_notifications': False,
         'unread_messages': False,
     })
-
 
 @employer_required
 def company_profile(request):
@@ -353,9 +394,9 @@ def company_profile(request):
         company.nature_of_company = request.POST.get('nature_of_company', '')
         company.main_branch_address = request.POST.get('main_branch_address', '')
         company.iloilo_bldg_unit = request.POST.get('iloilo_bldg_unit', '')
-        company.iloilo_street_barangay = request.POST.get('iloilo_street_barangay', '')
-        company.company_email = request.POST.get('company_email', '')
-        company.recruitment_email = request.POST.get('recruitment_email', '')
+        company.iloilo_street = request.POST.get('iloilo_street', '')
+        company.iloilo_barangay_code = request.POST.get('iloilo_barangay', '')
+        company.iloilo_barangay_name = request.POST.get('iloilo_barangay_name', '')
         company.save()
 
         sector_ids = request.POST.getlist('sectors')
@@ -421,5 +462,75 @@ def candidate_like(request, jobseeker_id):
                 company=company, jobseeker=jobseeker, job=job
             )
 
-    next_url = request.POST.get('next', '/employers/candidates/')
-    return redirect(next_url)
+            from apps.notifications.utils import notify_company_liked_jobseeker, notify_match
+            from apps.jobseekers.models import JobInteraction
+
+            # Notify jobseeker that company liked them
+            notify_company_liked_jobseeker(company, jobseeker, job)
+
+            # Check for mutual match
+            jobseeker_liked = JobInteraction.objects.filter(
+                jobseeker=jobseeker, job=job, interaction_type='liked'
+            ).exists()
+            if jobseeker_liked:
+                notify_match(company, jobseeker, job)
+                
+            next_url = request.POST.get('next', '/employers/candidates/')
+            return redirect(next_url)
+
+@employer_required
+def analytics(request):
+    profile = request.user.employer_profile
+    company = profile.company
+
+    # Import the analytics view logic from the existing analytics app
+    from apps.analytics.views import get_analytics_context
+    context = get_analytics_context(request)
+    context.update({
+        'company': company,
+        'unread_notifications': False,
+        'unread_messages': False,
+    })
+    return render(request, 'employers/analytics.html', context)
+
+@employer_required
+def all_candidates(request):
+    from apps.matching.engine import get_ranked_jobseekers
+    from apps.jobseekers.models import JobseekerProfile
+    profile = request.user.employer_profile
+    company = profile.company
+
+    search = request.GET.get('q', '').strip()
+    sort = request.GET.get('sort', 'name')
+
+    liked_ids = list(CandidateInteraction.objects.filter(
+        company=company
+    ).values_list('jobseeker_id', flat=True))
+
+    candidates = JobseekerProfile.objects.filter(profile_complete=True)
+
+    if search:
+        candidates = candidates.filter(
+            first_name__icontains=search
+        ) | candidates.filter(
+            last_name__icontains=search
+        ) | candidates.filter(
+            skills__name__icontains=search
+        )
+        candidates = candidates.distinct()
+
+    if sort == 'name':
+        candidates = candidates.order_by('first_name', 'last_name')
+    elif sort == 'recent':
+        candidates = candidates.order_by('-created_at')
+
+    return render(request, 'employers/all_candidates.html', {
+        'company': company,
+        'candidates': candidates,
+        'liked_ids': liked_ids,
+        'search': search,
+        'sort': sort,
+        'total': candidates.count(),
+        'unread_notifications': False,
+        'unread_messages': False,
+    })

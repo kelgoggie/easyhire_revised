@@ -4,7 +4,11 @@
 {% block title %}{{ job.title }} — EasyHire{% endblock %}
 
 {% block navbar %}
-    {% include "base/navbar_jobseeker.html" %}
+    {% if request.user.is_authenticated and request.user.is_jobseeker %}
+        {% include "base/navbar_dashboard_jobseeker.html" with active="jobs" %}
+    {% else %}
+        {% include "base/navbar_jobseeker.html" %}
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -29,13 +33,35 @@
 <main class="bg-surface min-h-screen py-10 px-16">
     <div class="max-w-4xl mx-auto">
 
-        <!-- Back -->
-        <a href="/jobs/" class="flex items-center gap-2 text-muted text-sm hover:text-primary transition mb-6">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Back to Jobs
-        </a>
+        <!-- Back + Prev/Next -->
+        <div class="flex items-center justify-between mb-6">
+            <a href="/jobs/" class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to Jobs
+            </a>
+            <div class="flex items-center gap-2">
+                {% if prev_job %}
+                <a href="/jobs/{{ prev_job.id }}/"
+                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-taupe/30 text-muted text-xs hover:border-primary hover:text-primary transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Previous
+                </a>
+                {% endif %}
+                {% if next_job %}
+                <a href="/jobs/{{ next_job.id }}/"
+                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-taupe/30 text-muted text-xs hover:border-primary hover:text-primary transition">
+                    Next
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+                {% endif %}
+            </div>
+        </div>
 
         <!-- Header Card -->
         <div class="bg-white border border-taupe/20 rounded-2xl p-8 shadow-sm mb-6">
@@ -60,7 +86,6 @@
                             </svg>
                             {{ job.slots }} slot{{ job.slots|pluralize }} available
                         </span>
-
                         <span class="flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -68,21 +93,133 @@
                             Posted {{ job.created_at|timesince }} ago
                         </span>
                     </div>
+                    <!-- Actions -->
+                    <div class="flex items-center gap-3 mt-5 pt-5 border-t border-taupe/10">
+                        <form method="POST" action="/jobs/{{ job.id }}/save/">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="/jobs/{{ job.id }}/">
+                            <button type="submit"
+                                    class="flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition
+                                           {% if job.id in liked_ids %}text-amber border-amber/30 bg-amber/5{% else %}border-taupe/30 text-taupe hover:border-amber hover:text-amber{% endif %}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
+                                     {% if job.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                                {% if job.id in liked_ids %}Saved{% else %}Save Job{% endif %}
+                            </button>
+                        </form>
+                        <form method="POST" action="/jobs/{{ job.id }}/hide/">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="/jobs/for-you/">
+                            <button type="submit"
+                                    class="flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition
+                                           {% if job.id in hidden_ids %}bg-red-50 border-red-200 text-red-400{% else %}border-taupe/30 text-taupe hover:border-red-300 hover:text-red-400{% endif %}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                                {% if job.id in hidden_ids %}Hidden{% else %}Hide Job{% endif %}
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- Match Score Card -->
+        {% if match_score %}
+        <div class="bg-white border border-taupe/20 rounded-2xl p-6 shadow-sm mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-bold text-primary text-base">Your Match Score</h2>
+                <span class="text-2xl font-extrabold
+                    {% if match_score.total >= 75 %}text-teal{% elif match_score.total >= 50 %}text-amber{% else %}text-muted{% endif %}">
+                    {{ match_score.total }}<span class="text-sm font-medium text-muted">/100</span>
+                </span>
+            </div>
+
+            <!-- Score bar -->
+            <div class="w-full h-2 bg-taupe/20 rounded-full mb-5">
+                <div class="h-2 rounded-full transition-all
+                    {% if match_score.total >= 75 %}bg-teal{% elif match_score.total >= 50 %}bg-amber{% else %}bg-taupe{% endif %}"
+                     style="width: {{ match_score.total }}%"></div>
+            </div>
+
+            <!-- Breakdown -->
+            <div class="grid grid-cols-2 gap-3">
+
+                <!-- Skills -->
+                <div class="flex flex-col gap-1 cursor-help"
+                     title="{{ match_score.counts.skills_matched }} out of {{ match_score.counts.skills_total }} required skill{% if match_score.counts.skills_total != 1 %}s{% endif %} met">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted">Skills</span>
+                        <span class="font-semibold text-primary">{{ match_score.counts.skills_matched }} / {{ match_score.counts.skills_total }}</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-taupe/20 rounded-full">
+                        <div class="h-1.5 rounded-full bg-teal/70" style="width: {{ match_score.breakdown.skills }}%"></div>
+                    </div>
+                    <p class="text-xs text-muted">Weight: {{ weights.skills }}%</p>
+                </div>
+
+                <!-- Education -->
+                <div class="flex flex-col gap-1 cursor-help"
+                     title="{% if match_score.counts.education_met %}Education requirement met{% else %}Education requirement not fully met{% endif %}">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted">Education</span>
+                        <span class="font-semibold {% if match_score.counts.education_met %}text-teal{% else %}text-muted{% endif %}">
+                            {% if match_score.counts.education_met %}Met{% else %}Not Met{% endif %}
+                        </span>
+                    </div>
+                    <div class="w-full h-1.5 bg-taupe/20 rounded-full">
+                        <div class="h-1.5 rounded-full bg-teal/70" style="width: {{ match_score.breakdown.education }}%"></div>
+                    </div>
+                    <p class="text-xs text-muted">Weight: {{ weights.education }}%</p>
+                </div>
+
+                <!-- Experience -->
+                <div class="flex flex-col gap-1 cursor-help"
+                     title="{{ match_score.counts.experience_months }} months of experience · {{ match_score.counts.experience_required }} months required">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted">Experience</span>
+                        <span class="font-semibold text-primary">{{ match_score.counts.experience_months }} / {{ match_score.counts.experience_required }} mo</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-taupe/20 rounded-full">
+                        <div class="h-1.5 rounded-full bg-teal/70" style="width: {{ match_score.breakdown.experience }}%"></div>
+                    </div>
+                    <p class="text-xs text-muted">Weight: {{ weights.experience }}%</p>
+                </div>
+
+                <!-- Certifications -->
+                <div class="flex flex-col gap-1 cursor-help"
+                     title="{{ match_score.counts.certs_matched }} out of {{ match_score.counts.certs_total }} certification{% if match_score.counts.certs_total != 1 %}s{% endif %} met">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted">Certifications</span>
+                        <span class="font-semibold text-primary">{{ match_score.counts.certs_matched }} / {{ match_score.counts.certs_total }}</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-taupe/20 rounded-full">
+                        <div class="h-1.5 rounded-full bg-teal/70" style="width: {{ match_score.breakdown.certifications }}%"></div>
+                    </div>
+                    <p class="text-xs text-muted">Weight: {{ weights.certifications }}%</p>
+                </div>
+
+            </div>
+
+            {% if match_score.breakdown.query_boost > 0 %}
+            <p class="text-xs text-teal mt-3">
+                +{{ match_score.breakdown.query_boost }} bonus points from your job search preference!
+            </p>
+            {% endif %}
+
+        </div>
+        {% endif %}
+
+        <!-- Main Grid -->
         <div class="grid grid-cols-3 gap-6">
 
             <!-- Left: Description -->
             <div class="col-span-2 flex flex-col gap-6">
-
-                <!-- Description -->
                 <div class="bg-white border border-taupe/20 rounded-2xl p-6 shadow-sm">
                     <h2 class="font-bold text-primary text-base mb-4">Job Description</h2>
                     <p class="text-primary text-sm leading-relaxed whitespace-pre-line">{{ job.description }}</p>
                 </div>
-
             </div>
 
             <!-- Right: Requirements -->
@@ -101,13 +238,9 @@
                 {% if job.experience_requirement %}
                 <div class="bg-white border border-taupe/20 rounded-2xl p-5 shadow-sm">
                     <h3 class="font-bold text-primary text-sm mb-3">Experience</h3>
-                    {% if job.experience_requirement.years_required == 0 %}
-                        <p class="text-sm text-primary">No experience required</p>
-                    {% else %}
-                        <p class="text-sm text-primary">{{ job.experience_requirement.years_required }} year{{ job.experience_requirement.years_required|pluralize }} minimum</p>
-                    {% endif %}
+                    <p class="text-sm text-primary">{{ job.experience_requirement.display_experience }}</p>
                     {% if job.experience_requirement.description %}
-                        <p class="text-xs text-muted mt-1">{{ job.experience_requirement.description }}</p>
+                    <p class="text-xs text-muted mt-1">{{ job.experience_requirement.description }}</p>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -128,4 +261,23 @@
                 {% if job.certification_requirements.all %}
                 <div class="bg-white border border-taupe/20 rounded-2xl p-5 shadow-sm">
                     <h3 class="font-bold text-primary text-sm mb-3">Certifications</h3>
-                    <div class="flex f
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for cert in job.certification_requirements.all %}
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-amber/10 text-amber">
+                            {{ cert.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+
+    </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}

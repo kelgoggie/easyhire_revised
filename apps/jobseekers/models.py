@@ -58,6 +58,7 @@ class JobseekerProfile(models.Model):
     profile_complete = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    bio = models.TextField(blank=True)
 
     class Meta:
         db_table = "jobseeker_profiles"

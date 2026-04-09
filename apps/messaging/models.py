@@ -3,13 +3,28 @@ from apps.accounts.models import User
 
 
 class Conversation(models.Model):
+    jobseeker = models.ForeignKey(
+        "jobseekers.JobseekerProfile", on_delete=models.CASCADE,
+        related_name="conversations",
+        default=1
+    )
+    company = models.ForeignKey(
+        "employers.Company", on_delete=models.CASCADE,
+        related_name="conversations",
+        default=1
+    )
+    job = models.ForeignKey(
+        "jobs.JobPosting", on_delete=models.CASCADE,
+        related_name="conversations", null=True, blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "conversations"
+        unique_together = ("jobseeker", "company", "job")
 
     def __str__(self):
-        return f"Conversation #{self.pk}"
+        return f"{self.jobseeker} ↔ {self.company.name}"
 
 
 class Message(models.Model):

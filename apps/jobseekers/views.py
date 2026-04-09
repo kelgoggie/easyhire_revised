@@ -7,7 +7,9 @@ from apps.jobseekers.models import (
     Certification, WorkExperience, Sector
 )
 from datetime import datetime
-
+import json
+from django.http import JsonResponse
+from django.db.models import Q
 
 
 @login_required
@@ -21,14 +23,12 @@ def dashboard(request):
         return redirect('/register/info/')
 
     from apps.matching.engine import get_ranked_jobs
-    from apps.jobs.models import JobPosting
 
     education = Education.objects.filter(profile=profile)
     skills = Skill.objects.filter(profile=profile)
     certifications = Certification.objects.filter(profile=profile)
     recent_jobs = JobPosting.objects.filter(status='open').order_by('-created_at')[:5]
 
-    # Get ranked jobs for this jobseeker
     if profile.profile_complete:
         ranked_jobs = get_ranked_jobs(profile)[:5]
     else:
@@ -57,14 +57,13 @@ def resume(request):
         return redirect('/register/info/')
 
     if request.method == 'POST':
-        # Update profile fields
         profile.job_search_query = request.POST.get('job_search_query', '')
         profile.house_unit = request.POST.get('house_unit', '')
         profile.street_barangay = request.POST.get('street_barangay', '')
-        province_code = request.POST.get('province', '')
-        city_code = request.POST.get('city_municipality', '')
         profile.province = 'Iloilo'
         profile.province_code = '063000000'
+
+        city_code = request.POST.get('city_municipality', '')
         profile.city_code = city_code
 
         from apps.core.models import CityMunicipality, Barangay
@@ -72,23 +71,6 @@ def resume(request):
             profile.city_municipality = CityMunicipality.objects.get(code=city_code).name
         except CityMunicipality.DoesNotExist:
             profile.city_municipality = ''
-            
-        barangay_code = request.POST.get('barangay', '')
-        profile.barangay_code = barangay_code
-
-        from apps.core.models import Province, CityMunicipality, Barangay
-        try:
-            profile.barangay = Barangay.objects.get(code=barangay_code).name
-        except Barangay.DoesNotExist:
-            profile.barangay = ''
-
-        # Save human-readable names
-        from apps.core.models import CityMunicipality, Barangay
-
-        try:
-            profile.city_municipality = CityMunicipality.objects.get(code=city_code).name
-        except CityMunicipality.DoesNotExist:
-            profile.city_municipality = ''
 
         barangay_code = request.POST.get('barangay', '')
         profile.barangay_code = barangay_code
@@ -97,16 +79,16 @@ def resume(request):
         except Barangay.DoesNotExist:
             profile.barangay = ''
 
-        profile.province = 'Iloilo'
-        profile.province_code = '063000000'
         profile.phone = request.POST.get('phone', '')
         profile.contact_email = request.POST.get('contact_email', '')
+        profile.bio = request.POST.get('bio', '')
         profile.save()
 
         # Education
         Education.objects.filter(profile=profile).delete()
         levels = request.POST.getlist('edu_level')
         courses = request.POST.getlist('edu_course')
+        institutions = request.POST.getlist('edu_institution')
         starts = request.POST.getlist('edu_start')
         ends = request.POST.getlist('edu_end')
         is_currents = request.POST.getlist('edu_is_current')
@@ -117,6 +99,7 @@ def resume(request):
                 profile=profile,
                 level=level,
                 course_degree=courses[i] if i < len(courses) else '',
+                institution=institutions[i] if i < len(institutions) else '',
                 year_started=starts[i] if i < len(starts) and starts[i] else None,
                 year_ended=ends[i] if i < len(ends) and ends[i] else None,
                 is_current=str(i) in is_currents,
@@ -194,11 +177,6 @@ def resume(request):
         'unread_messages': False,
     })
 
-import json
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q
-
 
 @login_required
 def recommended_jobs(request):
@@ -211,7 +189,6 @@ def recommended_jobs(request):
         return redirect('/register/info/')
 
     from apps.matching.engine import get_ranked_jobs
-    from apps.jobs.models import JobPosting
     from apps.jobseekers.models import JobInteraction
 
     tab = request.GET.get('tab', 'for_you')
@@ -274,9 +251,7 @@ def recommended_jobs(request):
         else:
             ranked_jobs = [{'job': job, 'score': None, 'breakdown': None} for job in jobs_qs]
 
-
     else:
-        # For You tab
         if profile.profile_complete:
             ranked_jobs = get_ranked_jobs(profile)
             ranked_jobs = [r for r in ranked_jobs if r['job'].id not in hidden_ids]
@@ -296,11 +271,9 @@ def recommended_jobs(request):
                 ranked_jobs.sort(
                     key=lambda x: 0 if x['job'].city.lower() == profile.city_municipality.lower() else 1
                 )
-            # else: keep best match order from engine
         else:
             ranked_jobs = []
 
-    # Build JSON-safe job data for modal
     jobs_json = []
     posted_map = {}
     for item in ranked_jobs:
@@ -357,7 +330,6 @@ def job_like(request, job_id):
     if request.method != 'POST':
         return redirect('/jobs/for-you/')
     from apps.jobseekers.models import JobInteraction
-    from apps.jobs.models import JobPosting
     profile = request.user.jobseeker_profile
     job = get_object_or_404(JobPosting, id=job_id)
 
@@ -368,12 +340,16 @@ def job_like(request, job_id):
         else:
             existing.interaction_type = JobInteraction.LIKED
             existing.save()
+            from apps.notifications.utils import notify_jobseeker_liked_job
+            notify_jobseeker_liked_job(profile, job)
     else:
         JobInteraction.objects.create(
             jobseeker=profile,
             job=job,
             interaction_type=JobInteraction.LIKED
         )
+        from apps.notifications.utils import notify_jobseeker_liked_job
+        notify_jobseeker_liked_job(profile, job)
 
     return redirect(request.POST.get('next', '/jobs/for-you/'))
 
@@ -383,7 +359,6 @@ def job_hide(request, job_id):
     if request.method != 'POST':
         return redirect('/jobs/for-you/')
     from apps.jobseekers.models import JobInteraction
-    from apps.jobs.models import JobPosting
     profile = request.user.jobseeker_profile
     job = get_object_or_404(JobPosting, id=job_id)
 
@@ -403,65 +378,12 @@ def job_hide(request, job_id):
 
     return redirect(request.POST.get('next', '/jobs/for-you/'))
 
-@login_required
-def job_like(request, job_id):
-    if request.method != 'POST':
-        return redirect('/jobs/for-you/')
-    from apps.jobseekers.models import JobInteraction
-    from apps.jobs.models import JobPosting
-    profile = request.user.jobseeker_profile
-    job = get_object_or_404(JobPosting, id=job_id)
-
-    existing = JobInteraction.objects.filter(jobseeker=profile, job=job).first()
-    if existing:
-        if existing.interaction_type == JobInteraction.LIKED:
-            existing.delete()
-        else:
-            existing.interaction_type = JobInteraction.LIKED
-            existing.save()
-    else:
-        JobInteraction.objects.create(
-            jobseeker=profile,
-            job=job,
-            interaction_type=JobInteraction.LIKED
-        )
-
-    return redirect(request.POST.get('next', '/jobs/for-you/'))
-
-
-@login_required
-def job_hide(request, job_id):
-    if request.method != 'POST':
-        return redirect('/jobs/for-you/')
-    from apps.jobseekers.models import JobInteraction
-    from apps.jobs.models import JobPosting
-    profile = request.user.jobseeker_profile
-    job = get_object_or_404(JobPosting, id=job_id)
-
-    existing = JobInteraction.objects.filter(jobseeker=profile, job=job).first()
-    if existing:
-        if existing.interaction_type == JobInteraction.HIDDEN:
-            existing.delete()  # toggle off
-        else:
-            existing.interaction_type = JobInteraction.HIDDEN
-            existing.save()
-    else:
-        JobInteraction.objects.create(
-            jobseeker=profile,
-            job=job,
-            interaction_type=JobInteraction.HIDDEN
-        )
-
-    return redirect(request.POST.get('next', '/jobs/for-you/'))
-
-from django.http import JsonResponse
 
 def autocomplete_skills(request):
     query = request.GET.get('q', '').strip()
     if not query or len(query) < 2:
         return JsonResponse([], safe=False)
 
-    # Pull distinct skill names from jobseeker profiles
     from apps.jobseekers.models import Skill as JobseekerSkill
     skills = JobseekerSkill.objects.filter(
         name__icontains=query
@@ -475,13 +397,10 @@ def autocomplete_positions(request):
     if not query or len(query) < 2:
         return JsonResponse([], safe=False)
 
-    # Pull from actual job postings in the system
-    from apps.jobs.models import JobPosting
     positions = JobPosting.objects.filter(
         title__icontains=query, status='open'
     ).values_list('title', flat=True).distinct().order_by('title')[:10]
 
-    # Also include static common positions
     static_positions = [
         'Accountant', 'Administrative Assistant', 'Architect', 'Bookkeeper',
         'Call Center Agent', 'Cashier', 'Civil Engineer', 'Computer Technician',
@@ -499,7 +418,6 @@ def autocomplete_positions(request):
 
     filtered_static = [p for p in static_positions if query.lower() in p.lower()]
     combined = list(dict.fromkeys(list(positions) + filtered_static))[:10]
-
     return JsonResponse(combined, safe=False)
 
 
@@ -509,7 +427,6 @@ def autocomplete_degrees(request):
         return JsonResponse([], safe=False)
 
     degrees = [
-        # Bachelor's
         'BS Accountancy', 'BS Architecture', 'BS Biology', 'BS Business Administration',
         'BS Chemical Engineering', 'BS Chemistry', 'BS Civil Engineering',
         'BS Computer Engineering', 'BS Computer Science', 'BS Criminology',
@@ -524,55 +441,45 @@ def autocomplete_degrees(request):
         'BS Pharmacy', 'BS Physical Therapy', 'BS Psychology', 'BS Radiologic Technology',
         'BS Real Estate Management', 'BS Social Work', 'BS Statistics',
         'BS Tourism Management',
-        # AB/BA
         'AB Communication', 'AB Economics', 'AB English', 'AB Filipino',
         'AB History', 'AB Journalism', 'AB Political Science', 'AB Psychology',
         'AB Sociology',
-        # Education
         'Bachelor of Elementary Education', 'Bachelor of Secondary Education',
         'Bachelor of Physical Education', 'Bachelor of Special Needs Education',
-        # Other
         'Bachelor of Laws', 'Bachelor of Arts in Music', 'Bachelor of Fine Arts',
         'Doctor of Medicine', 'Doctor of Dental Medicine',
-        # Vocational/TESDA
         'Automotive Servicing NC II', 'Bookkeeping NC III', 'Computer Hardware Servicing NC II',
         'Cookery NC II', 'Electrical Installation and Maintenance NC II',
         'Food and Beverage Services NC II', 'Housekeeping NC II',
         'Shielded Metal Arc Welding NC II', 'Driving NC II',
-        # Senior High Strands
         'ABM', 'HUMSS', 'STEM', 'GAS', 'TVL', 'Sports Track', 'Arts and Design Track',
     ]
 
-
     filtered = [d for d in degrees if query.lower() in d.lower()][:10]
     return JsonResponse(filtered, safe=False)
+
 
 def autocomplete_certifications(request):
     query = request.GET.get('q', '').strip()
     if not query or len(query) < 2:
         return JsonResponse([], safe=False)
 
-    # Pull from existing jobseeker certifications
     from apps.jobseekers.models import Certification as JobseekerCert
     existing = JobseekerCert.objects.filter(
         name__icontains=query
     ).values_list('name', flat=True).distinct().order_by('name')[:10]
 
     static_certs = [
-        # TESDA
         'TESDA NC I', 'TESDA NC II', 'TESDA NC III', 'TESDA NC IV',
-        # Professional licenses
         'PRC Board Exam - Nursing', 'PRC Board Exam - Medicine',
         'PRC Board Exam - Accountancy', 'PRC Board Exam - Engineering',
         'PRC Board Exam - Pharmacy', 'PRC Board Exam - Physical Therapy',
         'PRC Board Exam - Medical Technology', 'PRC Board Exam - Dentistry',
         'PRC Board Exam - Psychology', 'PRC Board Exam - Social Work',
-        # IT
         'AWS Certified Cloud Practitioner', 'AWS Certified Solutions Architect',
         'Google IT Support Certificate', 'Google Data Analytics Certificate',
         'Microsoft Certified: Azure Fundamentals', 'Cisco CCNA',
         'CompTIA A+', 'CompTIA Security+', 'Oracle Java Certification',
-        # Other
         'Civil Service Eligibility - Professional', 'Civil Service Eligibility - Sub-Professional',
         'First Aid and Basic Life Support', 'BOSH Training Certificate',
         'Occupational Health and Safety', 'Food Safety Certificate',

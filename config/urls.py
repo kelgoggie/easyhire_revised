@@ -9,7 +9,8 @@ urlpatterns = [
     path('', include('apps.accounts.urls')),
     path('', include('apps.core.urls')),
     path('', include('apps.jobseekers.urls')),
-    path('', include('apps.employers.urls')),
     path('', include('apps.analytics.urls')),
+    path('', include('apps.employers.urls')),
     path('', include('apps.admin_panel.urls')),
+    path('', include('apps.notifications.urls')),
 ]

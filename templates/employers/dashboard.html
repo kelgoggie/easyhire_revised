@@ -7,13 +7,17 @@
     {% include "base/navbar_dashboard_employer.html" with active="home" %}
 {% endblock %}
 
+
+    {% include "base/partner_logos.html" %}
+
 {% block content %}
-<main class="bg-primary min-h-screen py-8 px-12">
+
+<main class="bg-surface min-h-screen py-8 px-12">
     <div class="max-w-4xl mx-auto">
 
         <!-- Search bar -->
         <div class="text-center mb-6">
-            <p class="text-white/60 text-sm mb-2">Search for candidates on <span class="font-bold text-white">EasyHire...</span></p>
+            <p class="text-primary/60 text-sm mb-2">Search for candidates on <span class="font-bold text-olive">EasyHire...</span></p>
             <div class="relative max-w-xl mx-auto">
                 <input type="text" placeholder="Hinted search text"
                        class="w-full bg-surface border border-taupe/30 rounded-full px-5 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition pr-12">
@@ -40,7 +44,7 @@
                 <!-- Info -->
                 <div class="flex-1 min-w-0">
                     <h2 class="text-2xl text-primary mb-0.5">
-                        Company <span class="font-extrabold">{{ company.name }}</span>
+                        <span class="font-extrabold">{{ company.name }}</span>
                     </h2>
                     <p class="text-primary font-semibold text-sm mb-3">{{ company.nature_of_company }}</p>
                     {% if company.description %}
@@ -71,13 +75,13 @@
         </div>
 
         <!-- Recent Job Posts -->
-        <h2 class="text-white text-2xl mb-3">Your Recent <span class="font-extrabold">Job Posts</span></h2>
+        <h2 class="text-primary text-2xl mb-3">Your Recent <span class="font-extrabold">Job Posts</span></h2>
         <div class="bg-surface border border-taupe/20 rounded-2xl p-5 mb-8 shadow-sm min-h-[120px] flex flex-col justify-between">
 
             {% if recent_jobs %}
             <div class="space-y-2 mb-4">
                 {% for job in recent_jobs %}
-                <a href="/employers/jobs/{{ job.id }}/edit/"
+                <a href="/employers/jobs/{{ job.id }}"
                    class="flex items-center justify-between bg-taupe/10 border border-taupe/20 rounded-xl px-4 py-2.5 hover:bg-taupe/20 transition">
                     <p class="text-primary font-semibold text-sm">{{ job.title }}</p>
                     <p class="text-muted text-xs">{{ job.location_display }}</p>
@@ -115,7 +119,7 @@
         <!-- How does EasyHire work? -->
         <div>
             <h3 class="text-3xl font-extrabold text-center mb-6">
-                How does <span class="text-white">Easy</span><span class="text-teal">Hire</span><span class="text-white"> work?</span>
+                How does <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary"> work?</span>
             </h3>
         </div>
 

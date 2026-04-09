@@ -4,6 +4,8 @@
 {% block title %}Pending Verification — EasyHire{% endblock %}
 {% block navbar %}{% endblock %}
 
+
+
 {% block content %}
 <main class="min-h-screen bg-primary flex flex-col">
 
@@ -24,7 +26,7 @@
             </a>
         </div>
     </nav>
-
+    {% include "base/partner_logos.html" %}
     <!-- Content -->
     <div class="flex-1 px-12 py-10 max-w-4xl mx-auto w-full">
 
@@ -147,4 +149,6 @@
 </main>
 {% endblock %}
 
-{% block footer %}{% endblock %}
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}
