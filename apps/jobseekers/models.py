@@ -56,9 +56,12 @@ class JobseekerProfile(models.Model):
         "employers.Company", blank=True, related_name="followers"
     )
     profile_complete = models.BooleanField(default=False)
+<<<<<<< HEAD
     profile_visibility = models.CharField(max_length=20, default='public')
     sector_badge_visibility = models.CharField(max_length=20, default='public')
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+=======
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     bio = models.TextField(blank=True)

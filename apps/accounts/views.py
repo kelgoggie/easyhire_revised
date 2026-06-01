@@ -63,7 +63,11 @@ class RegisterStep1JobseekerView(View):
             consented_to_terms=True,
             consented_at=timezone.now(),
         )
+<<<<<<< HEAD
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+=======
+        login(request, user)
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         return redirect('/register/info/')
 
 
@@ -77,7 +81,10 @@ class RegisterStep2JobseekerView(View):
 
     def post(self, request):
         from apps.jobseekers.models import JobseekerProfile
+<<<<<<< HEAD
         from apps.core.models import CityMunicipality, Barangay
+=======
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         from datetime import datetime
 
         raw_date = request.POST.get('date_of_birth', '')
@@ -86,6 +93,7 @@ class RegisterStep2JobseekerView(View):
         except ValueError:
             date_of_birth = None
 
+<<<<<<< HEAD
         city_code = request.POST.get('city_municipality', '')
         barangay_code = request.POST.get('barangay', '')
 
@@ -104,6 +112,8 @@ class RegisterStep2JobseekerView(View):
         if raw_phone and not raw_phone.startswith('0'):
             raw_phone = '0' + raw_phone
 
+=======
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         JobseekerProfile.objects.create(
             user=request.user,
             first_name=request.POST.get('first_name', ''),
@@ -115,6 +125,7 @@ class RegisterStep2JobseekerView(View):
             civil_status=request.POST.get('civil_status', ''),
             house_unit=request.POST.get('house_unit', ''),
             street_barangay=request.POST.get('street_barangay', ''),
+<<<<<<< HEAD
             city_municipality=city_name,
             city_code=city_code,
             province=request.POST.get('province', 'Iloilo'),
@@ -126,6 +137,17 @@ class RegisterStep2JobseekerView(View):
             profile_complete=False,
             profile_visibility='public',
             sector_badge_visibility='public',
+=======
+            city_municipality=request.POST.get('city_municipality', ''),
+            city_code=request.POST.get('city_municipality', ''),
+            province=request.POST.get('province', ''),
+            province_code=request.POST.get('province_code', '063000000'),
+            barangay=request.POST.get('barangay', ''),
+            barangay_code=request.POST.get('barangay', ''),
+            phone=request.POST.get('phone', ''),
+            contact_email=request.POST.get('contact_email', ''),
+            profile_complete=False,
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         )
         return redirect('/dashboard/')
 
@@ -181,12 +203,18 @@ class EmployerRegisterStep1View(View):
         password = request.POST.get('password', '')
         confirm = request.POST.get('confirm_password', '')
         consent = request.POST.get('consent')
+<<<<<<< HEAD
         company_name = request.POST.get('company_name', '').strip()
 
         errors = {}
 
         if not company_name:
             errors['company_name'] = 'Name of business is required.'
+=======
+
+        errors = {}
+
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         if not consent:
             errors['consent'] = 'You must consent to data processing to register.'
         if password != confirm:
@@ -197,6 +225,7 @@ class EmployerRegisterStep1View(View):
             errors['email'] = 'An account with this email already exists.'
 
         if errors:
+<<<<<<< HEAD
             return render(request, self.template_name, {
                 'errors': errors, 'email': email,
                 'form': {'company_name': company_name},
@@ -205,6 +234,12 @@ class EmployerRegisterStep1View(View):
         request.session['employer_reg_email'] = email
         request.session['employer_reg_password'] = password
         request.session['employer_reg_company'] = company_name
+=======
+            return render(request, self.template_name, {'errors': errors, 'email': email})
+
+        request.session['employer_reg_email'] = email
+        request.session['employer_reg_password'] = password
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         return redirect('/employers/register/info/')
 
 
@@ -217,7 +252,11 @@ class EmployerRegisterStep2View(View):
         from apps.jobseekers.models import Sector
         return render(request, self.template_name, {
             'sectors': Sector.objects.all(),
+<<<<<<< HEAD
             'form': {'company_name': request.session.get('employer_reg_company', '')},
+=======
+            'form': {},
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         })
 
     def post(self, request):
@@ -320,7 +359,11 @@ class EmployerRegisterStep2View(View):
 
             del request.session['employer_reg_email']
             del request.session['employer_reg_password']
+<<<<<<< HEAD
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+=======
+            login(request, user)
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
             return redirect('/employers/pending/')
 
         except Exception as e:
@@ -334,6 +377,7 @@ class EmployerRegisterStep2View(View):
 # ── Shared ─────────────────────────────────────────────────────────────────────
 
 def logout_view(request):
+<<<<<<< HEAD
     # Only POST should mutate state (CSRF-protected)
     if request.method != 'POST':
         return redirect('/dashboard/' if request.user.is_authenticated else '/login/')
@@ -344,3 +388,7 @@ def logout_view(request):
     response['Pragma'] = 'no-cache'
     response['Expires'] = '0'
     return response
+=======
+    logout(request)
+    return redirect('/login/')
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2

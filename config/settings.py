@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+<<<<<<< HEAD
     'django.contrib.sites',
 
     # Allauth
@@ -51,6 +52,8 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+=======
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 
     # EasyHire apps
     'apps.accounts',
@@ -74,8 +77,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+<<<<<<< HEAD
     'allauth.account.middleware.AccountMiddleware',
     'apps.accounts.middleware.NoCacheAuthenticatedMiddleware',
+=======
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -152,10 +158,13 @@ STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+<<<<<<< HEAD
 # Media (user-uploaded files like profile pictures)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+=======
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -169,6 +178,7 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 hours
 SESSION_SAVE_EVERY_REQUEST = True
+<<<<<<< HEAD
 SESSION_COOKIE_HTTPONLY = True
 
 # ── Sites ──────────────────────────────────────────────────────────
@@ -206,3 +216,6 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {'access_type': 'online'},
     }
 }
+=======
+SESSION_COOKIE_HTTPONLY = True
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2

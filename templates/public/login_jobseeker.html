@@ -3,6 +3,7 @@
 
 {% block title %}Sign In — EasyHire{% endblock %}
 
+<<<<<<< HEAD
 {% block navbar %}{% endblock %}
 
 {% block content %}
@@ -151,3 +152,93 @@ function showLanding() {
 }
 </script>
 {% endblock %}
+=======
+{% block navbar %}
+    {% include "base/navbar_jobseeker.html" %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Partner Logos Bar -->
+<div class="px-16 py-3 flex items-center gap-4 border-b border-taupe/30 bg-surface">
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/peso_logo.png' %}" alt="PESO Iloilo City" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">PESO<br>Iloilo City</span>
+    </div>
+
+    <div class="w-px h-6 bg-taupe/40"></div>
+
+    <div class="flex items-center gap-2">
+        <div class="w-14 h-14 rounded-full bg-taupe/20 border border-taupe/40 flex items-center justify-center overflow-hidden">
+            <img src="{% static 'images/iloilo_logo.png' %}" alt="Iloilo City Seal" class="w-full h-full object-contain" onerror="this.style.display='none'">
+        </div>
+        <span class="text-xs text-muted font-medium leading-tight">Iloilo City<br>Government</span>
+    </div>
+</div>
+
+<main class="bg-surface min-h-screen flex flex-col items-center py-10">
+
+    <!-- Title -->
+    <p class="text-primary text-lg mb-1">Welcome back to</p>
+    <h1 class="font-extrabold text-4xl mb-8">
+        <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
+    </h1>
+
+    <!-- Error messages -->
+    {% if error == 'invalid_credentials' %}
+        <div class="bg-red-50 text-red-600 text-sm px-6 py-3 rounded-xl mb-4 w-full max-w-sm text-center">
+            Incorrect email or password. Please try again.
+        </div>
+    {% elif error == 'employer_mismatch' %}
+        <div class="bg-amber/10 text-primary text-sm px-6 py-3 rounded-xl mb-4 w-full max-w-sm text-center">
+            Oops, that jobseeker profile does not exist. Are you trying to
+            <a href="/employers/login/" class="text-teal font-semibold underline">log in as an employer?</a>
+        </div>
+    {% elif error == 'inactive' %}
+        <div class="bg-red-50 text-red-600 text-sm px-6 py-3 rounded-xl mb-4 w-full max-w-sm text-center">
+            Your account has been deactivated. Please contact support.
+        </div>
+    {% endif %}
+
+    <!-- Login Card -->
+    <div class="bg-surface border border-taupe/40 rounded-2xl px-8 py-8 w-full max-w-sm shadow-sm">
+        <form method="POST" action="/login/">
+            {% csrf_token %}
+
+            <div class="mb-4">
+                <label class="block text-primary text-sm font-medium mb-1">Email</label>
+                <input type="email" name="email" placeholder="Value" required
+                       class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-primary text-sm font-medium mb-1">Password</label>
+                <input type="password" name="password" placeholder="Value" required
+                       class="w-full bg-white border border-taupe/40 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            </div>
+
+            <div class="text-right mb-6">
+                <a href="/password-reset/" class="text-teal text-xs hover:underline">Forgot password?</a>
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-amber text-white font-semibold py-3 rounded-full hover:bg-amber/90 transition text-sm">
+                Sign In
+            </button>
+        </form>
+    </div>
+
+    <p class="text-muted text-sm mt-6">
+        New to EasyHire?
+        <a href="/register/" class="text-teal font-bold hover:underline">Click here to register.</a>
+    </p>
+
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}
+>>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
