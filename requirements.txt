@@ -1,0 +1,44 @@
+# Core
+Django>=5.0,<5.2
+psycopg2-binary>=2.9          # PostgreSQL adapter
+python-dotenv>=1.0            # .env file support
+Pillow>=10.0                  # ImageField support
+
+# Auth
+django-allauth>=0.61          # Extended auth (password reset, email verification)
+
+# Frontend / templating
+django-htmx>=1.17             # HTMX integration helpers
+
+# NLP / Matching
+spacy>=3.7                    # NLP pipeline for skill extraction
+rapidfuzz>=3.6                # Fast fuzzy string matching
+sentence-transformers>=2.5    # Semantic similarity for skill matching
+
+# PDF parsing (resume upload)
+pdfplumber>=0.10              # Extract text/tables from PDFs
+
+# Forms & validation
+django-crispy-forms>=2.1
+crispy-tailwind>=1.0
+
+# Utilities
+django-extensions>=3.2        # shell_plus, runserver_plus etc.
+django-storages>=1.14         # cloud file storage for production
+whitenoise>=6.6               # static file serving
+
+# Background tasks (score recompute, notifications)
+celery>=5.3
+redis>=5.0
+django-celery-results>=2.5
+
+# WebSockets (messaging)
+channels>=4.0
+channels-redis>=4.1
+
+# Dev only
+django-debug-toolbar>=4.3
+factory-boy>=3.3              # test fixtures
+
+# Deployment
+gunicorn>=21.2

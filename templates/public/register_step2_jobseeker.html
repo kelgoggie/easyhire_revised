@@ -1,0 +1,459 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Complete Your Profile — EasyHire{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_jobseeker.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="bg-surface min-h-screen py-10 px-6">
+
+    <!-- Header -->
+    <div class="max-w-5xl mx-auto mb-6 flex items-end justify-between">
+        <div>
+            <p class="text-primary text-lg font-normal">Welcome to</p>
+            <h1 class="font-extrabold text-4xl leading-tight">
+                <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
+            </h1>
+        </div>
+        <p class="text-muted text-sm pb-1">We're going to need a few more things from you.</p>
+    </div>
+
+    <!-- Form Card -->
+    <div class="max-w-5xl mx-auto bg-white border border-gray-200 rounded-2xl px-10 py-10 shadow-sm">
+        <form method="POST" action="/register/info/" id="reg-form">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-2 gap-x-14 gap-y-6">
+
+                <!-- ── LEFT: Personal Information ─────────────────── -->
+                <div>
+                    <div class="flex items-baseline gap-3 mb-5">
+                        <h2 class="font-bold text-primary text-base">Personal Information</h2>
+                        <span class="text-muted text-xs">*Required fields</span>
+                    </div>
+
+                    <!-- First Name | Middle Name -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">First Name*</label>
+                            <input type="text" name="first_name" id="first_name" required
+                                   placeholder="Juan"
+                                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Middle Name</label>
+                            <input type="text" name="middle_name" id="middle_name"
+                                   placeholder="Santos"
+                                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                        </div>
+                    </div>
+
+                    <!-- Last Name | Suffix -->
+                    <div class="grid grid-cols-5 gap-3 mb-4">
+                        <div class="col-span-3">
+                            <label class="block text-primary text-xs font-medium mb-1">Last Name*</label>
+                            <input type="text" name="last_name" id="last_name" required
+                                   placeholder="Dela Cruz"
+                                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-primary text-xs font-medium mb-1">Suffix</label>
+                            <input type="text" name="suffix" placeholder="Jr./Sr./III"
+                                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                        </div>
+                    </div>
+
+                    <!-- Civil Status -->
+                    <div class="mb-4">
+                        <label class="block text-primary text-xs font-medium mb-1">Civil Status</label>
+                        <select name="civil_status"
+                                class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition appearance-none">
+                            <option value="">Select Civil Status...</option>
+                            <option value="single">Single</option>
+                            <option value="married">Married</option>
+                            <option value="widowed">Widowed</option>
+                            <option value="separated">Separated</option>
+                            <option value="annulled">Annulled</option>
+                        </select>
+                    </div>
+
+                    <!-- Sex | Date of Birth -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-2">Sex*</label>
+                            <div class="flex items-center gap-5 py-1">
+                                <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+                                    <input type="radio" name="sex" value="M" checked class="accent-teal w-4 h-4">
+                                    Male
+                                </label>
+                                <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+                                    <input type="radio" name="sex" value="F" class="accent-teal w-4 h-4">
+                                    Female
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Date of Birth*</label>
+                            <div class="relative">
+                                <input type="text" name="date_of_birth" id="date_of_birth"
+                                       placeholder="Select Date of Birth" required autocomplete="off" readonly
+                                       class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
+                                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <p id="dob_error" class="text-red-500 text-xs mt-1 hidden"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── RIGHT: Address + Contact ───────────────────── -->
+                <div>
+                    <h2 class="font-bold text-primary text-base mb-5">Address</h2>
+
+                    <!-- House/Unit | Street/Barangay -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">House/Unit No.</label>
+                            <input type="text" name="house_unit" placeholder="123"
+                                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Street/Barangay*</label>
+                            <input type="text" name="street_barangay" placeholder="Rizal St."
+                                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                        </div>
+                    </div>
+
+                    <!-- City/Municipality -->
+                    <div class="mb-4">
+                        <label class="block text-primary text-xs font-medium mb-1">City/Municipality</label>
+                        <div class="relative">
+                            <select name="city_municipality" id="city_select" required
+                                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition appearance-none">
+                                <option value="">Loading cities...</option>
+                            </select>
+                            <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Barangay -->
+                    <div class="mb-4">
+                        <label class="block text-primary text-xs font-medium mb-1">Barangay</label>
+                        <div class="relative">
+                            <select name="barangay" id="barangay_select" required disabled
+                                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary focus:outline-none focus:border-teal transition appearance-none disabled:opacity-50 disabled:cursor-not-allowed">
+                                <option value="">Select City first...</option>
+                            </select>
+                            <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Province (locked) -->
+                    <div class="mb-6">
+                        <label class="block text-primary text-xs font-medium mb-1">Province</label>
+                        <div class="relative">
+                            <select disabled
+                                    class="w-full bg-gray-50 border border-gray-200 rounded-full px-4 py-2.5 text-sm text-muted cursor-not-allowed appearance-none">
+                                <option>Iloilo</option>
+                            </select>
+                            <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                        <input type="hidden" name="province" value="Iloilo">
+                        <input type="hidden" name="province_code" value="063000000">
+                    </div>
+
+                    <!-- Contact Information -->
+                    <h2 class="font-bold text-primary text-base mb-5">Contact Information</h2>
+
+                    <!-- Phone | Email side by side -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Phone*</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted select-none">+63</span>
+                                <input type="tel" name="phone" id="phone" required
+                                       placeholder="9XX XXX XXXX"
+                                       maxlength="13"
+                                       class="w-full bg-white border border-gray-200 rounded-full pl-12 pr-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                            </div>
+                            <p id="phone_error" class="text-red-500 text-xs mt-1 hidden">Enter a valid 11-digit PH number (e.g. 09171234567).</p>
+                        </div>
+                        <div>
+                            <label class="block text-primary text-xs font-medium mb-1">Email Address*</label>
+                            <input type="email" name="contact_email" id="contact_email" required
+                                   placeholder="youremail@gmail.com"
+                                   value="{{ session_email|default:'' }}"
+                                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                            <p id="email_error" class="text-red-500 text-xs mt-1 hidden">Enter a valid email address.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Submit row -->
+            <div class="flex items-center justify-end mt-10 pt-6 border-t border-gray-100">
+                <button type="submit" id="submit-btn"
+                        class="bg-amber text-white font-semibold px-10 py-3 rounded-full hover:bg-amber/90 transition text-sm">
+                    Confirm &amp; Submit
+                </button>
+            </div>
+
+        </form>
+    </div>
+</main>
+
+<!-- Calendar backdrop + popup -->
+<div id="cal-backdrop" class="fixed inset-0 z-40 hidden" onclick="closeCal()"></div>
+<div id="cal-popup" class="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 hidden" style="width:280px">
+    <div class="flex items-center justify-between mb-3">
+        <button type="button" onclick="prevMonth()" class="text-muted hover:text-primary px-2 text-lg leading-none">&#8249;</button>
+        <span id="cal-label" class="text-sm font-semibold text-primary"></span>
+        <button type="button" onclick="nextMonth()" class="text-muted hover:text-primary px-2 text-lg leading-none">&#8250;</button>
+    </div>
+    <div class="flex justify-center mb-3">
+        <select id="cal-year" onchange="goToYear(this.value)"
+                class="text-xs border border-gray-200 rounded-full px-3 py-1 text-primary focus:outline-none focus:border-teal">
+        </select>
+    </div>
+    <div class="grid grid-cols-7 gap-1 mb-1">
+        <span class="text-center text-xs text-muted font-medium">Su</span>
+        <span class="text-center text-xs text-muted font-medium">Mo</span>
+        <span class="text-center text-xs text-muted font-medium">Tu</span>
+        <span class="text-center text-xs text-muted font-medium">We</span>
+        <span class="text-center text-xs text-muted font-medium">Th</span>
+        <span class="text-center text-xs text-muted font-medium">Fr</span>
+        <span class="text-center text-xs text-muted font-medium">Sa</span>
+    </div>
+    <div id="cal-grid" class="grid grid-cols-7 gap-1"></div>
+    <p id="cal-error" class="text-red-500 text-xs mt-2 text-center hidden"></p>
+</div>
+
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const citySelect     = document.getElementById('city_select');
+const barangaySelect = document.getElementById('barangay_select');
+const phoneInput     = document.getElementById('phone');
+const emailInput     = document.getElementById('contact_email');
+const dateInput      = document.getElementById('date_of_birth');
+
+// ── PSGC: load Iloilo cities on page load ──────────────────────────
+const ILOILO_CODE = '063000000';
+fetch(`/api/cities/${ILOILO_CODE}/`)
+    .then(r => r.json())
+    .then(data => {
+        citySelect.innerHTML = '<option value="">Select City/Municipality...</option>';
+        data.forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.code;
+            o.textContent = c.name;
+            citySelect.appendChild(o);
+        });
+    });
+
+citySelect.addEventListener('change', function() {
+    barangaySelect.innerHTML = '<option value="">Select Barangay...</option>';
+    barangaySelect.disabled = true;
+    if (!this.value) { checkSubmit(); return; }
+    fetch(`/api/barangays/${this.value}/`)
+        .then(r => r.json())
+        .then(data => {
+            data.forEach(b => {
+                const o = document.createElement('option');
+                o.value = b.code;
+                o.textContent = b.name;
+                barangaySelect.appendChild(o);
+            });
+            barangaySelect.disabled = false;
+            checkSubmit();
+        });
+});
+
+barangaySelect.addEventListener('change', checkSubmit);
+
+// ── Auto-capitalise name fields ────────────────────────────────────
+['first_name','last_name','middle_name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function() {
+        const pos = this.selectionStart;
+        this.value = this.value.replace(/\b\w/g, c => c.toUpperCase());
+        this.setSelectionRange(pos, pos);
+        checkSubmit();
+    });
+});
+
+// ── Phone validation ───────────────────────────────────────────────
+phoneInput.addEventListener('input', function() {
+    let raw = this.value.replace(/\D/g, '');
+    if (raw.length > 10) raw = raw.slice(0, 10);
+    // format as 9XX XXX XXXX
+    let fmt = raw;
+    if (raw.length > 6) fmt = raw.slice(0,3)+' '+raw.slice(3,6)+' '+raw.slice(6);
+    else if (raw.length > 3) fmt = raw.slice(0,3)+' '+raw.slice(3);
+    this.value = fmt;
+    const err = document.getElementById('phone_error');
+    const valid = raw.length === 0 || (raw.length === 10 && /^9\d{9}$/.test(raw));
+    err.classList.toggle('hidden', valid);
+    checkSubmit();
+});
+
+// ── Email validation ───────────────────────────────────────────────
+function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
+emailInput.addEventListener('input', function() {
+    const err = document.getElementById('email_error');
+    err.classList.toggle('hidden', !this.value || isValidEmail(this.value));
+    checkSubmit();
+});
+emailInput.addEventListener('blur', function() {
+    if (this.value && !isValidEmail(this.value))
+        document.getElementById('email_error').classList.remove('hidden');
+});
+
+// ── Submit guard ───────────────────────────────────────────────────
+function checkSubmit() {
+    const phoneRaw  = phoneInput.value.replace(/\D/g,'');
+    const phoneOk   = phoneRaw.length === 10 && /^9\d{9}$/.test(phoneRaw);
+    const emailOk   = isValidEmail(emailInput.value);
+    const dobOk     = dateInput.value.length === 10;
+    const firstName = document.getElementById('first_name').value.trim();
+    const lastName  = document.getElementById('last_name').value.trim();
+    const cityOk    = !!citySelect.value;
+    const barOk     = !barangaySelect.disabled && !!barangaySelect.value;
+    document.getElementById('submit-btn').disabled =
+        !(phoneOk && emailOk && dobOk && firstName && lastName && cityOk && barOk);
+}
+
+// ── Form submit guard ──────────────────────────────────────────────
+document.getElementById('reg-form').addEventListener('submit', function(e) {
+    const phoneRaw = phoneInput.value.replace(/\D/g,'');
+    let stop = false;
+    if (phoneRaw.length > 0 && (phoneRaw.length !== 10 || !/^9\d{9}$/.test(phoneRaw))) {
+        document.getElementById('phone_error').classList.remove('hidden');
+        stop = true;
+    }
+    if (emailInput.value && !isValidEmail(emailInput.value)) {
+        document.getElementById('email_error').classList.remove('hidden');
+        stop = true;
+    }
+    if (dateInput.value.length === 10) {
+        const p = dateInput.value.split('/');
+        const dob = new Date(+p[2], +p[0]-1, +p[1]);
+        const today = new Date();
+        const minAge = new Date(today.getFullYear()-15, today.getMonth(), today.getDate());
+        if (dob > minAge) {
+            const err = document.getElementById('dob_error');
+            err.textContent = 'You must be at least 15 years old to register.';
+            err.classList.remove('hidden');
+            stop = true;
+        }
+    }
+    if (stop) e.preventDefault();
+});
+
+// ── Calendar popup ────────────────────────────────────────────────
+let calYear, calMonth;
+const today   = new Date();
+const maxDate = new Date(today.getFullYear()-15, today.getMonth(), today.getDate());
+const MONTHS  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function openCal() {
+    if (dateInput.value.length === 10) {
+        const p = dateInput.value.split('/');
+        calMonth = +p[0]-1; calYear = +p[2];
+    } else {
+        calMonth = maxDate.getMonth(); calYear = maxDate.getFullYear();
+    }
+    buildYearSelect(); renderCal();
+    const rect  = dateInput.getBoundingClientRect();
+    const popup = document.getElementById('cal-popup');
+    // fixed positioning uses viewport coords — no scroll offset needed
+    const popupW = 280;
+    const left   = Math.min(rect.left, window.innerWidth - popupW - 8);
+    popup.style.top  = (rect.bottom + 6) + 'px';
+    popup.style.left = Math.max(8, left) + 'px';
+    popup.classList.remove('hidden');
+    document.getElementById('cal-backdrop').classList.remove('hidden');
+}
+function closeCal() {
+    document.getElementById('cal-popup').classList.add('hidden');
+    document.getElementById('cal-backdrop').classList.add('hidden');
+}
+function buildYearSelect() {
+    const sel = document.getElementById('cal-year');
+    sel.innerHTML = '';
+    for (let y = maxDate.getFullYear(); y >= 1940; y--) {
+        const o = document.createElement('option');
+        o.value = y; o.textContent = y;
+        if (y === calYear) o.selected = true;
+        sel.appendChild(o);
+    }
+}
+function goToYear(y) {
+    calYear = +y;
+    if (calYear === maxDate.getFullYear() && calMonth > maxDate.getMonth())
+        calMonth = maxDate.getMonth();
+    renderCal();
+}
+function prevMonth() {
+    calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCal();
+}
+function nextMonth() {
+    const nm = (calMonth+1) % 12, ny = calMonth+1 > 11 ? calYear+1 : calYear;
+    if (ny > maxDate.getFullYear() || (ny === maxDate.getFullYear() && nm > maxDate.getMonth())) return;
+    calMonth = nm; calYear = ny; renderCal();
+}
+function renderCal() {
+    document.getElementById('cal-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+    document.getElementById('cal-year').value = calYear;
+    const grid = document.getElementById('cal-grid');
+    grid.innerHTML = '';
+    const firstDay     = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth  = new Date(calYear, calMonth+1, 0).getDate();
+    let selDay = null;
+    if (dateInput.value.length === 10) {
+        const p = dateInput.value.split('/');
+        if (+p[0]-1 === calMonth && +p[2] === calYear) selDay = +p[1];
+    }
+    for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
+    for (let d = 1; d <= daysInMonth; d++) {
+        const cellDate   = new Date(calYear, calMonth, d);
+        const isDisabled = cellDate > maxDate;
+        const isSelected = d === selDay;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = d;
+        btn.className = ['text-center text-xs rounded-full w-8 h-8 mx-auto transition',
+            isDisabled ? 'text-gray-300 cursor-not-allowed' :
+            isSelected ? 'bg-teal text-white font-semibold' :
+            'hover:bg-teal/20 text-primary cursor-pointer'].join(' ');
+        if (!isDisabled) btn.onclick = () => {
+            dateInput.value = `${String(calMonth+1).padStart(2,'0')}/${String(d).padStart(2,'0')}/${calYear}`;
+            document.getElementById('dob_error').classList.add('hidden');
+            closeCal(); checkSubmit();
+        };
+        grid.appendChild(btn);
+    }
+}
+dateInput.addEventListener('click', openCal);
+
+// initialise
+checkSubmit();
+document.querySelectorAll('input,select').forEach(el => el.addEventListener('change', checkSubmit));
+</script>
+{% endblock %}

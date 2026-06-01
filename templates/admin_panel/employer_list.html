@@ -1,0 +1,80 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Employers — PESO Admin{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-surface flex">
+
+    <!-- Sidebar -->
+    <aside class="w-56 bg-primary min-h-screen flex flex-col py-6 px-4 flex-shrink-0">
+        <a href="/admin-panel/" class="flex items-center gap-2 mb-8 px-2">
+            <img src="{% static 'images/navbar_logo.svg' %}" class="w-8 h-8 brightness-0 invert">
+            <span class="text-white font-bold text-sm">PESO Admin</span>
+        </a>
+        <nav class="flex flex-col gap-1 text-sm">
+            <a href="/admin-panel/" class="px-3 py-2 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition">Dashboard</a>
+            <a href="/admin-panel/employers/?status=pending"
+               class="flex items-center justify-between px-3 py-2 rounded-lg {% if current_status == 'pending' %}bg-white/10 text-white font-semibold{% else %}text-white/60 hover:bg-white/10 hover:text-white{% endif %} transition">
+                Pending
+                {% if pending_count %}<span class="bg-amber text-white text-xs px-2 py-0.5 rounded-full">{{ pending_count }}</span>{% endif %}
+            </a>
+            <a href="/admin-panel/employers/?status=verified"
+               class="px-3 py-2 rounded-lg {% if current_status == 'verified' %}bg-white/10 text-white font-semibold{% else %}text-white/60 hover:bg-white/10 hover:text-white{% endif %} transition">
+                Verified
+            </a>
+            <a href="/admin-panel/employers/?status=verification_denied"
+               class="px-3 py-2 rounded-lg {% if current_status == 'verification_denied' %}bg-white/10 text-white font-semibold{% else %}text-white/60 hover:bg-white/10 hover:text-white{% endif %} transition">
+                Denied
+            </a>
+            <a href="/admin-panel/employers/?status=unverified"
+               class="px-3 py-2 rounded-lg {% if current_status == 'unverified' %}bg-white/10 text-white font-semibold{% else %}text-white/60 hover:bg-white/10 hover:text-white{% endif %} transition">
+                Unverified
+            </a>
+        </nav>
+        <div class="mt-auto">
+            <a href="/admin/logout/" class="px-3 py-2 text-white/40 text-xs hover:text-white transition block">Log Out</a>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="flex-1 p-8">
+        <h1 class="text-2xl font-extrabold text-primary mb-6 capitalize">{{ current_status }} Companies</h1>
+        <div class="bg-white rounded-2xl border border-taupe/20 shadow-sm p-6">
+            {% if companies %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-muted border-b border-taupe/20">
+                        <th class="pb-2 font-medium">Company</th>
+                        <th class="pb-2 font-medium">Type</th>
+                        <th class="pb-2 font-medium">Nature</th>
+                        <th class="pb-2 font-medium">Registered</th>
+                        <th class="pb-2 font-medium"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company in companies %}
+                    <tr class="border-b border-taupe/10 last:border-0">
+                        <td class="py-3 font-semibold text-primary">{{ company.name }}</td>
+                        <td class="py-3 text-muted">{{ company.get_type_of_company_display }}</td>
+                        <td class="py-3 text-muted">{{ company.nature_of_company }}</td>
+                        <td class="py-3 text-muted">{{ company.created_at|date:"M d, Y" }}</td>
+                        <td class="py-3 text-right">
+                            <a href="/admin-panel/employers/{{ company.id }}/"
+                               class="text-teal text-xs font-semibold hover:text-primary transition">
+                                Review →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-sm text-center py-6">No companies with this status.</p>
+            {% endif %}
+        </div>
+    </div>
+</main>
+{% endblock %}
+{% block footer %}{% endblock %}

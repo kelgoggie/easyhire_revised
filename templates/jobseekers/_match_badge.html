@@ -1,0 +1,14 @@
+{% if has_score %}
+  {% if compact %}
+    {# Just the smiley circle #}
+    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full {{ pill_classes }} flex-shrink-0" title="{{ label }}">
+      {% include "jobseekers/_match_smiley.html" with emoji=emoji color=icon_color size="w-4 h-4" %}
+    </span>
+  {% else %}
+    {# Full pill with smiley + label #}
+    <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full {{ pill_classes }}">
+      {% include "jobseekers/_match_smiley.html" with emoji=emoji color=icon_color size="w-3.5 h-3.5" %}
+      {{ label }}
+    </span>
+  {% endif %}
+{% endif %}

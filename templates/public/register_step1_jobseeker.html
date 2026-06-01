@@ -1,0 +1,128 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Create Account — EasyHire{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col min-h-screen">
+
+  <!-- Navbar -->
+  <nav class="bg-surface px-8 py-3 flex items-center justify-between shadow-sm">
+    <a href="/" class="flex items-center gap-2">
+      <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-9 h-9">
+      <span class="font-bold text-xl">
+        <span class="text-primary">Easy</span><span class="text-teal">Hire</span>
+      </span>
+    </a>
+    <div class="flex items-center gap-8">
+      <div class="flex items-center gap-6 text-sm">
+        <a href="/about/" class="text-muted hover:text-primary transition">About</a>
+        <a href="/jobs/" class="text-muted hover:text-primary transition">Jobs</a>
+        <a href="/analytics/" class="text-muted hover:text-primary transition">Analytics</a>
+        <a href="/employers/" class="text-primary font-semibold hover:text-teal transition">EasyHire for Employers</a>
+      </div>
+      <a href="/login/" class="bg-teal text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-primary transition">
+        Sign In
+      </a>
+    </div>
+  </nav>
+
+  <!-- Split content -->
+  <div class="flex flex-1">
+
+    <!-- Left panel -->
+    <div class="w-1/2 bg-surface flex items-center justify-center py-12 px-8">
+      <div class="bg-white border border-gray-200 rounded-2xl p-8 w-72 shadow-sm relative">
+
+        <!-- eH icon -->
+        <div class="absolute top-4 right-4 w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center overflow-hidden">
+          <img src="{% static 'images/navbar_logo.svg' %}" alt="" class="w-6 h-6 opacity-70">
+        </div>
+
+        <!-- Greeting -->
+        <p class="text-[22px] text-primary font-normal leading-snug">Hello,</p>
+        <p class="text-[22px] text-primary font-extrabold italic leading-snug mb-1">Jobseeker!</p>
+        <a href="/employers/register/" class="text-xs text-muted underline block mb-5 hover:text-primary transition">Sign in as an Employer.</a>
+
+        <!-- Error messages -->
+        {% if errors %}
+        <div class="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg mb-4">
+          {% for field, message in errors.items %}
+          <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Registration form -->
+        <form method="POST" action="/register/">
+          {% csrf_token %}
+
+          <div class="mb-4">
+            <label class="block text-primary text-xs font-medium mb-1">Email Address</label>
+            <input type="email" name="email" value="{{ email|default:'' }}"
+                   placeholder="youremail@gmail.com" required
+                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-primary text-xs font-medium mb-1">Password</label>
+            <input type="password" name="password" placeholder="••••••••" required
+                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-primary text-xs font-medium mb-1">Confirm Password</label>
+            <input type="password" name="confirm_password" placeholder="••••••••" required
+                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+          </div>
+
+          <!-- Compact consent -->
+          <div class="flex items-start gap-2 mb-5">
+            <input type="checkbox" name="consent" id="consent" required
+                   class="mt-0.5 accent-teal flex-shrink-0">
+            <label for="consent" class="text-[10px] text-muted leading-relaxed cursor-pointer">
+              I consent to the collection of my data in accordance with the
+              <span class="font-semibold text-primary">Data Privacy Act of 2012 (RA 10173)</span>.
+            </label>
+          </div>
+
+          <button type="submit"
+                  class="w-full bg-primary text-white text-sm font-semibold py-3 rounded-full hover:bg-teal transition">
+            Create EasyHire Account
+          </button>
+        </form>
+
+        <p class="text-center text-xs text-muted mt-4">
+          Already have an account?
+          <a href="/login/" class="text-teal font-semibold hover:underline">Sign in</a>
+        </p>
+
+      </div>
+    </div>
+
+    <!-- Right panel: building photo -->
+    <div class="w-1/2 relative overflow-hidden min-h-[500px]">
+      <div class="absolute inset-0 bg-cover bg-center"
+           style="background-image: url('{% static 'images/iloilo_city_hall.jpg' %}');"></div>
+      <div class="absolute inset-0 bg-primary/65"></div>
+      <!-- Branding -->
+      <div class="absolute bottom-10 left-10 right-10">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+            <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-9 h-9">
+          </div>
+          <span class="text-white text-3xl font-extrabold tracking-tight">EasyHire.</span>
+        </div>
+        <p class="text-white/90 text-base leading-relaxed">
+          Find the <strong>best jobs</strong> in<br>Iloilo City <strong>for you</strong>.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  {% include "base/footer.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}PESO Admin Login — EasyHire{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-primary flex flex-col items-center justify-center px-4 py-12">
+
+    <!-- Logo -->
+    <img src="{% static 'images/Logo.svg' %}" class="w-16 h-16 mb-4">
+
+    <p class="text-white/60 text-base mb-1">PESO Iloilo City</p>
+    <h1 class="text-4xl font-extrabold text-center mb-8">
+        <span class="text-white">Easy</span><span class="text-teal">Hire</span>
+        <span class="text-white"> Admin.</span>
+    </h1>
+
+    <!-- Card -->
+    <div class="bg-surface border border-taupe/20 rounded-2xl p-8 w-full max-w-sm shadow-sm">
+
+        {% if error %}
+        <div class="bg-red-100 border border-red-300 text-red-700 text-sm rounded-xl px-4 py-3 mb-5">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/admin-panel/login/">
+            {% csrf_token %}
+
+            <div class="mb-4">
+                <label class="block text-primary text-xs font-medium mb-1">Email</label>
+                <input type="email" name="email"
+                       value="{{ email|default:'' }}"
+                       placeholder="Value"
+                       class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-primary text-xs font-medium mb-1">Password</label>
+                <input type="password" name="password"
+                       placeholder="Value"
+                       class="w-full bg-white border border-taupe/30 rounded-full px-4 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition">
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-primary text-white font-semibold py-3 rounded-full hover:bg-primary/80 transition text-sm">
+                Sign In
+            </button>
+        </form>
+    </div>
+
+    <p class="text-white/30 text-xs mt-6">Restricted to PESO Iloilo City staff only.</p>
+
+</main>
+{% endblock %}
+
+{% block footer %}{% endblock %}
