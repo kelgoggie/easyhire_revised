@@ -212,7 +212,13 @@ def applications(request):
 
 
 def _compute_auto_sectors(profile, education_qs):
-    """Return a list of sector codes that should be auto-applied based on profile data."""
+    """Return a list of sector codes that should be auto-applied based on profile data.
+
+    Rules:
+      - senior_citizen : age >= 60 (computed from date_of_birth)
+      - tesda_graduate : any Education entry with level == 'vocational'
+      - fresh_graduate : graduated within the last 24 months AND no work experience
+    """
     from datetime import date as date_cls
     codes = []
     today = date_cls.today()
@@ -228,15 +234,17 @@ def _compute_auto_sectors(profile, education_qs):
     if any(e.level == 'vocational' for e in education_qs):
         codes.append('tesda_graduate')
 
-    # Fresh Graduate — graduated (year_ended) within the last 6 months
-    # Since only year is stored, assume December graduation (most conservative estimate)
-    threshold = today.year * 12 + today.month - 6  # months since year 0
-    for edu in education_qs:
-        if not edu.is_current and edu.year_ended:
-            grad_months = edu.year_ended * 12 + 12  # December of graduation year
-            if grad_months >= threshold:
-                codes.append('fresh_graduate')
-                break
+    # Fresh Graduate — graduated within the last 24 months AND no work experience.
+    # Year is the only granularity we store, so assume December graduation.
+    has_work_experience = WorkExperience.objects.filter(profile=profile).exists()
+    if not has_work_experience:
+        threshold = today.year * 12 + today.month - 24  # months since year 0
+        for edu in education_qs:
+            if not edu.is_current and edu.year_ended:
+                grad_months = edu.year_ended * 12 + 12  # December of graduation year
+                if grad_months >= threshold:
+                    codes.append('fresh_graduate')
+                    break
 
     return codes
 
@@ -596,113 +604,162 @@ def job_hide(request, job_id):
     return redirect(request.POST.get('next', '/jobs/for-you/'))
 
 
+# ─── Static vocabularies for NLP-powered autocomplete ────────────────────
+# These give new users useful suggestions even before any other user has
+# typed similar things. The user's DB entries are merged in at runtime.
+
+STATIC_SKILLS = [
+    # Programming languages
+    'Python', 'JavaScript', 'TypeScript', 'Java', 'C', 'C++', 'C#', 'PHP',
+    'Ruby', 'Go', 'Rust', 'Kotlin', 'Swift', 'SQL', 'HTML', 'CSS', 'R',
+    # Web / frameworks
+    'React', 'Vue.js', 'Angular', 'Node.js', 'Django', 'Flask', 'Laravel',
+    'Spring Boot', 'Express.js', 'jQuery', 'Tailwind CSS', 'Bootstrap',
+    # Data / DB
+    'MySQL', 'PostgreSQL', 'MongoDB', 'SQLite', 'Redis', 'Oracle Database',
+    'Excel', 'Power BI', 'Tableau', 'Google Sheets', 'Data Analysis',
+    'Data Visualization', 'Machine Learning', 'Statistics',
+    # DevOps / cloud
+    'Git', 'GitHub', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'Google Cloud',
+    'Linux', 'Bash', 'CI/CD',
+    # Design / creative
+    'Adobe Photoshop', 'Adobe Illustrator', 'Adobe Premiere Pro', 'Figma',
+    'Canva', 'Sketch', 'AutoCAD', 'SolidWorks', 'Video Editing',
+    'Graphic Design', 'UI/UX Design', '3D Modeling',
+    # Office / productivity
+    'Microsoft Word', 'Microsoft Excel', 'Microsoft PowerPoint',
+    'Microsoft Outlook', 'Google Suite', 'Google Docs', 'Slack', 'Trello',
+    'Notion', 'Asana', 'Jira', 'Microsoft Teams',
+    # Communication / soft skills
+    'Communication', 'Public Speaking', 'Leadership', 'Teamwork',
+    'Problem Solving', 'Critical Thinking', 'Time Management',
+    'Project Management', 'Adaptability', 'Customer Service',
+    'Conflict Resolution', 'Negotiation', 'Active Listening', 'Empathy',
+    'Decision Making', 'Creativity', 'Attention to Detail',
+    # Language
+    'English', 'Filipino', 'Hiligaynon (Ilonggo)', 'Cebuano', 'Mandarin',
+    'Spanish', 'Japanese', 'Korean',
+    # Healthcare / clinical
+    'Patient Care', 'First Aid', 'CPR', 'Phlebotomy', 'Nursing Care',
+    'Pharmacology', 'Medical Records', 'Clinical Skills',
+    # Trade / vocational
+    'Carpentry', 'Welding', 'Plumbing', 'Electrical Wiring', 'Masonry',
+    'Painting', 'Construction', 'Automotive Repair', 'Driving',
+    'Heavy Equipment Operation', 'Cooking', 'Baking', 'Sewing', 'Tailoring',
+    'Bartending', 'Housekeeping', 'Laundry', 'Childcare', 'Caregiving',
+    # Business / finance
+    'Accounting', 'Bookkeeping', 'Auditing', 'Financial Analysis',
+    'Budgeting', 'Payroll', 'Tax Preparation', 'Sales', 'Marketing',
+    'Digital Marketing', 'SEO', 'Social Media Management', 'Content Writing',
+    'Copywriting', 'Email Marketing',
+    # Operations
+    'Inventory Management', 'Supply Chain', 'Logistics', 'Procurement',
+    'Quality Control', 'Operations Management', 'Warehouse Management',
+    # Teaching / training
+    'Teaching', 'Tutoring', 'Curriculum Development', 'Training',
+    'Lesson Planning', 'Classroom Management',
+]
+
+STATIC_POSITIONS = [
+    'Accountant', 'Administrative Assistant', 'Architect', 'Auditor',
+    'Bookkeeper', 'Cashier', 'Chef', 'Civil Engineer', 'Computer Technician',
+    'Construction Worker', 'Cook', 'Customer Service Representative',
+    'Data Analyst', 'Data Entry Clerk', 'Database Administrator',
+    'Delivery Driver', 'Dentist', 'Doctor', 'Electrical Engineer',
+    'Electrician', 'Factory Worker', 'Financial Analyst', 'Graphic Designer',
+    'HR Assistant', 'HR Manager', 'Hotel Receptionist', 'IT Support',
+    'Janitor', 'Lawyer', 'Logistics Coordinator', 'Machine Operator',
+    'Marketing Assistant', 'Marketing Manager', 'Mechanic',
+    'Medical Technologist', 'Midwife', 'Network Administrator', 'Nurse',
+    'Office Staff', 'Operations Manager', 'Pharmacist', 'Physical Therapist',
+    'Plumber', 'Project Manager', 'Purchasing Officer', 'Receptionist',
+    'Sales Associate', 'Sales Manager', 'Sales Representative', 'Secretary',
+    'Security Guard', 'Social Media Manager', 'Social Worker',
+    'Software Developer', 'Software Engineer', 'System Administrator',
+    'Teacher', 'Technical Support', 'Technician', 'UI/UX Designer',
+    'Veterinarian', 'Waiter / Waitress', 'Warehouse Worker', 'Web Developer',
+    'Welder', 'Writer / Copywriter',
+]
+
+STATIC_DEGREES = [
+    'BS Accountancy', 'BS Architecture', 'BS Biology', 'BS Business Administration',
+    'BS Chemical Engineering', 'BS Chemistry', 'BS Civil Engineering',
+    'BS Computer Engineering', 'BS Computer Science', 'BS Criminology',
+    'BS Electrical Engineering', 'BS Electronics Engineering', 'BS Environmental Science',
+    'BS Finance', 'BS Food Technology', 'BS Forensic Science',
+    'BS Hotel and Restaurant Management', 'BS Industrial Engineering',
+    'BS Information Systems', 'BS Information Technology', 'BS Interior Design',
+    'BS Management Accounting', 'BS Marine Engineering', 'BS Marine Transportation',
+    'BS Marketing Management', 'BS Mathematics', 'BS Mechanical Engineering',
+    'BS Medical Laboratory Science', 'BS Midwifery', 'BS Mining Engineering',
+    'BS Nursing', 'BS Nutrition and Dietetics', 'BS Occupational Therapy',
+    'BS Pharmacy', 'BS Physical Therapy', 'BS Psychology', 'BS Radiologic Technology',
+    'BS Real Estate Management', 'BS Social Work', 'BS Statistics',
+    'BS Tourism Management',
+    'AB Communication', 'AB Economics', 'AB English', 'AB Filipino',
+    'AB History', 'AB Journalism', 'AB Political Science', 'AB Psychology',
+    'AB Sociology',
+    'Bachelor of Elementary Education', 'Bachelor of Secondary Education',
+    'Bachelor of Physical Education', 'Bachelor of Special Needs Education',
+    'Bachelor of Laws', 'Bachelor of Arts in Music', 'Bachelor of Fine Arts',
+    'Doctor of Medicine', 'Doctor of Dental Medicine',
+    'Automotive Servicing NC II', 'Bookkeeping NC III', 'Computer Hardware Servicing NC II',
+    'Cookery NC II', 'Electrical Installation and Maintenance NC II',
+    'Food and Beverage Services NC II', 'Housekeeping NC II',
+    'Shielded Metal Arc Welding NC II', 'Driving NC II',
+    'ABM', 'HUMSS', 'STEM', 'GAS', 'TVL', 'Sports Track', 'Arts and Design Track',
+]
+
+STATIC_CERTS = [
+    'TESDA NC I', 'TESDA NC II', 'TESDA NC III', 'TESDA NC IV',
+    'PRC Board Exam - Nursing', 'PRC Board Exam - Medicine',
+    'PRC Board Exam - Accountancy', 'PRC Board Exam - Engineering',
+    'PRC Board Exam - Pharmacy', 'PRC Board Exam - Physical Therapy',
+    'PRC Board Exam - Medical Technology', 'PRC Board Exam - Dentistry',
+    'PRC Board Exam - Psychology', 'PRC Board Exam - Social Work',
+    'AWS Certified Cloud Practitioner', 'AWS Certified Solutions Architect',
+    'Google IT Support Certificate', 'Google Data Analytics Certificate',
+    'Microsoft Certified: Azure Fundamentals', 'Cisco CCNA',
+    'CompTIA A+', 'CompTIA Security+', 'Oracle Java Certification',
+    'Civil Service Eligibility - Professional', 'Civil Service Eligibility - Sub-Professional',
+    'First Aid and Basic Life Support', 'BOSH Training Certificate',
+    'Occupational Health and Safety', 'Food Safety Certificate',
+    'NCII Cookery', 'NCII Welding', 'NCII Electrical',
+]
+
+
+def _autocomplete_response(query, db_values, static_values, cache_key):
+    """Shared autocomplete logic: merge DB + static vocab, then smart-rank."""
+    if not query:
+        return JsonResponse([], safe=False)
+    from apps.jobseekers.nlp_service import smart_rank
+    candidates = list(dict.fromkeys(list(db_values) + list(static_values)))
+    suggestions = smart_rank(query, candidates, limit=10, cache_key=cache_key)
+    return JsonResponse(suggestions, safe=False)
+
+
 def autocomplete_skills(request):
     query = request.GET.get('q', '').strip()
-    if not query or len(query) < 2:
-        return JsonResponse([], safe=False)
-
     from apps.jobseekers.models import Skill as JobseekerSkill
-    skills = JobseekerSkill.objects.filter(
-        name__icontains=query
-    ).values_list('name', flat=True).distinct().order_by('name')[:10]
-
-    return JsonResponse(list(skills), safe=False)
+    db_skills = JobseekerSkill.objects.values_list('name', flat=True).distinct()
+    return _autocomplete_response(query, db_skills, STATIC_SKILLS, cache_key='skills')
 
 
 def autocomplete_positions(request):
     query = request.GET.get('q', '').strip()
-    if not query or len(query) < 2:
-        return JsonResponse([], safe=False)
-
-    positions = JobPosting.objects.filter(
-        title__icontains=query, status='open'
-    ).values_list('title', flat=True).distinct().order_by('title')[:10]
-
-    static_positions = [
-        'Accountant', 'Administrative Assistant', 'Architect', 'Bookkeeper',
-        'Call Center Agent', 'Cashier', 'Civil Engineer', 'Computer Technician',
-        'Construction Worker', 'Cook', 'Customer Service Representative',
-        'Data Analyst', 'Data Entry Clerk', 'Delivery Driver', 'Dentist',
-        'Electrical Engineer', 'Electrician', 'Factory Worker', 'Financial Analyst',
-        'Graphic Designer', 'HR Assistant', 'IT Support', 'Janitor',
-        'Logistics Coordinator', 'Marketing Assistant', 'Mechanic', 'Medical Technologist',
-        'Midwife', 'Nurse', 'Office Staff', 'Pharmacist', 'Physical Therapist',
-        'Plumber', 'Project Manager', 'Purchasing Officer', 'Receptionist',
-        'Sales Associate', 'Secretary', 'Security Guard', 'Social Worker',
-        'Software Developer', 'Teacher', 'Technician', 'Waiter/Waitress',
-        'Web Developer', 'Welder',
-    ]
-
-    filtered_static = [p for p in static_positions if query.lower() in p.lower()]
-    combined = list(dict.fromkeys(list(positions) + filtered_static))[:10]
-    return JsonResponse(combined, safe=False)
+    db_positions = JobPosting.objects.filter(status='open').values_list(
+        'title', flat=True).distinct()
+    return _autocomplete_response(query, db_positions, STATIC_POSITIONS, cache_key='positions')
 
 
 def autocomplete_degrees(request):
     query = request.GET.get('q', '').strip()
-    if not query or len(query) < 2:
-        return JsonResponse([], safe=False)
-
-    degrees = [
-        'BS Accountancy', 'BS Architecture', 'BS Biology', 'BS Business Administration',
-        'BS Chemical Engineering', 'BS Chemistry', 'BS Civil Engineering',
-        'BS Computer Engineering', 'BS Computer Science', 'BS Criminology',
-        'BS Electrical Engineering', 'BS Electronics Engineering', 'BS Environmental Science',
-        'BS Finance', 'BS Food Technology', 'BS Forensic Science',
-        'BS Hotel and Restaurant Management', 'BS Industrial Engineering',
-        'BS Information Systems', 'BS Information Technology', 'BS Interior Design',
-        'BS Management Accounting', 'BS Marine Engineering', 'BS Marine Transportation',
-        'BS Marketing Management', 'BS Mathematics', 'BS Mechanical Engineering',
-        'BS Medical Laboratory Science', 'BS Midwifery', 'BS Mining Engineering',
-        'BS Nursing', 'BS Nutrition and Dietetics', 'BS Occupational Therapy',
-        'BS Pharmacy', 'BS Physical Therapy', 'BS Psychology', 'BS Radiologic Technology',
-        'BS Real Estate Management', 'BS Social Work', 'BS Statistics',
-        'BS Tourism Management',
-        'AB Communication', 'AB Economics', 'AB English', 'AB Filipino',
-        'AB History', 'AB Journalism', 'AB Political Science', 'AB Psychology',
-        'AB Sociology',
-        'Bachelor of Elementary Education', 'Bachelor of Secondary Education',
-        'Bachelor of Physical Education', 'Bachelor of Special Needs Education',
-        'Bachelor of Laws', 'Bachelor of Arts in Music', 'Bachelor of Fine Arts',
-        'Doctor of Medicine', 'Doctor of Dental Medicine',
-        'Automotive Servicing NC II', 'Bookkeeping NC III', 'Computer Hardware Servicing NC II',
-        'Cookery NC II', 'Electrical Installation and Maintenance NC II',
-        'Food and Beverage Services NC II', 'Housekeeping NC II',
-        'Shielded Metal Arc Welding NC II', 'Driving NC II',
-        'ABM', 'HUMSS', 'STEM', 'GAS', 'TVL', 'Sports Track', 'Arts and Design Track',
-    ]
-
-    filtered = [d for d in degrees if query.lower() in d.lower()][:10]
-    return JsonResponse(filtered, safe=False)
+    # Degrees: static only (canonical PH degree list is comprehensive)
+    return _autocomplete_response(query, [], STATIC_DEGREES, cache_key='degrees')
 
 
 def autocomplete_certifications(request):
     query = request.GET.get('q', '').strip()
-    if not query or len(query) < 2:
-        return JsonResponse([], safe=False)
-
     from apps.jobseekers.models import Certification as JobseekerCert
-    existing = JobseekerCert.objects.filter(
-        name__icontains=query
-    ).values_list('name', flat=True).distinct().order_by('name')[:10]
-
-    static_certs = [
-        'TESDA NC I', 'TESDA NC II', 'TESDA NC III', 'TESDA NC IV',
-        'PRC Board Exam - Nursing', 'PRC Board Exam - Medicine',
-        'PRC Board Exam - Accountancy', 'PRC Board Exam - Engineering',
-        'PRC Board Exam - Pharmacy', 'PRC Board Exam - Physical Therapy',
-        'PRC Board Exam - Medical Technology', 'PRC Board Exam - Dentistry',
-        'PRC Board Exam - Psychology', 'PRC Board Exam - Social Work',
-        'AWS Certified Cloud Practitioner', 'AWS Certified Solutions Architect',
-        'Google IT Support Certificate', 'Google Data Analytics Certificate',
-        'Microsoft Certified: Azure Fundamentals', 'Cisco CCNA',
-        'CompTIA A+', 'CompTIA Security+', 'Oracle Java Certification',
-        'Civil Service Eligibility - Professional', 'Civil Service Eligibility - Sub-Professional',
-        'First Aid and Basic Life Support', 'BOSH Training Certificate',
-        'Occupational Health and Safety', 'Food Safety Certificate',
-        'NCII Cookery', 'NCII Welding', 'NCII Electrical',
-    ]
-
-    filtered_static = [c for c in static_certs if query.lower() in c.lower()]
-    combined = list(dict.fromkeys(list(existing) + filtered_static))[:10]
-    return JsonResponse(combined, safe=False)
+    db_certs = JobseekerCert.objects.values_list('name', flat=True).distinct()
+    return _autocomplete_response(query, db_certs, STATIC_CERTS, cache_key='certs')

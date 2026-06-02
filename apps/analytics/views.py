@@ -63,6 +63,46 @@ def get_analytics_context(request):
     now = timezone.now()
     twelve_months_ago = now - timedelta(days=365)
 
+    # Year filter (from ?year=YYYY), defaults to current year
+    try:
+        selected_year = int(request.GET.get('year', now.year))
+    except (TypeError, ValueError):
+        selected_year = now.year
+
+    def monthly_counts_for_year(qs, year):
+        """Returns [count_jan, count_feb, ..., count_dec] for the given year."""
+        rows = (qs.filter(created_at__year=year)
+                  .annotate(month=TruncMonth('created_at'))
+                  .values('month')
+                  .annotate(count=Count('id'))
+                  .order_by('month'))
+        by_month = {r['month'].month: r['count'] for r in rows}
+        return [by_month.get(m, 0) for m in range(1, 13)]
+
+    # Per-month series for the selected year (12 buckets, padded with zeros)
+    new_jobseekers_monthly = monthly_counts_for_year(JobseekerProfile.objects, selected_year)
+    new_employers_monthly  = monthly_counts_for_year(EmployerProfile.objects, selected_year)
+    applications_monthly   = monthly_counts_for_year(Application.objects, selected_year)
+    placements_monthly     = monthly_counts_for_year(
+        Application.objects.filter(status='accepted'), selected_year
+    )
+
+    # Totals for the chart footers
+    jobseekers_this_year = sum(new_jobseekers_monthly)
+    employers_this_year  = sum(new_employers_monthly)
+    applications_this_year = sum(applications_monthly)
+    placements_this_year   = sum(placements_monthly)
+
+    jobseekers_all_time  = JobseekerProfile.objects.count()
+    employers_all_time   = EmployerProfile.objects.count()
+    applications_all_time = Application.objects.count()
+    placements_all_time   = Application.objects.filter(status='accepted').count()
+
+    # Years that actually have data (for the dropdown)
+    js_year_rows = JobseekerProfile.objects.dates('created_at', 'year', order='DESC')
+    available_years = sorted({d.year for d in js_year_rows} | {now.year}, reverse=True)
+
+    # Old shape (kept for backward-compatible templates / summary cards)
     new_applicants_per_month = list(
         JobseekerProfile.objects.filter(
             created_at__gte=twelve_months_ago
@@ -151,9 +191,20 @@ def get_analytics_context(request):
         for row in Company.objects.values('type_of_company').annotate(count=Count('id')).order_by('-count')
     ]
 
+    # Nature of Company — group semantically into canonical industry buckets
+    # so "Hospital", "Medical Clinic", "Healthcare Center" all roll up as Healthcare.
+    raw_natures = list(
+        Company.objects.exclude(nature_of_company='').values_list('nature_of_company', flat=True)
+    )
+    from apps.jobseekers.nlp_service import cluster_to_canonical
+    nature_to_industry = cluster_to_canonical(set(raw_natures))
+    industry_counter = Counter()
+    for nature in raw_natures:
+        bucket = nature_to_industry.get(nature, nature) or 'Unspecified'
+        industry_counter[bucket] += 1
     company_natures = [
-        {'label': row['nature_of_company'] or 'Unspecified', 'count': row['count']}
-        for row in Company.objects.values('nature_of_company').annotate(count=Count('id')).order_by('-count')[:10]
+        {'label': label, 'count': count}
+        for label, count in industry_counter.most_common(12)
     ]
 
     company_locations = [
@@ -219,6 +270,21 @@ def get_analytics_context(request):
         'jobs_filled': jobs_filled,
         'jobs_by_industry': jobs_by_industry,
         'jobs_by_location': jobs_by_location,
+        # ── New dashboard-style monthly series ─────────────────────
+        'selected_year': selected_year,
+        'available_years': available_years,
+        'new_jobseekers_monthly': new_jobseekers_monthly,
+        'new_employers_monthly': new_employers_monthly,
+        'applications_monthly': applications_monthly,
+        'placements_monthly': placements_monthly,
+        'jobseekers_this_year': jobseekers_this_year,
+        'employers_this_year': employers_this_year,
+        'applications_this_year': applications_this_year,
+        'placements_this_year': placements_this_year,
+        'jobseekers_all_time': jobseekers_all_time,
+        'employers_all_time': employers_all_time,
+        'applications_all_time': applications_all_time,
+        'placements_all_time': placements_all_time,
     }
 
 

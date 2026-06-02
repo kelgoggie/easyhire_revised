@@ -1,0 +1,14 @@
+<div class="bg-surface border border-gray-200 rounded-2xl p-5">
+  <h3 class="font-bold text-primary text-base text-center mb-3">{{ title }}</h3>
+
+  <!-- Fixed-height container — Chart.js fills it without growing unbounded -->
+  <div class="relative" style="height: 280px;">
+    <canvas id="{{ chart_id }}"></canvas>
+  </div>
+
+  <!-- Totals footer -->
+  <div class="mt-4 pt-3 border-t border-gray-200 space-y-1">
+    <p class="text-sm text-primary">{{ year_label }}: <strong>{{ year_total|default:"0" }}</strong></p>
+    <p class="text-sm text-primary">{{ all_label }}: <strong>{{ all_time|default:"0" }}</strong></p>
+  </div>
+</div>
