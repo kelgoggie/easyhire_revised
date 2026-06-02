@@ -193,15 +193,43 @@ def get_analytics_context(request):
 
     # Nature of Company — group semantically into canonical industry buckets
     # so "Hospital", "Medical Clinic", "Healthcare Center" all roll up as Healthcare.
+    #
+    # Performance: the NLP model is ~80MB and takes 5–50s to load on first use.
+    # We:
+    #   1. Cache the clustering result per-(set of natures) for 1 hour, so
+    #      repeat page loads are instant.
+    #   2. Skip the model entirely if there are 0–2 unique natures (nothing
+    #      meaningful to cluster), so a fresh DB shows no NLP delay at all.
+    #   3. Only run NLP if the model has already been loaded into memory —
+    #      otherwise fall back to raw nature labels. Run `python manage.py
+    #      warm_nlp` once after server start to enable the smart grouping.
     raw_natures = list(
         Company.objects.exclude(nature_of_company='').values_list('nature_of_company', flat=True)
     )
-    from apps.jobseekers.nlp_service import cluster_to_canonical
-    nature_to_industry = cluster_to_canonical(set(raw_natures))
+
     industry_counter = Counter()
+    unique_natures = set(raw_natures)
+
+    nature_to_industry = None
+    if len(unique_natures) >= 3:
+        from django.core.cache import cache
+        cache_key = 'analytics:nature_clusters:' + str(hash(frozenset(unique_natures)))
+        nature_to_industry = cache.get(cache_key)
+        if nature_to_industry is None:
+            from apps.jobseekers import nlp_service
+            # Only attempt clustering if the model is already loaded in memory
+            # (so we don't block this request on the first-time download).
+            if nlp_service._model is not None:
+                nature_to_industry = nlp_service.cluster_to_canonical(unique_natures)
+                cache.set(cache_key, nature_to_industry, 60 * 60)  # 1 hour
+
     for nature in raw_natures:
-        bucket = nature_to_industry.get(nature, nature) or 'Unspecified'
+        if nature_to_industry:
+            bucket = nature_to_industry.get(nature, nature) or 'Unspecified'
+        else:
+            bucket = nature or 'Unspecified'
         industry_counter[bucket] += 1
+
     company_natures = [
         {'label': label, 'count': count}
         for label, count in industry_counter.most_common(12)
@@ -293,6 +321,12 @@ def analytics(request):
     context['is_authenticated'] = request.user.is_authenticated
     # Logged-in jobseekers get the sidebar-style dashboard view; everyone else
     # gets the public page with its own navbar.
-    if request.user.is_authenticated and getattr(request.user, 'is_jobseeker', False):
-        return render(request, 'jobseekers/analytics.html', context)
+    # Jobseekers and employers see the same analytics body wrapped in
+    # their respective dashboard layout. Public/unauthenticated visitors
+    # get the legacy single-page version.
+    if request.user.is_authenticated:
+        if getattr(request.user, 'is_jobseeker', False):
+            return render(request, 'jobseekers/analytics.html', context)
+        if getattr(request.user, 'is_employer', False):
+            return render(request, 'employers/analytics.html', context)
     return render(request, 'public/analytics.html', context)

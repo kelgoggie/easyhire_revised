@@ -66,6 +66,22 @@ def dashboard(request):
 
 
 @login_required
+def job_apply(request, job_id):
+    """Create an Application for the logged-in jobseeker on the given job."""
+    if request.method != 'POST' or not request.user.is_jobseeker:
+        return redirect(f'/jobs/view/{job_id}/')
+    try:
+        profile = request.user.jobseeker_profile
+    except JobseekerProfile.DoesNotExist:
+        return redirect('/register/info/')
+
+    from apps.jobs.models import Application
+    job = get_object_or_404(JobPosting, id=job_id, status='open')
+    Application.objects.get_or_create(jobseeker=profile, job=job)
+    return redirect('/applications/')
+
+
+@login_required
 def parse_resume_pdf(request):
     """Accept an uploaded PDF, extract structured fields, return JSON for the
     resume form to pre-fill. Skill matching uses the existing Skill catalog."""

@@ -236,7 +236,9 @@ class EmployerRegisterStep2View(View):
             'type_of_company': 'Type of company',
             'nature_of_company': 'Nature of company',
             'main_branch_address': 'Main branch address',
+            'iloilo_street': 'Iloilo street',
             'iloilo_barangay': 'Iloilo branch barangay',
+            'company_email': 'Company email',
             'recruitment_email': 'Recruitment email',
             'first_name': 'First name',
             'last_name': 'Last name',
@@ -253,7 +255,6 @@ class EmployerRegisterStep2View(View):
         # Phone validation
         phone = request.POST.get('phone', '').strip()
         phone_clean = re.sub(r'[\s\-\+]', '', phone)
-        print(f"DEBUG phone raw: '{phone}' | clean: '{phone_clean}'")
         if phone and not re.match(r'^(09\d{9}|639\d{9})$', phone_clean):
             errors['phone'] = 'Please enter a valid 11-digit Philippine mobile number (e.g. 09171234567).'
 
@@ -296,7 +297,7 @@ class EmployerRegisterStep2View(View):
                 iloilo_street=request.POST.get('iloilo_street', ''),
                 iloilo_barangay_code=request.POST.get('iloilo_barangay', ''),
                 iloilo_barangay_name=request.POST.get('iloilo_barangay_name', ''),
-                company_email=request.POST.get('recruitment_email'),
+                company_email=request.POST.get('company_email') or request.POST.get('recruitment_email'),
                 recruitment_email=request.POST.get('recruitment_email'),
                 verification_status=Company.PENDING,
             )

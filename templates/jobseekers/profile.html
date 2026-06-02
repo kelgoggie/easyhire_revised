@@ -34,7 +34,7 @@
 
         <!-- Avatar with edit overlay (clickable) -->
         <button type="button" onclick="openAvatarEditor()"
-                class="group block relative w-40 h-40 rounded-full border-4 border-surface bg-primary shadow-md mb-3 overflow-hidden mx-auto">
+                class="group block relative z-10 w-40 h-40 rounded-full border-4 border-surface bg-primary shadow-md mb-3 overflow-hidden mx-auto">
           {% if profile.profile_picture %}
             <img id="profile-pic-display" src="{{ profile.profile_picture.url }}" alt="" class="w-full h-full object-cover">
           {% else %}

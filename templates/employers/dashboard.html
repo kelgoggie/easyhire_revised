@@ -1,132 +1,108 @@
-{% extends "base/base.html" %}
+{% extends "base/base_dashboard_employer.html" %}
 {% load static %}
 
 {% block title %}Dashboard — EasyHire for Employers{% endblock %}
 
-{% block navbar %}
-    {% include "base/navbar_dashboard_employer.html" with active="home" %}
-{% endblock %}
+{% with active_nav="dashboard" %}
+{% block page_content %}
+<div class="py-8">
 
+  <!-- ── Company header ─────────────────────────────────────────── -->
+  <div class="flex items-center justify-between gap-6 mb-6">
 
-    {% include "base/partner_logos.html" %}
+    <div class="flex items-center gap-5 min-w-0">
+      <!-- Company logo / avatar -->
+      <div class="w-20 h-20 rounded-full bg-primary flex items-center justify-center flex-shrink-0 overflow-hidden">
+        {% if company.logo %}
+          <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="w-full h-full object-cover">
+        {% else %}
+          <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+          </svg>
+        {% endif %}
+      </div>
 
-{% block content %}
-
-<main class="bg-surface min-h-screen py-8 px-12">
-    <div class="max-w-4xl mx-auto">
-
-        <!-- Search bar -->
-        <div class="text-center mb-6">
-            <p class="text-primary/60 text-sm mb-2">Search for candidates on <span class="font-bold text-olive">EasyHire...</span></p>
-            <div class="relative max-w-xl mx-auto">
-                <input type="text" placeholder="Hinted search text"
-                       class="w-full bg-surface border border-taupe/30 rounded-full px-5 py-2.5 text-sm text-primary placeholder-taupe focus:outline-none focus:border-teal transition pr-12">
-                <button class="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <!-- Company Card -->
-        <div class="bg-surface border border-taupe/20 rounded-2xl p-6 mb-6 shadow-sm">
-            <div class="flex items-start gap-5">
-
-                <!-- Circular Avatar -->
-                <div class="w-24 h-24 rounded-full bg-teal/20 border-2 border-teal/30 flex items-center justify-center text-teal font-extrabold text-3xl flex-shrink-0">
-                    {{ company.name|first|upper }}
-                </div>
-
-                <!-- Divider -->
-                <div class="w-px bg-taupe/30 self-stretch mx-1"></div>
-
-                <!-- Info -->
-                <div class="flex-1 min-w-0">
-                    <h2 class="text-2xl text-primary mb-0.5">
-                        <span class="font-extrabold">{{ company.name }}</span>
-                    </h2>
-                    <p class="text-primary font-semibold text-sm mb-3">{{ company.nature_of_company }}</p>
-                    {% if company.description %}
-                    <p class="text-muted text-sm mb-4 leading-relaxed">{{ company.description }}</p>
-                    {% else %}
-                    <p class="text-taupe text-sm mb-4 italic">No description yet — edit your company profile to add one.</p>
-                    {% endif %}
-
-                    <!-- Bottom row: tags left, button right -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex flex-wrap gap-2">
-                            {% for sector in company.sector_badges.all %}
-                            <span class="flex items-center gap-1.5 bg-teal/10 text-teal text-xs px-3 py-1 rounded-full border border-teal/20 font-medium">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                                </svg>
-                                {{ sector.get_code_display }}
-                            </span>
-                            {% endfor %}
-                        </div>
-                        <a href="/employers/profile/"
-                           class="bg-taupe/20 text-primary text-xs font-semibold px-4 py-2 rounded-full hover:bg-taupe/40 transition flex-shrink-0">
-                            Edit Company Profile
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Recent Job Posts -->
-        <h2 class="text-primary text-2xl mb-3">Your Recent <span class="font-extrabold">Job Posts</span></h2>
-        <div class="bg-surface border border-taupe/20 rounded-2xl p-5 mb-8 shadow-sm min-h-[120px] flex flex-col justify-between">
-
-            {% if recent_jobs %}
-            <div class="space-y-2 mb-4">
-                {% for job in recent_jobs %}
-                <a href="/employers/jobs/{{ job.id }}"
-                   class="flex items-center justify-between bg-taupe/10 border border-taupe/20 rounded-xl px-4 py-2.5 hover:bg-taupe/20 transition">
-                    <p class="text-primary font-semibold text-sm">{{ job.title }}</p>
-                    <p class="text-muted text-xs">{{ job.location_display }}</p>
-                </a>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="flex-1"></div>
-            {% endif %}
-
-            <!-- Bottom row -->
-            <div class="flex items-center justify-between mt-2">
-                <a href="/employers/jobs/create/"
-                   class="flex items-center gap-2 text-primary text-sm font-semibold hover:text-teal transition">
-                    <div class="w-6 h-6 rounded-full border-2 border-primary flex items-center justify-center text-primary hover:border-teal hover:text-teal transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                        </svg>
-                    </div>
-                    Create new <span class="font-extrabold">Job Post</span>
-                </a>
-
-                <span class="text-taupe tracking-widest text-sm">••••</span>
-
-                <a href="/employers/jobs/"
-                   class="flex items-center gap-2 text-primary text-sm font-semibold hover:text-teal transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/>
-                    </svg>
-                    View <span class="font-extrabold">Your Jobs</span> &rsaquo;
-                </a>
-            </div>
-        </div>
-
-        <!-- How does EasyHire work? -->
-        <div>
-            <h3 class="text-3xl font-extrabold text-center mb-6">
-                How does <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary"> work?</span>
-            </h3>
-        </div>
-
+      <!-- Company info -->
+      <div class="min-w-0">
+        <h2 class="text-2xl text-primary leading-tight mb-1">
+          <span class="font-bold">{{ company.name }}</span>
+        </h2>
+        <p class="text-primary text-sm mb-0.5">
+          {% if company.iloilo_street or company.iloilo_barangay_name %}
+            {{ company.iloilo_street }}{% if company.iloilo_street and company.iloilo_barangay_name %}, {% endif %}{{ company.iloilo_barangay_name }}, Iloilo City
+          {% else %}
+            {{ company.main_branch_address|default:"Address not set" }}
+          {% endif %}
+        </p>
+        <p class="text-primary text-sm">
+          {% if profile.phone %}+63{{ profile.phone|slice:"1:" }}{% endif %}
+          {% if profile.phone and company.recruitment_email %} | {% endif %}
+          {{ company.recruitment_email|default:company.company_email }}
+        </p>
+      </div>
     </div>
-</main>
-{% endblock %}
 
-{% block footer %}
-    {% include "base/footer.html" %}
+    <a href="/employers/jobs/new/"
+       class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-taupe/30 transition flex-shrink-0">
+      Create New Job
+    </a>
+  </div>
+
+  <div class="border-b border-taupe/30 mb-8"></div>
+
+  <!-- ── Welcome heading ────────────────────────────────────────── -->
+  <h1 class="text-4xl font-extrabold text-primary mb-8">
+    Welcome to <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">!</span>
+  </h1>
+
+  <!-- ── Your Job Posts ─────────────────────────────────────────── -->
+  <section class="mb-10">
+    <div class="flex items-center gap-2 mb-1">
+      <svg class="w-5 h-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+      <h2 class="text-xl text-primary">Your <span class="font-extrabold">Job Posts</span></h2>
+    </div>
+    <p class="text-muted text-xs mb-4">
+      Jobs you posted, sorted by most recent.
+      <a href="/employers/jobs/" class="underline hover:text-primary transition">View My Job Posts.</a>
+    </p>
+
+    <div class="border border-gray-200 rounded-xl overflow-hidden bg-white">
+      <table class="w-full text-sm">
+        <thead class="border-b border-gray-100">
+          <tr class="text-left">
+            <th class="px-5 py-3 text-xs font-medium text-muted">Job Title</th>
+            <th class="px-4 py-3 text-xs font-medium text-muted">Job Location</th>
+            <th class="px-4 py-3 text-xs font-medium text-muted">Date Posted</th>
+            <th class="px-4 py-3 text-xs font-medium text-muted">Availability</th>
+            <th class="px-4 py-3 text-xs font-medium text-muted">Applicants</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in recent_jobs %}
+          <tr class="border-b border-gray-50 last:border-0 hover:bg-surface/40 transition">
+            <td class="px-5 py-3 font-semibold text-primary">
+              <a href="/employers/jobs/{{ job.id }}/" class="hover:text-teal transition">{{ job.title }}</a>
+            </td>
+            <td class="px-4 py-3 text-muted italic text-xs">{{ job.location_display|truncatechars:30 }}</td>
+            <td class="px-4 py-3 text-muted italic text-xs">{{ job.created_at|date:"F j, Y" }}</td>
+            <td class="px-4 py-3 text-muted italic text-xs">{{ job.slots }} slot{{ job.slots|pluralize }} open</td>
+            <td class="px-4 py-3 text-primary italic text-xs">{{ job.applicants_count|default:0 }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-5 py-10 text-center text-muted text-sm">
+              You haven't posted any jobs yet.
+              <a href="/employers/jobs/new/" class="text-teal hover:underline">Create your first job post.</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
 {% endblock %}
+{% endwith %}

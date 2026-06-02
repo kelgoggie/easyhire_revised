@@ -5,20 +5,15 @@
 
 {% with active_nav="resume" %}
 {% block page_content %}
-<div class="bg-surface min-h-screen">
+<div class="min-h-screen">
 
   <form method="POST" action="/resume/" enctype="multipart/form-data" id="resume-form">
     {% csrf_token %}
 
     <!-- ── Page header ─────────────────────────────────────────── -->
-    <div class="flex items-center justify-between px-10 pt-8 pb-4">
+    <div class="flex items-center justify-between pt-8 pb-4">
       <div class="flex items-center gap-3">
         <h1 class="text-3xl font-extrabold text-primary">Your Resume</h1>
-        <button type="button" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-taupe/20 transition text-muted">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-          </svg>
-        </button>
       </div>
       <label id="pdf-upload-label" class="flex items-center gap-2 bg-surface border border-taupe/30 rounded-xl px-4 py-2 cursor-pointer hover:bg-taupe/10 transition">
         <svg id="pdf-upload-icon" class="w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -32,7 +27,7 @@
     </div>
 
     <!-- ── Name + Edit Resume ──────────────────────────────────── -->
-    <div class="flex items-center justify-between px-10 pb-3">
+    <div class="flex items-center justify-between pb-3">
       <h2 class="text-2xl text-primary">
         {{ profile.first_name }}
         {% if profile.middle_name %} {{ profile.middle_name|first }}.{% endif %}
@@ -47,9 +42,9 @@
         Edit Resume
       </button>
     </div>
-    <div class="border-b border-taupe/30 mx-10 mb-6"></div>
+    <div class="border-b border-taupe/30 mb-6"></div>
 
-    <div class="px-10 space-y-4">
+    <div class="space-y-4">
 
       <!-- ── Card 1: Bio + Address + Contact + Sectors ──────────── -->
       <div class="bg-white border border-gray-200 rounded-2xl p-6">
@@ -208,7 +203,7 @@
             {% for edu in education %}
             <div class="education-row relative border border-gray-100 rounded-xl p-3 space-y-2">
               <button type="button" onclick="removeCard(this)" title="Remove this entry"
-                      class="add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-red-400 hover:bg-red-500 text-white flex items-center justify-center transition shadow-sm z-10">
+                      class="remove-x add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
               <div>
@@ -262,7 +257,7 @@
             {% empty %}
             <div class="education-row relative border border-gray-100 rounded-xl p-3 space-y-2">
               <button type="button" onclick="removeCard(this)" title="Remove this entry"
-                      class="add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-red-400 hover:bg-red-500 text-white flex items-center justify-center transition shadow-sm z-10">
+                      class="remove-x add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
               <div>
@@ -308,7 +303,7 @@
             {% for cert in certifications %}
             <div class="cert-row relative border border-gray-100 rounded-xl p-3 space-y-2">
               <button type="button" onclick="removeCard(this)" title="Remove this entry"
-                      class="add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-red-400 hover:bg-red-500 text-white flex items-center justify-center transition shadow-sm">
+                      class="remove-x add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
               <div><label class="block text-xs text-muted mb-1">Certification Name</label>
@@ -329,7 +324,7 @@
             {% empty %}
             <div class="cert-row relative border border-gray-100 rounded-xl p-3 space-y-2">
               <button type="button" onclick="removeCard(this)" title="Remove this entry"
-                      class="add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-red-400 hover:bg-red-500 text-white flex items-center justify-center transition shadow-sm">
+                      class="remove-x add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
               <div><label class="block text-xs text-muted mb-1">Certification Name</label>
@@ -362,7 +357,7 @@
             <span class="skill-chip relative inline-flex items-center gap-1 bg-teal/15 text-primary text-xs pl-3 pr-5 py-1 rounded-full border border-teal/20">
               {{ skill.name }}
               <button type="button" onclick="removeSkillChip(this)" title="Remove"
-                      class="add-remove-btn absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-400 hover:bg-red-500 text-white flex items-center justify-center transition shadow-sm">
+                      class="add-remove-btn absolute -top-1 -right-1 w-4 h-4 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
                 <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
               <input type="hidden" name="skill_name" value="{{ skill.name }}">
@@ -387,7 +382,7 @@
           {% for exp in experiences %}
           <div class="exp-row relative border border-gray-100 rounded-xl p-4">
             <button type="button" onclick="removeCard(this)" title="Remove this entry"
-                    class="add-remove-btn absolute top-3 right-3 w-5 h-5 rounded-full bg-red-400 hover:bg-red-500 text-white flex items-center justify-center transition shadow-sm z-10">
+                    class="remove-x add-remove-btn absolute top-3 right-3 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
             <div class="grid grid-cols-3 gap-3 mb-3 pr-8">
@@ -428,7 +423,7 @@
           {% empty %}
           <div class="exp-row relative border border-gray-100 rounded-xl p-4">
             <button type="button" onclick="removeCard(this)" title="Remove this entry"
-                    class="add-remove-btn absolute top-3 right-3 w-5 h-5 rounded-full bg-red-400 hover:bg-red-500 text-white flex items-center justify-center transition shadow-sm z-10">
+                    class="remove-x add-remove-btn absolute top-3 right-3 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
             <div class="grid grid-cols-3 gap-3 mb-3 pr-8">
@@ -477,7 +472,7 @@
         </button>
       </div>
 
-    </div><!-- /px-10 -->
+    </div><!-- /sections -->
   </form>
 </div>
 
@@ -498,6 +493,23 @@
 
 {% block page_scripts %}
 <script>
+// ── Show X buttons only when the entry has any content ─────────────
+function refreshEntryVisibility(entry) {
+  const filled = Array.from(entry.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea'))
+    .some(el => (el.value || '').trim() !== '');
+  entry.classList.toggle('has-content', filled);
+}
+function watchEntry(entry) {
+  if (!entry || entry.dataset.watched) return;
+  entry.dataset.watched = 'true';
+  entry.addEventListener('input', () => refreshEntryVisibility(entry));
+  entry.addEventListener('change', () => refreshEntryVisibility(entry));
+  refreshEntryVisibility(entry);
+}
+function watchAllEntries() {
+  document.querySelectorAll('.education-row, .cert-row, .exp-row').forEach(watchEntry);
+}
+
 // ── Confirmation modal ────────────────────────────────────────────
 function showConfirm(message, subtext, yesLabel, onYes) {
     document.getElementById('confirm-message').textContent = message;
@@ -566,7 +578,7 @@ function addSkillChip(name) {
     if (existing.includes(name.toLowerCase())) return;
     const span = document.createElement('span');
     span.className = 'skill-chip relative inline-flex items-center gap-1 bg-teal/15 text-primary text-xs pl-3 pr-5 py-1 rounded-full border border-teal/20';
-    span.innerHTML = `${name} <button type="button" onclick="removeSkillChip(this)" title="Remove" class="add-remove-btn absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-400 hover:bg-red-500 text-white flex items-center justify-center transition shadow-sm"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg></button><input type="hidden" name="skill_name" value="${name}">`;
+    span.innerHTML = `${name} <button type="button" onclick="removeSkillChip(this)" title="Remove" class="add-remove-btn absolute -top-1 -right-1 w-4 h-4 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg></button><input type="hidden" name="skill_name" value="${name}">`;
     skillTags.appendChild(span);
 }
 function removeSkillChip(btn) {
@@ -592,6 +604,7 @@ function removeCard(btn) {
         card.remove();
     } else {
         card.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => { el.value = ''; });
+        refreshEntryVisibility(card);
     }
 }
 
@@ -602,8 +615,10 @@ function addRow(type) {
     const first = container.querySelector('.' + (type === 'education' ? 'education-row' : type === 'certification' ? 'cert-row' : 'exp-row'));
     if (!first) return;
     const clone = first.cloneNode(true);
+    delete clone.dataset.watched;
     clone.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => { el.value = ''; if (el.type === 'checkbox') el.checked = false; });
     container.appendChild(clone);
+    watchEntry(clone);
     setTimeout(initAutocompletes, 50);
 }
 
@@ -705,6 +720,9 @@ function initAutocompletes() {
     document.querySelectorAll('input[name="cert_name"]').forEach(el => createAutocomplete(el, '/api/autocomplete/certifications/'));
 }
 initAutocompletes();
+
+// Initialise X-visibility for every existing entry on first paint
+watchAllEntries();
 
 // ── Resume PDF upload + auto-fill ───────────────────────────────────
 (function() {

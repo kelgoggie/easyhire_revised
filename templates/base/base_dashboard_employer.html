@@ -11,11 +11,7 @@
   #main-content      { margin-left: 11rem; transition: margin-left 0.2s ease; }
   body.sidebar-collapsed #sidebar      { width: 3.25rem; }
   body.sidebar-collapsed #main-content { margin-left: 3.25rem; }
-
-  /* hide labels + logo text when collapsed */
   body.sidebar-collapsed .nav-label    { display: none; }
-
-  /* center icons when collapsed */
   body.sidebar-collapsed .nav-link     { justify-content: center; padding-left: 0; padding-right: 0; }
   body.sidebar-collapsed .nav-divider  { margin-left: 0.5rem; margin-right: 0.5rem; }
 </style>
@@ -26,10 +22,11 @@
 
   <!-- ── Top bar ─────────────────────────────────────────────────── -->
   <header class="fixed top-0 left-0 right-0 z-40 bg-surface border-b border-gray-200 flex items-center justify-between px-6 py-3 h-14">
-    <a href="/dashboard/" class="flex items-center gap-2">
+    <a href="/employers/dashboard/" class="flex items-center gap-2">
       <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-8 h-8">
       <span class="font-extrabold text-lg">
-        <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
+        <span class="text-primary">Easy</span><span class="text-teal">Hire</span>
+        <span class="text-primary font-extrabold"> for Employers.</span>
       </span>
     </a>
 
@@ -43,9 +40,8 @@
           <span id="notif-dot" class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full hidden"></span>
         </button>
         <div id="notif-dropdown" class="absolute right-0 top-11 bg-white rounded-2xl shadow-xl w-80 z-50 border border-gray-100 hidden">
-          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <div class="px-4 py-3 border-b border-gray-100">
             <p class="font-bold text-primary text-sm">Notifications</p>
-            <button onclick="markAllRead()" class="text-teal text-xs hover:underline">Mark all read</button>
           </div>
           <div id="notif-list" class="max-h-72 overflow-y-auto">
             <p class="text-muted text-xs text-center py-6">No new notifications</p>
@@ -62,16 +58,14 @@
 
       <!-- Avatar -->
       <div class="relative ml-1" id="avatar-container">
-        {% with request.user.jobseeker_profile as jp %}
-        <a id="avatar-btn" href="/profile/" title="View your profile"
+        {% with request.user.employer_profile.company as co %}
+        <a id="avatar-btn" href="/employers/profile/" title="View company profile"
            class="w-9 h-9 bg-primary rounded-full flex items-center justify-center text-white font-bold text-sm overflow-hidden hover:ring-2 hover:ring-teal/40 transition block">
-          {% if jp and jp.profile_picture %}
-            <img src="{{ jp.profile_picture.url }}" alt="" class="w-full h-full object-cover">
-          {% elif jp %}
-            {{ jp.first_name|first|upper }}
-          {% else %}
-            ?
-          {% endif %}
+          {% if co.logo %}
+            <img src="{{ co.logo.url }}" alt="" class="w-full h-full object-cover">
+          {% elif co %}
+            {{ co.name|first|upper }}
+          {% else %}?{% endif %}
         </a>
         <button id="more-btn" type="button" title="More"
                 class="absolute -bottom-1 -right-1 w-4 h-4 bg-white rounded-full shadow border border-gray-200 flex items-center justify-center hover:bg-surface transition">
@@ -79,9 +73,9 @@
             <path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/>
           </svg>
         </button>
-        <div id="avatar-dropdown" class="absolute right-0 top-11 bg-white rounded-2xl shadow-lg w-52 z-50 border border-gray-100 hidden py-2">
-          <a href="/profile/" class="block px-4 py-2 border-b border-gray-100 mb-1 hover:bg-surface transition">
-            <p class="font-semibold text-primary text-sm">{% if jp %}{{ jp.first_name }} {{ jp.last_name }}{% endif %}</p>
+        <div id="avatar-dropdown" class="absolute right-0 top-11 bg-white rounded-2xl shadow-lg w-56 z-50 border border-gray-100 hidden py-2">
+          <a href="/employers/profile/" class="block px-4 py-2 border-b border-gray-100 mb-1 hover:bg-surface transition">
+            <p class="font-semibold text-primary text-sm">{% if co %}{{ co.name }}{% endif %}</p>
             <p class="text-muted text-xs truncate">{{ request.user.email }}</p>
           </a>
           <a href="/settings/" class="flex items-center gap-3 px-4 py-2 text-sm text-primary hover:bg-surface transition">
@@ -120,17 +114,15 @@
 
       <nav class="flex flex-col gap-0.5 flex-1">
 
-        <!-- Hamburger toggle — sits above Dashboard -->
-        <button id="sidebar-toggle"
-                title="Toggle sidebar"
+        <!-- Hamburger toggle -->
+        <button id="sidebar-toggle" title="Toggle sidebar"
                 class="nav-link flex items-center gap-3 px-3 py-2 mb-1 rounded-lg text-muted hover:text-primary hover:bg-primary/5 transition w-full">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
           </svg>
         </button>
 
-        <!-- Dashboard -->
-        <a href="/dashboard/" title="Dashboard"
+        <a href="/employers/dashboard/" title="Dashboard"
            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
                   {% if active_nav == 'dashboard' %}font-semibold text-primary bg-primary/10{% else %}text-muted hover:text-primary hover:bg-primary/5{% endif %}">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,37 +134,15 @@
           <span class="nav-label">Dashboard</span>
         </a>
 
-        <!-- Resume -->
-        <a href="/resume/" title="Resume"
-           class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
-                  {% if active_nav == 'resume' %}font-semibold text-primary bg-primary/10{% else %}text-muted hover:text-primary hover:bg-primary/5{% endif %}">
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-          </svg>
-          <span class="nav-label">Resume</span>
-        </a>
-
-        <!-- Jobs -->
-        <a href="/jobs/for-you/" title="Jobs"
+        <a href="/employers/jobs/" title="My Job Posts"
            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
                   {% if active_nav == 'jobs' %}font-semibold text-primary bg-primary/10{% else %}text-muted hover:text-primary hover:bg-primary/5{% endif %}">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
-          <span class="nav-label">Jobs</span>
+          <span class="nav-label">My Job Posts</span>
         </a>
 
-        <!-- Applications -->
-        <a href="/applications/" title="Applications"
-           class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
-                  {% if active_nav == 'applications' %}font-semibold text-primary bg-primary/10{% else %}text-muted hover:text-primary hover:bg-primary/5{% endif %}">
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-          </svg>
-          <span class="nav-label">Applications</span>
-        </a>
-
-        <!-- Analytics -->
         <a href="/analytics/" title="Analytics"
            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
                   {% if active_nav == 'analytics' %}font-semibold text-primary bg-primary/10{% else %}text-muted hover:text-primary hover:bg-primary/5{% endif %}">
@@ -184,7 +154,6 @@
 
         <div class="nav-divider border-t border-gray-200 my-2 mx-1"></div>
 
-        <!-- Settings -->
         <a href="/settings/" title="Settings"
            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
                   {% if active_nav == 'settings' %}font-semibold text-primary bg-primary/10{% else %}text-muted hover:text-primary hover:bg-primary/5{% endif %}">
@@ -195,7 +164,6 @@
           <span class="nav-label">Settings</span>
         </a>
 
-        <!-- Help -->
         <a href="/help/" title="Help"
            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition text-muted hover:text-primary hover:bg-primary/5">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,9 +174,8 @@
 
         <div class="nav-divider border-t border-gray-200 my-2 mx-1"></div>
 
-        <!-- Log Out -->
         <button type="button" onclick="openLogoutModal()" title="Log Out"
-           class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition text-muted hover:text-red-500 hover:bg-red-50 w-full text-left">
+                class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition text-muted hover:text-red-500 hover:bg-red-50 w-full text-left">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
           </svg>
@@ -220,7 +187,7 @@
 
     <!-- ── Page content + sticky footer ──────────────────────────── -->
     <main id="main-content" class="flex-1 flex flex-col bg-white min-h-[calc(100vh_-_3.5rem)]">
-      <div class="flex-1 px-8 pb-16">
+      <div class="flex-1 px-8 pb-32">
         {% block page_content %}{% endblock %}
       </div>
       {% include "base/footer.html" %}
@@ -230,78 +197,43 @@
 </div>
 
 <script>
-// ── Sidebar collapse ────────────────────────────────────────────────
+// ── Sidebar collapse (persisted in localStorage) ─────────────────────
 (function() {
-  if (localStorage.getItem('sidebar-collapsed') === 'true') {
+  if (localStorage.getItem('emp-sidebar-collapsed') === 'true') {
     document.body.classList.add('sidebar-collapsed');
   }
   document.getElementById('sidebar-toggle').addEventListener('click', function() {
     const collapsed = document.body.classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sidebar-collapsed', collapsed);
+    localStorage.setItem('emp-sidebar-collapsed', collapsed);
   });
 })();
 
-// ── Notification bell ───────────────────────────────────────────────
+// ── Bell + avatar dropdowns ─────────────────────────────────────────
 document.getElementById('notif-btn').addEventListener('click', function(e) {
   e.stopPropagation();
   document.getElementById('notif-dropdown').classList.toggle('hidden');
   document.getElementById('avatar-dropdown').classList.add('hidden');
 });
-
-// ── More button (opens dropdown). Avatar itself navigates to /profile/.
 document.getElementById('more-btn').addEventListener('click', function(e) {
   e.stopPropagation();
   document.getElementById('avatar-dropdown').classList.toggle('hidden');
   document.getElementById('notif-dropdown').classList.add('hidden');
 });
-
 document.addEventListener('click', function() {
   document.getElementById('notif-dropdown').classList.add('hidden');
   document.getElementById('avatar-dropdown').classList.add('hidden');
 });
 
-// ── Notifications polling ───────────────────────────────────────────
-function getCookie(n) {
-  const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
-  if (p.length === 2) return p.pop().split(';').shift();
-}
-function markAllRead() {
-  fetch('/api/notifications/read-all/', {method:'POST', headers:{'X-CSRFToken':getCookie('csrftoken')}})
-    .then(function() {
-      document.getElementById('notif-list').innerHTML = '<p class="text-muted text-xs text-center py-6">No new notifications</p>';
-      document.getElementById('notif-dot').classList.add('hidden');
-    });
-}
-function fetchNotifications() {
-  fetch('/api/notifications/').then(function(r){return r.json();}).then(function(d){
-    var dot = document.getElementById('notif-dot');
-    var list = document.getElementById('notif-list');
-    if (!d.notifications || !d.notifications.length) {
-      list.innerHTML = '<p class="text-muted text-xs text-center py-6">No new notifications</p>';
-      dot.classList.add('hidden'); return;
-    }
-    dot.classList.remove('hidden');
-    list.innerHTML = d.notifications.map(function(n) {
-      return '<a href="'+n.url+'" class="block px-4 py-3 hover:bg-surface border-b border-gray-50 last:border-0">'
-        +'<p class="text-sm text-primary font-medium">'+n.text+'</p>'
-        +(n.subtext ? '<p class="text-xs text-muted mt-0.5">'+n.subtext+'</p>' : '')
-        +'<p class="text-xs text-taupe mt-1">'+n.created_at+'</p></a>';
-    }).join('');
-  }).catch(function(){});
-}
-fetchNotifications();
-setInterval(fetchNotifications, 15000);
-
-// ── Log Out confirmation modal ──────────────────────────────────────
+// ── Log Out modal ───────────────────────────────────────────────────
 function openLogoutModal() {
-    document.getElementById('logout-modal').classList.remove('hidden');
-    document.getElementById('logout-modal').classList.add('flex');
-    document.body.style.overflow = 'hidden';
+  document.getElementById('logout-modal').classList.remove('hidden');
+  document.getElementById('logout-modal').classList.add('flex');
+  document.body.style.overflow = 'hidden';
 }
 function closeLogoutModal() {
-    document.getElementById('logout-modal').classList.add('hidden');
-    document.getElementById('logout-modal').classList.remove('flex');
-    document.body.style.overflow = '';
+  document.getElementById('logout-modal').classList.add('hidden');
+  document.getElementById('logout-modal').classList.remove('flex');
+  document.body.style.overflow = '';
 }
 </script>
 

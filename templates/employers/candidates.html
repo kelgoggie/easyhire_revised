@@ -1,181 +1,126 @@
-{% extends "base/base.html" %}
-{% load static %}
+{% extends "base/base_dashboard_employer.html" %}
+{% load static match_tags %}
 
-{% block title %}Recommended Candidates — EasyHire{% endblock %}
+{% block title %}{% if tab == 'recommended' %}Recommended Candidates{% else %}Applicants{% endif %} — {{ job.title }}{% endblock %}
 
-{% block navbar %}
-    {% include "base/navbar_dashboard_employer.html" %}
-{% endblock %}
+{% with active_nav="jobs" %}
+{% block page_content %}
+<div class="py-8">
 
-{% block partner_logos %}
-    {% include "base/partner_logos.html" %}
-{% endblock %}
+  <!-- ── Title row ────────────────────────────────────────────── -->
+  <div class="flex items-start justify-between gap-4 mb-2">
+    <h1 class="text-4xl font-extrabold text-primary leading-tight">{{ job.title }}</h1>
+    <div class="flex items-center gap-2 flex-shrink-0 pt-2">
+      <span class="inline-flex items-center bg-gray-100 text-muted text-xs font-semibold px-3 py-1.5 rounded-full">
+        {{ job.slots }} slot{{ job.slots|pluralize }} open
+      </span>
+      <a href="/employers/jobs/{{ job.id }}/edit/"
+         class="inline-flex items-center gap-1.5 bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+        Edit Job
+      </a>
+    </div>
+  </div>
+  <div class="border-b border-taupe/30 mb-6"></div>
 
-{% block content %}
+  <!-- ── Tab header + counterpart link ─────────────────────────── -->
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="text-2xl font-bold text-primary">
+      {% if tab == 'recommended' %}Recommended Candidates{% else %}Applicants{% endif %}
+      <span class="text-muted text-base font-normal ml-2">
+        ({% if tab == 'recommended' %}{{ ranked|length }}{% else %}{{ applicants_count }}{% endif %})
+      </span>
+    </h2>
+    {% if tab == 'recommended' %}
+    <a href="/employers/jobs/{{ job.id }}/candidates/?tab=applicants"
+       class="text-teal text-sm font-semibold hover:underline">View Applicants ({{ applicants_count }}) →</a>
+    {% else %}
+    <a href="/employers/jobs/{{ job.id }}/candidates/?tab=recommended"
+       class="text-teal text-sm font-semibold hover:underline">View Recommended Jobseekers →</a>
+    {% endif %}
+  </div>
 
+  {% if ranked %}
+  <!-- ── 4-column grid of candidate cards ──────────────────────── -->
+  <div class="grid grid-cols-4 gap-4">
+    {% for item in ranked %}
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
 
-<main class="bg-surface min-h-screen py-8 px-12">
-    <div class="max-w-6xl mx-auto">
-
-        <!-- Header -->
-        <div class="mb-4">
-            <a href="/employers/jobs/{{ job.id }}/" class="text-muted/40 hover:text-muted transition text-xs mb-1 inline-block">← {{ job.title }}</a>
-            <h1 class="text-3xl font-extrabold text-primary">Suggested <span class="text-teal">Jobseekers</span></h1>
-            <p class="text-muted/40 text-sm mt-1">Displaying results based on job requirements for <span class="text-lightteal/60 font-semibold">{{ job.title }}</span></p>
+      <!-- Top row: name + match smiley -->
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <div class="min-w-0">
+          <p class="font-bold text-primary text-base leading-tight">{{ item.profile.first_name }} {{ item.profile.last_name }}</p>
+          {% if item.application_status %}
+            {% if item.application_status == 'accepted' %}
+              <p class="text-teal text-xs mt-0.5">Accepted</p>
+            {% elif item.application_status == 'rejected' %}
+              <p class="text-red-500 text-xs mt-0.5">Rejected</p>
+            {% else %}
+              <p class="text-muted text-xs mt-0.5">Pending review</p>
+            {% endif %}
+          {% endif %}
         </div>
+        {% match_badge item.score True %}
+      </div>
 
-        <!-- Tabs row -->
-        <div class="flex items-center gap-3 mb-6 flex-wrap">
-            <button class="flex items-center gap-2 text-muted/60 text-sm hover:text-muted transition mr-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
-                </svg>
-                Sort by...
-            </button>
-
-            <a href="/employers/jobs/{{ job.id }}/candidates/?tab=recommended"
-               class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
-                      {% if tab == 'recommended' or not tab %}bg-primary text-white{% else %}bg-white text-primary/80 hover:bg-white/20{% endif %}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-                Recommended
-            </a>
-
-            <a href="/employers/jobs/{{ job.id }}/candidates/?tab=liked_by"
-               class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
-                      {% if tab == 'liked_by' %}bg-primary text-white{% else %}bg-white text-primary/80 hover:bg-white/20{% endif %}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-                Liked By
-                {% if liked_by_count %}
-                <span class="bg-amber text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ liked_by_count }}</span>
-                {% endif %}
-            </a>
-
-            <a href="/employers/jobs/{{ job.id }}/candidates/?tab=liked"
-               class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
-                      {% if tab == 'liked' %}bg-primary text-white{% else %}bg-white text-primary/80 hover:bg-white/20{% endif %}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                </svg>
-                Applicants You Liked
-            </a>
-
-            <a href="/employers/jobs/{{ job.id }}/candidates/?tab=applicants"
-               class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition
-                      {% if tab == 'applicants' %}bg-primary text-white{% else %}bg-white text-primary/80 hover:bg-white/20{% endif %}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 100-8 4 4 0 000 8z"/>
-                </svg>
-                Applicants
-            </a>
-        </div>
-
-        <!-- Grid -->
-        {% if ranked %}
-        <div class="grid grid-cols-4 gap-4">
-            {% for item in ranked %}
-            {% with js=item.profile %}
-            <div class="bg-surface border border-taupe/20 rounded-2xl p-5 shadow-sm flex flex-col cursor-pointer hover:shadow-md hover:border-teal/30 transition"
-                 onclick="window.location.href='/employers/candidates/{{ js.id }}/'">
-
-                <!-- Name + Match % -->
-                <div class="flex items-start justify-between mb-2">
-                    <p class="text-primary font-bold text-sm leading-tight">
-                        {{ js.first_name }}<br>{{ js.last_name }}
-                    </p>
-                    {% if item.score is not None %}
-                    <span class="text-teal text-sm font-bold flex-shrink-0 ml-2">
-                        {{ item.score }}<span class="text-muted text-xs">/100</span>
-                    </span>
-                    {% else %}
-                    <span class="text-muted text-xs flex-shrink-0 ml-2">—</span>
-                    {% endif %}
-                </div>
-
-                <!-- Candidate tags -->
-                <div class="flex flex-col gap-1.5 flex-1 mb-4">
-                    {% for edu in js.educations.all|slice:":1" %}
-                    <span class="flex items-center gap-1 bg-teal/10 text-teal text-xs px-2 py-0.5 rounded-full border border-teal/20 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
-                        </svg>
-                        {{ edu.get_level_display }}
-                    </span>
-                    {% endfor %}
-                    {% for skill in js.skills.all|slice:":2" %}
-                    <span class="flex items-center gap-1 bg-blue-50 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-200 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
-                        </svg>
-                        {{ skill.name }}
-                    </span>
-                    {% endfor %}
-                    {% if js.experiences.exists %}
-                    <span class="flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2 py-0.5 rounded-full border border-purple-200 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/>
-                        </svg>
-                        Has Experience
-                    </span>
-                    {% endif %}
-                    {% for cert in js.certifications.all|slice:":1" %}
-                    <span class="flex items-center gap-1 bg-amber/10 text-amber text-xs px-2 py-0.5 rounded-full border border-amber/20 w-fit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 1l2.39 7.26H22l-6.19 4.5 2.39 7.26L12 15.51l-6.2 5.51 2.39-7.26L2 9.26h7.61z"/>
-                        </svg>
-                        {{ cert.name }}
-                    </span>
-                    {% endfor %}
-                </div>
-
-                <!-- Actions -->
-                <div class="flex items-center justify-between mt-auto pt-3 border-t border-taupe/10">
-                    <form method="POST" action="/employers/candidates/{{ js.id }}/like/"
-                          onclick="event.stopPropagation()">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="/employers/jobs/{{ job.id }}/candidates/?tab={{ tab }}">
-                        <button type="submit"
-                                class="w-8 h-8 flex items-center justify-center rounded-full border transition
-                                       {% if js.id in liked_ids %}text-amber border-amber/30{% else %}border-taupe/30 text-taupe hover:border-amber hover:text-amber{% endif %}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
-                                 {% if js.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
-                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                            </svg>
-                        </button>
-                    </form>
-
-                    <a href="/employers/candidates/{{ js.id }}/"
-                       onclick="event.stopPropagation()"
-                       class="w-8 h-8 flex items-center justify-center rounded-full border border-taupe/30 text-taupe hover:border-teal hover:text-teal transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8a3 3 0 100 6 3 3 0 000-6z"/>
-                        </svg>
-                    </a>
-                </div>
-
-            </div>
-            {% endwith %}
-            {% endfor %}
-        </div>
-
-        {% else %}
-        <div class="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
-            <p class="text-white/40 text-sm">
-                {% if tab == 'liked_by' %}No jobseekers have liked this job yet.
-                {% elif tab == 'liked' %}You haven't liked any applicants yet.
-                {% elif tab == 'applicants' %}No applicants yet.
-                {% else %}No candidates with complete profiles yet.{% endif %}
-            </p>
-        </div>
+      <!-- Requirement tags (from the JOB, with checkmarks/X for what the candidate has) -->
+      <div class="flex flex-wrap gap-1.5 mb-4 flex-1">
+        {% if job.education_requirement %}
+        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20">
+          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+          <span class="truncate">{{ job.education_requirement.get_level_display }}</span>
+        </span>
         {% endif %}
+        {% for skill in job.skill_requirements.all|slice:":2" %}
+        <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2.5 py-0.5 rounded-full border border-green-200">
+          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+          <span class="truncate">{{ skill.name }}</span>
+        </span>
+        {% endfor %}
+        {% if job.experience_requirement %}
+        <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2.5 py-0.5 rounded-full border border-purple-200">
+          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v4H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2h-3V4a3 3 0 00-3-3zm-1 7V4a1 1 0 112 0v4h-2z"/></svg>
+          <span class="truncate">{{ job.experience_requirement.display_experience }}</span>
+        </span>
+        {% endif %}
+        {% with certs=job.certification_requirements.all %}
+        {% if certs %}
+        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs px-2.5 py-0.5 rounded-full border border-gray-200">
+          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <span class="truncate">{{ certs.0.name|truncatechars:14 }}</span>
+        </span>
+        {% endif %}
+        {% endwith %}
+      </div>
+
+      <!-- View Application/Profile button -->
+      <a href="/employers/candidates/{{ item.profile.id }}/?job={{ job.id }}"
+         class="block w-full text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
+        {% if tab == 'recommended' %}View Profile{% else %}View Application{% endif %}
+      </a>
 
     </div>
-</main>
-{% endblock %}
+    {% endfor %}
+  </div>
 
-{% block footer %}
-    {% include "base/footer.html" %}
+  {% else %}
+  <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+    {% if tab == 'recommended' %}
+    <p class="text-primary font-semibold text-sm mb-1">No recommended candidates yet.</p>
+    <p class="text-muted text-xs mb-4">As jobseekers update their resumes, the matching engine will surface candidates whose skills, education, experience and certifications align with this job's requirements.</p>
+    {% else %}
+    <p class="text-primary font-semibold text-sm mb-1">No applicants yet.</p>
+    <p class="text-muted text-xs mb-4">When jobseekers apply to this post, their applications will appear here ranked by match score.</p>
+    <a href="/employers/jobs/{{ job.id }}/candidates/?tab=recommended"
+       class="inline-block bg-primary text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-teal transition">
+      View Recommended Candidates
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
 {% endblock %}
+{% endwith %}

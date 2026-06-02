@@ -165,11 +165,15 @@ class JobseekerJobDetailView(View):
             from apps.matching.engine import compute_match_score
             match_score = compute_match_score(job, profile)
 
+        from apps.jobs.models import Application
+        already_applied = Application.objects.filter(jobseeker=profile, job=job).exists()
+
         return render(request, self.template_name, {
             'job': job,
             'liked_ids': liked_ids,
             'hidden_ids': hidden_ids,
             'match_score': match_score,
+            'already_applied': already_applied,
             'prev_job': prev_job,
             'next_job': next_job,
             'weights': {

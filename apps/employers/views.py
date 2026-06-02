@@ -101,7 +101,13 @@ def dashboard(request):
     profile = request.user.employer_profile
     company = profile.company
     from apps.jobs.models import JobPosting
-    recent_jobs = JobPosting.objects.filter(company=company).order_by('-created_at')[:5]
+    from django.db.models import Count
+
+    recent_jobs = (
+        JobPosting.objects.filter(company=company)
+        .annotate(applicants_count=Count('applications'))
+        .order_by('-created_at')[:5]
+    )
 
     return render(request, 'employers/dashboard.html', {
         'profile': profile,
@@ -133,8 +139,10 @@ def job_list(request):
         liked_by_count=Count(
             'jobseeker_interactions',
             filter=Q(jobseeker_interactions__interaction_type='liked')
-        )
-    )
+        ),
+        applicants_count=Count('applications', distinct=True),
+    ).select_related('education_requirement', 'experience_requirement'
+    ).prefetch_related('skill_requirements', 'certification_requirements')
 
     if query:
         jobs = jobs.filter(title__icontains=query)
@@ -221,10 +229,18 @@ def job_create(request):
             )
         return redirect('/employers/jobs/')
 
+    # Prefill location with the company's Iloilo branch address as the default
+    location_defaults = {
+        'bldg_unit': company.iloilo_bldg_unit or '',
+        'street': company.iloilo_street or '',
+        'barangay_code': company.iloilo_barangay_code or '',
+        'barangay_name': company.iloilo_barangay_name or '',
+    }
     return render(request, 'employers/job_form.html', {
         'company': company,
         'action': 'Create',
         'job': None,
+        'location_defaults': location_defaults,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -238,6 +254,9 @@ def job_edit(request, job_id):
     job = get_object_or_404(JobPosting, id=job_id, company=company)
 
     if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        if title:
+            job.title = title
         job.description = request.POST.get('description', '')
         job.location_type = request.POST.get('location_type', 'iloilo')
         job.bldg_unit = request.POST.get('bldg_unit', '')
@@ -297,6 +316,7 @@ def job_edit(request, job_id):
         'company': company,
         'action': 'Edit',
         'job': job,
+        'location_defaults': None,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -327,49 +347,47 @@ def job_detail(request, job_id):
 
 @employer_required
 def candidates(request, job_id):
-    from apps.matching.engine import get_ranked_jobseekers
-    from apps.jobseekers.models import JobInteraction
+    from apps.matching.engine import get_ranked_jobseekers, compute_match_score
+    from apps.jobseekers.models import JobInteraction, JobseekerProfile
+    from apps.jobs.models import Application
     profile = request.user.employer_profile
     company = profile.company
     job = get_object_or_404(JobPosting, id=job_id, company=company)
-    tab = request.GET.get('tab', 'recommended')
+    # 'applicants' = people who submitted Application (default)
+    # 'recommended' = matching engine results
+    tab = request.GET.get('tab', 'applicants')
 
     liked_ids = list(CandidateInteraction.objects.filter(
         company=company, job=job
     ).values_list('jobseeker_id', flat=True))
 
-    
-    # Jobseekers who liked this job
-    liked_by_jobseeker_ids = list(JobInteraction.objects.filter(
+    # Counts for tab labels
+    applicants_count = Application.objects.filter(job=job).count()
+    liked_by_count = JobInteraction.objects.filter(
         job=job, interaction_type=JobInteraction.LIKED
-    ).values_list('jobseeker_id', flat=True))
+    ).count()
 
-    liked_by_count = len(liked_by_jobseeker_ids)
+    if tab == 'recommended':
+        ranked = get_ranked_jobseekers(job)
+        # Hide people who already applied so the lists complement each other
+        applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
+        ranked = [r for r in ranked if r['profile'].id not in applicant_ids]
 
-    if tab == 'liked_by':
-        from apps.jobseekers.models import JobseekerProfile
-        from apps.matching.engine import compute_match_score
-        jobseekers_raw = JobseekerProfile.objects.filter(id__in=liked_by_jobseeker_ids)
+    else:  # 'applicants' (default)
+        apps = (Application.objects.filter(job=job)
+                .select_related('jobseeker')
+                .order_by('-created_at'))
         ranked = []
-        for js in jobseekers_raw:
-            score_data = compute_match_score(job, js)
+        for app in apps:
+            score_data = compute_match_score(job, app.jobseeker)
             ranked.append({
-                'profile': js,
+                'profile': app.jobseeker,
                 'score': score_data['total'],
                 'breakdown': score_data['breakdown'],
+                'application_id': app.id,
+                'application_status': app.status,
             })
-        ranked.sort(key=lambda x: x['score'], reverse=True)
-
-    elif tab == 'liked':
-        from apps.jobseekers.models import JobseekerProfile
-        jobseekers_raw = JobseekerProfile.objects.filter(id__in=liked_ids)
-        ranked = [{'profile': js, 'score': None, 'breakdown': {}} for js in jobseekers_raw]
-
-    elif tab == 'applicants':
-        ranked = []
-
-    else:
-        ranked = get_ranked_jobseekers(job)
+        ranked.sort(key=lambda x: -x['score'])
 
     return render(request, 'employers/candidates.html', {
         'company': company,
@@ -377,6 +395,7 @@ def candidates(request, job_id):
         'ranked': ranked,
         'liked_ids': liked_ids,
         'liked_by_count': liked_by_count,
+        'applicants_count': applicants_count,
         'tab': tab,
         'unread_notifications': False,
         'unread_messages': False,
@@ -387,6 +406,7 @@ def company_profile(request):
     profile = request.user.employer_profile
     company = profile.company
     from apps.jobseekers.models import Sector
+    from django.db.models import Count, Q
     sectors = Sector.objects.all()
 
     if request.method == 'POST':
@@ -404,10 +424,30 @@ def company_profile(request):
 
         return redirect('/employers/profile/')
 
+    # Job posts (with applicants + liked-by counts) for the card grid
+    jobs = (
+        JobPosting.objects.filter(company=company)
+        .annotate(
+            applicants_count=Count('applications', distinct=True),
+            liked_by_count=Count(
+                'jobseeker_interactions',
+                filter=Q(jobseeker_interactions__interaction_type='liked'),
+                distinct=True,
+            ),
+        )
+        .select_related('education_requirement', 'experience_requirement')
+        .prefetch_related('skill_requirements', 'certification_requirements')
+        .order_by('-created_at')
+    )
+
+    followers_count = company.followers.count() if hasattr(company, 'followers') else 0
+
     return render(request, 'employers/company_profile.html', {
         'company': company,
         'profile': profile,
         'sectors': sectors,
+        'jobs': jobs,
+        'followers_count': followers_count,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -478,20 +518,10 @@ def candidate_like(request, jobseeker_id):
             next_url = request.POST.get('next', '/employers/candidates/')
             return redirect(next_url)
 
-@employer_required
-def analytics(request):
-    profile = request.user.employer_profile
-    company = profile.company
-
-    # Import the analytics view logic from the existing analytics app
-    from apps.analytics.views import get_analytics_context
-    context = get_analytics_context(request)
-    context.update({
-        'company': company,
-        'unread_notifications': False,
-        'unread_messages': False,
-    })
-    return render(request, 'employers/analytics.html', context)
+# Analytics for employers is served by apps/analytics/views.analytics,
+# which forks by user type and renders templates/employers/analytics.html
+# (a thin wrapper around templates/analytics/_dashboard_body.html).
+# No duplicate view needed here.
 
 @employer_required
 def all_candidates(request):
