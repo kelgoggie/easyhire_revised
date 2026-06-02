@@ -23,23 +23,15 @@ def dashboard(request):
         return redirect('/register/info/')
 
     from apps.matching.engine import get_ranked_jobs
-<<<<<<< HEAD
     from apps.jobs.models import Application
-=======
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 
     education = Education.objects.filter(profile=profile)
     skills = Skill.objects.filter(profile=profile)
     certifications = Certification.objects.filter(profile=profile)
-<<<<<<< HEAD
-=======
-    recent_jobs = JobPosting.objects.filter(status='open').order_by('-created_at')[:5]
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 
     if profile.profile_complete:
         ranked_jobs = get_ranked_jobs(profile)[:5]
     else:
-<<<<<<< HEAD
         ranked_jobs = JobPosting.objects.filter(status='open').order_by('-created_at').select_related('company')[:5]
         ranked_jobs = [{'job': j, 'score': None} for j in ranked_jobs]
 
@@ -59,30 +51,21 @@ def dashboard(request):
             followed_jobs.append({'company': company, 'job': job})
         if len(followed_jobs) >= 6:
             break
-=======
-        ranked_jobs = []
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 
     return render(request, 'jobseekers/dashboard.html', {
         'profile': profile,
         'education': education,
         'skills': skills,
         'certifications': certifications,
-<<<<<<< HEAD
         'ranked_jobs': ranked_jobs,
         'applications': applications,
         'followed_jobs': followed_jobs,
-=======
-        'recent_jobs': recent_jobs,
-        'ranked_jobs': ranked_jobs,
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         'unread_notifications': False,
         'unread_messages': False,
     })
 
 
 @login_required
-<<<<<<< HEAD
 def parse_resume_pdf(request):
     """Accept an uploaded PDF, extract structured fields, return JSON for the
     resume form to pre-fill. Skill matching uses the existing Skill catalog."""
@@ -259,8 +242,6 @@ def _compute_auto_sectors(profile, education_qs):
 
 
 @login_required
-=======
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 def resume(request):
     if not request.user.is_jobseeker:
         return redirect('/employers/dashboard/')
@@ -309,23 +290,15 @@ def resume(request):
         for i, level in enumerate(levels):
             if not level:
                 continue
-<<<<<<< HEAD
             s = starts[i] if i < len(starts) else ''
             e = ends[i]   if i < len(ends)   else ''
-=======
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
             Education.objects.create(
                 profile=profile,
                 level=level,
                 course_degree=courses[i] if i < len(courses) else '',
                 institution=institutions[i] if i < len(institutions) else '',
-<<<<<<< HEAD
                 year_started=int(s) if s else None,
                 year_ended=int(e) if e else None,
-=======
-                year_started=starts[i] if i < len(starts) and starts[i] else None,
-                year_ended=ends[i] if i < len(ends) and ends[i] else None,
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
                 is_current=str(i) in is_currents,
             )
 
@@ -350,7 +323,6 @@ def resume(request):
             if name:
                 Skill.objects.create(profile=profile, name=name)
 
-<<<<<<< HEAD
         # Work Experience — duration comes as YYYY-MM from type="month" inputs
         WorkExperience.objects.filter(profile=profile).delete()
         positions        = request.POST.getlist('exp_position')
@@ -374,27 +346,11 @@ def resume(request):
             s_month, s_year = _split_month_year(start_val)
             e_month, e_year = _split_month_year(end_val)
             is_current = str(i) in exp_is_currents
-=======
-        # Work Experience
-        WorkExperience.objects.filter(profile=profile).delete()
-        positions = request.POST.getlist('exp_position')
-        descriptions = request.POST.getlist('exp_description')
-        start_months = request.POST.getlist('exp_start_month')
-        start_years = request.POST.getlist('exp_start_year')
-        end_months = request.POST.getlist('exp_end_month')
-        end_years = request.POST.getlist('exp_end_year')
-        companies = request.POST.getlist('exp_company')
-        exp_is_currents = request.POST.getlist('exp_is_current')
-        for i, position in enumerate(positions):
-            if not position:
-                continue
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
             WorkExperience.objects.create(
                 profile=profile,
                 position=position,
                 company=companies[i] if i < len(companies) else '',
                 description=descriptions[i] if i < len(descriptions) else '',
-<<<<<<< HEAD
                 month_started=s_month,
                 year_started=int(s_year) if s_year else None,
                 month_ended=e_month if not is_current else '',
@@ -410,24 +366,11 @@ def resume(request):
         profile.sectors.clear()
         profile.sectors.set(manual_ids | auto_ids)
         profile.sector_badge_visibility = request.POST.get('sector_badge_visibility', 'public')
-=======
-                month_started=start_months[i] if i < len(start_months) else '',
-                year_started=start_years[i] if i < len(start_years) and start_years[i] else None,
-                month_ended=end_months[i] if i < len(end_months) else '',
-                year_ended=end_years[i] if i < len(end_years) and end_years[i] else None,
-                is_current=str(i) in exp_is_currents,
-            )
-
-        # Sectors
-        profile.sectors.clear()
-        profile.sectors.set(request.POST.getlist('sectors'))
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         profile.profile_complete = True
         profile.save()
 
         return redirect('/dashboard/')
 
-<<<<<<< HEAD
     education    = Education.objects.filter(profile=profile)
     skills       = Skill.objects.filter(profile=profile)
     certifications = Certification.objects.filter(profile=profile)
@@ -437,13 +380,6 @@ def resume(request):
     manual_sectors = Sector.objects.filter(code__in=MANUAL_CODES)
     auto_codes     = _compute_auto_sectors(profile, education)
     auto_sectors   = Sector.objects.filter(code__in=auto_codes)
-=======
-    education = Education.objects.filter(profile=profile)
-    skills = Skill.objects.filter(profile=profile)
-    certifications = Certification.objects.filter(profile=profile)
-    experiences = WorkExperience.objects.filter(profile=profile)
-    sectors = Sector.objects.all()
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 
     return render(request, 'jobseekers/resume.html', {
         'profile': profile,
@@ -451,12 +387,8 @@ def resume(request):
         'skills': skills,
         'certifications': certifications,
         'experiences': experiences,
-<<<<<<< HEAD
         'manual_sectors': manual_sectors,
         'auto_sectors': auto_sectors,
-=======
-        'sectors': sectors,
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         'year_range': range(datetime.now().year, 1949, -1),
         'unread_notifications': False,
         'unread_messages': False,

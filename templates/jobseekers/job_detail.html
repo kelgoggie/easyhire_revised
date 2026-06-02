@@ -1,19 +1,9 @@
-<<<<<<< HEAD
 {% extends "base/base_dashboard_jobseeker.html" %}
-=======
-{% extends "base/base.html" %}
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 {% load static %}
 
 {% block title %}{{ job.title }} — EasyHire{% endblock %}
 
-<<<<<<< HEAD
 {% with active_nav="jobs" %}
-=======
-{% block navbar %}
-    {% include "base/navbar_dashboard_jobseeker.html" with active="jobs" %}
-{% endblock %}
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
 
 {% block content %}
 <main class="bg-surface min-h-screen py-10 px-16">
@@ -240,10 +230,4 @@
 </main>
 {% endblock %}
 
-<<<<<<< HEAD
 {% endwith %}
-=======
-{% block footer %}
-    {% include "base/footer.html" %}
-{% endblock %}
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2

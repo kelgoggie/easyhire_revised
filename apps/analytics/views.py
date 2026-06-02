@@ -4,11 +4,12 @@ import json
 
 def get_analytics_context(request):
     from django.utils import timezone
-    from datetime import timedelta
+    from datetime import timedelta, date
     from django.db.models import Count
     from django.db.models.functions import TruncMonth
     from apps.jobseekers.models import JobseekerProfile, WorkExperience, Education, Skill, JobInteraction, Sector
-    from apps.jobs.models import JobPosting
+    from apps.jobs.models import JobPosting, Application
+    from apps.employers.models import Company, EmployerProfile
     from collections import Counter
 
     # ── Applicant stats ────────────────────────────────────────────
@@ -125,6 +126,58 @@ def get_analytics_context(request):
         ).order_by('-count')[:20]
     )
 
+    # ── Age groups ────────────────────────────────────────────────
+    today = date.today()
+    age_buckets = {'<18': 0, '18-24': 0, '25-34': 0, '35-44': 0, '45-54': 0, '55-64': 0, '65+': 0}
+    for dob in JobseekerProfile.objects.exclude(date_of_birth__isnull=True).values_list('date_of_birth', flat=True):
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        if age < 18:        age_buckets['<18'] += 1
+        elif age < 25:      age_buckets['18-24'] += 1
+        elif age < 35:      age_buckets['25-34'] += 1
+        elif age < 45:      age_buckets['35-44'] += 1
+        elif age < 55:      age_buckets['45-54'] += 1
+        elif age < 65:      age_buckets['55-64'] += 1
+        else:               age_buckets['65+'] += 1
+    age_groups = [{'label': k, 'count': v} for k, v in age_buckets.items()]
+
+    # ── Employer demographics ─────────────────────────────────────
+    total_companies = Company.objects.count()
+    total_employers = EmployerProfile.objects.count()
+
+    company_type_labels = dict(Company._meta.get_field('type_of_company').choices)
+    company_types = [
+        {'label': company_type_labels.get(row['type_of_company'], row['type_of_company'] or 'Unspecified'),
+         'count': row['count']}
+        for row in Company.objects.values('type_of_company').annotate(count=Count('id')).order_by('-count')
+    ]
+
+    company_natures = [
+        {'label': row['nature_of_company'] or 'Unspecified', 'count': row['count']}
+        for row in Company.objects.values('nature_of_company').annotate(count=Count('id')).order_by('-count')[:10]
+    ]
+
+    company_locations = [
+        {'label': row['iloilo_barangay_name'] or 'Unspecified', 'count': row['count']}
+        for row in Company.objects.exclude(iloilo_barangay_name='').values('iloilo_barangay_name').annotate(count=Count('id')).order_by('-count')[:15]
+    ]
+
+    # ── Labor & employment ────────────────────────────────────────
+    total_applications = Application.objects.count()
+    jobs_filled = Application.objects.filter(status='accepted').count()
+
+    jobs_by_industry = [
+        {'label': row['sector__label'] or 'Unspecified', 'count': row['count']}
+        for row in JobPosting.objects.filter(status='open').values('sector__label').annotate(count=Count('id')).order_by('-count')[:10]
+    ] if hasattr(JobPosting, 'sector') else [
+        {'label': s.label, 'count': s.job_postings.filter(status='open').count() if hasattr(s, 'job_postings') else 0}
+        for s in Sector.objects.all()
+    ]
+
+    jobs_by_location = [
+        {'label': row['barangay_name'] or row['city'] or 'Unspecified', 'count': row['count']}
+        for row in JobPosting.objects.filter(status='open').values('barangay_name', 'city').annotate(count=Count('id')).order_by('-count')[:15]
+    ]
+
     def format_months(qs):
         return [
             {'month': row['month'].strftime('%b %Y'), 'count': row['count']}
@@ -156,10 +209,24 @@ def get_analytics_context(request):
         'common_skills': common_skills,
         'barangay_data': barangay_data,
         'placements': 0,
+        'age_groups': age_groups,
+        'total_companies': total_companies,
+        'total_employers': total_employers,
+        'company_types': company_types,
+        'company_natures': company_natures,
+        'company_locations': company_locations,
+        'total_applications': total_applications,
+        'jobs_filled': jobs_filled,
+        'jobs_by_industry': jobs_by_industry,
+        'jobs_by_location': jobs_by_location,
     }
 
 
 def analytics(request):
     context = get_analytics_context(request)
     context['is_authenticated'] = request.user.is_authenticated
+    # Logged-in jobseekers get the sidebar-style dashboard view; everyone else
+    # gets the public page with its own navbar.
+    if request.user.is_authenticated and getattr(request.user, 'is_jobseeker', False):
+        return render(request, 'jobseekers/analytics.html', context)
     return render(request, 'public/analytics.html', context)

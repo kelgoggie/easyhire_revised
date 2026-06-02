@@ -4,13 +4,7 @@
 {% block title %}Labor Analysis — EasyHire{% endblock %}
 
 {% block navbar %}
-<<<<<<< HEAD
     {% if not is_authenticated %}
-=======
-    {% if is_authenticated %}
-        {% include "base/navbar_dashboard_jobseeker.html" with active="analytics" %}
-    {% else %}
->>>>>>> 4332066b7c26abeb5f6e206f1bbc8ba1d999b2e2
         {% include "base/navbar_jobseeker.html" %}
     {% endif %}
 {% endblock %}

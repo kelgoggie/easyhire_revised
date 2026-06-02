@@ -1,0 +1,377 @@
+{% extends "base/base_dashboard_jobseeker.html" %}
+{% load static %}
+
+{% block title %}Analytics — EasyHire{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{% endblock %}
+
+{% with active_nav="analytics" %}
+{% block page_content %}
+<div class="py-8">
+
+  <!-- Header row -->
+  <div class="flex items-start justify-between mb-6">
+    <h1 class="text-4xl font-extrabold text-primary">Analytics</h1>
+    <div class="text-right">
+      <p class="text-xs text-muted mb-1">Show Results for:</p>
+      <div class="relative">
+        <select id="year-select"
+                class="appearance-none bg-white border border-gray-200 rounded-full px-5 py-2 pr-10 text-sm text-primary italic focus:outline-none focus:border-teal transition cursor-pointer min-w-[180px]">
+          <option value="all">All Years</option>
+          {% for y in "2026,2025,2024,2023,2022"|cut:" " %}{% endfor %}
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+        </select>
+        <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main analytics card -->
+  <div class="bg-surface border border-gray-200 rounded-2xl flex overflow-hidden min-h-[640px]">
+
+    <!-- LEFT: category list -->
+    <nav class="w-64 flex-shrink-0 border-r border-gray-200 px-5 py-6 overflow-y-auto">
+
+      <p class="text-sm font-bold text-primary mb-1">Jobseeker <span class="font-normal text-muted">Demographics</span></p>
+      <ul class="space-y-0.5 mb-5 text-sm">
+        {% include "jobseekers/_analytics_nav_item.html" with key="js-accounts" label="Registered Accounts" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="js-sex" label="Sex" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="js-age" label="Age Group" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="js-civil" label="Civil Status" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="js-edu" label="Highest Educational Attainment" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="js-location" label="Location" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="js-sectors" label="Sectors" %}
+      </ul>
+
+      <p class="text-sm font-bold text-primary mb-1">Employer <span class="font-normal text-muted">Demographics</span></p>
+      <ul class="space-y-0.5 mb-5 text-sm">
+        {% include "jobseekers/_analytics_nav_item.html" with key="emp-accounts" label="Registered Accounts" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="emp-type" label="Business Type" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="emp-nature" label="Nature of Company" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="emp-location" label="Location" %}
+      </ul>
+
+      <p class="text-sm font-bold text-primary mb-1">Labor &amp; <span class="font-normal text-muted">Employment</span></p>
+      <ul class="space-y-0.5 text-sm">
+        {% include "jobseekers/_analytics_nav_item.html" with key="lab-applications" label="Applications" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="lab-filled" label="Jobs Filled" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="lab-industry" label="Jobs by Industry" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="lab-location" label="Jobs by Location" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="lab-searched" label="Frequently Searched Jobs" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="lab-demand" label="In Demand Jobs" %}
+        {% include "jobseekers/_analytics_nav_item.html" with key="lab-hard" label="Hard to Fill Jobs" %}
+      </ul>
+    </nav>
+
+    <!-- RIGHT: chart panel -->
+    <section class="flex-1 px-10 py-8 bg-white">
+
+      <!-- All panels are rendered but only one is visible at a time -->
+
+      <!-- ── Jobseeker: Registered Accounts ────────────────────── -->
+      <div data-panel="js-accounts" class="analytics-panel">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Registered Accounts</h2>
+        <p class="text-muted text-xs mb-6">Total jobseekers on EasyHire.</p>
+        <p class="text-6xl font-extrabold text-primary mb-2">{{ total_applicants }}</p>
+        <p class="text-muted text-sm">jobseekers registered</p>
+      </div>
+
+      <!-- ── Sex ──────────────────────────────────────────────── -->
+      <div data-panel="js-sex" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Sex</h2>
+        <p class="text-muted text-xs mb-6">Breakdown of registered jobseekers by sex.</p>
+        <div class="max-w-md mx-auto"><canvas id="chart-js-sex" height="220"></canvas></div>
+      </div>
+
+      <!-- ── Age Group ────────────────────────────────────────── -->
+      <div data-panel="js-age" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Age Group</h2>
+        <p class="text-muted text-xs mb-6">Distribution of jobseekers across age brackets.</p>
+        <canvas id="chart-js-age" height="220"></canvas>
+      </div>
+
+      <!-- ── Civil Status ─────────────────────────────────────── -->
+      <div data-panel="js-civil" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Civil Status</h2>
+        <p class="text-muted text-xs mb-6">Civil status breakdown of registered jobseekers.</p>
+        <div class="max-w-md mx-auto"><canvas id="chart-js-civil" height="220"></canvas></div>
+      </div>
+
+      <!-- ── Highest Educational Attainment ───────────────────── -->
+      <div data-panel="js-edu" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Highest Educational Attainment</h2>
+        <p class="text-muted text-xs mb-6">Education levels reported by jobseekers.</p>
+        <canvas id="chart-js-edu" height="240"></canvas>
+      </div>
+
+      <!-- ── Jobseeker Location ───────────────────────────────── -->
+      <div data-panel="js-location" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Location</h2>
+        <p class="text-muted text-xs mb-6">Where Iloilo City jobseekers live (by barangay).</p>
+        <canvas id="chart-js-location" height="280"></canvas>
+      </div>
+
+      <!-- ── Sectors ──────────────────────────────────────────── -->
+      <div data-panel="js-sectors" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Sectors</h2>
+        <p class="text-muted text-xs mb-6">Number of jobseekers in each sectoral group.</p>
+        <canvas id="chart-js-sectors" height="220"></canvas>
+      </div>
+
+      <!-- ── Employer: Registered Accounts ────────────────────── -->
+      <div data-panel="emp-accounts" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Registered Accounts</h2>
+        <p class="text-muted text-xs mb-6">Total companies and employer accounts.</p>
+        <div class="grid grid-cols-2 gap-6 max-w-md">
+          <div>
+            <p class="text-6xl font-extrabold text-primary leading-none">{{ total_companies }}</p>
+            <p class="text-muted text-sm mt-2">companies</p>
+          </div>
+          <div>
+            <p class="text-6xl font-extrabold text-teal leading-none">{{ total_employers }}</p>
+            <p class="text-muted text-sm mt-2">employer accounts</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Employer: Business Type ──────────────────────────── -->
+      <div data-panel="emp-type" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Business Type</h2>
+        <p class="text-muted text-xs mb-6">Distribution of company types.</p>
+        <div class="max-w-md mx-auto"><canvas id="chart-emp-type" height="220"></canvas></div>
+      </div>
+
+      <!-- ── Employer: Nature of Company ──────────────────────── -->
+      <div data-panel="emp-nature" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Nature of Company</h2>
+        <p class="text-muted text-xs mb-6">Top industries among registered companies.</p>
+        <canvas id="chart-emp-nature" height="240"></canvas>
+      </div>
+
+      <!-- ── Employer: Location ───────────────────────────────── -->
+      <div data-panel="emp-location" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Location</h2>
+        <p class="text-muted text-xs mb-6">Where registered employers are based (by Iloilo barangay).</p>
+        <canvas id="chart-emp-location" height="280"></canvas>
+      </div>
+
+      <!-- ── Labor: Applications ──────────────────────────────── -->
+      <div data-panel="lab-applications" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Applications</h2>
+        <p class="text-muted text-xs mb-6">Total applications submitted on the platform.</p>
+        <p class="text-6xl font-extrabold text-primary mb-2">{{ total_applications }}</p>
+        <p class="text-muted text-sm mb-6">applications submitted</p>
+        <p class="text-xs font-semibold text-primary mb-2">Per month</p>
+        <canvas id="chart-lab-applications" height="180"></canvas>
+      </div>
+
+      <!-- ── Labor: Jobs Filled ───────────────────────────────── -->
+      <div data-panel="lab-filled" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Jobs Filled</h2>
+        <p class="text-muted text-xs mb-6">Applications marked as accepted by employers.</p>
+        <p class="text-6xl font-extrabold text-teal mb-2">{{ jobs_filled }}</p>
+        <p class="text-muted text-sm">jobs filled to date</p>
+      </div>
+
+      <!-- ── Labor: Jobs by Industry ──────────────────────────── -->
+      <div data-panel="lab-industry" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Jobs by Industry</h2>
+        <p class="text-muted text-xs mb-6">Open job postings grouped by sector.</p>
+        <canvas id="chart-lab-industry" height="220"></canvas>
+      </div>
+
+      <!-- ── Labor: Jobs by Location ──────────────────────────── -->
+      <div data-panel="lab-location" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Jobs by Location</h2>
+        <p class="text-muted text-xs mb-6">Where open jobs are located.</p>
+        <canvas id="chart-lab-location" height="260"></canvas>
+      </div>
+
+      <!-- ── Labor: Frequently Searched Jobs ──────────────────── -->
+      <div data-panel="lab-searched" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Frequently Searched Jobs</h2>
+        <p class="text-muted text-xs mb-6">Top job search queries from jobseekers.</p>
+        {% if jobs_of_interest %}
+          <canvas id="chart-lab-searched" height="220"></canvas>
+        {% else %}
+          <p class="text-muted text-sm italic">No search data yet.</p>
+        {% endif %}
+      </div>
+
+      <!-- ── Labor: In Demand Jobs ────────────────────────────── -->
+      <div data-panel="lab-demand" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">In Demand Jobs</h2>
+        <p class="text-muted text-xs mb-6">Open jobs with the most jobseeker interactions.</p>
+        {% if in_demand %}
+        <div class="space-y-2">
+          {% for job in in_demand %}
+          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-primary truncate">{{ job.title }}</p>
+              <p class="text-xs text-muted truncate">{{ job.company.name }}</p>
+            </div>
+            <span class="text-sm font-bold text-teal flex-shrink-0 ml-4">{{ job.interaction_count }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-sm italic">No data yet.</p>
+        {% endif %}
+      </div>
+
+      <!-- ── Labor: Hard to Fill Jobs ─────────────────────────── -->
+      <div data-panel="lab-hard" class="analytics-panel hidden">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Hard to Fill Jobs</h2>
+        <p class="text-muted text-xs mb-1">Open 30+ days with fewer than 3 applicants.</p>
+        <p class="text-6xl font-extrabold text-amber mb-6">{{ hard_to_fill_count }}</p>
+        {% if hard_to_fill %}
+        <div class="space-y-2">
+          {% for job in hard_to_fill %}
+          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-primary truncate">{{ job.title }}</p>
+              <p class="text-xs text-muted truncate">{{ job.company.name }}</p>
+            </div>
+            <span class="text-xs text-muted flex-shrink-0 ml-4">{{ job.created_at|timesince }} ago</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-sm italic">No hard-to-fill jobs right now.</p>
+        {% endif %}
+      </div>
+
+    </section>
+  </div>
+</div>
+
+{% block page_scripts %}
+<style>
+  .nav-pill { display: block; padding: 0.4rem 0.75rem; border-radius: 0.5rem; color: var(--muted, #595959); transition: all 0.15s; }
+  .nav-pill:hover { background: rgba(74,155,142,0.08); color: #2D4A3E; }
+  .nav-pill.active { background: rgba(74,155,142,0.15); color: #2D4A3E; font-weight: 600; }
+</style>
+<script>
+// ── Data from Django ────────────────────────────────────────────────
+const D = {
+  sex:       { labels: ['Male', 'Female'], data: [{{ men }}, {{ women }}] },
+  age:       { labels: {{ age_groups|safe }}.map(x => x.label), data: {{ age_groups|safe }}.map(x => x.count) },
+  civil:     { labels: [{% for x in civil_status %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in civil_status %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  edu:       { labels: [{% for x in education_breakdown %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in education_breakdown %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  jsLoc:     { labels: [{% for x in barangay_data %}'{{ x.barangay|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in barangay_data %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  sectors:   { labels: [{% for x in sector_data %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in sector_data %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  empType:   { labels: [{% for x in company_types %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in company_types %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  empNat:    { labels: [{% for x in company_natures %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in company_natures %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  empLoc:    { labels: [{% for x in company_locations %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in company_locations %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  apps:      {{ interactions_per_month|safe }},
+  industry:  { labels: [{% for x in jobs_by_industry %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in jobs_by_industry %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  jobLoc:    { labels: [{% for x in jobs_by_location %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in jobs_by_location %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  searched:  { labels: [{% for x in jobs_of_interest %}'{{ x.query|capfirst|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in jobs_of_interest %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+};
+
+// ── Colors / Chart defaults ─────────────────────────────────────────
+const C = { primary:'#2D4A3E', teal:'#4A9B8E', amber:'#E8A838', muted:'#C4B9B0' };
+const PALETTE = [C.teal, C.primary, C.amber, '#C0C195', '#8BBDB7', '#6B7B8D', '#A8C3F0', '#D4A017'];
+Chart.defaults.font.family = 'Inter, sans-serif';
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#595959';
+
+function barH(id, labels, data, color) {
+  const ctx = document.getElementById(id); if (!ctx) return;
+  return new Chart(ctx, { type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: color+'AA', borderColor: color, borderWidth: 1.5, borderRadius: 4 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+               plugins: { legend: { display: false } },
+               scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { grid: { display: false } } } } });
+}
+function barV(id, labels, data, color) {
+  const ctx = document.getElementById(id); if (!ctx) return;
+  return new Chart(ctx, { type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: color+'66', borderColor: color, borderWidth: 2, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+               plugins: { legend: { display: false } },
+               scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } } });
+}
+function donut(id, labels, data, colors) {
+  const ctx = document.getElementById(id); if (!ctx) return;
+  return new Chart(ctx, { type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+               plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } } } });
+}
+function line(id, labels, data, color) {
+  const ctx = document.getElementById(id); if (!ctx) return;
+  return new Chart(ctx, { type: 'line',
+    data: { labels, datasets: [{ data, borderColor: color, backgroundColor: color+'22', borderWidth: 2.5,
+            pointBackgroundColor: color, pointRadius: 4, tension: 0.4, fill: true }] },
+    options: { responsive: true, maintainAspectRatio: false,
+               plugins: { legend: { display: false } },
+               scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } } });
+}
+
+// ── Chart lazy-init (so we only render when a panel becomes visible) ─
+const charts = {};
+function init(key) {
+  if (charts[key]) return;
+  switch (key) {
+    case 'js-sex':         charts[key] = donut('chart-js-sex', D.sex.labels, D.sex.data, [C.primary, C.teal]); break;
+    case 'js-age':         charts[key] = barV('chart-js-age', D.age.labels, D.age.data, C.teal); break;
+    case 'js-civil':       charts[key] = donut('chart-js-civil', D.civil.labels, D.civil.data, PALETTE); break;
+    case 'js-edu':         charts[key] = barH('chart-js-edu', D.edu.labels, D.edu.data, C.primary); break;
+    case 'js-location':    charts[key] = barH('chart-js-location', D.jsLoc.labels, D.jsLoc.data, C.teal); break;
+    case 'js-sectors':     charts[key] = barH('chart-js-sectors', D.sectors.labels, D.sectors.data, C.amber); break;
+    case 'emp-type':       charts[key] = donut('chart-emp-type', D.empType.labels, D.empType.data, PALETTE); break;
+    case 'emp-nature':     charts[key] = barH('chart-emp-nature', D.empNat.labels, D.empNat.data, C.primary); break;
+    case 'emp-location':   charts[key] = barH('chart-emp-location', D.empLoc.labels, D.empLoc.data, C.teal); break;
+    case 'lab-applications': charts[key] = line('chart-lab-applications', D.apps.map(x => x.month), D.apps.map(x => x.count), C.teal); break;
+    case 'lab-industry':   charts[key] = barH('chart-lab-industry', D.industry.labels, D.industry.data, C.primary); break;
+    case 'lab-location':   charts[key] = barH('chart-lab-location', D.jobLoc.labels, D.jobLoc.data, C.teal); break;
+    case 'lab-searched':   charts[key] = barH('chart-lab-searched', D.searched.labels, D.searched.data, C.amber); break;
+  }
+}
+
+// ── Panel switching ─────────────────────────────────────────────────
+function selectPanel(key) {
+  document.querySelectorAll('.analytics-panel').forEach(p => {
+    p.classList.toggle('hidden', p.dataset.panel !== key);
+  });
+  document.querySelectorAll('.nav-pill').forEach(a => {
+    a.classList.toggle('active', a.dataset.key === key);
+  });
+  init(key);
+  history.replaceState(null, '', '#' + key);
+}
+
+document.querySelectorAll('.nav-pill').forEach(a => {
+  a.addEventListener('click', function(e) {
+    e.preventDefault();
+    selectPanel(this.dataset.key);
+  });
+});
+
+// Initial selection from URL hash, else first item
+const initialKey = (window.location.hash || '').replace('#', '') || 'js-accounts';
+selectPanel(document.querySelector('.nav-pill[data-key="' + initialKey + '"]') ? initialKey : 'js-accounts');
+</script>
+{% endblock %}
+
+{% endblock %}
+{% endwith %}
