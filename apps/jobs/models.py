@@ -51,6 +51,12 @@ class JobPosting(models.Model):
     salary_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     salary_max = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
+    # Optional posting-level contact info (overrides company defaults if set)
+    contact_email = models.EmailField(blank=True, default='')
+    contact_phone = models.CharField(max_length=20, blank=True, default='')
+    # Free-text bag of keywords used by the matching engine and search
+    search_keywords = models.CharField(max_length=500, blank=True, default='')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -85,6 +91,18 @@ class JobPosting(models.Model):
             and applicant_count < 3
         )
 
+    @property
+    def education_requirement(self):
+        """Backwards-compat alias: first education requirement, or None.
+
+        The relation became one-to-many in migration 0002 so a single job
+        can list multiple education paths (e.g. "BS Comp Sci OR Vocational
+        TESDA"). Templates and matching code that access a single object
+        keep working via this property; new code can iterate
+        ``job.education_requirements.all()``.
+        """
+        return self.education_requirements.first()
+
 
 class JobEducationRequirement(models.Model):
     LEVELS = [
@@ -98,8 +116,8 @@ class JobEducationRequirement(models.Model):
         ("doctorate", "Doctorate"),
     ]
 
-    job = models.OneToOneField(
-        JobPosting, on_delete=models.CASCADE, related_name="education_requirement"
+    job = models.ForeignKey(
+        JobPosting, on_delete=models.CASCADE, related_name="education_requirements"
     )
     level = models.CharField(max_length=30, choices=LEVELS)
     course_degree = models.CharField(max_length=200, blank=True,
@@ -196,6 +214,7 @@ class Application(models.Model):
         related_name="applications"
     )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    message = models.TextField(blank=True, default='', db_column='application_message')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

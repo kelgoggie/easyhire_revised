@@ -99,6 +99,7 @@
                             <label class="block text-primary text-xs font-medium mb-1">Date of Birth*</label>
                             <div class="relative">
                                 <input type="text" name="date_of_birth" id="date_of_birth"
+                                       data-datepicker="date" data-min-age="15"
                                        placeholder="Select Date of Birth" required autocomplete="off" readonly
                                        class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
                                 <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,32 +213,6 @@
         </form>
     </div>
 </main>
-
-<!-- Calendar backdrop + popup -->
-<div id="cal-backdrop" class="fixed inset-0 z-40 hidden" onclick="closeCal()"></div>
-<div id="cal-popup" class="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 hidden" style="width:280px">
-    <div class="flex items-center justify-between mb-3">
-        <button type="button" onclick="prevMonth()" class="text-muted hover:text-primary px-2 text-lg leading-none">&#8249;</button>
-        <span id="cal-label" class="text-sm font-semibold text-primary"></span>
-        <button type="button" onclick="nextMonth()" class="text-muted hover:text-primary px-2 text-lg leading-none">&#8250;</button>
-    </div>
-    <div class="flex justify-center mb-3">
-        <select id="cal-year" onchange="goToYear(this.value)"
-                class="text-xs border border-gray-200 rounded-full px-3 py-1 text-primary focus:outline-none focus:border-teal">
-        </select>
-    </div>
-    <div class="grid grid-cols-7 gap-1 mb-1">
-        <span class="text-center text-xs text-muted font-medium">Su</span>
-        <span class="text-center text-xs text-muted font-medium">Mo</span>
-        <span class="text-center text-xs text-muted font-medium">Tu</span>
-        <span class="text-center text-xs text-muted font-medium">We</span>
-        <span class="text-center text-xs text-muted font-medium">Th</span>
-        <span class="text-center text-xs text-muted font-medium">Fr</span>
-        <span class="text-center text-xs text-muted font-medium">Sa</span>
-    </div>
-    <div id="cal-grid" class="grid grid-cols-7 gap-1"></div>
-    <p id="cal-error" class="text-red-500 text-xs mt-2 text-center hidden"></p>
-</div>
 
 {% endblock %}
 
@@ -367,90 +342,11 @@ document.getElementById('reg-form').addEventListener('submit', function(e) {
     if (stop) e.preventDefault();
 });
 
-// ── Calendar popup ────────────────────────────────────────────────
-let calYear, calMonth;
-const today   = new Date();
-const maxDate = new Date(today.getFullYear()-15, today.getMonth(), today.getDate());
-const MONTHS  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
-function openCal() {
-    if (dateInput.value.length === 10) {
-        const p = dateInput.value.split('/');
-        calMonth = +p[0]-1; calYear = +p[2];
-    } else {
-        calMonth = maxDate.getMonth(); calYear = maxDate.getFullYear();
-    }
-    buildYearSelect(); renderCal();
-    const rect  = dateInput.getBoundingClientRect();
-    const popup = document.getElementById('cal-popup');
-    // fixed positioning uses viewport coords — no scroll offset needed
-    const popupW = 280;
-    const left   = Math.min(rect.left, window.innerWidth - popupW - 8);
-    popup.style.top  = (rect.bottom + 6) + 'px';
-    popup.style.left = Math.max(8, left) + 'px';
-    popup.classList.remove('hidden');
-    document.getElementById('cal-backdrop').classList.remove('hidden');
-}
-function closeCal() {
-    document.getElementById('cal-popup').classList.add('hidden');
-    document.getElementById('cal-backdrop').classList.add('hidden');
-}
-function buildYearSelect() {
-    const sel = document.getElementById('cal-year');
-    sel.innerHTML = '';
-    for (let y = maxDate.getFullYear(); y >= 1940; y--) {
-        const o = document.createElement('option');
-        o.value = y; o.textContent = y;
-        if (y === calYear) o.selected = true;
-        sel.appendChild(o);
-    }
-}
-function goToYear(y) {
-    calYear = +y;
-    if (calYear === maxDate.getFullYear() && calMonth > maxDate.getMonth())
-        calMonth = maxDate.getMonth();
-    renderCal();
-}
-function prevMonth() {
-    calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCal();
-}
-function nextMonth() {
-    const nm = (calMonth+1) % 12, ny = calMonth+1 > 11 ? calYear+1 : calYear;
-    if (ny > maxDate.getFullYear() || (ny === maxDate.getFullYear() && nm > maxDate.getMonth())) return;
-    calMonth = nm; calYear = ny; renderCal();
-}
-function renderCal() {
-    document.getElementById('cal-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
-    document.getElementById('cal-year').value = calYear;
-    const grid = document.getElementById('cal-grid');
-    grid.innerHTML = '';
-    const firstDay     = new Date(calYear, calMonth, 1).getDay();
-    const daysInMonth  = new Date(calYear, calMonth+1, 0).getDate();
-    let selDay = null;
-    if (dateInput.value.length === 10) {
-        const p = dateInput.value.split('/');
-        if (+p[0]-1 === calMonth && +p[2] === calYear) selDay = +p[1];
-    }
-    for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
-    for (let d = 1; d <= daysInMonth; d++) {
-        const cellDate   = new Date(calYear, calMonth, d);
-        const isDisabled = cellDate > maxDate;
-        const isSelected = d === selDay;
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.textContent = d;
-        btn.className = ['text-center text-xs rounded-full w-8 h-8 mx-auto transition',
-            isDisabled ? 'text-gray-300 cursor-not-allowed' :
-            isSelected ? 'bg-teal text-white font-semibold' :
-            'hover:bg-teal/20 text-primary cursor-pointer'].join(' ');
-        if (!isDisabled) btn.onclick = () => {
-            dateInput.value = `${String(calMonth+1).padStart(2,'0')}/${String(d).padStart(2,'0')}/${calYear}`;
-            document.getElementById('dob_error').classList.add('hidden');
-            closeCal(); checkSubmit();
-        };
-        grid.appendChild(btn);
-    }
-}
-dateInput.addEventListener('click', openCal);
+// Clear DOB error when a new date is picked
+dateInput.addEventListener('change', function() {
+    document.getElementById('dob_error').classList.add('hidden');
+    checkSubmit();
+});
 
 // initialise
 checkSubmit();

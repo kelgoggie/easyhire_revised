@@ -42,13 +42,14 @@
           </svg>
           <span id="notif-dot" class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full hidden"></span>
         </button>
-        <div id="notif-dropdown" class="absolute right-0 top-11 bg-white rounded-2xl shadow-xl w-80 z-50 border border-gray-100 hidden">
-          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <div id="notif-dropdown" class="absolute right-0 top-11 bg-surface rounded-2xl shadow-xl w-[340px] max-h-[480px] z-50 border border-taupe/30 hidden overflow-hidden flex flex-col">
+          <div class="px-5 pt-4 pb-2 flex items-center justify-between">
             <p class="font-bold text-primary text-sm">Notifications</p>
-            <button onclick="markAllRead()" class="text-teal text-xs hover:underline">Mark all read</button>
+            <button onclick="markAllRead()" class="text-muted text-[11px] hover:text-primary transition">Mark all as read</button>
           </div>
-          <div id="notif-list" class="max-h-72 overflow-y-auto">
-            <p class="text-muted text-xs text-center py-6">No new notifications</p>
+          <div class="mx-5 border-b border-taupe/40"></div>
+          <div id="notif-list" class="overflow-y-auto py-2">
+            <p class="text-muted text-xs text-center py-8">No new notifications</p>
           </div>
         </div>
       </div>
@@ -265,10 +266,21 @@ function getCookie(n) {
   const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
   if (p.length === 2) return p.pop().split(';').shift();
 }
+const NOTIF_ICONS = {
+  heart:    '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
+  sparkle:  '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6L12 2zM19 14l.8 2.7L22.5 17.5l-2.7.8L19 21l-.8-2.7L15.5 17.5l2.7-.8L19 14z"/></svg>',
+  briefcase:'<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-4V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H4a2 2 0 00-2 2v11a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 0h-4V4h4v2z"/></svg>',
+};
+function escapeNotif(s) {
+  return (s || '').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+}
+function markRead(id) {
+  fetch('/api/notifications/'+id+'/read/', {method:'POST', headers:{'X-CSRFToken':getCookie('csrftoken')}});
+}
 function markAllRead() {
   fetch('/api/notifications/read-all/', {method:'POST', headers:{'X-CSRFToken':getCookie('csrftoken')}})
     .then(function() {
-      document.getElementById('notif-list').innerHTML = '<p class="text-muted text-xs text-center py-6">No new notifications</p>';
+      document.getElementById('notif-list').innerHTML = '<p class="text-muted text-xs text-center py-8">No new notifications</p>';
       document.getElementById('notif-dot').classList.add('hidden');
     });
 }
@@ -277,15 +289,25 @@ function fetchNotifications() {
     var dot = document.getElementById('notif-dot');
     var list = document.getElementById('notif-list');
     if (!d.notifications || !d.notifications.length) {
-      list.innerHTML = '<p class="text-muted text-xs text-center py-6">No new notifications</p>';
+      list.innerHTML = '<p class="text-muted text-xs text-center py-8">No new notifications</p>';
       dot.classList.add('hidden'); return;
     }
     dot.classList.remove('hidden');
     list.innerHTML = d.notifications.map(function(n) {
-      return '<a href="'+n.url+'" class="block px-4 py-3 hover:bg-surface border-b border-gray-50 last:border-0">'
-        +'<p class="text-sm text-primary font-medium">'+n.text+'</p>'
-        +(n.subtext ? '<p class="text-xs text-muted mt-0.5">'+n.subtext+'</p>' : '')
-        +'<p class="text-xs text-taupe mt-1">'+n.created_at+'</p></a>';
+      var icon   = NOTIF_ICONS[n.icon] || NOTIF_ICONS.heart;
+      var actor  = escapeNotif(n.actor);
+      var verb   = escapeNotif(n.verb);
+      var quoted = n.quoted ? '<p class="text-sm text-primary italic mt-0.5">&ldquo;'+escapeNotif(n.quoted)+'&rdquo;</p>' : '';
+      var meta   = n.meta ? ' <span class="text-muted">|</span> <span class="font-semibold text-muted">'+escapeNotif(n.meta)+'</span>' : '';
+      return '<a href="'+n.url+'" onclick="markRead('+n.id+')"'
+        +' class="flex items-start gap-3 px-5 py-2.5 hover:bg-white/40 transition">'
+        +'<span class="w-9 h-9 rounded-full bg-taupe/40 flex items-center justify-center flex-shrink-0 text-primary mt-0.5">'+icon+'</span>'
+        +'<div class="flex-1 min-w-0">'
+          +'<p class="text-sm text-primary leading-snug"><span class="font-bold">'+actor+'</span> '+verb+'</p>'
+          +quoted
+          +'<p class="text-[11px] text-muted italic mt-0.5">'+escapeNotif(n.created_at)+meta+'</p>'
+        +'</div>'
+      +'</a>';
     }).join('');
   }).catch(function(){});
 }

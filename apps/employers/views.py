@@ -141,8 +141,8 @@ def job_list(request):
             filter=Q(jobseeker_interactions__interaction_type='liked')
         ),
         applicants_count=Count('applications', distinct=True),
-    ).select_related('education_requirement', 'experience_requirement'
-    ).prefetch_related('skill_requirements', 'certification_requirements')
+    ).select_related('experience_requirement'
+    ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
 
     if query:
         jobs = jobs.filter(title__icontains=query)
@@ -188,14 +188,16 @@ def job_create(request):
             status=request.POST.get('status', 'open'),
         )
 
-        # Education requirement
-        edu_level = request.POST.get('edu_level')
-        if edu_level:
-            JobEducationRequirement.objects.create(
-                job=job,
-                level=edu_level,
-                course_degree=request.POST.get('edu_course', ''),
-            )
+        # Education requirements (may be multiple)
+        edu_levels  = request.POST.getlist('edu_level')
+        edu_courses = request.POST.getlist('edu_course')
+        for i, level in enumerate(edu_levels):
+            if level:
+                JobEducationRequirement.objects.create(
+                    job=job,
+                    level=level,
+                    course_degree=edu_courses[i] if i < len(edu_courses) else '',
+                )
 
         # Skills
         for name in request.POST.getlist('skill_name'):
@@ -270,15 +272,17 @@ def job_edit(request, job_id):
         job.status = request.POST.get('status', 'open')
         job.save()
 
-        # Education
+        # Education (may be multiple)
         JobEducationRequirement.objects.filter(job=job).delete()
-        edu_level = request.POST.get('edu_level')
-        if edu_level:
-            JobEducationRequirement.objects.create(
-                job=job,
-                level=edu_level,
-                course_degree=request.POST.get('edu_course', ''),
-            )
+        edu_levels  = request.POST.getlist('edu_level')
+        edu_courses = request.POST.getlist('edu_course')
+        for i, level in enumerate(edu_levels):
+            if level:
+                JobEducationRequirement.objects.create(
+                    job=job,
+                    level=level,
+                    course_degree=edu_courses[i] if i < len(edu_courses) else '',
+                )
 
         # Skills
         JobSkillRequirement.objects.filter(job=job).delete()
@@ -316,7 +320,9 @@ def job_edit(request, job_id):
         'company': company,
         'action': 'Edit',
         'job': job,
-        'location_defaults': None,
+        # All edit-mode prefills come from `job.*`; this empty dict just keeps
+        # the template's `|default:location_defaults.*` chain from raising.
+        'location_defaults': {'bldg_unit': '', 'street': '', 'barangay_code': '', 'barangay_name': ''},
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -435,8 +441,8 @@ def company_profile(request):
                 distinct=True,
             ),
         )
-        .select_related('education_requirement', 'experience_requirement')
-        .prefetch_related('skill_requirements', 'certification_requirements')
+        .select_related('experience_requirement')
+        .prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
         .order_by('-created_at')
     )
 

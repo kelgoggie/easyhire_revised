@@ -399,15 +399,15 @@
               <div>
                 <label class="block text-xs text-muted mb-1">Duration</label>
                 <div class="flex items-center gap-1">
-                  <input type="month" name="exp_start_month_year"
+                  <input type="text" name="exp_start_month_year" data-datepicker="month" readonly autocomplete="off"
                          value="{% if exp.year_started %}{{ exp.year_started }}-{% if exp.month_started %}{{ exp.month_started|stringformat:'02d' }}{% else %}01{% endif %}{% endif %}"
                          placeholder="Select Start Date"
-                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary focus:outline-none focus:border-teal transition">
+                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
                   <span class="text-gray-300 text-xs">–</span>
-                  <input type="month" name="exp_end_month_year" {% if exp.is_current %}disabled{% endif %}
+                  <input type="text" name="exp_end_month_year" data-datepicker="month" readonly autocomplete="off" {% if exp.is_current %}disabled{% endif %}
                          value="{% if exp.year_ended and not exp.is_current %}{{ exp.year_ended }}-{% if exp.month_ended %}{{ exp.month_ended|stringformat:'02d' }}{% else %}01{% endif %}{% endif %}"
                          placeholder="Select End Date"
-                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary focus:outline-none focus:border-teal transition disabled:opacity-40">
+                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
                 </div>
                 <label class="inline-flex items-center gap-1 text-xs text-muted mt-1 cursor-pointer">
                   <input type="checkbox" name="exp_is_current" value="{{ forloop.counter0 }}" {% if exp.is_current %}checked{% endif %} class="resume-field accent-teal exp-current-cb"> Present
@@ -434,9 +434,11 @@
               <div>
                 <label class="block text-xs text-muted mb-1">Duration</label>
                 <div class="flex items-center gap-1">
-                  <input type="month" name="exp_start_month_year" placeholder="Select Start Date" class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary focus:outline-none focus:border-teal transition">
+                  <input type="text" name="exp_start_month_year" data-datepicker="month" readonly autocomplete="off" placeholder="Select Start Date"
+                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
                   <span class="text-gray-300 text-xs">–</span>
-                  <input type="month" name="exp_end_month_year" placeholder="Select End Date" class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary focus:outline-none focus:border-teal transition">
+                  <input type="text" name="exp_end_month_year" data-datepicker="month" readonly autocomplete="off" placeholder="Select End Date"
+                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
                 </div>
                 <label class="inline-flex items-center gap-1 text-xs text-muted mt-1 cursor-pointer">
                   <input type="checkbox" name="exp_is_current" value="0" class="resume-field accent-teal exp-current-cb"> Present

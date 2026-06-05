@@ -586,8 +586,8 @@ def get_ranked_jobseekers(job, sector_filter=False):
 def get_ranked_jobs(profile, sector_filter=False):
     from apps.jobs.models import JobPosting
     jobs = JobPosting.objects.filter(status='open').select_related(
-        'company', 'education_requirement', 'experience_requirement'
-    ).prefetch_related('skill_requirements', 'certification_requirements')
+        'company', 'experience_requirement'
+    ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
 
     results = []
     for job in jobs:

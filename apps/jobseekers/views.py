@@ -77,7 +77,14 @@ def job_apply(request, job_id):
 
     from apps.jobs.models import Application
     job = get_object_or_404(JobPosting, id=job_id, status='open')
-    Application.objects.get_or_create(jobseeker=profile, job=job)
+    message = (request.POST.get('message') or '').strip()
+    app, created = Application.objects.get_or_create(
+        jobseeker=profile, job=job,
+        defaults={'message': message},
+    )
+    if not created and message and not app.message:
+        app.message = message
+        app.save(update_fields=['message'])
     return redirect('/applications/')
 
 
@@ -191,8 +198,8 @@ def applications(request):
     search = request.GET.get('q', '').strip()
 
     qs = Application.objects.filter(jobseeker=profile).select_related(
-        'job', 'job__company', 'job__education_requirement', 'job__experience_requirement'
-    ).prefetch_related('job__skill_requirements', 'job__certification_requirements')
+        'job', 'job__company', 'job__experience_requirement'
+    ).prefetch_related('job__skill_requirements', 'job__certification_requirements', 'job__education_requirements')
 
     if search:
         qs = qs.filter(
@@ -459,8 +466,8 @@ def recommended_jobs(request):
         return qs.order_by('-created_at')
 
     base_qs = JobPosting.objects.select_related(
-        'company', 'education_requirement', 'experience_requirement'
-    ).prefetch_related('skill_requirements', 'certification_requirements')
+        'company', 'experience_requirement'
+    ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
 
     if tab == 'liked':
         jobs_qs = apply_sort_qs(apply_search(base_qs.filter(id__in=liked_ids, status='open')))

@@ -1,0 +1,200 @@
+{# Shared calendar popup + auto-wiring script.
+   Usage: <input type="text" data-datepicker="date">   → MM/DD/YYYY
+          <input type="text" data-datepicker="month">  → YYYY-MM
+   Optional: data-min-age="15", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-DD" #}
+<div id="dp-backdrop" class="fixed inset-0 z-40 hidden"></div>
+<div id="dp-popup" class="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 hidden" style="width:280px;">
+    <div class="flex items-center justify-between mb-3">
+        <button type="button" data-dp-action="prev" class="text-muted hover:text-primary px-2 text-lg leading-none">&#8249;</button>
+        <span id="dp-label" class="text-sm font-semibold text-primary"></span>
+        <button type="button" data-dp-action="next" class="text-muted hover:text-primary px-2 text-lg leading-none">&#8250;</button>
+    </div>
+    <div class="flex justify-center mb-3">
+        <select id="dp-year" class="text-xs border border-gray-200 rounded-full px-3 py-1 text-primary focus:outline-none focus:border-teal"></select>
+    </div>
+    <div id="dp-dow" class="grid grid-cols-7 gap-1 mb-1 hidden">
+        <span class="text-center text-xs text-muted font-medium">Su</span>
+        <span class="text-center text-xs text-muted font-medium">Mo</span>
+        <span class="text-center text-xs text-muted font-medium">Tu</span>
+        <span class="text-center text-xs text-muted font-medium">We</span>
+        <span class="text-center text-xs text-muted font-medium">Th</span>
+        <span class="text-center text-xs text-muted font-medium">Fr</span>
+        <span class="text-center text-xs text-muted font-medium">Sa</span>
+    </div>
+    <div id="dp-grid" class="grid gap-1"></div>
+</div>
+
+<script>
+(function(){
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const SHORT  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  let activeInput = null, mode = 'date';
+  let viewYear = 0, viewMonth = 0;
+  let minDate = null, maxDate = null;
+
+  const popup    = document.getElementById('dp-popup');
+  const backdrop = document.getElementById('dp-backdrop');
+  const label    = document.getElementById('dp-label');
+  const yearSel  = document.getElementById('dp-year');
+  const dowRow   = document.getElementById('dp-dow');
+  const grid     = document.getElementById('dp-grid');
+
+  function parseValue(v, m) {
+    if (!v) return null;
+    if (m === 'month') {
+      const mm = v.match(/^(\d{4})-(\d{1,2})$/);
+      if (mm) return { year:+mm[1], month:+mm[2]-1 };
+    } else {
+      const mm = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (mm) return { year:+mm[3], month:+mm[1]-1, day:+mm[2] };
+    }
+    return null;
+  }
+  function fmtDate(y, m, d)  { return String(m+1).padStart(2,'0') + '/' + String(d).padStart(2,'0') + '/' + y; }
+  function fmtMonth(y, m)    { return y + '-' + String(m+1).padStart(2,'0'); }
+
+  function readBounds(input) {
+    minDate = input.dataset.minDate ? new Date(input.dataset.minDate + 'T00:00:00') : null;
+    maxDate = input.dataset.maxDate ? new Date(input.dataset.maxDate + 'T00:00:00') : null;
+    if (input.dataset.minAge) {
+      const now = new Date();
+      maxDate = new Date(now.getFullYear() - (+input.dataset.minAge), now.getMonth(), now.getDate());
+    }
+  }
+
+  function open(input) {
+    activeInput = input;
+    mode = input.dataset.datepicker === 'month' ? 'month' : 'date';
+    readBounds(input);
+    const parsed = parseValue(input.value, mode);
+    if (parsed) { viewYear = parsed.year; viewMonth = parsed.month; }
+    else if (maxDate) { viewYear = maxDate.getFullYear(); viewMonth = maxDate.getMonth(); }
+    else { const now = new Date(); viewYear = now.getFullYear(); viewMonth = now.getMonth(); }
+    buildYearSelect();
+    render();
+    const rect = input.getBoundingClientRect();
+    const POPW = 280;
+    const left = Math.min(rect.left, window.innerWidth - POPW - 8);
+    popup.style.top  = (rect.bottom + 6) + 'px';
+    popup.style.left = Math.max(8, left) + 'px';
+    popup.classList.remove('hidden');
+    backdrop.classList.remove('hidden');
+  }
+  function close() {
+    popup.classList.add('hidden');
+    backdrop.classList.add('hidden');
+    activeInput = null;
+  }
+  window.EHDatePicker = { close: close, open: open };
+
+  function buildYearSelect() {
+    yearSel.innerHTML = '';
+    const yMax = maxDate ? maxDate.getFullYear() : 2100;
+    const yMin = minDate ? minDate.getFullYear() : 1940;
+    for (let y = yMax; y >= yMin; y--) {
+      const o = document.createElement('option');
+      o.value = y; o.textContent = y;
+      if (y === viewYear) o.selected = true;
+      yearSel.appendChild(o);
+    }
+  }
+
+  function inRange(y, m, d) {
+    if (mode === 'month') {
+      if (maxDate && (y > maxDate.getFullYear() || (y === maxDate.getFullYear() && m > maxDate.getMonth()))) return false;
+      if (minDate && (y < minDate.getFullYear() || (y === minDate.getFullYear() && m < minDate.getMonth()))) return false;
+      return true;
+    }
+    const cell = new Date(y, m, d);
+    if (maxDate && cell > maxDate) return false;
+    if (minDate && cell < minDate) return false;
+    return true;
+  }
+
+  function render() {
+    grid.innerHTML = '';
+    if (mode === 'month') {
+      label.textContent = String(viewYear);
+      dowRow.classList.add('hidden');
+      grid.className = 'grid grid-cols-3 gap-2';
+      const sel = parseValue(activeInput.value, 'month');
+      for (let i = 0; i < 12; i++) {
+        const ok = inRange(viewYear, i);
+        const isSel = sel && sel.year === viewYear && sel.month === i;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = SHORT[i];
+        btn.className = ['text-center text-xs rounded-full py-1.5 transition',
+          !ok ? 'text-gray-300 cursor-not-allowed' :
+          isSel ? 'bg-teal text-white font-semibold' :
+          'hover:bg-teal/20 text-primary cursor-pointer'].join(' ');
+        if (ok) btn.addEventListener('click', function(){
+          activeInput.value = fmtMonth(viewYear, i);
+          activeInput.dispatchEvent(new Event('input',  {bubbles:true}));
+          activeInput.dispatchEvent(new Event('change', {bubbles:true}));
+          close();
+        });
+        grid.appendChild(btn);
+      }
+    } else {
+      label.textContent = MONTHS[viewMonth] + ' ' + viewYear;
+      dowRow.classList.remove('hidden');
+      grid.className = 'grid grid-cols-7 gap-1';
+      const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+      const sel = parseValue(activeInput.value, 'date');
+      for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
+      for (let d = 1; d <= daysInMonth; d++) {
+        const ok = inRange(viewYear, viewMonth, d);
+        const isSel = sel && sel.year === viewYear && sel.month === viewMonth && sel.day === d;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = d;
+        btn.className = ['text-center text-xs rounded-full w-8 h-8 mx-auto transition',
+          !ok ? 'text-gray-300 cursor-not-allowed' :
+          isSel ? 'bg-teal text-white font-semibold' :
+          'hover:bg-teal/20 text-primary cursor-pointer'].join(' ');
+        if (ok) btn.addEventListener('click', function(){
+          activeInput.value = fmtDate(viewYear, viewMonth, d);
+          activeInput.dispatchEvent(new Event('input',  {bubbles:true}));
+          activeInput.dispatchEvent(new Event('change', {bubbles:true}));
+          close();
+        });
+        grid.appendChild(btn);
+      }
+    }
+  }
+
+  yearSel.addEventListener('change', function() {
+    viewYear = +this.value;
+    if (maxDate && viewYear === maxDate.getFullYear() && viewMonth > maxDate.getMonth()) viewMonth = maxDate.getMonth();
+    if (minDate && viewYear === minDate.getFullYear() && viewMonth < minDate.getMonth()) viewMonth = minDate.getMonth();
+    render();
+  });
+  popup.addEventListener('click', function(e) {
+    const a = e.target.closest('[data-dp-action]');
+    if (!a) return;
+    if (a.dataset.dpAction === 'prev') {
+      if (mode === 'month') viewYear--;
+      else { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } }
+    } else {
+      if (mode === 'month') viewYear++;
+      else { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } }
+    }
+    buildYearSelect();
+    render();
+  });
+  backdrop.addEventListener('click', close);
+
+  document.addEventListener('click', function(e) {
+    const input = e.target.closest('input[data-datepicker]');
+    if (!input || input.disabled) return;
+    e.preventDefault();
+    open(input);
+  });
+  document.addEventListener('keydown', function(e) {
+    const t = e.target;
+    if (t && t.matches && t.matches('input[data-datepicker]')) e.preventDefault();
+  });
+})();
+</script>

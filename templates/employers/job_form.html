@@ -101,6 +101,7 @@
           </button>
         </div>
         <div id="edu-container" class="space-y-3">
+          {% for edu in job.education_requirements.all %}
           <div class="edu-row relative border border-gray-100 rounded-xl p-3 space-y-2">
             <button type="button" onclick="removeEdu(this)" title="Remove"
                     class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
@@ -112,30 +113,58 @@
                 <select name="edu_level"
                         class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition">
                   <option value="">Select Educational Level...</option>
-                  {% with cur=job.education_requirement.level %}
-                  <option value="elementary"  {% if cur == 'elementary' %}selected{% endif %}>Elementary</option>
-                  <option value="junior_high" {% if cur == 'junior_high' %}selected{% endif %}>High School / JHS</option>
-                  <option value="senior_high" {% if cur == 'senior_high' %}selected{% endif %}>Senior High School</option>
-                  <option value="vocational"  {% if cur == 'vocational' %}selected{% endif %}>Vocational / TESDA</option>
-                  <option value="associate"   {% if cur == 'associate' %}selected{% endif %}>Associate Degree</option>
-                  <option value="bachelor"    {% if cur == 'bachelor' %}selected{% endif %}>Bachelor's Degree</option>
-                  <option value="master"      {% if cur == 'master' %}selected{% endif %}>Master's Degree</option>
-                  <option value="doctorate"   {% if cur == 'doctorate' %}selected{% endif %}>Doctorate</option>
-                  {% endwith %}
+                  <option value="elementary"  {% if edu.level == 'elementary' %}selected{% endif %}>Elementary</option>
+                  <option value="junior_high" {% if edu.level == 'junior_high' %}selected{% endif %}>High School / JHS</option>
+                  <option value="senior_high" {% if edu.level == 'senior_high' %}selected{% endif %}>Senior High School</option>
+                  <option value="vocational"  {% if edu.level == 'vocational' %}selected{% endif %}>Vocational / TESDA</option>
+                  <option value="associate"   {% if edu.level == 'associate' %}selected{% endif %}>Associate Degree</option>
+                  <option value="bachelor"    {% if edu.level == 'bachelor' %}selected{% endif %}>Bachelor's Degree</option>
+                  <option value="master"      {% if edu.level == 'master' %}selected{% endif %}>Master's Degree</option>
+                  <option value="doctorate"   {% if edu.level == 'doctorate' %}selected{% endif %}>Doctorate</option>
                 </select>
                 <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
             </div>
             <div>
               <label class="block text-xs text-muted mb-1">Course/Strand</label>
-              <input type="text" name="edu_course"
-                     value="{{ job.education_requirement.course_degree|default:'' }}"
+              <input type="text" name="edu_course" value="{{ edu.course_degree|default:'' }}"
                      placeholder="e.g. BS Agriculture, STEM"
                      class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
             </div>
           </div>
+          {% empty %}
+          {# Always show at least one blank row so the fields are visible #}
+          <div class="edu-row relative border border-gray-100 rounded-xl p-3 space-y-2">
+            <button type="button" onclick="removeEdu(this)" title="Remove"
+                    class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <div>
+              <label class="block text-xs text-muted mb-1">Educational Level</label>
+              <div class="relative">
+                <select name="edu_level"
+                        class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition">
+                  <option value="">Select Educational Level...</option>
+                  <option value="elementary">Elementary</option>
+                  <option value="junior_high">High School / JHS</option>
+                  <option value="senior_high">Senior High School</option>
+                  <option value="vocational">Vocational / TESDA</option>
+                  <option value="associate">Associate Degree</option>
+                  <option value="bachelor">Bachelor's Degree</option>
+                  <option value="master">Master's Degree</option>
+                  <option value="doctorate">Doctorate</option>
+                </select>
+                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1">Course/Strand</label>
+              <input type="text" name="edu_course" placeholder="e.g. BS Agriculture, STEM"
+                     class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+            </div>
+          </div>
+          {% endfor %}
         </div>
-        <p class="text-xs text-muted/70 italic mt-2">Note: Only the first entry is saved per job.</p>
       </div>
 
       <!-- Skills -->

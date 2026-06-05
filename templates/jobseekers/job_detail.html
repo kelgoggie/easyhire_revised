@@ -139,15 +139,95 @@
       </a>
     </div>
     {% else %}
-    <form method="POST" action="/jobs/{{ job.id }}/apply/" class="inline-block">
-      {% csrf_token %}
-      <button type="submit"
-              class="bg-amber text-white font-semibold px-20 py-3 rounded-full hover:bg-amber/90 transition text-sm">
-        Apply
-      </button>
-    </form>
+    <button type="button" id="open-apply-modal"
+            class="bg-amber text-white font-semibold px-20 py-3 rounded-full hover:bg-amber/90 transition text-sm">
+      Apply
+    </button>
     {% endif %}
   </div>
+
+  {% if not already_applied %}
+  <!-- ── Apply modal ───────────────────────────────────────────── -->
+  <div id="apply-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" data-close-apply></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 z-10">
+      <div class="mb-4">
+        <p class="text-primary font-bold text-base leading-tight">
+          {{ job.title }} <span class="text-muted font-normal">— {{ job.company.name }}</span>
+        </p>
+        <p class="text-muted text-xs mt-1">
+          {% if job.location_type == 'remote' %}Remote{% else %}{{ job.location_display }}{% endif %}
+        </p>
+      </div>
+
+      <form id="apply-form" method="POST" action="/jobs/{{ job.id }}/apply/">
+        {% csrf_token %}
+        <label class="block text-primary text-xs font-medium mb-1">Application Message</label>
+        <textarea name="message" rows="6" placeholder="Introduce yourself and tell the employer why you're a great fit. This is optional."
+                  class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none"></textarea>
+
+        <p class="text-xs text-muted mt-3">
+          Thoroughly check application message for any typos or sensitive information before submitting application.
+          <span class="text-red-500">This action cannot be undone.</span>
+        </p>
+
+        <div class="flex gap-3 justify-end mt-5">
+          <button type="button" data-close-apply
+                  class="bg-gray-100 text-primary font-semibold px-6 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
+            Cancel
+          </button>
+          <button type="button" id="open-apply-confirm"
+                  class="bg-amber text-white font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition text-sm">
+            Apply
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Confirmation modal ────────────────────────────────────── -->
+  <div id="apply-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" data-close-confirm></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10 text-center">
+      <p class="text-primary font-semibold text-base mb-2">Submit your application?</p>
+      <p class="text-muted text-sm mb-6">You won't be able to edit or withdraw this application after it's submitted.</p>
+      <div class="flex gap-3 justify-center">
+        <button type="button" data-close-confirm
+                class="bg-gray-100 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
+          Go back
+        </button>
+        <button type="button" id="apply-confirm-yes"
+                class="bg-amber text-white font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition text-sm">
+          Yes, submit
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    const applyBtn      = document.getElementById('open-apply-modal');
+    const applyModal    = document.getElementById('apply-modal');
+    const confirmModal  = document.getElementById('apply-confirm-modal');
+    const openConfirm   = document.getElementById('open-apply-confirm');
+    const confirmYes    = document.getElementById('apply-confirm-yes');
+    const applyForm     = document.getElementById('apply-form');
+
+    function show(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+    function hide(m) { m.classList.add('hidden');    m.classList.remove('flex'); }
+
+    applyBtn.addEventListener('click', () => show(applyModal));
+    applyModal.querySelectorAll('[data-close-apply]').forEach(el =>
+      el.addEventListener('click', () => hide(applyModal))
+    );
+    openConfirm.addEventListener('click', () => show(confirmModal));
+    confirmModal.querySelectorAll('[data-close-confirm]').forEach(el =>
+      el.addEventListener('click', () => hide(confirmModal))
+    );
+    confirmYes.addEventListener('click', () => applyForm.submit());
+  })();
+  </script>
+  {% endif %}
 
   <!-- Prev / Next nav -->
   {% if prev_job or next_job %}

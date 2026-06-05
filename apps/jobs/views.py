@@ -15,11 +15,11 @@ class PublicJobListView(View):
     def get(self, request):
         jobs = JobPosting.objects.filter(status=JobPosting.STATUS_OPEN).select_related(
             'company',
-            'education_requirement',
             'experience_requirement',
         ).prefetch_related(
             'skill_requirements',
             'certification_requirements',
+            'education_requirements',
         )
 
         # Filters
@@ -59,11 +59,11 @@ class PublicJobDetailView(View):
         job = get_object_or_404(
             JobPosting.objects.select_related(
                 'company',
-                'education_requirement',
                 'experience_requirement',
             ).prefetch_related(
                 'skill_requirements',
                 'certification_requirements',
+                'education_requirements',
             ),
             pk=pk,
             status=JobPosting.STATUS_OPEN,
@@ -127,11 +127,11 @@ class JobseekerJobDetailView(View):
         job = get_object_or_404(
             JobPosting.objects.select_related(
                 'company',
-                'education_requirement',
                 'experience_requirement',
             ).prefetch_related(
                 'skill_requirements',
                 'certification_requirements',
+                'education_requirements',
             ),
             pk=pk,
             status=JobPosting.STATUS_OPEN,
