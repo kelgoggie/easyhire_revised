@@ -331,9 +331,13 @@ function addEdu() {
   if (!first) return;
   const clone = first.cloneNode(true);
   delete clone.dataset.watched;
-  clone.querySelectorAll('input:not([type=hidden]), select').forEach(el => el.value = '');
+  clone.querySelectorAll('input:not([type=hidden]), select').forEach(el => {
+    el.value = '';
+    delete el.dataset.autocomplete;
+  });
   container.appendChild(clone);
   watchEntry(clone);
+  initAutocompletes();
 }
 
 // ── Experience (single entry — model is OneToOne) ────────────────
@@ -419,10 +423,24 @@ function addCert() {
   `;
   container.appendChild(div);
   watchEntry(div);
+  initAutocompletes();
 }
 
 // Initialise X-visibility for every existing entry on first paint
 watchAllEntries();
+
+// ── Autocomplete (powered by partials/_autocomplete.html) ──────────────
+function initAutocompletes() {
+  const ac = window.createAutocomplete;
+  if (!ac) return;
+  document.querySelectorAll('input[name="title"]'                ).forEach(el => ac(el, '/api/autocomplete/positions/'));
+  document.querySelectorAll('input[name="edu_course"]'           ).forEach(el => ac(el, '/api/autocomplete/degrees/'));
+  document.querySelectorAll('input[name="cert_name"]'            ).forEach(el => ac(el, '/api/autocomplete/certifications/'));
+  document.querySelectorAll('input[name="cert_org"]'             ).forEach(el => ac(el, '/api/autocomplete/institutions/'));
+  document.querySelectorAll('input[name="exp_preferred_position"]').forEach(el => ac(el, '/api/autocomplete/positions/'));
+  document.querySelectorAll('input#skill-input'                  ).forEach(el => ac(el, '/api/autocomplete/skills/'));
+}
+initAutocompletes();
 
 // ── Barangay dropdown ───────────────────────────────────────────
 const barangaySelect = document.getElementById('job_barangay');

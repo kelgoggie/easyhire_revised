@@ -679,47 +679,15 @@ citySelect.addEventListener('change', function() {
 });
 
 // ── Autocomplete ────────────────────────────────────────────────
-function createAutocomplete(inputEl, endpoint) {
-    if (inputEl.dataset.autocomplete) return;
-    inputEl.dataset.autocomplete = 'true';
-    const wrapper = document.createElement('div');
-    wrapper.className = 'relative';
-    inputEl.parentNode.insertBefore(wrapper, inputEl);
-    wrapper.appendChild(inputEl);
-    const dropdown = document.createElement('ul');
-    dropdown.className = 'absolute left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 mt-1 hidden max-h-48 overflow-y-auto';
-    wrapper.appendChild(dropdown);
-    let timer;
-    inputEl.addEventListener('input', function() {
-        clearTimeout(timer);
-        const q = this.value.trim();
-        if (q.length < 1) { dropdown.classList.add('hidden'); return; }
-        timer = setTimeout(function() {
-            fetch(endpoint + '?q=' + encodeURIComponent(q))
-                .then(r => r.json())
-                .then(function(results) {
-                    dropdown.innerHTML = '';
-                    if (!results.length) { dropdown.classList.add('hidden'); return; }
-                    results.forEach(function(item) {
-                        const li = document.createElement('li');
-                        li.textContent = item;
-                        li.className = 'px-4 py-2 text-xs text-primary hover:bg-surface cursor-pointer';
-                        li.addEventListener('mousedown', function(e) {
-                            e.preventDefault(); inputEl.value = item; dropdown.classList.add('hidden');
-                        });
-                        dropdown.appendChild(li);
-                    });
-                    dropdown.classList.remove('hidden');
-                });
-        }, 250);
-    });
-    inputEl.addEventListener('blur', function() { setTimeout(function() { dropdown.classList.add('hidden'); }, 150); });
-}
 function initAutocompletes() {
-    document.querySelectorAll('input[name="skill_name"]').forEach(el => createAutocomplete(el, '/api/autocomplete/skills/'));
-    document.querySelectorAll('input[name="exp_position"]').forEach(el => createAutocomplete(el, '/api/autocomplete/positions/'));
-    document.querySelectorAll('input[name="edu_course"]').forEach(el => createAutocomplete(el, '/api/autocomplete/degrees/'));
-    document.querySelectorAll('input[name="cert_name"]').forEach(el => createAutocomplete(el, '/api/autocomplete/certifications/'));
+    const ac = window.createAutocomplete;
+    if (!ac) return;
+    document.querySelectorAll('input[name="skill_name"]'    ).forEach(el => ac(el, '/api/autocomplete/skills/'));
+    document.querySelectorAll('input[name="exp_position"]'  ).forEach(el => ac(el, '/api/autocomplete/positions/'));
+    document.querySelectorAll('input[name="exp_company"]'   ).forEach(el => ac(el, '/api/autocomplete/companies/'));
+    document.querySelectorAll('input[name="edu_course"]'    ).forEach(el => ac(el, '/api/autocomplete/degrees/'));
+    document.querySelectorAll('input[name="edu_institution"]').forEach(el => ac(el, '/api/autocomplete/institutions/'));
+    document.querySelectorAll('input[name="cert_name"]'     ).forEach(el => ac(el, '/api/autocomplete/certifications/'));
 }
 initAutocompletes();
 

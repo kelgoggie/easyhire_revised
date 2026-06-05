@@ -23,4 +23,6 @@ urlpatterns = [
     path('api/autocomplete/positions/', views.autocomplete_positions, name='autocomplete_positions'),
     path('api/autocomplete/degrees/', views.autocomplete_degrees, name='autocomplete_degrees'),
     path('api/autocomplete/certifications/', views.autocomplete_certifications, name='autocomplete_certifications'),
+    path('api/autocomplete/institutions/',   views.autocomplete_institutions,   name='autocomplete_institutions'),
+    path('api/autocomplete/companies/',      views.autocomplete_companies,      name='autocomplete_companies'),
 ]

@@ -19,6 +19,7 @@ class Command(BaseCommand):
         )
         from apps.jobseekers.views import (
             STATIC_SKILLS, STATIC_POSITIONS, STATIC_DEGREES, STATIC_CERTS,
+            STATIC_INSTITUTIONS, STATIC_COMPANIES,
         )
 
         self.stdout.write('Loading sentence-transformer model...')
@@ -35,11 +36,13 @@ class Command(BaseCommand):
 
         self.stdout.write('Pre-computing embeddings for static vocabularies...')
         for name, vocab, key in [
-            ('skills',     STATIC_SKILLS,     'skills'),
-            ('positions',  STATIC_POSITIONS,  'positions'),
-            ('degrees',    STATIC_DEGREES,    'degrees'),
-            ('certs',      STATIC_CERTS,      'certs'),
-            ('industries', CANONICAL_INDUSTRIES, 'canonical_industries'),
+            ('skills',       STATIC_SKILLS,        'skills'),
+            ('positions',    STATIC_POSITIONS,     'positions'),
+            ('degrees',      STATIC_DEGREES,       'degrees'),
+            ('certs',        STATIC_CERTS,         'certs'),
+            ('institutions', STATIC_INSTITUTIONS,  'institutions'),
+            ('companies',    STATIC_COMPANIES,     'companies'),
+            ('industries',   CANONICAL_INDUSTRIES, 'canonical_industries'),
         ]:
             t0 = time.time()
             _get_or_compute_embeddings(vocab, key)
