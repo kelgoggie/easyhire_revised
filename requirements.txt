@@ -6,6 +6,7 @@ Pillow>=10.0                  # ImageField support
 
 # Auth
 django-allauth>=0.61          # Extended auth (password reset, email verification)
+PyJWT[crypto]>=2.8            # required by allauth's Google OAuth provider
 
 # Frontend / templating
 django-htmx>=1.17             # HTMX integration helpers
@@ -25,6 +26,8 @@ crispy-tailwind>=1.0
 # Utilities
 django-extensions>=3.2        # shell_plus, runserver_plus etc.
 django-storages>=1.14         # cloud file storage for production
+django-cloudinary-storage>=0.3 # Cloudinary backend for media files
+cloudinary>=1.36              # Cloudinary SDK
 whitenoise>=6.6               # static file serving
 
 # Background tasks (score recompute, notifications)
