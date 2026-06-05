@@ -1,30 +1,28 @@
-{% extends "base/base_dashboard_employer.html" %}
+{% extends "base/base_dashboard_jobseeker.html" %}
 {% load static %}
 
-{% block title %}{{ company.name }} — EasyHire for Employers{% endblock %}
+{% block title %}{{ company.name }} — EasyHire{% endblock %}
 
 {% block page_content %}
-{# Profile page intentionally doesn't highlight any sidebar nav item #}
 <div class="-mx-8">
 
-  <!-- ── Banner with building photo ──────────────────────────────── -->
+  <!-- ── Banner ────────────────────────────────────────────────── -->
   <div class="relative h-64 overflow-hidden">
     <div class="absolute inset-0 bg-cover bg-center"
          style="background-image: url('{% static "images/iloilo_city_hall.jpg" %}');"></div>
     <div class="absolute inset-0 bg-primary/55"></div>
-    <a href="#"
-       class="absolute bottom-6 right-8 bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition shadow-md">
-      Edit Profile
-    </a>
+    <button type="button" id="follow-btn" data-following="{{ is_following|yesno:'true,false' }}"
+            class="absolute bottom-6 right-8 text-sm font-semibold px-6 py-2.5 rounded-full transition shadow-md
+                   {% if is_following %}bg-white text-primary border border-white hover:bg-surface{% else %}bg-amber text-white hover:bg-amber/90{% endif %}">
+      {% if is_following %}Following{% else %}Follow{% endif %}
+    </button>
   </div>
 
-  <!-- ── Profile body ────────────────────────────────────────────── -->
+  <!-- ── Profile body ──────────────────────────────────────────── -->
   <div class="px-8 pb-8 -mt-20">
 
-    <!-- Header row: avatar + info + follower count + Create New Job -->
-    <div class="flex items-start gap-6 mb-6">
+    <div class="flex items-start gap-6 mb-12">
 
-      <!-- Company avatar (z-10 so it sits ABOVE the banner stacking context) -->
       <div class="relative z-10 w-40 h-40 rounded-full border-4 border-white bg-primary shadow-md flex-shrink-0 flex items-center justify-center overflow-hidden">
         {% if company.logo %}
           <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="w-full h-full object-cover">
@@ -35,49 +33,43 @@
         {% endif %}
       </div>
 
-      <!-- Company info -->
-      <div class="flex-1 min-w-0 pt-20">
-        <h1 class="text-3xl text-primary leading-tight mb-1">{{ company.name }}</h1>
-        <p class="text-primary text-sm mb-2">
+      <div class="flex-1 min-w-0 pt-24">
+        <h1 class="text-3xl text-primary leading-tight mb-2">{{ company.name }}</h1>
+        <p class="text-primary text-sm mb-3">
           {% if company.iloilo_barangay_name %}
             <strong>{{ company.iloilo_barangay_name }},</strong> Iloilo City
           {% else %}
             <strong>{{ company.main_branch_address|default:"Address not set" }}</strong>
           {% endif %}
         </p>
-        <p class="text-primary text-xs mb-1">
+        <p class="text-primary text-xs mb-2">
           <strong>Hiring Email Address</strong>
           <span class="text-muted ml-1">{{ company.recruitment_email|default:company.company_email|default:"Not set" }}</span>
         </p>
         <p class="text-primary text-xs">
           <strong>Contact No.</strong>
-          <span class="text-muted ml-1">{% if profile.phone %}+63 {{ profile.phone|slice:"1:" }}{% else %}Not set{% endif %}</span>
+          <span class="text-muted ml-1">{% if rep_phone %}+63 {{ rep_phone|slice:"1:" }}{% else %}Not set{% endif %}</span>
         </p>
       </div>
 
-      <!-- Followers + Create New Job (right column) -->
-      <div class="flex-shrink-0 pt-20 text-right">
-        <p class="text-primary text-sm mb-3">
-          <strong>{{ followers_count }}</strong> follower{{ followers_count|pluralize }}
+      <div class="flex-shrink-0 pt-24 text-right">
+        <p class="text-primary text-sm">
+          <strong id="follower-count">{{ followers_count }}</strong>
+          <span id="follower-label">follower{{ followers_count|pluralize }}</span>
         </p>
-        <a href="/employers/jobs/create/"
-           class="inline-block bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-taupe/30 transition">
-          Create New Job
-        </a>
       </div>
     </div>
 
-    <!-- ── Job posts grid ────────────────────────────────────────── -->
+    <!-- ── Open job posts ────────────────────────────────────────── -->
     {% if jobs %}
     <div class="grid grid-cols-2 gap-5">
       {% for job in jobs %}
       <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
 
-        <!-- Top row: title block + settings menu -->
         <div class="flex items-start justify-between mb-3">
           <div class="min-w-0 pr-3">
             <p class="font-bold text-primary text-base leading-tight mb-0.5">
-              <a href="/employers/jobs/{{ job.id }}/" class="hover:text-teal transition">{{ job.title }}</a>
+              <a href="/jobs/view/{{ job.id }}/" class="hover:text-teal transition">{{ job.title }}</a>
             </p>
             <p class="text-primary text-xs italic mb-0.5">{{ job.location_display|truncatechars:40 }}</p>
             <p class="text-muted text-xs italic mb-1">Posted on {{ job.created_at|date:"F j, Y" }}</p>
@@ -88,29 +80,8 @@
               Liked by {{ job.liked_by_count|default:0 }} jobseeker{{ job.liked_by_count|pluralize }}
             </p>
           </div>
-
-          <!-- Dot menu -->
-          <div class="relative flex-shrink-0">
-            <button type="button" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('hidden')"
-                    class="text-muted hover:text-primary p-1 transition">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M10 18h4"/>
-              </svg>
-            </button>
-            <div class="hidden absolute right-0 top-7 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-40 py-1">
-              <a href="/employers/jobs/{{ job.id }}/edit/"       class="block px-4 py-2 text-sm text-primary hover:bg-surface">Edit Job</a>
-              <a href="/employers/jobs/{{ job.id }}/candidates/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">View Applicants</a>
-              <hr class="my-1 border-gray-100">
-              <form method="POST" action="/employers/jobs/{{ job.id }}/delete/"
-                    onsubmit="return confirm('Delete this job post permanently?')">
-                {% csrf_token %}
-                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Delete</button>
-              </form>
-            </div>
-          </div>
         </div>
 
-        <!-- Requirement tags -->
         <div class="flex flex-wrap gap-1.5 mb-3">
           {% if job.education_requirement %}
           <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20">
@@ -140,20 +111,14 @@
           {% endwith %}
         </div>
 
-        <!-- Description preview -->
         <div class="bg-surface/60 border border-gray-100 rounded-xl px-3 py-2.5 mb-4 flex-1">
           <p class="text-muted text-xs leading-relaxed line-clamp-4">{{ job.description|truncatechars:280 }}</p>
         </div>
 
-        <!-- Bottom actions -->
         <div class="flex items-center justify-between gap-3">
-          <a href="/employers/jobs/{{ job.id }}/candidates/"
+          <a href="/jobs/view/{{ job.id }}/"
              class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
-            View Applicants ({{ job.applicants_count|default:0 }})
-          </a>
-          <a href="/employers/jobs/{{ job.id }}/edit/"
-             class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
-            Edit Job
+            View Job
           </a>
         </div>
 
@@ -162,11 +127,8 @@
     </div>
     {% else %}
     <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
-      <p class="text-primary font-semibold text-sm mb-1">No job posts yet.</p>
-      <p class="text-muted text-xs mb-4">Create your first job post to start receiving applicants.</p>
-      <a href="/employers/jobs/create/" class="inline-block bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
-        + Create New Job
-      </a>
+      <p class="text-primary font-semibold text-sm mb-1">No open job posts.</p>
+      <p class="text-muted text-xs">Follow {{ company.name }} to be notified when new positions open.</p>
     </div>
     {% endif %}
 
@@ -178,12 +140,39 @@
   .line-clamp-4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 </style>
 <script>
-// Close any open dot-menu dropdowns when clicking outside
-document.addEventListener('click', function(e) {
-  document.querySelectorAll('.grid > .bg-white > div > div.absolute').forEach(d => {
-    if (!d.contains(e.target) && !d.previousElementSibling.contains(e.target)) d.classList.add('hidden');
+(function() {
+  const btn   = document.getElementById('follow-btn');
+  const count = document.getElementById('follower-count');
+  const label = document.getElementById('follower-label');
+  if (!btn) return;
+
+  function getCookie(n) {
+    const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+
+  btn.addEventListener('click', function() {
+    btn.disabled = true;
+    fetch('/companies/{{ company.id }}/follow/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+    }).then(function(r){ return r.json(); }).then(function(d){
+      btn.disabled = false;
+      if (!d.ok) return;
+      if (d.following) {
+        btn.textContent = 'Following';
+        btn.classList.remove('bg-amber', 'text-white', 'hover:bg-amber/90');
+        btn.classList.add('bg-white', 'text-primary', 'border', 'border-white', 'hover:bg-surface');
+      } else {
+        btn.textContent = 'Follow';
+        btn.classList.add('bg-amber', 'text-white', 'hover:bg-amber/90');
+        btn.classList.remove('bg-white', 'text-primary', 'border', 'border-white', 'hover:bg-surface');
+      }
+      count.textContent = d.followers_count;
+      label.textContent = 'follower' + (d.followers_count === 1 ? '' : 's');
+    }).catch(function(){ btn.disabled = false; });
   });
-});
+})();
 </script>
 {% endblock %}
 

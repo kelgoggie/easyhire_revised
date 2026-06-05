@@ -1,5 +1,5 @@
 {% extends "base/base.html" %}
-{% load static %}
+{% load static match_tags %}
 
 {% block title %}{{ jobseeker.full_name }} — EasyHire{% endblock %}
 
@@ -156,7 +156,7 @@
                         <p class="text-sm font-semibold text-primary">{{ exp.position }}</p>
                         {% if exp.company %}<p class="text-xs text-teal font-medium">{{ exp.company }}</p>{% endif %}
                         <p class="text-xs text-taupe">
-                            {{ exp.month_started }} {{ exp.year_started }} – {% if exp.is_current %}Present{% else %}{{ exp.month_ended }} {{ exp.year_ended }}{% endif %}
+                            {{ exp.month_started|month_name }} {{ exp.year_started }} – {% if exp.is_current %}Present{% else %}{{ exp.month_ended|month_name }} {{ exp.year_ended }}{% endif %}
                         </p>
                         {% if exp.description %}<p class="text-xs text-muted mt-1">{{ exp.description }}</p>{% endif %}
                     </div>

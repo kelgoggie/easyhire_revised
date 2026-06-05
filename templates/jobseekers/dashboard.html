@@ -104,11 +104,12 @@
         </thead>
         <tbody>
           {% for item in ranked_jobs %}
-          <tr class="border-b border-gray-50 last:border-0 hover:bg-surface/40 transition">
-            <td class="px-5 py-3 font-semibold text-primary">
-              <a href="/jobs/view/{{ item.job.id }}/" class="hover:text-teal transition">{{ item.job.title }}</a>
+          <tr class="row-link border-b border-gray-50 last:border-0 hover:bg-surface/40 transition cursor-pointer"
+              data-href="/jobs/view/{{ item.job.id }}/">
+            <td class="px-5 py-3 font-semibold text-primary">{{ item.job.title }}</td>
+            <td class="px-4 py-3 text-muted italic text-xs">
+              <a href="/companies/{{ item.job.company.id }}/" class="hover:text-teal transition">{{ item.job.company.name|truncatechars:25 }}</a>
             </td>
-            <td class="px-4 py-3 text-muted italic text-xs">{{ item.job.company.name|truncatechars:25 }}</td>
             <td class="px-4 py-3 text-muted text-xs">{{ item.job.location_display|truncatechars:25 }}</td>
             <td class="px-4 py-3 text-muted text-xs">{{ item.job.slots }} slot{{ item.job.slots|pluralize }} open</td>
             <td class="px-4 py-3">
@@ -156,11 +157,12 @@
         </thead>
         <tbody>
           {% for app in applications %}
-          <tr class="border-b border-gray-50 last:border-0 hover:bg-surface/40 transition">
-            <td class="px-5 py-3 font-semibold text-primary">
-              <a href="/jobs/view/{{ app.job.id }}/" class="hover:text-teal transition">{{ app.job.title }}</a>
+          <tr class="row-link border-b border-gray-50 last:border-0 hover:bg-surface/40 transition cursor-pointer"
+              data-href="/jobs/view/{{ app.job.id }}/">
+            <td class="px-5 py-3 font-semibold text-primary">{{ app.job.title }}</td>
+            <td class="px-4 py-3 text-muted italic text-xs">
+              <a href="/companies/{{ app.job.company.id }}/" class="hover:text-teal transition">{{ app.job.company.name|truncatechars:25 }}</a>
             </td>
-            <td class="px-4 py-3 text-muted italic text-xs">{{ app.job.company.name|truncatechars:25 }}</td>
             <td class="px-4 py-3 text-muted text-xs">{{ app.job.location_display|truncatechars:25 }}</td>
             <td class="px-4 py-3">
               {% if app.status == 'accepted' %}
@@ -234,5 +236,19 @@
   </section>
 
 </div>
+
+{% block page_scripts %}
+<script>
+// Whole-row click navigates to the job; clicks inside an <a> or <button> pass through.
+document.querySelectorAll('tr.row-link').forEach(function(tr) {
+  tr.addEventListener('click', function(e) {
+    if (e.target.closest('a, button')) return;
+    const href = tr.dataset.href;
+    if (href) window.location = href;
+  });
+});
+</script>
+{% endblock %}
+
 {% endblock %}
 {% endwith %}

@@ -10,12 +10,32 @@
   <!-- ── Title row ──────────────────────────────────────────────── -->
   <div class="flex items-start justify-between gap-4 mb-2">
     <h1 class="text-4xl font-extrabold text-primary leading-tight">
-      {{ job.title }}<span class="font-normal text-primary">, </span><span class="font-normal text-primary text-2xl align-middle">{{ job.company.name }}</span>
+      {{ job.title }}<span class="font-normal text-primary">, </span><a href="/companies/{{ job.company.id }}/" class="font-normal text-primary text-2xl align-middle hover:text-teal transition">{{ job.company.name }}</a>
     </h1>
     <div class="flex items-center gap-2 flex-shrink-0 pt-2">
       <span class="inline-flex items-center bg-gray-100 text-muted text-xs font-semibold px-3 py-1 rounded-full">
         {{ job.slots }} slot{{ job.slots|pluralize }} open
       </span>
+
+      <!-- Like -->
+      <button type="button" id="like-btn" title="{% if job.id in liked_ids %}Unlike{% else %}Like{% endif %} this job"
+              class="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 bg-white transition
+                     {% if job.id in liked_ids %}text-red-400{% else %}text-gray-300 hover:text-red-400{% endif %}">
+        <svg class="w-4 h-4" viewBox="0 0 24 24"
+             {% if job.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
+          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+        </svg>
+      </button>
+
+      <!-- Hide -->
+      <button type="button" id="hide-btn" title="{% if job.id in hidden_ids %}Unhide{% else %}Hide{% endif %} this job"
+              class="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 bg-white transition
+                     {% if job.id in hidden_ids %}text-primary{% else %}text-gray-300 hover:text-red-400{% endif %}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88"/>
+        </svg>
+      </button>
+
       {% if match_score %}{% match_badge match_score.total %}{% endif %}
     </div>
   </div>
@@ -228,6 +248,61 @@
   })();
   </script>
   {% endif %}
+
+  <!-- ── Like / Hide AJAX ──────────────────────────────────────── -->
+  <script>
+  (function() {
+    function getCookie(n) {
+      const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+      if (p.length === 2) return p.pop().split(';').shift();
+    }
+
+    function bind(btn, url, onState, offClasses, onClasses, payloadKey) {
+      if (!btn) return;
+      btn.addEventListener('click', function() {
+        btn.disabled = true;
+        fetch(url, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+        }).then(function(r){ return r.json(); }).then(function(d){
+          btn.disabled = false;
+          if (!d.ok) return;
+          onState(btn, d[payloadKey]);
+        }).catch(function(){ btn.disabled = false; });
+      });
+    }
+
+    bind(document.getElementById('like-btn'), '/jobs/{{ job.id }}/save/', function(btn, on) {
+      const svg = btn.querySelector('svg');
+      if (on) {
+        btn.classList.remove('text-gray-300', 'hover:text-red-400');
+        btn.classList.add('text-red-400');
+        svg.setAttribute('fill', 'currentColor');
+        svg.removeAttribute('stroke'); svg.removeAttribute('stroke-width');
+        btn.title = 'Unlike this job';
+      } else {
+        btn.classList.add('text-gray-300', 'hover:text-red-400');
+        btn.classList.remove('text-red-400');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        btn.title = 'Like this job';
+      }
+    }, null, null, 'liked');
+
+    bind(document.getElementById('hide-btn'), '/jobs/{{ job.id }}/hide/', function(btn, on) {
+      if (on) {
+        btn.classList.remove('text-gray-300', 'hover:text-red-400');
+        btn.classList.add('text-primary');
+        btn.title = 'Unhide this job';
+      } else {
+        btn.classList.add('text-gray-300', 'hover:text-red-400');
+        btn.classList.remove('text-primary');
+        btn.title = 'Hide this job';
+      }
+    }, null, null, 'hidden');
+  })();
+  </script>
 
   <!-- Prev / Next nav -->
   {% if prev_job or next_job %}

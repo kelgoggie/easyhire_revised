@@ -543,7 +543,7 @@ def all_candidates(request):
         company=company
     ).values_list('jobseeker_id', flat=True))
 
-    candidates = JobseekerProfile.objects.filter(profile_complete=True)
+    candidates = JobseekerProfile.objects.filter(profile_complete=True, user__is_active=True)
 
     if search:
         candidates = candidates.filter(

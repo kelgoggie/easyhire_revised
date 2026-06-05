@@ -78,7 +78,9 @@
                         {{ js.first_name|first|upper }}{{ js.last_name|first|upper }}
                     </div>
                     <div class="min-w-0">
-                        <p class="text-primary font-extrabold text-sm leading-tight truncate">{{ js.first_name }} {{ js.last_name }}</p>
+                        <p class="text-primary font-extrabold text-sm leading-tight truncate">
+                            <a href="/employers/candidates/{{ js.id }}/" class="hover:text-teal transition">{{ js.first_name }} {{ js.last_name }}</a>
+                        </p>
                         <p class="text-muted text-xs truncate">{{ js.city_municipality|default:"Iloilo City" }}</p>
                     </div>
                 </div>

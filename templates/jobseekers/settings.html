@@ -1,0 +1,484 @@
+{% extends "base/base_dashboard_jobseeker.html" %}
+{% load static %}
+
+{% block title %}Settings — EasyHire{% endblock %}
+
+{% with active_nav="settings" %}
+{% block page_content %}
+<div class="py-8 max-w-5xl">
+
+  <h1 class="text-5xl font-extrabold text-primary mb-8">Settings</h1>
+
+  <!-- ── Personal Information ──────────────────────────────────── -->
+  <h2 class="text-lg font-bold text-primary mb-4">Personal Information</h2>
+
+  {% with display=pending_change|default:profile %}
+  <form id="personal-form" method="POST" action="/settings/" enctype="multipart/form-data" class="mb-6">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="personal_change">
+    <input type="file"   name="id_document" id="personal-id-doc" class="hidden" accept="image/*,application/pdf">
+
+    <div class="grid grid-cols-4 gap-4 mb-4">
+      <div>
+        <label class="block text-primary text-xs mb-1">First Name</label>
+        <input type="text" name="first_name" value="{{ display.first_name|default:'' }}" required disabled
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Middle Name</label>
+        <input type="text" name="middle_name" value="{{ display.middle_name|default:'' }}" disabled
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Last Name</label>
+        <input type="text" name="last_name" value="{{ display.last_name|default:'' }}" required disabled
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Suffix</label>
+        <input type="text" name="suffix" value="{{ display.suffix|default:'' }}" disabled
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 items-end">
+      <div>
+        <label class="block text-primary text-xs mb-1">Birthday</label>
+        <div class="relative">
+          <input type="text" name="date_of_birth" data-datepicker="date" data-min-age="15" data-display-format="long" disabled
+                 value="{% if display.date_of_birth %}{{ display.date_of_birth|date:'F j, Y' }}{% endif %}"
+                 placeholder="Select date" readonly autocomplete="off"
+                 class="personal-field w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Sex</label>
+        <div class="relative">
+          <select name="sex" disabled
+                  class="personal-field w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+            <option value="M" {% if display.sex == 'M' %}selected{% endif %}>Male</option>
+            <option value="F" {% if display.sex == 'F' %}selected{% endif %}>Female</option>
+          </select>
+          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div></div>
+      <div class="flex justify-end">
+        {% if pending_change %}
+        <button type="button" disabled
+                class="bg-gray-100 border border-gray-200 text-muted text-sm font-semibold px-8 py-2 rounded-full w-full cursor-not-allowed">
+          Pending Review
+        </button>
+        {% else %}
+        <button type="button" id="edit-personal-btn"
+                class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition w-full">
+          Edit Personal Information
+        </button>
+        <button type="button" id="submit-personal-btn"
+                class="hidden bg-amber border border-amber text-white text-sm font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition w-full">
+          Submit &amp; Confirm
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if pending_change %}
+    <p class="text-xs text-red-500 italic mt-3">
+      Change of Personal Information pending. Changes may take up to 2 business days to be evaluated by EasyHire Administrators.
+    </p>
+    {% else %}
+    <p class="text-xs text-muted italic mt-3">
+      To protect the integrity of our website, changes to Personal Information require a valid ID and are subject to review by PESO.
+    </p>
+    {% endif %}
+  </form>
+  {% endwith %}
+
+  {% if not pending_change %}
+  <!-- Confirmation modal: warn about needing an ID -->
+  <div id="edit-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" data-close-edit-confirm></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+      <p class="text-primary font-bold text-base mb-2">Edit Personal Information</p>
+      <p class="text-muted text-sm leading-relaxed mb-5">
+        You're about to request a change of personal information. To ensure the integrity of EasyHire's website,
+        you will be required to submit a Valid ID. Kindly secure an ID before proceeding.
+      </p>
+      <div class="flex gap-3 justify-end">
+        <button type="button" data-close-edit-confirm
+                class="bg-gray-100 text-primary font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition text-sm">
+          Cancel
+        </button>
+        <button type="button" id="edit-confirm-proceed"
+                class="bg-amber text-white font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition text-sm">
+          Proceed
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ID upload modal -->
+  <div id="id-submit-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" data-close-id-submit></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+      <p class="text-primary font-bold text-base mb-2">Submit a Valid ID</p>
+      <p class="text-muted text-sm leading-relaxed mb-4">
+        Upload a clear photo or scan of any valid Philippine government ID. Accepted IDs include:
+        {% for id_name in valid_ph_ids %}{{ id_name }}{% if not forloop.last %}, {% endif %}{% if forloop.last %}.{% endif %}{% endfor %}
+      </p>
+
+      <div class="mb-4">
+        <button type="button" id="id-upload-btn"
+                class="w-full flex items-center justify-center gap-2 bg-surface border border-dashed border-taupe/60 text-primary text-sm font-semibold px-4 py-3 rounded-xl hover:bg-taupe/20 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          <span id="id-upload-label">Choose file (JPG, PNG, or PDF · max 10MB)</span>
+        </button>
+      </div>
+
+      <div class="flex gap-3 justify-end border-t border-gray-100 pt-4">
+        <button type="button" data-close-id-submit
+                class="bg-gray-100 text-primary font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition text-sm">
+          Cancel
+        </button>
+        <button type="button" id="id-submit-confirm" disabled
+                class="bg-amber text-white font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Account ───────────────────────────────────────────────── -->
+  <h2 class="text-lg font-bold text-primary mt-8 mb-3">Account</h2>
+  <ul class="space-y-2 text-sm">
+    <li>
+      <button type="button" id="open-password-modal"
+              class="text-primary hover:text-teal transition text-left">
+        Password
+      </button>
+    </li>
+    <li>
+      <button type="button" id="open-deactivate-modal"
+              class="text-primary hover:text-teal transition text-left">
+        Deactivate Account
+      </button>
+    </li>
+  </ul>
+
+  <!-- Password change modal -->
+  <div id="password-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" data-close-password></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+      <p class="text-primary font-bold text-base mb-4">Change Password</p>
+      <form id="password-form">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="block text-primary text-xs mb-1">Current Password</label>
+          <input type="password" name="current_password" required
+                 class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        </div>
+        <div class="mb-3">
+          <label class="block text-primary text-xs mb-1">New Password</label>
+          <input type="password" name="new_password" required minlength="8"
+                 class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+          <p class="text-xs text-muted mt-1">At least 8 characters.</p>
+        </div>
+        <div class="mb-4">
+          <label class="block text-primary text-xs mb-1">Confirm New Password</label>
+          <input type="password" name="confirm_password" required minlength="8"
+                 class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        </div>
+        <p id="password-error" class="text-xs text-red-500 mb-3 hidden"></p>
+        <div class="flex gap-3 justify-end">
+          <button type="button" data-close-password
+                  class="bg-gray-100 text-primary font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition text-sm">
+            Cancel
+          </button>
+          <button type="submit" id="password-submit"
+                  class="bg-amber text-white font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition text-sm">
+            Change Password
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Deactivation modal -->
+  <div id="deactivate-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" data-close-deactivate></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+      <p class="text-red-500 font-bold text-base mb-2">Deactivate your account?</p>
+      <p class="text-muted text-sm leading-relaxed mb-4">
+        You won't be able to log in, and your profile will be hidden from employers.
+        Your applications and history are kept so you can return later.
+      </p>
+      <p class="text-muted text-xs leading-relaxed mb-4">
+        To reactivate, or to request permanent deletion of your account, contact PESO Iloilo City.
+      </p>
+      <form id="deactivate-form">
+        {% csrf_token %}
+        <label class="block text-primary text-xs mb-1">
+          Enter your password to confirm:
+        </label>
+        <input type="password" name="confirm_password" required autocomplete="current-password"
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-red-400 transition mb-3">
+        <p id="deactivate-error" class="text-xs text-red-500 mb-3 hidden"></p>
+        <div class="flex gap-3 justify-end">
+          <button type="button" data-close-deactivate
+                  class="bg-gray-100 text-primary font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition text-sm">
+            Cancel
+          </button>
+          <button type="submit" id="deactivate-submit"
+                  class="bg-red-500 text-white font-semibold px-6 py-2 rounded-full hover:bg-red-600 transition text-sm">
+            Yes, deactivate
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Privacy & Preferences ─────────────────────────────────── -->
+  <h2 class="text-lg font-bold text-primary mt-8 mb-3">Privacy &amp; Preferences</h2>
+
+  <form id="privacy-form" method="POST" action="/settings/">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="privacy">
+
+    <p class="text-sm text-primary mb-2">Profile Visibility</p>
+    <div class="space-y-1.5 mb-5">
+      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+        <input type="radio" name="profile_visibility" value="public"
+               class="accent-primary w-3.5 h-3.5"
+               {% if profile.profile_visibility != 'hidden' %}checked{% endif %}>
+        Continue showing my profile to Employers after being tagged as Hired.
+      </label>
+      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+        <input type="radio" name="profile_visibility" value="hidden"
+               class="accent-primary w-3.5 h-3.5"
+               {% if profile.profile_visibility == 'hidden' %}checked{% endif %}>
+        Don't show my profile to Employers after being tagged as Hired.
+      </label>
+    </div>
+
+    <p class="text-sm text-primary mb-2">Sector Badge Visibility</p>
+    <div class="space-y-1.5">
+      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+        <input type="radio" name="sector_badge_visibility" value="public"
+               class="accent-primary w-3.5 h-3.5"
+               {% if profile.sector_badge_visibility != 'similar' and profile.sector_badge_visibility != 'hidden' %}checked{% endif %}>
+        Show All Employers
+      </label>
+      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+        <input type="radio" name="sector_badge_visibility" value="similar"
+               class="accent-primary w-3.5 h-3.5"
+               {% if profile.sector_badge_visibility == 'similar' %}checked{% endif %}>
+        Only Show Employers with Similar Badges
+      </label>
+      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+        <input type="radio" name="sector_badge_visibility" value="hidden"
+               class="accent-primary w-3.5 h-3.5"
+               {% if profile.sector_badge_visibility == 'hidden' %}checked{% endif %}>
+        Do Not Show
+      </label>
+    </div>
+  </form>
+
+  <!-- Auto-save toast for privacy radios -->
+  <div id="privacy-toast"
+       class="fixed bottom-6 right-6 bg-primary text-white text-sm font-semibold px-5 py-2.5 rounded-full shadow-lg opacity-0 transition-opacity duration-200 pointer-events-none">
+    Saved
+  </div>
+
+</div>
+
+{% block page_scripts %}
+<script>
+function getCookie(n) {
+  const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+  if (p.length === 2) return p.pop().split(';').shift();
+}
+
+// ── Personal Information: Edit -> warn -> unlock -> Submit -> pick ID -> POST ──
+(function() {
+  const editBtn   = document.getElementById('edit-personal-btn');
+  if (!editBtn) return;   // pending state: nothing to wire
+
+  const submitBtn = document.getElementById('submit-personal-btn');
+  const fields    = document.querySelectorAll('.personal-field');
+  const personalForm = document.getElementById('personal-form');
+  const idDocInput   = document.getElementById('personal-id-doc');
+
+  const editModal     = document.getElementById('edit-confirm-modal');
+  const editProceed   = document.getElementById('edit-confirm-proceed');
+  const idModal       = document.getElementById('id-submit-modal');
+  const idConfirm     = document.getElementById('id-submit-confirm');
+  const idUploadBtn   = document.getElementById('id-upload-btn');
+  const idUploadLabel = document.getElementById('id-upload-label');
+
+  function show(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+  function hide(m) { m.classList.add('hidden');    m.classList.remove('flex'); }
+
+  editBtn.addEventListener('click', function() { show(editModal); });
+  editModal.querySelectorAll('[data-close-edit-confirm]').forEach(function(el) {
+    el.addEventListener('click', function() { hide(editModal); });
+  });
+
+  editProceed.addEventListener('click', function() {
+    hide(editModal);
+    fields.forEach(function(f) { f.disabled = false; });
+    editBtn.classList.add('hidden');
+    submitBtn.classList.remove('hidden');
+  });
+
+  submitBtn.addEventListener('click', function() { show(idModal); });
+  idModal.querySelectorAll('[data-close-id-submit]').forEach(function(el) {
+    el.addEventListener('click', function() { hide(idModal); });
+  });
+
+  idUploadBtn.addEventListener('click', function() { idDocInput.click(); });
+
+  idDocInput.addEventListener('change', function() {
+    const f = idDocInput.files && idDocInput.files[0];
+    if (!f) { idConfirm.disabled = true; return; }
+    if (f.size > 10 * 1024 * 1024) {
+      idUploadLabel.textContent = 'File too large (max 10MB) — choose another';
+      idDocInput.value = '';
+      idConfirm.disabled = true;
+      return;
+    }
+    idUploadLabel.textContent = f.name;
+    idConfirm.disabled = false;
+  });
+
+  idConfirm.addEventListener('click', function() {
+    if (!idDocInput.files || !idDocInput.files[0]) return;
+    personalForm.submit();
+  });
+})();
+
+// ── Password change ───────────────────────────────────────────────────
+(function() {
+  const openBtn = document.getElementById('open-password-modal');
+  const modal   = document.getElementById('password-modal');
+  const form    = document.getElementById('password-form');
+  const errEl   = document.getElementById('password-error');
+  const submit  = document.getElementById('password-submit');
+
+  function show() { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  function hide() {
+    modal.classList.add('hidden'); modal.classList.remove('flex');
+    form.reset(); errEl.classList.add('hidden'); errEl.textContent = '';
+  }
+
+  openBtn.addEventListener('click', show);
+  modal.querySelectorAll('[data-close-password]').forEach(function(el) {
+    el.addEventListener('click', hide);
+  });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    submit.disabled = true;
+    fetch('/settings/password/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      body: new FormData(form),
+    }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
+      .then(function(pair){
+        submit.disabled = false;
+        const [ok, d] = pair;
+        if (ok && d.ok) {
+          hide();
+          const toast = document.getElementById('privacy-toast');
+          toast.textContent = 'Password updated';
+          toast.classList.remove('opacity-0'); toast.classList.add('opacity-100');
+          setTimeout(function() {
+            toast.classList.add('opacity-0'); toast.classList.remove('opacity-100');
+            toast.textContent = 'Saved';
+          }, 1600);
+        } else {
+          errEl.textContent = (d && d.error) || 'Something went wrong.';
+          errEl.classList.remove('hidden');
+        }
+      }).catch(function(){ submit.disabled = false; });
+  });
+})();
+
+// ── Account deactivation ──────────────────────────────────────────────
+(function() {
+  const openBtn = document.getElementById('open-deactivate-modal');
+  const modal   = document.getElementById('deactivate-modal');
+  const form    = document.getElementById('deactivate-form');
+  const errEl   = document.getElementById('deactivate-error');
+  const submit  = document.getElementById('deactivate-submit');
+
+  function show() { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  function hide() {
+    modal.classList.add('hidden'); modal.classList.remove('flex');
+    form.reset(); errEl.classList.add('hidden'); errEl.textContent = '';
+  }
+
+  openBtn.addEventListener('click', show);
+  modal.querySelectorAll('[data-close-deactivate]').forEach(function(el) {
+    el.addEventListener('click', hide);
+  });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    submit.disabled = true;
+    fetch('/settings/deactivate/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      body: new FormData(form),
+    }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
+      .then(function(pair){
+        const [ok, d] = pair;
+        if (ok && d.ok) {
+          window.location = d.redirect || '/';
+        } else {
+          submit.disabled = false;
+          errEl.textContent = (d && d.error) || 'Something went wrong.';
+          errEl.classList.remove('hidden');
+        }
+      }).catch(function(){ submit.disabled = false; });
+  });
+})();
+
+// ── Privacy & Preferences: auto-save on radio change ──────────────────
+(function() {
+  const form  = document.getElementById('privacy-form');
+  const toast = document.getElementById('privacy-toast');
+  let toastTimer = null;
+
+  function showToast() {
+    toast.classList.remove('opacity-0');
+    toast.classList.add('opacity-100');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() {
+      toast.classList.add('opacity-0');
+      toast.classList.remove('opacity-100');
+    }, 1400);
+  }
+
+  form.addEventListener('change', function(e) {
+    if (e.target.type !== 'radio') return;
+    const data = new FormData(form);
+    fetch('/settings/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      body: data,
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.ok) showToast();
+    });
+  });
+})();
+</script>
+{% endblock %}
+
+{% endblock %}
+{% endwith %}

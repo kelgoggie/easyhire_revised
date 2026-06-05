@@ -32,35 +32,25 @@ def notify_match(company, jobseeker, job):
     )
 
 
-def notify_jobseeker_liked_job(jobseeker, job):
+def refresh_jobseeker_liked_job_notification(job):
+    """Recompute the single grouped 'X liked your job post' notification
+    for this job's employer. Call after any like/un-like change.
+    Stores just the name preview (e.g. 'Juan and Janice' or 'Juan and 14 others');
+    the verb 'liked your job post.' is appended at render time."""
     from .models import Notification
     from apps.jobseekers.models import JobInteraction
 
-    employer_user = job.company.representatives.first().user
-    if not employer_user:
+    rep = job.company.representatives.first()
+    if not rep or not rep.user:
         return
+    employer_user = rep.user
 
-    # Get all likers for this job
-    liked_profiles = list(
-        JobInteraction.objects.filter(
-            job=job, interaction_type='liked'
-        ).select_related('jobseeker').order_by('created_at')
+    likers = list(
+        JobInteraction.objects.filter(job=job, interaction_type=JobInteraction.LIKED)
+        .select_related('jobseeker').order_by('created_at')
     )
+    count = len(likers)
 
-    count = len(liked_profiles)
-    if count == 0:
-        return
-
-    # Build preview text
-    names = [f"{li.jobseeker.first_name}" for li in liked_profiles[:2]]
-    if count > 2:
-        preview = f"{', '.join(names)} and {count - 2}+ others liked your job"
-    elif count == 2:
-        preview = f"{names[0]} and {names[1]} liked your job"
-    else:
-        preview = f"{names[0]} liked your job"
-
-    # Update existing grouped notification or create new one
     existing = Notification.objects.filter(
         recipient=employer_user,
         notif_type=Notification.JOBSEEKERS_LIKED_JOB,
@@ -68,10 +58,24 @@ def notify_jobseeker_liked_job(jobseeker, job):
         is_read=False,
     ).first()
 
+    if count == 0:
+        if existing:
+            existing.delete()
+        return
+
+    first = likers[0].jobseeker.first_name
+    if count == 1:
+        preview = first
+    elif count == 2:
+        preview = f"{first} and {likers[1].jobseeker.first_name}"
+    else:
+        others = count - 1
+        preview = f"{first} and {others} other{'s' if others != 1 else ''}"
+
     if existing:
         existing.liker_count = count
         existing.liker_preview = preview
-        existing.save()
+        existing.save(update_fields=['liker_count', 'liker_preview'])
     else:
         Notification.objects.create(
             recipient=employer_user,
@@ -80,3 +84,7 @@ def notify_jobseeker_liked_job(jobseeker, job):
             liker_count=count,
             liker_preview=preview,
         )
+
+
+def notify_jobseeker_liked_job(jobseeker, job):
+    refresh_jobseeker_liked_job_notification(job)

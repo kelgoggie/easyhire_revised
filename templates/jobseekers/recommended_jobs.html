@@ -10,11 +10,11 @@
   <div class="max-w-5xl mx-auto py-8">
 
     <!-- Search bar -->
-    <form method="GET" action="/jobs/for-you/" class="mb-6">
-      <input type="hidden" name="tab" value="{{ tab }}">
-      <input type="hidden" name="sort" value="{{ sort }}">
+    <form id="search-form" method="GET" action="/jobs/for-you/" class="mb-6">
+      <input type="hidden" name="tab"  id="search-tab"  value="{{ tab }}">
+      <input type="hidden" name="sort" id="search-sort" value="{{ sort }}">
       <div class="relative max-w-xl mx-auto">
-        <input type="text" name="q" value="{{ search|default:'' }}" placeholder="Search Jobs..."
+        <input type="text" name="q" id="search-q" value="{{ search|default:'' }}" placeholder="Search Jobs..."
                class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-3 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
         <button type="submit"
                 class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
@@ -25,25 +25,48 @@
       </div>
     </form>
 
-    <!-- Heading + Sort row -->
-    <h1 class="text-4xl font-extrabold text-primary mb-4">Jobs <span class="text-primary">For You</span></h1>
+    <!-- Heading -->
+    <h1 id="page-heading" class="text-4xl font-extrabold text-primary mb-4">
+      {% if tab == 'liked' %}Liked <span>Jobs</span>
+      {% elif tab == 'hidden' %}Hidden <span>Jobs</span>
+      {% else %}Jobs <span>For You</span>{% endif %}
+    </h1>
 
-    <div class="flex items-center gap-2 mb-6">
+    <!-- Tabs + Sort -->
+    <div class="flex items-center justify-between gap-4 mb-6 flex-wrap">
+      <div class="flex items-center gap-1.5" id="tab-bar">
+        <button type="button" data-tab="for_you"
+                class="tab-btn px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab != 'liked' and tab != 'hidden' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+          For You
+        </button>
+        <button type="button" data-tab="liked"
+                class="tab-btn px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'liked' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+          Liked
+        </button>
+        <button type="button" data-tab="hidden"
+                class="tab-btn px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'hidden' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+          Hidden
+        </button>
+      </div>
+
       <div class="relative" id="sort-dropdown-wrapper">
         <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
                 class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/>
           </svg>
-          Sort by...
+          <span id="sort-label">
+            {% if sort == 'date_new' %}Recently Posted
+            {% elif sort == 'date_old' %}Oldest First
+            {% elif sort == 'nearest' %}Nearest to Me
+            {% else %}Best Match{% endif %}
+          </span>
         </button>
-        <div id="sort-menu" class="hidden absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
-          <a href="?tab={{ tab }}&sort=match&q={{ search }}"
-             class="block px-4 py-2 text-sm {% if sort == 'match' or not sort %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Best Match</a>
-          <a href="?tab={{ tab }}&sort=date_new&q={{ search }}"
-             class="block px-4 py-2 text-sm {% if sort == 'date_new' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Recently Posted</a>
-          <a href="?tab={{ tab }}&sort=date_old&q={{ search }}"
-             class="block px-4 py-2 text-sm {% if sort == 'date_old' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest First</a>
+        <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
+          <button type="button" data-sort="match"    class="sort-opt block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">Best Match</button>
+          <button type="button" data-sort="nearest"  class="sort-opt block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">Nearest to Me</button>
+          <button type="button" data-sort="date_new" class="sort-opt block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">Recently Posted</button>
+          <button type="button" data-sort="date_old" class="sort-opt block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">Oldest First</button>
         </div>
       </div>
     </div>
@@ -61,119 +84,15 @@
     </div>
     {% endif %}
 
-    <!-- Job Cards Grid -->
-    {% if ranked_jobs %}
-    <div class="grid grid-cols-4 gap-4">
-      {% for item in ranked_jobs %}
-      <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
-
-        <!-- Top bar: hide button (left) + match badge (right) -->
-        <div class="flex items-start justify-between px-4 pt-3 pb-1">
-          <!-- Hide -->
-          <form method="POST" action="/jobs/{{ item.job.id }}/hide/">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="/jobs/for-you/?tab={{ tab }}&sort={{ sort }}">
-            <button type="submit" title="Hide this job"
-                    class="text-gray-300 hover:text-red-400 transition">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88"/>
-              </svg>
-            </button>
-          </form>
-
-          <!-- Match badge (clickable for modal) -->
-          <div class="cursor-pointer" onclick="openJobModal({{ item.job.id }})">
-            {% match_badge item.score %}
-          </div>
-        </div>
-
-        <!-- Job info (clickable) -->
-        <div class="px-4 pb-3 flex-1 cursor-pointer" onclick="openJobModal({{ item.job.id }})">
-          <p class="font-bold text-primary text-base leading-tight mb-0.5">{{ item.job.title }}</p>
-          <p class="text-primary text-xs mb-0.5">{{ item.job.company.name }}</p>
-          <p class="text-muted text-xs italic mb-3">{{ item.job.location_display }}</p>
-
-          <!-- Requirement tags -->
-          <div class="flex flex-col gap-1.5">
-
-            {% if item.job.education_requirement %}
-            <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20 w-fit max-w-full">
-              <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
-              <span class="truncate">{{ item.job.education_requirement.get_level_display }}</span>
-            </span>
-            {% endif %}
-
-            {% with skills=item.job.skill_requirements.all %}
-            {% if skills %}
-            <div class="grid grid-cols-2 gap-1">
-              {% for skill in skills|slice:":2" %}
-              <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2 py-0.5 rounded-full border border-green-200 truncate">
-                <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
-                <span class="truncate">{{ skill.name }}</span>
-              </span>
-              {% endfor %}
-            </div>
-            {% endif %}
-            {% endwith %}
-
-            {% if item.job.experience_requirement %}
-            <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2.5 py-0.5 rounded-full border border-purple-200 w-fit max-w-full">
-              <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v4H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2h-3V4a3 3 0 00-3-3zm-1 7V4a1 1 0 112 0v4h-2z"/></svg>
-              <span class="truncate">{{ item.job.experience_requirement.display_experience }}</span>
-            </span>
-            {% endif %}
-
-            {% with certs=item.job.certification_requirements.all %}
-            {% if certs %}
-            <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs px-2.5 py-0.5 rounded-full border border-gray-200 w-fit max-w-full">
-              <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-              <span class="truncate">{{ certs.0.name }}</span>
-            </span>
-            {% endif %}
-            {% endwith %}
-
-          </div>
-        </div>
-
-        <!-- Bottom: heart (centered-right) + Send Application -->
-        <div class="px-4 pb-4 pt-1">
-          <div class="flex justify-end mb-2">
-            <form method="POST" action="/jobs/{{ item.job.id }}/save/">
-              {% csrf_token %}
-              <input type="hidden" name="next" value="/jobs/for-you/?tab={{ tab }}&sort={{ sort }}">
-              <button type="submit"
-                      class="w-6 h-6 flex items-center justify-center transition
-                             {% if item.job.id in liked_ids %}text-red-400{% else %}text-gray-300 hover:text-red-400{% endif %}">
-                <svg class="w-4 h-4" viewBox="0 0 24 24"
-                     {% if item.job.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
-                  <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
-                </svg>
-              </button>
-            </form>
-          </div>
-          <a href="/jobs/view/{{ item.job.id }}/"
-             class="block w-full text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
-            Send Application
-          </a>
-        </div>
-
-      </div>
-      {% endfor %}
+    <!-- Cards grid (swapped via AJAX) -->
+    <div id="jobs-grid-wrapper">
+      {% include "jobseekers/_jobs_grid.html" %}
     </div>
-
-    {% else %}
-    <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
-      <p class="text-muted text-sm">
-        {% if search %}No jobs found for "{{ search }}".
-        {% else %}No open jobs available right now. Check back soon!{% endif %}
-      </p>
-    </div>
-    {% endif %}
 
   </div>
 </div>
 
-<!-- Job Detail Modal (kept for future use) -->
+<!-- Job Detail Modal -->
 <div id="job-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
   <div class="absolute inset-0 bg-black/40" onclick="closeJobModal()"></div>
   <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto z-10">
@@ -199,23 +118,189 @@
 </div>
 
 {% block page_scripts %}
+{{ jobs_json|json_script:"jobs-json-data" }}
+{{ posted_map|json_script:"posted-map-data" }}
 <script>
-const jobDataList = {{ jobs_json|safe }};
-const postedMap   = {{ posted_map|safe }};
-const jobData     = {};
+let currentTab  = '{{ tab }}';
+let currentSort = '{{ sort }}';
+let currentQ    = '{{ search|escapejs }}';
+let jobData     = {};
+let postedMap   = JSON.parse(document.getElementById('posted-map-data').textContent);
 
-jobDataList.forEach(function(job) {
-    if (postedMap[job.id]) {
-        const d = new Date(postedMap[job.id]);
-        const days = Math.floor((new Date() - d) / 86400000);
-        job.posted = days === 0 ? 'today' : days === 1 ? '1 day ago' : days + ' days ago';
-    } else { job.posted = ''; }
-    jobData[job.id] = job;
+function rebuildJobData(list) {
+    jobData = {};
+    list.forEach(function(job) {
+        if (postedMap[job.id]) {
+            const d    = new Date(postedMap[job.id]);
+            const days = Math.floor((new Date() - d) / 86400000);
+            job.posted = days === 0 ? 'today' : days === 1 ? '1 day ago' : days + ' days ago';
+        } else { job.posted = ''; }
+        jobData[job.id] = job;
+    });
+}
+rebuildJobData(JSON.parse(document.getElementById('jobs-json-data').textContent));
+
+function getCookie(name) {
+    const v = '; ' + document.cookie, p = v.split('; ' + name + '=');
+    if (p.length === 2) return p.pop().split(';').shift();
+}
+
+// ── Like / Unlike ─────────────────────────────────────────────────────
+function toggleLike(jobId, btn) {
+    btn.disabled = true;
+    fetch('/jobs/' + jobId + '/save/', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+    }).then(function(r){ return r.json(); }).then(function(data){
+        btn.disabled = false;
+        const svg = btn.querySelector('svg');
+        if (data.liked) {
+            btn.classList.remove('text-gray-300', 'hover:text-red-400');
+            btn.classList.add('text-red-400');
+            svg.setAttribute('fill', 'currentColor');
+            svg.removeAttribute('stroke');
+            svg.removeAttribute('stroke-width');
+        } else {
+            btn.classList.add('text-gray-300', 'hover:text-red-400');
+            btn.classList.remove('text-red-400');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.setAttribute('stroke-width', '2');
+            if (currentTab === 'liked') {
+                btn.closest('.job-card').remove();
+                checkEmptyAfterRemove();
+            }
+        }
+    }).catch(function(){ btn.disabled = false; });
+}
+
+// ── Hide / Unhide ─────────────────────────────────────────────────────
+function toggleHide(jobId, btn) {
+    btn.disabled = true;
+    fetch('/jobs/' + jobId + '/hide/', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+    }).then(function(r){ return r.json(); }).then(function(data){
+        btn.disabled = false;
+        const card = btn.closest('.job-card');
+        if (data.hidden && currentTab !== 'hidden') {
+            card.remove();
+            checkEmptyAfterRemove();
+        } else if (!data.hidden && currentTab === 'hidden') {
+            card.remove();
+            checkEmptyAfterRemove();
+        } else {
+            if (data.hidden) {
+                btn.classList.remove('text-gray-300', 'hover:text-red-400');
+                btn.classList.add('text-primary');
+                btn.title = 'Unhide this job';
+            } else {
+                btn.classList.add('text-gray-300', 'hover:text-red-400');
+                btn.classList.remove('text-primary');
+                btn.title = 'Hide this job';
+            }
+        }
+    }).catch(function(){ btn.disabled = false; });
+}
+
+function checkEmptyAfterRemove() {
+    const wrapper = document.getElementById('jobs-grid-wrapper');
+    if (!wrapper.querySelector('.job-card')) {
+        reloadGrid();
+    }
+}
+
+// ── Tab + Sort + Search → AJAX grid swap ──────────────────────────────
+function buildUrl(extra) {
+    const url = new URL(window.location.origin + '/jobs/for-you/');
+    url.searchParams.set('tab',  currentTab);
+    url.searchParams.set('sort', currentSort);
+    if (currentQ) url.searchParams.set('q', currentQ);
+    return url;
+}
+
+function reloadGrid(pushState) {
+    if (pushState === undefined) pushState = false;
+    const url = buildUrl();
+    if (pushState) history.pushState({tab: currentTab, sort: currentSort, q: currentQ}, '', url);
+
+    const wrapper = document.getElementById('jobs-grid-wrapper');
+    wrapper.innerHTML = '<div class="flex justify-center py-12"><div class="w-6 h-6 border-2 border-teal border-t-transparent rounded-full animate-spin"></div></div>';
+
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            wrapper.innerHTML = data.html;
+            postedMap = data.posted_map || {};
+            rebuildJobData(data.jobs_json || []);
+            updateHeading();
+        });
+}
+
+function updateHeading() {
+    const h = document.getElementById('page-heading');
+    if (currentTab === 'liked')       h.innerHTML = 'Liked <span>Jobs</span>';
+    else if (currentTab === 'hidden') h.innerHTML = 'Hidden <span>Jobs</span>';
+    else                              h.innerHTML = 'Jobs <span>For You</span>';
+}
+
+function updateTabUI() {
+    document.querySelectorAll('.tab-btn').forEach(function(b){
+        const isActive = b.dataset.tab === currentTab
+            || (b.dataset.tab === 'for_you' && currentTab !== 'liked' && currentTab !== 'hidden');
+        b.classList.toggle('bg-primary',  isActive);
+        b.classList.toggle('text-white',  isActive);
+        b.classList.toggle('bg-white',   !isActive);
+        b.classList.toggle('text-muted', !isActive);
+        b.classList.toggle('border',     !isActive);
+        b.classList.toggle('border-gray-200', !isActive);
+        b.classList.toggle('hover:text-primary', !isActive);
+    });
+    document.getElementById('search-tab').value = currentTab;
+}
+
+document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+        const newTab = b.dataset.tab;
+        if (newTab === currentTab) return;
+        currentTab = newTab;
+        updateTabUI();
+        reloadGrid(true);
+    });
 });
 
+document.querySelectorAll('.sort-opt').forEach(function(b){
+    b.addEventListener('click', function(){
+        currentSort = b.dataset.sort;
+        document.getElementById('sort-label').textContent = b.textContent.trim();
+        document.getElementById('sort-menu').classList.add('hidden');
+        document.getElementById('search-sort').value = currentSort;
+        reloadGrid(true);
+    });
+});
+
+document.getElementById('search-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    currentQ = document.getElementById('search-q').value.trim();
+    reloadGrid(true);
+});
+
+window.addEventListener('popstate', function(e){
+    const url = new URL(window.location);
+    currentTab  = url.searchParams.get('tab')  || 'for_you';
+    currentSort = url.searchParams.get('sort') || 'match';
+    currentQ    = url.searchParams.get('q')    || '';
+    document.getElementById('search-q').value = currentQ;
+    document.getElementById('search-tab').value = currentTab;
+    document.getElementById('search-sort').value = currentSort;
+    updateTabUI();
+    reloadGrid(false);
+});
+
+// ── Job Detail Modal ──────────────────────────────────────────────────
 function openJobModal(jobId) {
     const job = jobData[jobId];
-    if (!job) return;
+    if (!job) { window.location = '/jobs/view/' + jobId + '/'; return; }
     document.getElementById('modal-title').textContent = job.title;
     document.getElementById('modal-company').textContent = job.company + ' · ' + job.location;
     const scoreEl = document.getElementById('modal-score');
@@ -231,7 +316,6 @@ function openJobModal(jobId) {
     body += '</div></div><p class="text-xs text-muted">Posted ' + job.posted + ' · ' + job.slots + ' slot' + (job.slots !== 1 ? 's' : '') + ' available</p>';
     document.getElementById('modal-body').innerHTML = body;
 
-    const tab = '{{ tab }}', sort = '{{ sort }}';
     document.getElementById('modal-actions').innerHTML =
         '<a href="/jobs/view/' + jobId + '/" class="flex items-center gap-2 bg-primary text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-teal transition">View &amp; Apply</a>';
 

@@ -1,5 +1,14 @@
 from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
 from .models import Province, CityMunicipality, Barangay
+
+
+@login_required
+def help_view(request):
+    if request.user.is_employer:
+        return render(request, 'employers/help.html')
+    return render(request, 'jobseekers/help.html')
 
 
 def provinces_api(request):

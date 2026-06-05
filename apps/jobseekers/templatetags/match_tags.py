@@ -29,6 +29,32 @@ def _tier(score):
     return TIERS[-1][1:]
 
 
+_MONTH_ABBR = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+
+@register.filter
+def month_name(value):
+    """Render a stored month value as 3-letter abbreviation (e.g. '2' -> 'Feb').
+
+    Accepts: numeric strings ('2', '02'), ints (2), already-named months
+    ('Feb', 'February'), or empty -> returns empty string.
+    """
+    if value in (None, '', 0):
+        return ''
+    try:
+        n = int(str(value).lstrip('0') or '0')
+        if 1 <= n <= 12:
+            return _MONTH_ABBR[n]
+    except (TypeError, ValueError):
+        pass
+    s = str(value).strip()
+    for i, abbr in enumerate(_MONTH_ABBR):
+        if i and (s.lower() == abbr.lower() or s.lower().startswith(abbr.lower())):
+            return abbr
+    return s
+
+
 @register.inclusion_tag('jobseekers/_match_badge.html')
 def match_badge(score, compact=False):
     """Render a match score badge.

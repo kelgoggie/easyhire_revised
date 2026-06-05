@@ -1,0 +1,100 @@
+{% load match_tags %}
+{% if ranked_jobs %}
+<div class="grid grid-cols-4 gap-4">
+  {% for item in ranked_jobs %}
+  <div class="job-card bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col"
+       data-job-id="{{ item.job.id }}">
+
+    <!-- Top bar: hide button (left) + match badge (right) -->
+    <div class="flex items-start justify-between px-4 pt-3 pb-1">
+      <button type="button" title="{% if item.job.id in hidden_ids %}Unhide{% else %}Hide{% endif %} this job"
+              class="hide-btn transition {% if item.job.id in hidden_ids %}text-primary{% else %}text-gray-300 hover:text-red-400{% endif %}"
+              onclick="toggleHide({{ item.job.id }}, this)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88"/>
+        </svg>
+      </button>
+
+      <div class="cursor-pointer" onclick="openJobModal({{ item.job.id }})">
+        {% match_badge item.score %}
+      </div>
+    </div>
+
+    <!-- Job info (clickable) -->
+    <div class="px-4 pb-3 flex-1 cursor-pointer" onclick="openJobModal({{ item.job.id }})">
+      <p class="font-bold text-primary text-base leading-tight mb-0.5">{{ item.job.title }}</p>
+      <p class="text-primary text-xs mb-0.5">
+        <a href="/companies/{{ item.job.company.id }}/" onclick="event.stopPropagation()" class="hover:text-teal transition">{{ item.job.company.name }}</a>
+      </p>
+      <p class="text-muted text-xs italic mb-3">{{ item.job.location_display }}</p>
+
+      <div class="flex flex-col gap-1.5">
+        {% if item.job.education_requirement %}
+        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20 w-fit max-w-full">
+          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+          <span class="truncate">{{ item.job.education_requirement.get_level_display }}</span>
+        </span>
+        {% endif %}
+
+        {% with skills=item.job.skill_requirements.all %}
+        {% if skills %}
+        <div class="grid grid-cols-2 gap-1">
+          {% for skill in skills|slice:":2" %}
+          <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2 py-0.5 rounded-full border border-green-200 truncate">
+            <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+            <span class="truncate">{{ skill.name }}</span>
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if item.job.experience_requirement %}
+        <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2.5 py-0.5 rounded-full border border-purple-200 w-fit max-w-full">
+          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span class="truncate">{{ item.job.experience_requirement.display_experience }}</span>
+        </span>
+        {% endif %}
+
+        {% with certs=item.job.certification_requirements.all %}
+        {% if certs %}
+        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs px-2.5 py-0.5 rounded-full border border-gray-200 w-fit max-w-full">
+          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <span class="truncate">{{ certs.0.name }}</span>
+        </span>
+        {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+
+    <!-- Bottom: heart + Send Application -->
+    <div class="px-4 pb-4 pt-1">
+      <div class="flex justify-end mb-2">
+        <button type="button" title="{% if item.job.id in liked_ids %}Unlike{% else %}Like{% endif %} this job"
+                class="like-btn w-6 h-6 flex items-center justify-center transition {% if item.job.id in liked_ids %}text-red-400{% else %}text-gray-300 hover:text-red-400{% endif %}"
+                onclick="toggleLike({{ item.job.id }}, this)">
+          <svg class="w-4 h-4" viewBox="0 0 24 24"
+               {% if item.job.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
+            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+          </svg>
+        </button>
+      </div>
+      <a href="/jobs/view/{{ item.job.id }}/"
+         class="block w-full text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
+        Send Application
+      </a>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+  <p class="text-muted text-sm">
+    {% if search %}No jobs found for &ldquo;{{ search }}&rdquo;.
+    {% elif tab == 'liked' %}You haven't liked any jobs yet.
+    {% elif tab == 'hidden' %}You haven't hidden any jobs yet.
+    {% else %}No open jobs available right now. Check back soon!{% endif %}
+  </p>
+</div>
+{% endif %}

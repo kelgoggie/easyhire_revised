@@ -134,6 +134,40 @@ class WorkExperience(models.Model):
         db_table = "jobseeker_experiences"
 
 
+class PersonalInfoChangeRequest(models.Model):
+    """Jobseeker-submitted edit to their core personal info, pending PESO review."""
+    STATUS_PENDING  = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING,  "Pending"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    profile       = models.ForeignKey(JobseekerProfile, on_delete=models.CASCADE, related_name="info_change_requests")
+    first_name    = models.CharField(max_length=100)
+    middle_name   = models.CharField(max_length=100, blank=True, default="")
+    last_name     = models.CharField(max_length=100)
+    suffix        = models.CharField(max_length=20,  blank=True, default="")
+    date_of_birth = models.DateField(null=True, blank=True)
+    sex           = models.CharField(max_length=10,  blank=True, default="")
+    id_document   = models.FileField(upload_to='personal_info_ids/', null=True, blank=True,
+        help_text="Uploaded photo/scan of a valid Philippine ID for PESO verification.")
+    id_type       = models.CharField(max_length=50, blank=True, default='',
+        help_text="Optional — admin notes which ID type was provided. The jobseeker no longer picks this; they just upload.")
+    status        = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    submitted_at  = models.DateTimeField(auto_now_add=True)
+    reviewed_at   = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "personal_info_change_requests"
+        ordering = ["-submitted_at"]
+
+    def __str__(self):
+        return f"{self.profile} change request ({self.status})"
+
+
 class JobInteraction(models.Model):
     LIKED = "liked"
     HIDDEN = "hidden"

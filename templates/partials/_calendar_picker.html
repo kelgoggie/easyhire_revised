@@ -1,7 +1,9 @@
-{# Shared calendar popup + auto-wiring script.
-   Usage: <input type="text" data-datepicker="date">   → MM/DD/YYYY
-          <input type="text" data-datepicker="month">  → YYYY-MM
-   Optional: data-min-age="15", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-DD" #}
+{% comment %}
+Shared calendar popup + auto-wiring script.
+Usage: <input type="text" data-datepicker="date">   -> MM/DD/YYYY
+       <input type="text" data-datepicker="month">  -> YYYY-MM
+Optional: data-min-age="15", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-DD"
+{% endcomment %}
 <div id="dp-backdrop" class="fixed inset-0 z-40 hidden"></div>
 <div id="dp-popup" class="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 hidden" style="width:280px;">
     <div class="flex items-center justify-between mb-3">
@@ -46,12 +48,24 @@
       const mm = v.match(/^(\d{4})-(\d{1,2})$/);
       if (mm) return { year:+mm[1], month:+mm[2]-1 };
     } else {
-      const mm = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      // MM/DD/YYYY
+      let mm = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
       if (mm) return { year:+mm[3], month:+mm[1]-1, day:+mm[2] };
+      // "Month D, YYYY" (e.g. "April 3, 2002")
+      mm = v.match(/^([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})$/);
+      if (mm) {
+        const idx = MONTHS.findIndex(function(n){ return n.toLowerCase() === mm[1].toLowerCase(); });
+        if (idx >= 0) return { year:+mm[3], month:idx, day:+mm[2] };
+      }
     }
     return null;
   }
-  function fmtDate(y, m, d)  { return String(m+1).padStart(2,'0') + '/' + String(d).padStart(2,'0') + '/' + y; }
+  function fmtDate(y, m, d) {
+    if (activeInput && activeInput.dataset.displayFormat === 'long') {
+      return MONTHS[m] + ' ' + d + ', ' + y;
+    }
+    return String(m+1).padStart(2,'0') + '/' + String(d).padStart(2,'0') + '/' + y;
+  }
   function fmtMonth(y, m)    { return y + '-' + String(m+1).padStart(2,'0'); }
 
   function readBounds(input) {

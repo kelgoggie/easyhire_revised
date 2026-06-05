@@ -143,6 +143,205 @@ def profile_view(request):
     })
 
 
+# Allowed value sets for the privacy radios (kept here so the template and view agree).
+# Stored in CharField(max_length=10) so keep these short.
+# profile_visibility:  'public' = keep visible after hire, 'hidden' = hide after hire
+# sector_badge_visibility: 'public' = all employers, 'similar' = only employers with similar badges, 'hidden' = no employers
+PROFILE_VISIBILITY_VALUES      = {'public', 'hidden'}
+SECTOR_BADGE_VISIBILITY_VALUES = {'public', 'similar', 'hidden'}
+
+# Philippine government / school IDs offered when requesting a personal-info change.
+VALID_PH_IDS = [
+    'PhilSys (National ID)',
+    'Philippine Passport',
+    "Driver's License",
+    'UMID (Unified Multi-Purpose ID)',
+    'SSS ID',
+    'GSIS eCard',
+    'PRC ID',
+    'Postal ID',
+    "Voter's ID / Voter's Certification",
+    'School ID',
+    'PSA Birth Certificate',
+    'TIN ID',
+    'PhilHealth ID',
+    'Senior Citizen ID',
+    'PWD ID',
+    'Pag-IBIG Loyalty Card Plus',
+    'OFW iDOLE Card',
+]
+
+
+@login_required
+def settings_view(request):
+    if not request.user.is_jobseeker:
+        return redirect('/employers/dashboard/')
+    try:
+        profile = request.user.jobseeker_profile
+    except JobseekerProfile.DoesNotExist:
+        return redirect('/register/info/')
+
+    from apps.jobseekers.models import PersonalInfoChangeRequest
+    pending_change = PersonalInfoChangeRequest.objects.filter(
+        profile=profile, status=PersonalInfoChangeRequest.STATUS_PENDING
+    ).first()
+
+    saved_section = None
+
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+
+        if form_type == 'personal_change' and not pending_change:
+            id_doc = request.FILES.get('id_document')
+            if id_doc and id_doc.size <= 10 * 1024 * 1024:
+                dob = profile.date_of_birth
+                dob_raw = request.POST.get('date_of_birth', '').strip()
+                if dob_raw:
+                    for fmt in ('%m/%d/%Y', '%B %d, %Y'):
+                        try:
+                            dob = datetime.strptime(dob_raw, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+                sex = request.POST.get('sex', '').strip()
+                if sex not in {'M', 'F'}:
+                    sex = profile.sex
+                PersonalInfoChangeRequest.objects.create(
+                    profile=profile,
+                    first_name  = (request.POST.get('first_name')  or profile.first_name).strip(),
+                    middle_name = (request.POST.get('middle_name') or '').strip(),
+                    last_name   = (request.POST.get('last_name')   or profile.last_name).strip(),
+                    suffix      = (request.POST.get('suffix')      or '').strip(),
+                    date_of_birth = dob,
+                    sex         = sex,
+                    id_document = id_doc,
+                )
+                return redirect('/settings/')
+
+        elif form_type == 'privacy':
+            pv = request.POST.get('profile_visibility', '').strip()
+            bv = request.POST.get('sector_badge_visibility', '').strip()
+            updates = {}
+            if pv in PROFILE_VISIBILITY_VALUES:
+                updates['profile_visibility'] = pv
+            if bv in SECTOR_BADGE_VISIBILITY_VALUES:
+                updates['sector_badge_visibility'] = bv
+            if updates:
+                for k, v in updates.items():
+                    setattr(profile, k, v)
+                profile.save(update_fields=list(updates.keys()))
+            if _is_ajax(request):
+                return JsonResponse({'ok': True, **updates})
+            saved_section = 'privacy'
+
+    return render(request, 'jobseekers/settings.html', {
+        'profile': profile,
+        'pending_change': pending_change,
+        'saved_section': saved_section,
+        'valid_ph_ids': VALID_PH_IDS,
+    })
+
+
+@login_required
+def change_password(request):
+    if request.method != 'POST':
+        return redirect('/settings/')
+    from django.contrib.auth import update_session_auth_hash
+    user = request.user
+    current = request.POST.get('current_password', '')
+    new1    = request.POST.get('new_password', '')
+    new2    = request.POST.get('confirm_password', '')
+
+    if not user.check_password(current):
+        return JsonResponse({'ok': False, 'error': 'Current password is incorrect.'}, status=400)
+    if len(new1) < 8:
+        return JsonResponse({'ok': False, 'error': 'New password must be at least 8 characters.'}, status=400)
+    if new1 != new2:
+        return JsonResponse({'ok': False, 'error': "New passwords don't match."}, status=400)
+    if new1 == current:
+        return JsonResponse({'ok': False, 'error': 'New password must differ from current.'}, status=400)
+
+    user.set_password(new1)
+    user.save(update_fields=['password'])
+    update_session_auth_hash(request, user)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def company_public(request, pk):
+    """Jobseeker-facing read-only company profile (mirrors employer-side layout)."""
+    from django.db.models import Count, Q as DjQ
+    from apps.employers.models import Company
+    company = get_object_or_404(Company, pk=pk)
+
+    jobs = (
+        JobPosting.objects.filter(company=company, status=JobPosting.STATUS_OPEN)
+        .annotate(
+            liked_by_count=Count(
+                'jobseeker_interactions',
+                filter=DjQ(jobseeker_interactions__interaction_type='liked'),
+                distinct=True,
+            ),
+        )
+        .select_related('experience_requirement')
+        .prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
+        .order_by('-created_at')
+    )
+    followers_count = company.followers.count() if hasattr(company, 'followers') else 0
+
+    is_following = False
+    rep_phone = ''
+    try:
+        if request.user.is_jobseeker:
+            is_following = request.user.jobseeker_profile.followed_companies.filter(pk=company.pk).exists()
+    except Exception:
+        pass
+    rep = company.representatives.first()
+    if rep:
+        rep_phone = getattr(rep, 'phone', '') or ''
+
+    return render(request, 'jobseekers/company_public.html', {
+        'company': company,
+        'jobs': jobs,
+        'followers_count': followers_count,
+        'is_following': is_following,
+        'rep_phone': rep_phone,
+    })
+
+
+@login_required
+def follow_company(request, pk):
+    if request.method != 'POST' or not request.user.is_jobseeker:
+        return JsonResponse({'ok': False}, status=400)
+    from apps.employers.models import Company
+    company = get_object_or_404(Company, pk=pk)
+    profile = request.user.jobseeker_profile
+    if profile.followed_companies.filter(pk=company.pk).exists():
+        profile.followed_companies.remove(company)
+        following = False
+    else:
+        profile.followed_companies.add(company)
+        following = True
+    followers_count = company.followers.count() if hasattr(company, 'followers') else 0
+    return JsonResponse({'ok': True, 'following': following, 'followers_count': followers_count})
+
+
+@login_required
+def deactivate_account(request):
+    if request.method != 'POST':
+        return redirect('/settings/')
+    from django.contrib.auth import logout
+    password = request.POST.get('confirm_password') or ''
+    if not request.user.check_password(password):
+        return JsonResponse({'ok': False, 'error': "Password is incorrect."}, status=400)
+
+    user = request.user
+    user.is_active = False
+    user.save(update_fields=['is_active'])
+    logout(request)
+    return JsonResponse({'ok': True, 'redirect': '/'})
+
+
 @login_required
 def profile_picture_upload(request):
     """Accepts an uploaded (already-cropped) image and saves it."""
@@ -458,67 +657,52 @@ def recommended_jobs(request):
             )
         return qs
 
-    def apply_sort_qs(qs):
-        if sort == 'date_new':
-            return qs.order_by('-created_at')
-        elif sort == 'date_old':
-            return qs.order_by('created_at')
-        return qs.order_by('-created_at')
-
     base_qs = JobPosting.objects.select_related(
         'company', 'experience_requirement'
     ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
 
-    if tab == 'liked':
-        jobs_qs = apply_sort_qs(apply_search(base_qs.filter(id__in=liked_ids, status='open')))
+    def _apply_sort(items):
+        """Sort the ranked-jobs list in-place by the active `sort` key."""
+        if sort == 'date_new':
+            items.sort(key=lambda x: x['job'].created_at, reverse=True)
+        elif sort == 'date_old':
+            items.sort(key=lambda x: x['job'].created_at)
+        elif sort == 'nearest':
+            from apps.matching.engine import score_location
+            # Higher score_location → physically closer → sort first.
+            items.sort(key=lambda x: -score_location(x['job'], profile))
+        elif sort == 'match':
+            items.sort(key=lambda x: -(x['score'] or 0))
+        return items
+
+    def _build_ranked(jobs_qs):
         if profile.profile_complete:
             from apps.matching.engine import compute_match_score
-            ranked_jobs = []
-            for job in jobs_qs:
-                score_data = compute_match_score(job, profile)
-                ranked_jobs.append({
-                    'job': job,
-                    'score': score_data['total'],
-                    'breakdown': score_data['breakdown'],
-                })
-        else:
-            ranked_jobs = [{'job': job, 'score': None, 'breakdown': None} for job in jobs_qs]
+            return [
+                {'job': job, 'score': (sd := compute_match_score(job, profile))['total'], 'breakdown': sd['breakdown']}
+                for job in jobs_qs
+            ]
+        return [{'job': job, 'score': None, 'breakdown': None} for job in jobs_qs]
+
+    if tab == 'liked':
+        jobs_qs = apply_search(base_qs.filter(id__in=liked_ids, status='open'))
+        ranked_jobs = _apply_sort(_build_ranked(jobs_qs))
 
     elif tab == 'hidden':
-        jobs_qs = apply_sort_qs(apply_search(base_qs.filter(id__in=hidden_ids, status='open')))
-        if profile.profile_complete:
-            from apps.matching.engine import compute_match_score
-            ranked_jobs = []
-            for job in jobs_qs:
-                score_data = compute_match_score(job, profile)
-                ranked_jobs.append({
-                    'job': job,
-                    'score': score_data['total'],
-                    'breakdown': score_data['breakdown'],
-                })
-        else:
-            ranked_jobs = [{'job': job, 'score': None, 'breakdown': None} for job in jobs_qs]
+        jobs_qs = apply_search(base_qs.filter(id__in=hidden_ids, status='open'))
+        ranked_jobs = _apply_sort(_build_ranked(jobs_qs))
 
     else:
         if profile.profile_complete:
             ranked_jobs = get_ranked_jobs(profile)
             ranked_jobs = [r for r in ranked_jobs if r['job'].id not in hidden_ids]
-
             if search:
                 ranked_jobs = [
                     r for r in ranked_jobs
                     if search.lower() in r['job'].title.lower()
                     or search.lower() in r['job'].company.name.lower()
                 ]
-
-            if sort == 'date_new':
-                ranked_jobs.sort(key=lambda x: x['job'].created_at, reverse=True)
-            elif sort == 'date_old':
-                ranked_jobs.sort(key=lambda x: x['job'].created_at)
-            elif sort == 'nearest':
-                ranked_jobs.sort(
-                    key=lambda x: 0 if x['job'].city.lower() == profile.city_municipality.lower() else 1
-                )
+            _apply_sort(ranked_jobs)
         else:
             ranked_jobs = []
 
@@ -558,7 +742,7 @@ def recommended_jobs(request):
         })
         posted_map[str(job.id)] = job.created_at.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    return render(request, 'jobseekers/recommended_jobs.html', {
+    context = {
         'profile': profile,
         'ranked_jobs': ranked_jobs,
         'liked_ids': liked_ids,
@@ -566,11 +750,27 @@ def recommended_jobs(request):
         'tab': tab,
         'sort': sort,
         'search': search,
-        'jobs_json': json.dumps(jobs_json),
-        'posted_map': json.dumps(posted_map),
+        'jobs_json': jobs_json,
+        'posted_map': posted_map,
         'unread_notifications': False,
         'unread_messages': False,
-    })
+    }
+
+    if _is_ajax(request):
+        from django.template.loader import render_to_string
+        html = render_to_string('jobseekers/_jobs_grid.html', context, request=request)
+        return JsonResponse({
+            'html': html,
+            'jobs_json': jobs_json,
+            'posted_map': posted_map,
+            'tab': tab,
+        })
+
+    return render(request, 'jobseekers/recommended_jobs.html', context)
+
+
+def _is_ajax(request):
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
 
 @login_required
@@ -578,27 +778,26 @@ def job_like(request, job_id):
     if request.method != 'POST':
         return redirect('/jobs/for-you/')
     from apps.jobseekers.models import JobInteraction
+    from apps.notifications.utils import refresh_jobseeker_liked_job_notification
     profile = request.user.jobseeker_profile
     job = get_object_or_404(JobPosting, id=job_id)
 
     existing = JobInteraction.objects.filter(jobseeker=profile, job=job).first()
-    if existing:
-        if existing.interaction_type == JobInteraction.LIKED:
-            existing.delete()
-        else:
-            existing.interaction_type = JobInteraction.LIKED
-            existing.save()
-            from apps.notifications.utils import notify_jobseeker_liked_job
-            notify_jobseeker_liked_job(profile, job)
+    if existing and existing.interaction_type == JobInteraction.LIKED:
+        existing.delete()
+        liked = False
     else:
-        JobInteraction.objects.create(
-            jobseeker=profile,
-            job=job,
-            interaction_type=JobInteraction.LIKED
-        )
-        from apps.notifications.utils import notify_jobseeker_liked_job
-        notify_jobseeker_liked_job(profile, job)
+        if existing:
+            existing.interaction_type = JobInteraction.LIKED
+            existing.save(update_fields=['interaction_type'])
+        else:
+            JobInteraction.objects.create(jobseeker=profile, job=job, interaction_type=JobInteraction.LIKED)
+        liked = True
 
+    refresh_jobseeker_liked_job_notification(job)
+
+    if _is_ajax(request):
+        return JsonResponse({'ok': True, 'liked': liked})
     return redirect(request.POST.get('next', '/jobs/for-you/'))
 
 
@@ -611,19 +810,19 @@ def job_hide(request, job_id):
     job = get_object_or_404(JobPosting, id=job_id)
 
     existing = JobInteraction.objects.filter(jobseeker=profile, job=job).first()
-    if existing:
-        if existing.interaction_type == JobInteraction.HIDDEN:
-            existing.delete()
-        else:
-            existing.interaction_type = JobInteraction.HIDDEN
-            existing.save()
+    if existing and existing.interaction_type == JobInteraction.HIDDEN:
+        existing.delete()
+        hidden = False
     else:
-        JobInteraction.objects.create(
-            jobseeker=profile,
-            job=job,
-            interaction_type=JobInteraction.HIDDEN
-        )
+        if existing:
+            existing.interaction_type = JobInteraction.HIDDEN
+            existing.save(update_fields=['interaction_type'])
+        else:
+            JobInteraction.objects.create(jobseeker=profile, job=job, interaction_type=JobInteraction.HIDDEN)
+        hidden = True
 
+    if _is_ajax(request):
+        return JsonResponse({'ok': True, 'hidden': hidden})
     return redirect(request.POST.get('next', '/jobs/for-you/'))
 
 
