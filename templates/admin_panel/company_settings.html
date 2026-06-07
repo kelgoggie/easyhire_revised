@@ -1,0 +1,130 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}Account Settings — {{ company.name }}{% endblock %}
+
+{% with active_nav="companies" %}
+{% block admin_content %}
+<div class="py-8 max-w-5xl">
+
+  <div class="flex items-end justify-between gap-4 mb-2">
+    <h1 class="text-5xl font-extrabold text-primary">Account Settings</h1>
+    <a href="/admin-panel/companies/{{ company.id }}/" class="text-muted text-sm hover:text-primary transition">&lt; Back to profile</a>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <h2 class="text-3xl font-extrabold text-primary mb-1">{{ company.name }}</h2>
+  <p class="text-muted text-sm mb-1">
+    {% if company.iloilo_barangay_name %}{{ company.iloilo_barangay_name }}, Iloilo City{% else %}{{ company.main_branch_address|default:"—" }}{% endif %}
+  </p>
+  <p class="text-muted text-sm mb-6">
+    {{ company.company_email }}
+    {% if rep %} · Representative: {{ rep.first_name }} {{ rep.last_name }} ({{ rep.user.email }}){% endif %}
+  </p>
+
+  {% if saved_section == 'company' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Company information updated.</div>
+  {% elif saved_section == 'password' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Representative's password reset.</div>
+  {% elif saved_section == 'disabled' %}
+  <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">Representative account disabled.</div>
+  {% elif saved_section == 'enabled' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Representative account re-enabled.</div>
+  {% endif %}
+  {% if error %}
+  <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">{{ error }}</div>
+  {% endif %}
+
+  <!-- ── Company Information ───────────────────────────────────── -->
+  <h3 class="text-lg font-bold text-primary mb-3">Company Information</h3>
+  <form method="POST" class="mb-8">
+    {% csrf_token %}
+    <input type="hidden" name="form" value="company">
+
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="block text-primary text-xs mb-1">Company Name</label>
+        <input type="text" name="name" value="{{ company.name }}" required
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Main Branch Address</label>
+        <input type="text" name="main_branch_address" value="{{ company.main_branch_address }}"
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Company Email</label>
+        <input type="email" name="company_email" value="{{ company.company_email }}" required
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Hiring (Recruitment) Email</label>
+        <input type="email" name="recruitment_email" value="{{ company.recruitment_email }}" required
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-primary text-xs mb-1">Description</label>
+      <textarea name="description" rows="3"
+                class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition resize-none">{{ company.description }}</textarea>
+    </div>
+
+    <div class="flex justify-end">
+      <button type="submit"
+              class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition">
+        Save Company Info
+      </button>
+    </div>
+  </form>
+
+  {% if rep %}
+  <!-- ── Reset Representative Password ─────────────────────────── -->
+  <h3 class="text-lg font-bold text-primary mb-3">Reset Representative Password</h3>
+  <form method="POST" class="mb-12">
+    {% csrf_token %}
+    <input type="hidden" name="form" value="password">
+    <div class="grid grid-cols-4 gap-4 items-end">
+      <div>
+        <label class="block text-primary text-xs mb-1">New Password</label>
+        <input type="password" name="new_password" minlength="8" required
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Confirm Password</label>
+        <input type="password" name="confirm_password" minlength="8" required
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div></div>
+      <div class="flex justify-end">
+        <button type="submit"
+                class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition w-full">
+          Set Password
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Disable / Enable -->
+  <div class="flex justify-center">
+    <form method="POST">
+      {% csrf_token %}
+      {% if rep.user.is_active %}
+      <input type="hidden" name="form" value="disable">
+      <button type="submit" onclick="return confirm('Disable this representative? The company will no longer be able to log in.')"
+              class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-12 py-2.5 rounded-full hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition">
+        Disable Representative Account
+      </button>
+      {% else %}
+      <input type="hidden" name="form" value="enable">
+      <button type="submit" class="bg-teal text-white text-sm font-semibold px-12 py-2.5 rounded-full hover:bg-teal/90 transition">
+        Re-enable Representative Account
+      </button>
+      {% endif %}
+    </form>
+  </div>
+  {% else %}
+  <p class="text-muted text-sm italic text-center">No representative account is linked to this company yet.</p>
+  {% endif %}
+
+</div>
+{% endblock %}
+{% endwith %}

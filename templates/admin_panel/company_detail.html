@@ -1,0 +1,210 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}{{ company.name }} — EasyHire Admin{% endblock %}
+
+{% with active_nav="companies" %}
+{% block admin_content %}
+<div class="py-8 max-w-6xl">
+
+  <div class="flex items-start justify-between gap-4 mb-2">
+    <h1 class="text-5xl font-extrabold text-primary leading-tight">Companies</h1>
+    <div class="flex items-center gap-2 pt-2">
+      {% if prev_id %}
+      <a href="/admin-panel/companies/{{ prev_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+      {% else %}<span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">&lt; Previous</span>{% endif %}
+      {% if next_id %}
+      <a href="/admin-panel/companies/{{ next_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+      {% else %}<span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">Next &gt;</span>{% endif %}
+    </div>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <div class="flex items-start justify-between gap-4 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+        {% if company.logo %}
+          <img src="{{ company.logo.url }}" alt="" class="w-full h-full object-cover">
+        {% else %}
+          <span class="text-primary font-bold text-2xl">{{ company.name|first|upper }}</span>
+        {% endif %}
+      </div>
+      <div>
+        <h2 class="text-3xl font-extrabold text-primary leading-tight">{{ company.name }}</h2>
+        <p class="text-muted text-sm">
+          {% if company.iloilo_barangay_name %}{{ company.iloilo_barangay_name }}, Iloilo City
+          {% else %}{{ company.main_branch_address|default:"—" }}{% endif %}
+        </p>
+        <p class="text-muted text-sm">
+          {{ company.company_email }}{% if rep and rep.phone %} | +63 {{ rep.phone|slice:"1:" }}{% endif %}
+          {% if rep and not rep.user.is_active %}<span class="ml-2 text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full">Disabled</span>{% endif %}
+        </p>
+        <div class="flex items-center gap-1.5 mt-2">
+          <span class="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-taupe/20 text-primary border border-taupe/30">{{ company.get_type_of_company_display|default:"—" }}</span>
+          {% if company.verification_status == 'pending' %}
+          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30">Pending Verification</span>
+          {% elif company.verification_status == 'verified' %}
+          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-teal/15 text-teal border border-teal/30">Verified</span>
+          {% elif company.verification_status == 'denied' %}
+          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Denied</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="flex flex-col items-end gap-2">
+      <a href="/admin-panel/companies/{{ company.id }}/settings/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-taupe/30 transition">Account Settings</a>
+      {% if company.verification_status == 'pending' %}
+      <a href="/admin-panel/employers/{{ company.id }}/" class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">Review Verification</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- About card -->
+  <div class="bg-surface/60 border border-taupe/40 rounded-2xl p-5 mb-6">
+    <p class="text-primary font-bold text-sm mb-2">About</p>
+    <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-3">
+      {% if company.description %}
+      <p class="text-primary text-sm leading-relaxed whitespace-pre-line">{{ company.description }}</p>
+      {% else %}
+      <p class="text-muted text-xs italic">No company description.</p>
+      {% endif %}
+    </div>
+    <div class="grid grid-cols-3 gap-3 text-xs">
+      <div class="bg-white border border-gray-200 rounded-xl px-4 py-3">
+        <p class="text-muted">Nature of Company</p>
+        <p class="font-bold text-primary">{{ company.nature_of_company|default:"—" }}</p>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl px-4 py-3">
+        <p class="text-muted">Company Size</p>
+        <p class="font-bold text-primary">{{ company.company_size|default:"—" }}</p>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl px-4 py-3">
+        <p class="text-muted">Hiring Email</p>
+        <p class="font-bold text-primary break-all">{{ company.recruitment_email|default:company.company_email }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Job posts with admin delete -->
+  <div class="bg-surface/60 border border-taupe/40 rounded-2xl p-5">
+    <div class="flex items-baseline justify-between mb-3">
+      <p class="text-primary font-bold text-sm">Job Posts <span class="text-muted font-normal">({{ jobs|length }})</span></p>
+    </div>
+    {% if jobs %}
+    <div class="space-y-2">
+      {% for job in jobs %}
+      <div class="job-row bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+           data-job-id="{{ job.id }}" data-job-title="{{ job.title }}">
+        <div class="min-w-0">
+          <p class="font-bold text-primary text-sm leading-tight truncate">{{ job.title }}</p>
+          <p class="text-muted text-xs">{{ job.location_display|truncatechars:40 }} · Posted {{ job.created_at|date:"M j, Y" }}</p>
+          <p class="text-muted text-xs">
+            {{ job.applicants_count }} applicant{{ job.applicants_count|pluralize }} · {{ job.hired_count }} hired ·
+            <span class="font-semibold {% if job.status == 'open' %}text-teal{% elif job.status == 'closed' %}text-muted{% else %}text-amber{% endif %}">{{ job.get_status_display }}</span>
+          </p>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+          <a href="/employers/jobs/{{ job.id }}/" class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">View</a>
+          <button type="button" class="delete-job-btn bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">Delete</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted text-xs italic text-center py-4">This company has no job posts.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Job-delete modal with reason ───────────────────────────────── -->
+<div id="delete-job-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" data-close-delete></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+    <p class="text-red-500 font-bold text-base mb-1">Delete job post?</p>
+    <p class="text-muted text-sm mb-1">You're about to delete <strong id="delete-job-title" class="text-primary"></strong>.</p>
+    <p class="text-muted text-xs mb-4">The company representative will receive a notification with the reason you provide. <span class="text-red-500">This cannot be undone.</span></p>
+
+    <form id="delete-job-form">
+      {% csrf_token %}
+      <p class="text-primary text-sm font-semibold mb-2">Reason</p>
+      <div class="space-y-1.5 mb-4 max-h-48 overflow-y-auto pr-1">
+        {% for code, label in reasons %}
+        <label class="flex items-center gap-2 text-sm text-primary cursor-pointer rounded-lg px-2 py-1.5 hover:bg-surface transition">
+          <input type="radio" name="reason" value="{{ code }}" class="accent-primary w-3.5 h-3.5">
+          {{ label }}
+        </label>
+        {% endfor %}
+      </div>
+
+      <label class="block text-primary text-xs mb-1">Optional admin notes</label>
+      <textarea name="notes" rows="2" placeholder="Add context the company should see (optional)"
+                class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none"></textarea>
+
+      <p id="delete-error" class="text-xs text-red-500 mt-2 hidden"></p>
+
+      <div class="flex gap-3 justify-end mt-5">
+        <button type="button" data-close-delete class="bg-gray-100 text-primary font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition text-sm">Cancel</button>
+        <button type="submit" id="delete-confirm" class="bg-red-500 text-white font-semibold px-6 py-2 rounded-full hover:bg-red-600 transition text-sm">Delete & Notify</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block admin_scripts %}
+<script>
+(function() {
+  function getCookie(n) {
+    const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+
+  const modal     = document.getElementById('delete-job-modal');
+  const form      = document.getElementById('delete-job-form');
+  const titleEl   = document.getElementById('delete-job-title');
+  const errEl     = document.getElementById('delete-error');
+  const submitBtn = document.getElementById('delete-confirm');
+  let activeRow   = null;
+
+  function show() { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  function hide() {
+    modal.classList.add('hidden'); modal.classList.remove('flex');
+    form.reset(); errEl.classList.add('hidden'); errEl.textContent = '';
+    submitBtn.disabled = false;
+  }
+
+  document.querySelectorAll('.delete-job-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      activeRow = btn.closest('.job-row');
+      titleEl.textContent = activeRow.dataset.jobTitle;
+      show();
+    });
+  });
+  modal.querySelectorAll('[data-close-delete]').forEach(function(el) {
+    el.addEventListener('click', hide);
+  });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!activeRow) return;
+    submitBtn.disabled = true;
+    const jobId = activeRow.dataset.jobId;
+    fetch('/admin-panel/companies/{{ company.id }}/jobs/' + jobId + '/delete/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      body: new FormData(form),
+    }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
+      .then(function(pair){
+        const [ok, d] = pair;
+        if (ok && d.ok) {
+          activeRow.remove();
+          hide();
+        } else {
+          submitBtn.disabled = false;
+          errEl.textContent = (d && d.error) || 'Something went wrong.';
+          errEl.classList.remove('hidden');
+        }
+      }).catch(function(){ submitBtn.disabled = false; });
+  });
+})();
+</script>
+{% endblock %}
+{% endblock %}
+{% endwith %}

@@ -120,7 +120,7 @@ def dashboard(request):
 
     pending_approvals = (
         Company.objects.filter(verification_status=Company.PENDING)
-        .prefetch_related('verification_documents')
+        .prefetch_related('verification_docs')
         .order_by('-created_at')[:5]
     )
     recent_reports = (
@@ -441,3 +441,209 @@ def jobseeker_application_detail(request, pk, app_id):
         'next_app_id':   next_app_id,
     })
     return render(request, 'admin_panel/jobseeker_application_detail.html', ctx)
+
+
+# ── Phase 3: Companies ─────────────────────────────────────────────
+
+# Reason choices for admin job-deletion. Used by the modal + persisted to notification.
+JOB_DELETION_REASONS = [
+    ('duplicate',     'Duplicate posting'),
+    ('spam',          'Spam or low-quality post'),
+    ('misleading',    'Misleading or inaccurate'),
+    ('inappropriate', 'Inappropriate content'),
+    ('discrimination','Discriminatory language'),
+    ('outdated',      'Outdated / no longer relevant'),
+    ('fraud',         'Suspected fraudulent posting'),
+    ('policy',        'Violates platform policy'),
+    ('other',         'Other (see admin notes)'),
+]
+
+
+@staff_required
+def company_list(request):
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    search = (request.GET.get('q') or '').strip()
+    sort   = (request.GET.get('sort') or 'newest').strip()
+
+    qs = Company.objects.all()
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(company_email__icontains=search))
+    if sort == 'oldest':     qs = qs.order_by('created_at')
+    elif sort == 'name_az':  qs = qs.order_by('name')
+    elif sort == 'name_za':  qs = qs.order_by('-name')
+    else:                    qs = qs.order_by('-created_at')
+
+    paginator = Paginator(qs, 24)
+    page = paginator.get_page(request.GET.get('page') or 1)
+
+    ctx = _admin_context(request)
+    ctx.update({'page': page, 'search': search, 'sort': sort})
+    return render(request, 'admin_panel/company_list.html', ctx)
+
+
+def _surrounding_company_ids(pk):
+    ids = list(Company.objects.order_by('id').values_list('id', flat=True))
+    try:
+        idx = ids.index(pk)
+    except ValueError:
+        return None, None
+    prev_id = ids[idx - 1] if idx > 0 else None
+    next_id = ids[idx + 1] if idx + 1 < len(ids) else None
+    return prev_id, next_id
+
+
+@staff_required
+def company_detail(request, pk):
+    from apps.jobs.models import JobPosting, Application
+    from django.db.models import Count, Q as DjQ
+
+    company = get_object_or_404(
+        Company.objects.prefetch_related('verification_docs', 'sector_badges'), pk=pk,
+    )
+    jobs = (
+        JobPosting.objects.filter(company=company)
+        .annotate(
+            applicants_count=Count('applications', distinct=True),
+            hired_count=Count(
+                'applications',
+                filter=DjQ(applications__status=Application.STATUS_HIRED),
+                distinct=True,
+            ),
+        )
+        .select_related('experience_requirement')
+        .prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
+        .order_by('-created_at')
+    )
+    rep = company.representatives.first()
+    prev_id, next_id = _surrounding_company_ids(pk)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'company':      company,
+        'rep':          rep,
+        'jobs':         jobs,
+        'prev_id':      prev_id,
+        'next_id':      next_id,
+        'reasons':      JOB_DELETION_REASONS,
+    })
+    return render(request, 'admin_panel/company_detail.html', ctx)
+
+
+@staff_required
+def company_settings(request, pk):
+    from .models import AuditLog
+    company = get_object_or_404(Company, pk=pk)
+    rep = company.representatives.first()
+    saved_section = None
+    error = None
+
+    if request.method == 'POST':
+        form = (request.POST.get('form') or '').strip()
+
+        if form == 'company':
+            company.name              = request.POST.get('name', company.name).strip()
+            company.company_email     = request.POST.get('company_email', company.company_email).strip()
+            company.recruitment_email = request.POST.get('recruitment_email', company.recruitment_email).strip()
+            company.main_branch_address = request.POST.get('main_branch_address', company.main_branch_address).strip()
+            company.description       = request.POST.get('description', '').strip()
+            company.save()
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_EDIT,
+                target_model='Company', target_id=company.id,
+                notes='Edited company information.',
+            )
+            saved_section = 'company'
+
+        elif form == 'password' and rep:
+            new1 = request.POST.get('new_password', '')
+            new2 = request.POST.get('confirm_password', '')
+            if len(new1) < 8:
+                error = 'New password must be at least 8 characters.'
+            elif new1 != new2:
+                error = "Passwords don't match."
+            else:
+                rep.user.set_password(new1)
+                rep.user.save(update_fields=['password'])
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_RESET_PASSWORD,
+                    target_model='User', target_id=rep.user.id,
+                    notes='Admin reset password for company representative.',
+                )
+                saved_section = 'password'
+
+        elif form == 'disable' and rep:
+            rep.user.is_active = False
+            rep.user.save(update_fields=['is_active'])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_DEACTIVATE,
+                target_model='User', target_id=rep.user.id,
+                notes='Admin disabled company representative account.',
+            )
+            saved_section = 'disabled'
+
+        elif form == 'enable' and rep:
+            rep.user.is_active = True
+            rep.user.save(update_fields=['is_active'])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_REACTIVATE,
+                target_model='User', target_id=rep.user.id,
+                notes='Admin re-enabled company representative account.',
+            )
+            saved_section = 'enabled'
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'company':       company,
+        'rep':           rep,
+        'saved_section': saved_section,
+        'error':         error,
+    })
+    return render(request, 'admin_panel/company_settings.html', ctx)
+
+
+@staff_required
+def company_delete_job(request, pk, job_id):
+    """Delete a job posting and notify the company with the admin's reason."""
+    from django.http import JsonResponse
+    from apps.jobs.models import JobPosting
+    from apps.notifications.models import Notification
+    from .models import AuditLog
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    company = get_object_or_404(Company, pk=pk)
+    job = get_object_or_404(JobPosting, pk=job_id, company=company)
+
+    reason_code = (request.POST.get('reason') or '').strip()
+    reason_dict = dict(JOB_DELETION_REASONS)
+    if reason_code not in reason_dict:
+        return JsonResponse({'ok': False, 'error': 'Pick a deletion reason.'}, status=400)
+    reason_label = reason_dict[reason_code]
+    admin_notes  = (request.POST.get('notes') or '').strip()
+
+    # Snapshot what we need before deletion.
+    job_title = job.title
+
+    # Notify every representative of the company.
+    full_message = f"Reason: {reason_label}"
+    if admin_notes:
+        full_message += f". Admin notes: {admin_notes}"
+    for rep in company.representatives.all():
+        Notification.objects.create(
+            recipient=rep.user,
+            notif_type=Notification.JOB_DELETED_BY_ADMIN,
+            company=company,
+            liker_preview=job_title[:200],
+            admin_message=full_message[:1000],
+        )
+
+    AuditLog.objects.create(
+        admin=request.user, action=AuditLog.ACTION_DELETE,
+        target_model='JobPosting', target_id=job.id,
+        notes=f"Deleted job '{job_title}'. {full_message}",
+    )
+
+    job.delete()
+    return JsonResponse({'ok': True, 'message': f'Deleted "{job_title}".'})

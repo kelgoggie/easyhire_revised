@@ -62,7 +62,7 @@
             </td>
             <td class="px-4 py-3 text-muted italic">{{ company.get_type_of_company_display|default:"—" }}</td>
             <td class="px-4 py-3 text-muted italic">
-              {% with docs=company.verification_documents.all %}
+              {% with docs=company.verification_docs.all %}
                 {% if docs %}{{ docs.0.get_doc_type_display|truncatechars:25 }}{% if docs|length > 1 %}, {{ docs|length|add:-1 }} more{% endif %}
                 {% else %}None submitted{% endif %}
               {% endwith %}

@@ -53,6 +53,13 @@ def notifications_api(request):
             item['verb']  = 'liked your job post.'
             item['icon']  = 'heart'
             item['url']   = f'/employers/jobs/{n.job.id}/candidates/?tab=liked_by' if n.job else '#'
+        elif n.notif_type == Notification.JOB_DELETED_BY_ADMIN:
+            item['actor']  = 'PESO Admin'
+            item['verb']   = f'removed your job post "{n.liker_preview or "Untitled"}".'
+            item['quoted'] = n.admin_message or 'No reason provided.'
+            item['icon']   = 'briefcase'
+            item['meta']   = ''
+            item['url']    = '/employers/jobs/' if n.recipient.is_employer else '#'
         data.append(item)
 
     return JsonResponse({'notifications': data, 'count': len(data)})
