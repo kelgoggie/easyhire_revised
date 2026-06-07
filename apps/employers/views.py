@@ -392,6 +392,8 @@ def candidates(request, job_id):
                 'breakdown': score_data['breakdown'],
                 'application_id': app.id,
                 'application_status': app.status,
+                'application_message': app.message,
+                'applied_at': app.created_at,
             })
         ranked.sort(key=lambda x: -x['score'])
 
@@ -405,6 +407,99 @@ def candidates(request, job_id):
         'tab': tab,
         'unread_notifications': False,
         'unread_messages': False,
+    })
+
+
+# Valid transitions enforced server-side. Rejected is terminal.
+# Hired stays as status='hired' even after un-hire (un-hire = "employment ended"),
+# we just stamp employed_until and end the linked work-experience entry.
+_ALLOWED_TRANSITIONS = {
+    # action -> set of statuses we'll accept this action from
+    'view':   {'pending'},
+    'accept': {'pending', 'viewed'},
+    'reject': {'pending', 'viewed', 'accepted'},  # accepted can be reverted
+    'hire':   {'accepted'},
+    'unhire': {'hired'},  # marks employment as ended; status stays 'hired' for history
+}
+
+
+@employer_required
+def application_update_status(request, app_id):
+    """Single endpoint for view/accept/reject/hire transitions on an Application."""
+    from django.http import JsonResponse
+    from apps.jobs.models import Application
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    profile = request.user.employer_profile
+    company = profile.company
+    app = get_object_or_404(Application.objects.select_related('job'), id=app_id, job__company=company)
+
+    action = (request.POST.get('action') or '').strip().lower()
+    if action not in _ALLOWED_TRANSITIONS:
+        return JsonResponse({'ok': False, 'error': 'Unknown action'}, status=400)
+
+    if app.status not in _ALLOWED_TRANSITIONS[action]:
+        # No-op for repeated views; explicit error for everything else.
+        if action == 'view':
+            return JsonResponse({'ok': True, 'status': app.status, 'noop': True})
+        return JsonResponse({
+            'ok': False,
+            'error': f"Can't {action} an application that is already '{app.get_status_display()}'.",
+        }, status=409)
+
+    from django.utils import timezone
+    from apps.jobseekers.models import WorkExperience
+    now = timezone.now()
+    update_fields = []
+
+    if action == 'unhire':
+        # Status stays 'hired' for historical record; stamp employed_until.
+        if app.employed_until:
+            return JsonResponse({'ok': False, 'error': 'Employment is already marked as ended.'}, status=409)
+        app.employed_until = now.date()
+        update_fields.append('employed_until')
+        # End the linked work-experience entry (if it still exists).
+        we = WorkExperience.objects.filter(from_application=app).first()
+        if we and we.is_current:
+            we.is_current = False
+            we.month_ended = str(now.month)
+            we.year_ended  = now.year
+            we.save(update_fields=['is_current', 'month_ended', 'year_ended'])
+    else:
+        # All other actions update the status field.
+        status_for = {
+            'view':   Application.STATUS_VIEWED,
+            'accept': Application.STATUS_ACCEPTED,
+            'reject': Application.STATUS_REJECTED,
+            'hire':   Application.STATUS_HIRED,
+        }
+        app.status = status_for[action]
+        update_fields.append('status')
+        if action == 'hire':
+            if not app.hired_at:
+                app.hired_at = now
+                update_fields.append('hired_at')
+            # Auto-create a work-experience entry on the jobseeker's resume
+            # (idempotent — only one per application).
+            if not WorkExperience.objects.filter(from_application=app).exists():
+                WorkExperience.objects.create(
+                    profile=app.jobseeker,
+                    position=app.job.title,
+                    company=app.job.company.name,
+                    description='',
+                    month_started=str(now.month),
+                    year_started=now.year,
+                    is_current=True,
+                    from_application=app,
+                )
+
+    app.save(update_fields=update_fields)
+    return JsonResponse({
+        'ok': True,
+        'status': app.status,
+        'status_label': app.get_status_display(),
+        'employed_until': app.employed_until.isoformat() if app.employed_until else None,
     })
 
 @employer_required
@@ -448,12 +543,20 @@ def company_profile(request):
 
     followers_count = company.followers.count() if hasattr(company, 'followers') else 0
 
+    from apps.jobs.models import Application
+    hired_employees = (
+        Application.objects.filter(job__company=company, status=Application.STATUS_HIRED)
+        .select_related('jobseeker', 'job')
+        .order_by('-hired_at', '-created_at')
+    )
+
     return render(request, 'employers/company_profile.html', {
         'company': company,
         'profile': profile,
         'sectors': sectors,
         'jobs': jobs,
         'followers_count': followers_count,
+        'hired_employees': hired_employees,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -471,6 +574,17 @@ def candidate_detail(request, jobseeker_id):
         company=company, jobseeker=jobseeker
     ).exists()
 
+    # Currently-employed hire at this company (if any).
+    from apps.jobs.models import Application
+    active_hire = (
+        Application.objects
+        .filter(jobseeker=jobseeker, job__company=company,
+                status=Application.STATUS_HIRED, employed_until__isnull=True)
+        .select_related('job')
+        .order_by('-hired_at')
+        .first()
+    )
+
     return render(request, 'employers/candidate_detail.html', {
         'company': company,
         'jobseeker': jobseeker,
@@ -479,6 +593,7 @@ def candidate_detail(request, jobseeker_id):
         'certifications': certifications,
         'experiences': experiences,
         'is_liked': is_liked,
+        'active_hire': active_hire,
         'unread_notifications': False,
         'unread_messages': False,
     })

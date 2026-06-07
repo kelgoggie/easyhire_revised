@@ -18,5 +18,6 @@ urlpatterns = [
     path('employers/profile/', views.company_profile, name='company_profile'),
     path('employers/all_candidates/', views.all_candidates, name='all_candidates'),
     path('employers/candidates/<int:jobseeker_id>/', views.candidate_detail, name='candidate_detail'),
+    path('employers/applications/<int:app_id>/status/', views.application_update_status, name='application_update_status'),
     
 ]

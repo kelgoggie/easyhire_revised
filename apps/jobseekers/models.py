@@ -129,6 +129,12 @@ class WorkExperience(models.Model):
     year_ended = models.PositiveIntegerField(null=True, blank=True)
     is_current = models.BooleanField(default=False,
         help_text="I'm still employed under this position.")
+    # Set when this entry was auto-created from a Hired application on EasyHire.
+    # Lets us update / end the entry when the employer un-hires.
+    from_application = models.ForeignKey(
+        'jobs.Application', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='work_experiences',
+    )
 
     class Meta:
         db_table = "jobseeker_experiences"

@@ -195,14 +195,18 @@ class JobExperienceRequirement(models.Model):
 
 
 class Application(models.Model):
-    STATUS_PENDING = "pending"
-    STATUS_ACCEPTED = "accepted"
-    STATUS_REJECTED = "rejected"
+    STATUS_PENDING  = "pending"   # employer hasn't opened the application yet
+    STATUS_VIEWED   = "viewed"    # employer opened it but hasn't decided
+    STATUS_ACCEPTED = "accepted"  # employer accepted; can still be rejected or moved to hired
+    STATUS_REJECTED = "rejected"  # terminal — no undo
+    STATUS_HIRED    = "hired"     # terminal — applicant was tagged hired
 
     STATUS_CHOICES = [
-        (STATUS_PENDING, "Pending"),
+        (STATUS_PENDING,  "Pending"),
+        (STATUS_VIEWED,   "Viewed"),
         (STATUS_ACCEPTED, "Accepted"),
         (STATUS_REJECTED, "Rejected"),
+        (STATUS_HIRED,    "Hired"),
     ]
 
     jobseeker = models.ForeignKey(
@@ -216,6 +220,10 @@ class Application(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
     message = models.TextField(blank=True, default='', db_column='application_message')
     created_at = models.DateTimeField(auto_now_add=True)
+    # Set when the employer marks the applicant as Hired.
+    hired_at = models.DateTimeField(null=True, blank=True)
+    # Optional: employer can later mark when the employment ended. Null = still employed.
+    employed_until = models.DateField(null=True, blank=True)
 
     class Meta:
         db_table = "applications"

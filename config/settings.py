@@ -122,6 +122,15 @@ DATABASES = {
     }
 }
 
+# If DATABASE_URL is set (Render's Postgres add-on provides this), it wins.
+if os.getenv('DATABASE_URL'):
+    import dj_database_url
+    DATABASES['default'] = dj_database_url.config(
+        default=os.environ['DATABASE_URL'],
+        conn_max_age=600,
+        ssl_require=True,
+    )
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

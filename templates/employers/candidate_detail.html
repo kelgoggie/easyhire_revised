@@ -41,21 +41,90 @@
                     {% endif %}
                 </div>
 
-                <!-- Like button -->
-                <form method="POST" action="/employers/candidates/{{ jobseeker.id }}/like/">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.path }}">
-                    <button type="submit"
-                            class="flex items-center gap-2 px-5 py-2.5 rounded-full border transition text-sm font-semibold
-                                {% if is_liked %}bg-teal text-white border-teal hover:bg-teal/80
-                                {% else %}bg-white text-primary border-taupe/30 hover:border-teal hover:text-teal{% endif %}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    {% if active_hire %}
+                    <button type="button" id="unhire-btn" data-app-id="{{ active_hire.id }}"
+                            class="flex items-center gap-2 px-5 py-2.5 rounded-full border border-red-300 bg-white text-red-500 text-sm font-semibold hover:bg-red-50 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
                         </svg>
-                        {% if is_liked %}Liked{% else %}Like Candidate{% endif %}
+                        Un-hire
                     </button>
-                </form>
+                    {% endif %}
+
+                    <!-- Like button -->
+                    <form method="POST" action="/employers/candidates/{{ jobseeker.id }}/like/">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit"
+                                class="flex items-center gap-2 px-5 py-2.5 rounded-full border transition text-sm font-semibold
+                                    {% if is_liked %}bg-teal text-white border-teal hover:bg-teal/80
+                                    {% else %}bg-white text-primary border-taupe/30 hover:border-teal hover:text-teal{% endif %}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                            {% if is_liked %}Liked{% else %}Like Candidate{% endif %}
+                        </button>
+                    </form>
+                </div>
             </div>
+
+            {% if active_hire %}
+            <!-- Un-hire confirm modal -->
+            <div id="unhire-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+              <div class="absolute inset-0 bg-black/40" data-close-unhire></div>
+              <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10 text-center">
+                <p class="text-red-500 font-bold text-base mb-2">Un-hire this employee?</p>
+                <p class="text-muted text-sm mb-6">
+                  This marks the employment as ended today and updates {{ jobseeker.first_name }}'s work history.
+                  The hire stays on record in your Employees list.
+                </p>
+                <div class="flex gap-3 justify-center">
+                  <button type="button" data-close-unhire
+                          class="bg-gray-100 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
+                    Cancel
+                  </button>
+                  <button type="button" id="unhire-confirm-yes"
+                          class="bg-red-500 text-white font-semibold px-8 py-2.5 rounded-full hover:bg-red-600 transition text-sm">
+                    Yes, un-hire
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <script>
+            (function() {
+              function getCookie(n) {
+                const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+                if (p.length === 2) return p.pop().split(';').shift();
+              }
+              function show(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+              function hide(m) { m.classList.add('hidden');    m.classList.remove('flex'); }
+
+              const btn   = document.getElementById('unhire-btn');
+              const modal = document.getElementById('unhire-modal');
+              const yes   = document.getElementById('unhire-confirm-yes');
+
+              btn.addEventListener('click', () => show(modal));
+              modal.querySelectorAll('[data-close-unhire]').forEach(el =>
+                el.addEventListener('click', () => hide(modal)));
+
+              yes.addEventListener('click', function() {
+                const appId = btn.dataset.appId;
+                const fd = new FormData();
+                fd.append('action', 'unhire');
+                fetch('/employers/applications/' + appId + '/status/', {
+                  method: 'POST',
+                  headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+                  body: fd,
+                }).then(r => r.json()).then(function(d) {
+                  hide(modal);
+                  if (d.ok) window.location.reload();
+                });
+              });
+            })();
+            </script>
+            {% endif %}
 
             <!-- Address + Contact -->
             <div class="flex items-center gap-4 text-muted text-sm mt-4 flex-wrap">
