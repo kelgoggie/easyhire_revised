@@ -39,20 +39,112 @@ def staff_required(view_func):
     return wrapper
 
 
+def _relative(dt):
+    """Compact relative time (e.g. '5m ago', '2h ago', 'Mar 4')."""
+    from django.utils import timezone
+    s = int((timezone.now() - dt).total_seconds())
+    if s < 60:     return f"{max(s, 1)}s ago"
+    if s < 3600:   return f"{s // 60}m ago"
+    if s < 86400:  return f"{s // 3600}h ago"
+    if s < 604800: return f"{s // 86400}d ago"
+    return dt.strftime("%b %d")
+
+
+def _admin_context(request):
+    """Shared context for every admin page — sidebar counts + notification feed.
+
+    Notifications fire on three things (per spec):
+      1. Pending company verification
+      2. Pending personal-info change requests
+      3. New user reports
+    """
+    from apps.employers.models import Company
+    from apps.jobseekers.models import PersonalInfoChangeRequest
+    from .models import UserReport
+
+    pending_companies = Company.objects.filter(verification_status=Company.PENDING).count()
+    pending_jobseekers = PersonalInfoChangeRequest.objects.filter(
+        status=PersonalInfoChangeRequest.STATUS_PENDING).count()
+    open_reports = UserReport.objects.filter(status=UserReport.STATUS_OPEN).count()
+
+    feed = []
+    for c in Company.objects.filter(verification_status=Company.PENDING).order_by('-created_at')[:5]:
+        feed.append({
+            'icon': 'company',
+            'actor': c.name,
+            'verb':  'is awaiting partnership approval.',
+            'when':  _relative(c.created_at),
+            'url':   f'/admin-panel/employers/{c.id}/',
+            'at':    c.created_at,
+        })
+    for r in (PersonalInfoChangeRequest.objects
+              .filter(status=PersonalInfoChangeRequest.STATUS_PENDING)
+              .select_related('profile').order_by('-submitted_at')[:5]):
+        feed.append({
+            'icon': 'user',
+            'actor': f'{r.profile.first_name} {r.profile.last_name}',
+            'verb':  'requested a change of personal information.',
+            'when':  _relative(r.submitted_at),
+            'url':   '#',
+            'at':    r.submitted_at,
+        })
+    for ur in (UserReport.objects.filter(status=UserReport.STATUS_OPEN)
+               .order_by('-created_at')[:5]):
+        feed.append({
+            'icon': 'flag',
+            'actor': ur.filed_by_label,
+            'verb':  f'filed a report against {ur.account_label}.',
+            'when':  _relative(ur.created_at),
+            'url':   '#',
+            'at':    ur.created_at,
+        })
+    feed.sort(key=lambda x: x['at'], reverse=True)
+
+    return {
+        'pending_companies':     pending_companies,
+        'pending_jobseekers':    pending_jobseekers,
+        'open_reports':          open_reports,
+        'admin_notifications':   feed[:10],
+        'admin_attention_count': pending_companies + pending_jobseekers + open_reports,
+    }
+
+
 @staff_required
 def dashboard(request):
-    pending = Company.objects.filter(verification_status=Company.PENDING).order_by('-created_at')
-    verified = Company.objects.filter(verification_status=Company.VERIFIED).order_by('-verified_at')
-    denied = Company.objects.filter(verification_status=Company.DENIED).order_by('-updated_at')
-    unverified = Company.objects.filter(verification_status=Company.UNVERIFIED).order_by('-created_at')
+    from apps.accounts.models import User
+    from apps.jobs.models import JobPosting
+    from .models import UserReport
+    from apps.matching.engine import (
+        WEIGHT_SKILLS, WEIGHT_EDUCATION, WEIGHT_EXPERIENCE, WEIGHT_CERTIFICATIONS,
+    )
 
-    return render(request, 'admin_panel/dashboard.html', {
-        'pending': pending,
-        'verified': verified,
-        'denied': denied,
-        'unverified': unverified,
-        'pending_count': pending.count(),
+    pending_approvals = (
+        Company.objects.filter(verification_status=Company.PENDING)
+        .prefetch_related('verification_documents')
+        .order_by('-created_at')[:5]
+    )
+    recent_reports = (
+        UserReport.objects.filter(status=UserReport.STATUS_OPEN)
+        .select_related('reported_jobseeker', 'reported_company', 'filed_by')
+        .order_by('-created_at')[:5]
+    )
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'total_users':       User.objects.count(),
+        'jobseeker_count':   User.objects.filter(user_type=User.JOBSEEKER).count(),
+        'employer_count':    User.objects.filter(user_type=User.EMPLOYER).count(),
+        'job_count':         JobPosting.objects.count(),
+        'pending_approvals': pending_approvals,
+        'recent_reports':    recent_reports,
+        'algorithm_weights': {
+            'skills':         round(WEIGHT_SKILLS * 100),
+            'education':      round(WEIGHT_EDUCATION * 100),
+            'experience':     round(WEIGHT_EXPERIENCE * 100),
+            'certifications': round(WEIGHT_CERTIFICATIONS * 100),
+        },
     })
+    return render(request, 'admin_panel/dashboard.html', ctx)
 
 
 @staff_required
@@ -135,3 +227,217 @@ def set_verification(request, company_id):
 
     company.save()
     return redirect('admin_panel:employer_detail', company_id=company_id)
+
+
+# ── Phase 2: Jobseekers ─────────────────────────────────────────────
+
+@staff_required
+def jobseeker_list(request):
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    from apps.jobseekers.models import JobseekerProfile
+
+    search = (request.GET.get('q') or '').strip()
+    sort   = (request.GET.get('sort') or 'newest').strip()
+
+    qs = JobseekerProfile.objects.select_related('user').prefetch_related('sectors')
+    if search:
+        qs = qs.filter(
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search)  |
+            Q(user__email__icontains=search)
+        )
+    if sort == 'oldest':       qs = qs.order_by('created_at')
+    elif sort == 'name_az':    qs = qs.order_by('first_name', 'last_name')
+    elif sort == 'name_za':    qs = qs.order_by('-first_name', '-last_name')
+    else:                      qs = qs.order_by('-created_at')   # 'newest'
+
+    paginator = Paginator(qs, 24)
+    page = paginator.get_page(request.GET.get('page') or 1)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'page':   page,
+        'search': search,
+        'sort':   sort,
+    })
+    return render(request, 'admin_panel/jobseeker_list.html', ctx)
+
+
+def _surrounding_jobseeker_ids(pk):
+    """Return (prev_id, next_id) for the detail-page pagination, ordered by id."""
+    from apps.jobseekers.models import JobseekerProfile
+    ids = list(JobseekerProfile.objects.order_by('id').values_list('id', flat=True))
+    try:
+        idx = ids.index(pk)
+    except ValueError:
+        return None, None
+    prev_id = ids[idx - 1] if idx > 0 else None
+    next_id = ids[idx + 1] if idx + 1 < len(ids) else None
+    return prev_id, next_id
+
+
+@staff_required
+def jobseeker_detail(request, pk):
+    from apps.jobseekers.models import (
+        JobseekerProfile, Education, Skill, Certification, WorkExperience,
+    )
+    jobseeker = get_object_or_404(JobseekerProfile.objects.select_related('user'), pk=pk)
+    educations    = Education.objects.filter(profile=jobseeker).order_by('-year_started')
+    skills        = Skill.objects.filter(profile=jobseeker)
+    certifications = Certification.objects.filter(profile=jobseeker)
+    experiences   = WorkExperience.objects.filter(profile=jobseeker).order_by('-year_started', '-id')
+
+    from apps.jobs.models import Application
+    applications = (Application.objects.filter(jobseeker=jobseeker)
+                    .select_related('job', 'job__company')
+                    .order_by('-created_at')[:10])
+
+    prev_id, next_id = _surrounding_jobseeker_ids(pk)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'jobseeker':      jobseeker,
+        'educations':     educations,
+        'skills':         skills,
+        'certifications': certifications,
+        'experiences':    experiences,
+        'applications':   applications,
+        'prev_id':        prev_id,
+        'next_id':        next_id,
+    })
+    return render(request, 'admin_panel/jobseeker_detail.html', ctx)
+
+
+@staff_required
+def jobseeker_settings(request, pk):
+    from apps.jobseekers.models import JobseekerProfile
+    from datetime import datetime
+    from .models import AuditLog
+
+    jobseeker = get_object_or_404(JobseekerProfile.objects.select_related('user'), pk=pk)
+    saved_section = None
+    error = None
+
+    if request.method == 'POST':
+        form = (request.POST.get('form') or '').strip()
+
+        if form == 'personal':
+            jobseeker.first_name  = request.POST.get('first_name', jobseeker.first_name).strip()
+            jobseeker.middle_name = request.POST.get('middle_name', '').strip()
+            jobseeker.last_name   = request.POST.get('last_name', jobseeker.last_name).strip()
+            jobseeker.suffix      = request.POST.get('suffix', '').strip()
+            sex = request.POST.get('sex', '').strip()
+            if sex in {'M', 'F'}:
+                jobseeker.sex = sex
+            dob_raw = request.POST.get('date_of_birth', '').strip()
+            if dob_raw:
+                for fmt in ('%m/%d/%Y', '%B %d, %Y'):
+                    try:
+                        jobseeker.date_of_birth = datetime.strptime(dob_raw, fmt).date()
+                        break
+                    except ValueError:
+                        continue
+            jobseeker.save()
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_EDIT,
+                target_model='JobseekerProfile', target_id=jobseeker.id,
+                notes='Edited personal information.',
+            )
+            saved_section = 'personal'
+
+        elif form == 'password':
+            new1 = request.POST.get('new_password', '')
+            new2 = request.POST.get('confirm_password', '')
+            if len(new1) < 8:
+                error = 'New password must be at least 8 characters.'
+            elif new1 != new2:
+                error = "Passwords don't match."
+            else:
+                jobseeker.user.set_password(new1)
+                jobseeker.user.save(update_fields=['password'])
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_RESET_PASSWORD,
+                    target_model='User', target_id=jobseeker.user.id,
+                    notes='Admin reset password.',
+                )
+                saved_section = 'password'
+
+        elif form == 'disable':
+            jobseeker.user.is_active = False
+            jobseeker.user.save(update_fields=['is_active'])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_DEACTIVATE,
+                target_model='User', target_id=jobseeker.user.id,
+                notes='Admin disabled account.',
+            )
+            saved_section = 'disabled'
+
+        elif form == 'enable':
+            jobseeker.user.is_active = True
+            jobseeker.user.save(update_fields=['is_active'])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_REACTIVATE,
+                target_model='User', target_id=jobseeker.user.id,
+                notes='Admin re-enabled account.',
+            )
+            saved_section = 'enabled'
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'jobseeker':     jobseeker,
+        'saved_section': saved_section,
+        'error':         error,
+    })
+    return render(request, 'admin_panel/jobseeker_settings.html', ctx)
+
+
+@staff_required
+def jobseeker_application_detail(request, pk, app_id):
+    from apps.jobseekers.models import (
+        JobseekerProfile, Education, Skill, Certification, WorkExperience,
+    )
+    from apps.jobs.models import Application
+    from apps.matching.engine import compute_match_score
+
+    jobseeker = get_object_or_404(JobseekerProfile.objects.select_related('user'), pk=pk)
+    app = get_object_or_404(
+        Application.objects.select_related('job', 'job__company'),
+        id=app_id, jobseeker=jobseeker,
+    )
+    job = app.job
+
+    score_data = compute_match_score(job, jobseeker) if jobseeker.profile_complete else {
+        'total': 0, 'breakdown': {}
+    }
+
+    educations    = Education.objects.filter(profile=jobseeker).order_by('-year_started')
+    skills        = Skill.objects.filter(profile=jobseeker)
+    certifications = Certification.objects.filter(profile=jobseeker)
+    experiences   = WorkExperience.objects.filter(profile=jobseeker).order_by('-year_started', '-id')
+
+    # Prev / next other applications for THIS jobseeker
+    app_ids = list(Application.objects.filter(jobseeker=jobseeker)
+                   .order_by('-created_at').values_list('id', flat=True))
+    try:
+        idx = app_ids.index(app.id)
+    except ValueError:
+        idx = -1
+    prev_app_id = app_ids[idx - 1] if idx > 0 else None
+    next_app_id = app_ids[idx + 1] if 0 <= idx < len(app_ids) - 1 else None
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'jobseeker':     jobseeker,
+        'app':           app,
+        'job':           job,
+        'score':         score_data.get('total', 0),
+        'breakdown':     score_data.get('breakdown', {}),
+        'educations':    educations,
+        'skills':        skills,
+        'certifications': certifications,
+        'experiences':   experiences,
+        'prev_app_id':   prev_app_id,
+        'next_app_id':   next_app_id,
+    })
+    return render(request, 'admin_panel/jobseeker_application_detail.html', ctx)

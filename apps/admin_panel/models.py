@@ -135,3 +135,74 @@ class SiteSettings(models.Model):
     def get(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class UserReport(models.Model):
+    """A user-submitted report about another account (jobseeker or employer).
+
+    Phase 1 captures the minimum data shown in the admin dashboard's
+    User Reports table; a full review workflow lands in a later phase.
+    """
+    ACCOUNT_JOBSEEKER = "jobseeker"
+    ACCOUNT_EMPLOYER  = "employer"
+    ACCOUNT_TYPE_CHOICES = [
+        (ACCOUNT_JOBSEEKER, "Jobseeker"),
+        (ACCOUNT_EMPLOYER,  "Employer"),
+    ]
+
+    STATUS_OPEN     = "open"
+    STATUS_REVIEWED = "reviewed"
+    STATUS_DISMISSED = "dismissed"
+    STATUS_CHOICES = [
+        (STATUS_OPEN,      "Open"),
+        (STATUS_REVIEWED,  "Reviewed"),
+        (STATUS_DISMISSED, "Dismissed"),
+    ]
+
+    # Who/what the report is about. Exactly one of these should be set.
+    reported_jobseeker = models.ForeignKey(
+        'jobseekers.JobseekerProfile', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='reports_received',
+    )
+    reported_company = models.ForeignKey(
+        'employers.Company', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='reports_received',
+    )
+    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES)
+    description  = models.TextField(help_text="Short description of the report (e.g. 'Profanity in application message').")
+    filed_by     = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reports_filed',
+    )
+    status       = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    created_at   = models.DateTimeField(auto_now_add=True)
+    reviewed_at  = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "user_reports"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Report against {self.account_label} — {self.get_status_display()}"
+
+    @property
+    def account_label(self):
+        if self.reported_jobseeker:
+            return f"{self.reported_jobseeker.first_name} {self.reported_jobseeker.last_name}"
+        if self.reported_company:
+            return self.reported_company.name
+        return "Unknown"
+
+    @property
+    def filed_by_label(self):
+        if not self.filed_by:
+            return "(deleted user)"
+        try:
+            if self.filed_by.is_jobseeker:
+                p = self.filed_by.jobseeker_profile
+                return f"{p.first_name} {p.last_name}"
+            if self.filed_by.is_employer:
+                return self.filed_by.employer_profile.company.name
+        except Exception:
+            pass
+        return self.filed_by.email

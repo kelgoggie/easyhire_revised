@@ -1,0 +1,102 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}Jobseekers — EasyHire Admin{% endblock %}
+
+{% with active_nav="jobseekers" %}
+{% block admin_content %}
+<div class="py-8 max-w-6xl">
+
+  <!-- Title + search -->
+  <div class="flex items-end justify-between gap-6 mb-2">
+    <h1 class="text-5xl font-extrabold text-primary">Jobseekers</h1>
+    <form method="GET" action="/admin-panel/jobseekers/" class="flex-1 max-w-md">
+      <input type="hidden" name="sort" value="{{ sort }}">
+      <div class="relative">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search Jobseekers..."
+               class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
+        <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/></svg>
+        </button>
+      </div>
+    </form>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <!-- Sort -->
+  <div class="flex items-center gap-2 mb-6">
+    <div class="relative" id="sort-wrapper">
+      <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
+              class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/></svg>
+        Sort
+        <span class="text-primary">·
+          {% if sort == 'oldest' %}Oldest first
+          {% elif sort == 'name_az' %}Name A-Z
+          {% elif sort == 'name_za' %}Name Z-A
+          {% else %}Newest first{% endif %}
+        </span>
+      </button>
+      <div id="sort-menu" class="hidden absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
+        <a href="?sort=newest&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort != 'oldest' and sort != 'name_az' and sort != 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest first</a>
+        <a href="?sort=oldest&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
+        <a href="?sort=name_az&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
+        <a href="?sort=name_za&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards -->
+  {% if page.object_list %}
+  <div class="grid grid-cols-4 gap-4">
+    {% for js in page.object_list %}
+    <a href="/admin-panel/jobseekers/{{ js.id }}/"
+       class="block bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition relative">
+      <p class="font-bold text-primary text-base leading-tight">{{ js.first_name }} {{ js.last_name }}</p>
+      <p class="text-muted text-xs italic mb-3">Joined {{ js.created_at|date:"M j Y" }}</p>
+
+      <div class="flex flex-wrap gap-1.5">
+        {% for sector in js.sectors.all|slice:":4" %}
+        <span class="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-taupe/20 text-primary border border-taupe/30">
+          {{ sector.label|truncatechars:18 }}
+        </span>
+        {% empty %}
+        <span class="text-muted text-xs italic">No sectors</span>
+        {% endfor %}
+      </div>
+
+      {% if not js.user.is_active %}
+      <span class="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full">
+        Disabled
+      </span>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if page.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between mt-8 text-sm">
+    {% if page.has_previous %}
+    <a href="?page={{ page.previous_page_number }}&sort={{ sort }}&q={{ search }}" class="text-muted hover:text-primary transition">&lt; Previous</a>
+    {% else %}<span></span>{% endif %}
+    <span class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}
+    <a href="?page={{ page.next_page_number }}&sort={{ sort }}&q={{ search }}" class="text-muted hover:text-primary transition">Next &gt;</a>
+    {% else %}<span></span>{% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="border border-gray-200 rounded-2xl p-12 text-center text-muted text-sm">
+    {% if search %}No jobseekers match &ldquo;{{ search }}&rdquo;.{% else %}No jobseekers yet.{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+document.addEventListener('click', function(e) {
+  const w = document.getElementById('sort-wrapper');
+  if (w && !w.contains(e.target)) document.getElementById('sort-menu').classList.add('hidden');
+});
+</script>
+{% endblock %}
+{% endwith %}

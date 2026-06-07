@@ -1,0 +1,202 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load match_tags %}
+{% block title %}{{ jobseeker.first_name }} {{ jobseeker.last_name }} — {{ job.title }}{% endblock %}
+
+{% with active_nav="jobseekers" %}
+{% block admin_content %}
+<div class="py-8 max-w-6xl">
+
+  <!-- Heading -->
+  <div class="flex items-start justify-between gap-4 mb-1">
+    <h1 class="text-5xl font-extrabold text-primary leading-tight">{{ jobseeker.first_name }} {{ jobseeker.last_name }}</h1>
+  </div>
+  <div class="border-b border-taupe/40 mb-5"></div>
+
+  <div class="flex items-start justify-between gap-4 mb-6">
+    <div>
+      <h2 class="text-2xl font-extrabold text-primary leading-tight">
+        {{ job.title }}<span class="font-normal text-primary">, </span><a href="/companies/{{ job.company.id }}/" class="font-normal text-primary text-xl align-middle hover:text-teal transition">{{ job.company.name }}</a>
+      </h2>
+      <p class="text-muted text-sm mt-0.5">Applied {{ app.created_at|date:"M j, Y g:i A" }} · Status: <strong>{{ app.get_status_display }}</strong></p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if prev_app_id %}
+      <a href="/admin-panel/jobseekers/{{ jobseeker.id }}/applications/{{ prev_app_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+      {% else %}
+      <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">&lt; Previous</span>
+      {% endif %}
+      {% if next_app_id %}
+      <a href="/admin-panel/jobseekers/{{ jobseeker.id }}/applications/{{ next_app_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+      {% else %}
+      <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">Next &gt;</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Two columns -->
+  <div class="grid grid-cols-3 gap-5 mb-6">
+
+    <!-- LEFT: Job description + compatibility -->
+    <div class="col-span-2 space-y-5">
+      <div class="bg-white border border-gray-200 rounded-2xl p-6">
+        <p class="text-sm font-bold text-primary mb-3">Job Description:</p>
+        <p class="text-primary text-sm leading-relaxed whitespace-pre-line">{{ job.description }}</p>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-2xl p-6">
+        <p class="text-sm font-bold text-primary mb-1">Compatibility Breakdown</p>
+        <p class="text-muted text-xs mb-4">How this jobseeker scored on each requirement category for this job.</p>
+
+        {% with b=breakdown %}
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-primary font-semibold">Skills:</span>
+              <span class="text-muted">{{ b.skills.score|default:0 }}%</span>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full bg-green-400" style="width: {{ b.skills.score|default:0 }}%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-primary font-semibold">Education:</span>
+              <span class="text-muted">{{ b.education.score|default:0 }}%</span>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full bg-teal" style="width: {{ b.education.score|default:0 }}%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-primary font-semibold">Experience:</span>
+              <span class="text-muted">{{ b.experience.score|default:0 }}%</span>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full bg-purple-400" style="width: {{ b.experience.score|default:0 }}%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-primary font-semibold">Certifications:</span>
+              <span class="text-muted">{{ b.certifications.score|default:0 }}%</span>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full bg-red-400" style="width: {{ b.certifications.score|default:0 }}%"></div>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+      </div>
+    </div>
+
+    <!-- RIGHT: Job requirements -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Skills:</p>
+        {% with sk=job.skill_requirements.all %}
+        {% if sk %}
+        <div class="flex flex-wrap gap-1.5">
+          {% for s in sk %}<span class="inline-flex items-center bg-[#D6E4D1] text-primary text-xs px-3 py-1 rounded-full">{{ s.name }}</span>{% endfor %}
+        </div>
+        {% else %}<p class="text-muted text-xs italic">None specified</p>{% endif %}
+        {% endwith %}
+      </div>
+
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Education:</p>
+        {% if job.education_requirement %}
+        <div class="flex flex-wrap gap-1.5">
+          <span class="inline-flex items-center bg-[#D6E4D1] text-primary text-xs px-3 py-1 rounded-full">{{ job.education_requirement.get_level_display }}</span>
+          {% if job.education_requirement.course_degree %}<span class="inline-flex items-center bg-[#D6E4D1] text-primary text-xs px-3 py-1 rounded-full">{{ job.education_requirement.course_degree }}</span>{% endif %}
+        </div>
+        {% else %}<p class="text-muted text-xs italic">None required</p>{% endif %}
+      </div>
+
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Experience:</p>
+        <span class="inline-flex items-center bg-purple-100 text-primary text-xs px-3 py-1 rounded-full">
+          {% if job.experience_requirement %}{{ job.experience_requirement.display_experience }}{% else %}None Required{% endif %}
+        </span>
+      </div>
+
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Certifications:</p>
+        {% with cs=job.certification_requirements.all %}
+        {% if cs %}
+        <div class="flex flex-wrap gap-1.5">
+          {% for c in cs %}<span class="inline-flex items-center bg-purple-100 text-primary text-xs px-3 py-1 rounded-full">{{ c.name }}</span>{% endfor %}
+        </div>
+        {% else %}<span class="inline-flex items-center bg-purple-100 text-primary text-xs px-3 py-1 rounded-full">None Required</span>{% endif %}
+        {% endwith %}
+      </div>
+
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Hiring Sectors:</p>
+        {% with secs=job.company.sector_badges.all %}
+        {% if secs %}
+        <div class="flex flex-wrap gap-1.5">
+          {% for s in secs %}<span class="inline-flex items-center bg-gray-100 text-primary text-xs px-3 py-1 rounded-full">{{ s.label }}</span>{% endfor %}
+        </div>
+        {% else %}<p class="text-muted text-xs italic">None</p>{% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Jobseeker's Resume + match score -->
+  <div class="bg-surface/60 border border-taupe/40 rounded-2xl p-6">
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-3xl font-extrabold text-primary">Jobseeker's Resume</p>
+      <p class="text-3xl font-extrabold text-primary">{{ score }}%</p>
+    </div>
+
+    <div class="grid grid-cols-4 gap-3">
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-base mb-3">Education</p>
+        {% for edu in educations %}
+        <p class="font-bold text-primary text-xs leading-tight">{{ edu.course_degree|default:edu.get_level_display }}</p>
+        <p class="text-muted text-xs">{{ edu.institution|default:"—" }}</p>
+        <p class="text-muted text-xs mb-2">{{ edu.year_started|default:"—" }}-{% if edu.is_current %}Present{% else %}{{ edu.year_ended|default:"—" }}{% endif %}</p>
+        {% empty %}
+        <p class="text-muted text-xs italic">No education listed.</p>
+        {% endfor %}
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-base mb-3">Experience</p>
+        {% for exp in experiences %}
+        <p class="font-bold text-primary text-xs leading-tight">{{ exp.position }}</p>
+        <p class="text-muted text-xs">{{ exp.company|default:"—" }}</p>
+        <p class="text-muted text-xs mb-2">{{ exp.year_started|default:"—" }}-{% if exp.is_current %}Present{% else %}{{ exp.year_ended|default:"—" }}{% endif %}</p>
+        {% empty %}
+        <p class="text-muted text-xs italic">No experience.</p>
+        {% endfor %}
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-base mb-3">Certifications</p>
+        {% for cert in certifications %}
+        <p class="font-bold text-primary text-xs leading-tight">{{ cert.name }}</p>
+        <p class="text-muted text-xs mb-2">{{ cert.issuing_org|default:"" }}</p>
+        {% empty %}
+        <p class="text-muted text-xs italic">No Certifications Added</p>
+        {% endfor %}
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-base mb-3">Skills</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for skill in skills %}
+          <span class="inline-flex items-center text-xs px-3 py-1 rounded-full bg-taupe/20 text-primary border border-taupe/30">{{ skill.name }}</span>
+          {% empty %}
+          <p class="text-muted text-xs italic">No skills.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+{% endwith %}

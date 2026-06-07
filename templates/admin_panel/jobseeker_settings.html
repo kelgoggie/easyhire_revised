@@ -1,0 +1,141 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}Account Settings — {{ jobseeker.first_name }} {{ jobseeker.last_name }}{% endblock %}
+
+{% with active_nav="jobseekers" %}
+{% block admin_content %}
+<div class="py-8 max-w-5xl">
+
+  <div class="flex items-end justify-between gap-4 mb-2">
+    <h1 class="text-5xl font-extrabold text-primary">Account Settings</h1>
+    <a href="/admin-panel/jobseekers/{{ jobseeker.id }}/" class="text-muted text-sm hover:text-primary transition">&lt; Back to profile</a>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <h2 class="text-3xl font-extrabold text-primary mb-1">{{ jobseeker.first_name }} {{ jobseeker.last_name }}{% if jobseeker.suffix %}, {{ jobseeker.suffix }}{% endif %}</h2>
+  <p class="text-muted text-sm">
+    {% if jobseeker.house_unit %}{{ jobseeker.house_unit }}, {% endif %}{{ jobseeker.street_barangay|default:"—" }}{% if jobseeker.barangay %}, {{ jobseeker.barangay }}{% endif %}, {{ jobseeker.city_municipality }}
+  </p>
+  <p class="text-muted text-sm mb-6">{{ jobseeker.user.email }}{% if jobseeker.phone %} | +63 {{ jobseeker.phone|slice:"1:" }}{% endif %}</p>
+
+  {% if saved_section == 'personal' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Personal information updated.</div>
+  {% elif saved_section == 'password' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Password reset successfully.</div>
+  {% elif saved_section == 'disabled' %}
+  <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">Account disabled. The user can no longer log in.</div>
+  {% elif saved_section == 'enabled' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Account re-enabled.</div>
+  {% endif %}
+  {% if error %}
+  <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">{{ error }}</div>
+  {% endif %}
+
+  <!-- ── Personal Information ──────────────────────────────────── -->
+  <h3 class="text-lg font-bold text-primary mb-3">Personal Information</h3>
+  <form method="POST" class="mb-8">
+    {% csrf_token %}
+    <input type="hidden" name="form" value="personal">
+
+    <div class="grid grid-cols-4 gap-4 mb-4">
+      <div>
+        <label class="block text-primary text-xs mb-1">First Name</label>
+        <input type="text" name="first_name" value="{{ jobseeker.first_name }}" required
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Middle Name</label>
+        <input type="text" name="middle_name" value="{{ jobseeker.middle_name }}"
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Last Name</label>
+        <input type="text" name="last_name" value="{{ jobseeker.last_name }}" required
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Suffix</label>
+        <input type="text" name="suffix" value="{{ jobseeker.suffix }}"
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 items-end">
+      <div>
+        <label class="block text-primary text-xs mb-1">Birthday</label>
+        <div class="relative">
+          <input type="text" name="date_of_birth" data-datepicker="date" data-display-format="long"
+                 value="{% if jobseeker.date_of_birth %}{{ jobseeker.date_of_birth|date:'F j, Y' }}{% endif %}"
+                 placeholder="Select date" readonly autocomplete="off"
+                 class="w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
+          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </div>
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Sex</label>
+        <div class="relative">
+          <select name="sex" class="w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+            <option value="M" {% if jobseeker.sex == 'M' %}selected{% endif %}>Male</option>
+            <option value="F" {% if jobseeker.sex == 'F' %}selected{% endif %}>Female</option>
+          </select>
+          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div></div>
+      <div class="flex justify-end">
+        <button type="submit"
+                class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition w-full">
+          Edit
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- ── Create New Password ───────────────────────────────────── -->
+  <h3 class="text-lg font-bold text-primary mb-3">Create New Password</h3>
+  <form method="POST" class="mb-12">
+    {% csrf_token %}
+    <input type="hidden" name="form" value="password">
+    <div class="grid grid-cols-4 gap-4 items-end">
+      <div>
+        <label class="block text-primary text-xs mb-1">Password</label>
+        <input type="password" name="new_password" minlength="8" required
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Confirm Password</label>
+        <input type="password" name="confirm_password" minlength="8" required
+               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      </div>
+      <div></div>
+      <div class="flex justify-end">
+        <button type="submit"
+                class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition w-full">
+          Set Password
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- ── Disable / Enable Account ──────────────────────────────── -->
+  <div class="flex justify-center">
+    <form method="POST">
+      {% csrf_token %}
+      {% if jobseeker.user.is_active %}
+      <input type="hidden" name="form" value="disable">
+      <button type="submit" onclick="return confirm('Disable this account? The user will no longer be able to log in.')"
+              class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-12 py-2.5 rounded-full hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition">
+        Disable Account
+      </button>
+      {% else %}
+      <input type="hidden" name="form" value="enable">
+      <button type="submit"
+              class="bg-teal text-white text-sm font-semibold px-12 py-2.5 rounded-full hover:bg-teal/90 transition">
+        Re-enable Account
+      </button>
+      {% endif %}
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+{% endwith %}
