@@ -1,0 +1,147 @@
+{% comment %}
+Shared "Report" modal. Open from anywhere with:
+  window.openReportModal({
+    targetType: 'jobseeker' | 'employer',
+    targetId:   <pk>,
+    contextLabel: 'optional, shown above the radios',
+  });
+{% endcomment %}
+<div id="report-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" data-close-report></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+    <p class="text-primary font-bold text-base mb-1">Submit a report</p>
+    <p id="report-context" class="text-muted text-xs mb-4"></p>
+
+    <form id="report-form">
+      {% csrf_token %}
+      <input type="hidden" name="target_type" id="report-target-type">
+      <input type="hidden" name="target_id"   id="report-target-id">
+
+      <p class="text-primary text-sm font-semibold mb-2">Reason</p>
+      <div class="space-y-1.5 mb-3 max-h-56 overflow-y-auto pr-1">
+        <label class="flex items-center gap-2 text-sm text-primary cursor-pointer rounded-lg px-2 py-1.5 hover:bg-surface transition">
+          <input type="radio" name="reason" value="inappropriate_language" class="report-reason accent-primary w-3.5 h-3.5">
+          Inappropriate language
+        </label>
+        <label class="flex items-center gap-2 text-sm text-primary cursor-pointer rounded-lg px-2 py-1.5 hover:bg-surface transition">
+          <input type="radio" name="reason" value="misleading" class="report-reason accent-primary w-3.5 h-3.5">
+          Misleading information
+        </label>
+        <label class="flex items-center gap-2 text-sm text-primary cursor-pointer rounded-lg px-2 py-1.5 hover:bg-surface transition">
+          <input type="radio" name="reason" value="discrimination" class="report-reason accent-primary w-3.5 h-3.5">
+          Discriminatory content
+        </label>
+        <label class="flex items-center gap-2 text-sm text-primary cursor-pointer rounded-lg px-2 py-1.5 hover:bg-surface transition">
+          <input type="radio" name="reason" value="spam" class="report-reason accent-primary w-3.5 h-3.5">
+          Spam or low-quality content
+        </label>
+        <label class="flex items-center gap-2 text-sm text-primary cursor-pointer rounded-lg px-2 py-1.5 hover:bg-surface transition">
+          <input type="radio" name="reason" value="fraud" class="report-reason accent-primary w-3.5 h-3.5">
+          Suspected fraud or scam
+        </label>
+        <label class="flex items-center gap-2 text-sm text-primary cursor-pointer rounded-lg px-2 py-1.5 hover:bg-surface transition">
+          <input type="radio" name="reason" value="harassment" class="report-reason accent-primary w-3.5 h-3.5">
+          Harassment
+        </label>
+        <label class="flex items-center gap-2 text-sm text-primary cursor-pointer rounded-lg px-2 py-1.5 hover:bg-surface transition">
+          <input type="radio" name="reason" value="other" class="report-reason accent-primary w-3.5 h-3.5">
+          Other
+        </label>
+      </div>
+
+      <div id="report-other-wrap" class="mb-3 hidden">
+        <label class="block text-primary text-xs mb-1">Describe the issue <span class="text-muted">(100 characters max)</span></label>
+        <input type="text" name="other_text" id="report-other-text" maxlength="100"
+               class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+      </div>
+
+      <p id="report-error" class="text-xs text-red-500 mb-2 hidden"></p>
+      <p id="report-success" class="text-xs text-teal mb-2 hidden">Report submitted. Thanks for letting us know.</p>
+
+      <div class="flex gap-3 justify-end mt-3">
+        <button type="button" data-close-report
+                class="bg-gray-100 text-primary font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition text-sm">
+          Cancel
+        </button>
+        <button type="submit" id="report-submit-btn"
+                class="bg-red-500 text-white font-semibold px-6 py-2 rounded-full hover:bg-red-600 transition text-sm">
+          Submit Report
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function() {
+  const modal     = document.getElementById('report-modal');
+  const form      = document.getElementById('report-form');
+  const ctxEl     = document.getElementById('report-context');
+  const typeEl    = document.getElementById('report-target-type');
+  const idEl      = document.getElementById('report-target-id');
+  const otherWrap = document.getElementById('report-other-wrap');
+  const otherText = document.getElementById('report-other-text');
+  const errEl     = document.getElementById('report-error');
+  const okEl      = document.getElementById('report-success');
+  const submit    = document.getElementById('report-submit-btn');
+
+  function getCookie(n) {
+    const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+  function show() { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  function hide() {
+    modal.classList.add('hidden'); modal.classList.remove('flex');
+    form.reset();
+    otherWrap.classList.add('hidden');
+    errEl.classList.add('hidden'); errEl.textContent = '';
+    okEl.classList.add('hidden');
+    submit.disabled = false;
+  }
+
+  window.openReportModal = function(opts) {
+    typeEl.value = opts.targetType || '';
+    idEl.value   = String(opts.targetId || '');
+    ctxEl.textContent = opts.contextLabel || '';
+    show();
+  };
+
+  modal.querySelectorAll('[data-close-report]').forEach(function(el) {
+    el.addEventListener('click', hide);
+  });
+
+  form.addEventListener('change', function(e) {
+    if (e.target && e.target.classList.contains('report-reason')) {
+      const isOther = e.target.value === 'other';
+      otherWrap.classList.toggle('hidden', !isOther);
+      if (isOther) setTimeout(function() { otherText.focus(); }, 50);
+    }
+  });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    submit.disabled = true;
+    errEl.classList.add('hidden'); okEl.classList.add('hidden');
+    fetch('/api/report/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      body: new FormData(form),
+    }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
+      .then(function(pair) {
+        const [ok, d] = pair;
+        if (ok && d.ok) {
+          okEl.classList.remove('hidden');
+          setTimeout(hide, 1200);
+        } else {
+          submit.disabled = false;
+          errEl.textContent = (d && d.error) || 'Something went wrong.';
+          errEl.classList.remove('hidden');
+        }
+      }).catch(function() {
+        submit.disabled = false;
+        errEl.textContent = 'Network error. Try again.';
+        errEl.classList.remove('hidden');
+      });
+  });
+})();
+</script>

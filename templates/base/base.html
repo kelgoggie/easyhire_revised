@@ -46,6 +46,7 @@
     {% block footer %}{% endblock %}
     {% include "partials/_calendar_picker.html" %}
     {% include "partials/_autocomplete.html" %}
+    {% if request.user.is_authenticated %}{% include "partials/_report_modal.html" %}{% endif %}
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

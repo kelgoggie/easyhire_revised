@@ -160,19 +160,25 @@
       <p class="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">Application message</p>
       <p id="app-modal-message" class="text-primary text-sm leading-relaxed whitespace-pre-line"></p>
     </div>
-    <div class="flex gap-3 justify-end">
-      <button type="button" id="app-modal-reject"
-              class="bg-white border border-red-300 text-red-500 font-semibold px-6 py-2.5 rounded-full hover:bg-red-50 transition text-sm">
-        Reject
+    <div class="flex items-center justify-between gap-3">
+      <button type="button" id="app-modal-report"
+              class="text-muted text-xs italic hover:text-red-500 transition underline-offset-2 hover:underline">
+        Report this application
       </button>
-      <button type="button" id="app-modal-accept"
-              class="bg-teal text-white font-semibold px-6 py-2.5 rounded-full hover:bg-teal/90 transition text-sm">
-        Accept
-      </button>
-      <button type="button" data-close-app
-              class="bg-gray-100 text-primary font-semibold px-6 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
-        Exit
-      </button>
+      <div class="flex gap-3">
+        <button type="button" id="app-modal-reject"
+                class="bg-white border border-red-300 text-red-500 font-semibold px-6 py-2.5 rounded-full hover:bg-red-50 transition text-sm">
+          Reject
+        </button>
+        <button type="button" id="app-modal-accept"
+                class="bg-teal text-white font-semibold px-6 py-2.5 rounded-full hover:bg-teal/90 transition text-sm">
+          Accept
+        </button>
+        <button type="button" data-close-app
+                class="bg-gray-100 text-primary font-semibold px-6 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
+          Exit
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -356,6 +362,16 @@
   });
 
   // ── Reject flow (from modal) ────────────────────────────────────────
+  // Report this applicant
+  document.getElementById('app-modal-report').addEventListener('click', function() {
+    if (!activeCard || !window.openReportModal) return;
+    window.openReportModal({
+      targetType:   'jobseeker',
+      targetId:     activeCard.dataset.applicantId,
+      contextLabel: 'About: ' + (activeCard.dataset.applicantName || 'this applicant') + "'s application",
+    });
+  });
+
   document.getElementById('app-modal-reject').addEventListener('click', function() {
     if (this.disabled) return;
     show(rejectModal);

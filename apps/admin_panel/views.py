@@ -647,3 +647,80 @@ def company_delete_job(request, pk, job_id):
 
     job.delete()
     return JsonResponse({'ok': True, 'message': f'Deleted "{job_title}".'})
+
+
+# ── User report submission (jobseeker reports a company, employer reports a jobseeker) ─
+
+REPORT_REASONS = {
+    'inappropriate_language': 'Inappropriate language',
+    'misleading':             'Misleading information',
+    'discrimination':         'Discriminatory content',
+    'spam':                   'Spam or low-quality content',
+    'fraud':                  'Suspected fraud or scam',
+    'harassment':             'Harassment',
+    'other':                  'Other',
+}
+
+
+@login_required
+def report_submit(request):
+    """POST /api/report/  — file a UserReport about a jobseeker or a company.
+
+    Body params:
+      target_type: 'jobseeker' | 'employer'
+      target_id:   pk of the JobseekerProfile or Company being reported
+      reason:      one of REPORT_REASONS keys
+      other_text:  optional, used when reason='other', clipped to 100 chars
+    """
+    from django.http import JsonResponse
+    from .models import UserReport
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    target_type = (request.POST.get('target_type') or '').strip()
+    target_id   = (request.POST.get('target_id') or '').strip()
+    reason_code = (request.POST.get('reason') or '').strip()
+    other_text  = (request.POST.get('other_text') or '').strip()[:100]
+
+    if reason_code not in REPORT_REASONS:
+        return JsonResponse({'ok': False, 'error': 'Pick a reason.'}, status=400)
+    if reason_code == 'other' and not other_text:
+        return JsonResponse({'ok': False, 'error': 'Please describe the reason.'}, status=400)
+
+    label = REPORT_REASONS[reason_code]
+    description = f'Other: {other_text}' if reason_code == 'other' else label
+    if reason_code != 'other' and other_text:
+        description = f'{label} — {other_text}'
+
+    if target_type == 'jobseeker':
+        from apps.jobseekers.models import JobseekerProfile
+        target = get_object_or_404(JobseekerProfile, id=target_id)
+        # Disallow self-reports.
+        if request.user.is_jobseeker:
+            try:
+                if request.user.jobseeker_profile.id == target.id:
+                    return JsonResponse({'ok': False, 'error': "You can't report yourself."}, status=400)
+            except Exception:
+                pass
+        UserReport.objects.create(
+            reported_jobseeker=target, account_type=UserReport.ACCOUNT_JOBSEEKER,
+            description=description, filed_by=request.user,
+        )
+    elif target_type == 'employer':
+        from apps.employers.models import Company
+        target = get_object_or_404(Company, id=target_id)
+        if request.user.is_employer:
+            try:
+                if request.user.employer_profile.company_id == target.id:
+                    return JsonResponse({'ok': False, 'error': "You can't report your own company."}, status=400)
+            except Exception:
+                pass
+        UserReport.objects.create(
+            reported_company=target, account_type=UserReport.ACCOUNT_EMPLOYER,
+            description=description, filed_by=request.user,
+        )
+    else:
+        return JsonResponse({'ok': False, 'error': 'Invalid target.'}, status=400)
+
+    return JsonResponse({'ok': True})

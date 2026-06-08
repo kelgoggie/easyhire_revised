@@ -22,4 +22,7 @@ urlpatterns = [
     path('admin-panel/companies/<int:pk>/',                               views.company_detail,                  name='company_detail'),
     path('admin-panel/companies/<int:pk>/settings/',                      views.company_settings,                name='company_settings'),
     path('admin-panel/companies/<int:pk>/jobs/<int:job_id>/delete/',      views.company_delete_job,              name='company_delete_job'),
+
+    # User-facing report submission (jobseeker reports company, employer reports jobseeker)
+    path('api/report/',                                                   views.report_submit,                   name='report_submit'),
 ]

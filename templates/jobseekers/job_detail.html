@@ -304,6 +304,28 @@
   })();
   </script>
 
+  <!-- Report this job -->
+  <div class="text-center mt-6">
+    <button type="button" id="report-job-btn"
+            class="text-muted text-xs italic hover:text-red-500 transition underline-offset-2 hover:underline">
+      Report this job
+    </button>
+  </div>
+  <script>
+  (function() {
+    const btn = document.getElementById('report-job-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+      if (!window.openReportModal) return;
+      window.openReportModal({
+        targetType:   'employer',
+        targetId:     {{ job.company.id }},
+        contextLabel: 'About: {{ job.title|escapejs }} at {{ job.company.name|escapejs }}',
+      });
+    });
+  })();
+  </script>
+
   <!-- Prev / Next nav -->
   {% if prev_job or next_job %}
   <div class="flex items-center justify-between mt-8 max-w-2xl mx-auto text-xs">
