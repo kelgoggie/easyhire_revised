@@ -85,6 +85,20 @@ def job_apply(request, job_id):
     if not created and message and not app.message:
         app.message = message
         app.save(update_fields=['message'])
+
+    # Notify every company representative when a new application comes in
+    # (no notification on subsequent re-submits — only on create).
+    if created:
+        from apps.notifications.models import Notification
+        for rep in job.company.representatives.select_related('user').all():
+            Notification.objects.create(
+                recipient=rep.user,
+                notif_type=Notification.NEW_APPLICATION,
+                company=job.company,
+                jobseeker=profile,
+                job=job,
+            )
+
     return redirect('/applications/')
 
 

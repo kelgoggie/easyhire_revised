@@ -44,6 +44,107 @@
     </div>
   </div>
 
+  {% if pending_change %}
+  <!-- Personal-info change request awaiting review -->
+  <div class="bg-amber/10 border border-amber/40 rounded-2xl p-5 mb-6">
+    <div class="flex items-start gap-3 mb-3">
+      <svg class="w-5 h-5 text-amber flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div class="flex-1">
+        <p class="text-primary font-bold text-sm">Pending Personal Information Change</p>
+        <p class="text-muted text-xs">Submitted {{ pending_change.submitted_at|date:"M j, Y g:i A" }}. Review the requested values below.</p>
+      </div>
+    </div>
+
+    {% with j=jobseeker p=pending_change %}
+    <div class="grid grid-cols-6 gap-3 text-xs mb-4">
+      <div>
+        <p class="text-muted">First Name</p>
+        <p class="text-primary {% if j.first_name != p.first_name %}font-bold{% endif %}">{{ p.first_name }}</p>
+        {% if j.first_name != p.first_name %}<p class="text-muted italic text-[10px]">was {{ j.first_name }}</p>{% endif %}
+      </div>
+      <div>
+        <p class="text-muted">Middle Name</p>
+        <p class="text-primary {% if j.middle_name != p.middle_name %}font-bold{% endif %}">{{ p.middle_name|default:"—" }}</p>
+        {% if j.middle_name != p.middle_name %}<p class="text-muted italic text-[10px]">was {{ j.middle_name|default:"(empty)" }}</p>{% endif %}
+      </div>
+      <div>
+        <p class="text-muted">Last Name</p>
+        <p class="text-primary {% if j.last_name != p.last_name %}font-bold{% endif %}">{{ p.last_name }}</p>
+        {% if j.last_name != p.last_name %}<p class="text-muted italic text-[10px]">was {{ j.last_name }}</p>{% endif %}
+      </div>
+      <div>
+        <p class="text-muted">Suffix</p>
+        <p class="text-primary {% if j.suffix != p.suffix %}font-bold{% endif %}">{{ p.suffix|default:"—" }}</p>
+        {% if j.suffix != p.suffix %}<p class="text-muted italic text-[10px]">was {{ j.suffix|default:"(empty)" }}</p>{% endif %}
+      </div>
+      <div>
+        <p class="text-muted">Birthday</p>
+        <p class="text-primary {% if j.date_of_birth != p.date_of_birth %}font-bold{% endif %}">{% if p.date_of_birth %}{{ p.date_of_birth|date:"F j, Y" }}{% else %}—{% endif %}</p>
+        {% if j.date_of_birth != p.date_of_birth %}<p class="text-muted italic text-[10px]">was {% if j.date_of_birth %}{{ j.date_of_birth|date:"F j, Y" }}{% else %}(empty){% endif %}</p>{% endif %}
+      </div>
+      <div>
+        <p class="text-muted">Sex</p>
+        <p class="text-primary {% if j.sex != p.sex %}font-bold{% endif %}">{{ p.get_sex_display|default:p.sex|default:"—" }}</p>
+        {% if j.sex != p.sex %}<p class="text-muted italic text-[10px]">was {{ j.get_sex_display|default:j.sex|default:"(empty)" }}</p>{% endif %}
+      </div>
+    </div>
+    {% endwith %}
+
+    <div class="flex items-center justify-between gap-3 pt-3 border-t border-amber/30">
+      <div class="text-xs text-muted">
+        {% if pending_change.id_document %}
+        <a href="{{ pending_change.id_document.url }}" target="_blank" class="inline-flex items-center gap-1 text-primary underline hover:text-teal transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          View submitted ID
+        </a>
+        {% else %}
+        <span class="italic">No ID document on file</span>
+        {% endif %}
+      </div>
+      <div class="flex gap-2">
+        <button type="button" id="change-reject-btn" data-request-id="{{ pending_change.id }}"
+                class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-5 py-2 rounded-full hover:bg-red-50 transition">
+          Reject
+        </button>
+        <button type="button" id="change-approve-btn" data-request-id="{{ pending_change.id }}"
+                class="bg-teal text-white text-xs font-semibold px-5 py-2 rounded-full hover:bg-teal/90 transition">
+          Approve
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    function getCookie(n) {
+      const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+      if (p.length === 2) return p.pop().split(';').shift();
+    }
+    function decide(reqId, decision, confirmMsg) {
+      if (!confirm(confirmMsg)) return;
+      const fd = new FormData();
+      fd.append('decision', decision);
+      fetch('/admin-panel/change-requests/' + reqId + '/review/', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+        body: fd,
+      }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
+        .then(function(pair) {
+          const [ok, d] = pair;
+          if (ok && d.ok) window.location.reload();
+          else alert((d && d.error) || 'Something went wrong.');
+        });
+    }
+    document.getElementById('change-approve-btn').addEventListener('click', function() {
+      decide(this.dataset.requestId, 'approve', 'Approve this change? Profile fields will be overwritten with the requested values.');
+    });
+    document.getElementById('change-reject-btn').addEventListener('click', function() {
+      decide(this.dataset.requestId, 'reject', 'Reject this change? The jobseeker will need to submit a new request to try again.');
+    });
+  })();
+  </script>
+  {% endif %}
+
   <!-- Bio + resume cards -->
   <div class="bg-surface/60 border border-taupe/40 rounded-2xl p-5 mb-6">
     <p class="text-primary font-bold text-sm mb-2">Personal Bio</p>

@@ -60,6 +60,41 @@ def notifications_api(request):
             item['icon']   = 'briefcase'
             item['meta']   = ''
             item['url']    = '/employers/jobs/' if n.recipient.is_employer else '#'
+        elif n.notif_type == Notification.PERSONAL_INFO_APPROVED:
+            item['actor'] = 'PESO Admin'
+            item['verb']  = 'approved your personal information change request.'
+            item['icon']  = 'sparkle'
+            item['meta']  = ''
+            item['url']   = '/settings/'
+        elif n.notif_type == Notification.PERSONAL_INFO_REJECTED:
+            item['actor'] = 'PESO Admin'
+            item['verb']  = 'denied your personal information change request.'
+            item['icon']  = 'sparkle'
+            item['meta']  = ''
+            item['url']   = '/settings/'
+        elif n.notif_type == Notification.NEW_APPLICATION:
+            actor_name = (f'{n.jobseeker.first_name} {n.jobseeker.last_name}'
+                          if n.jobseeker else 'Someone')
+            item['actor'] = actor_name
+            item['verb']  = 'applied to your job post.'
+            item['icon']  = 'briefcase'
+            item['url']   = (f'/employers/jobs/{n.job.id}/candidates/?tab=applicants'
+                             if n.job else '/employers/jobs/')
+        elif n.notif_type == Notification.APPLICATION_ACCEPTED:
+            item['actor'] = n.company.name if n.company else 'Employer'
+            item['verb']  = 'accepted your application.'
+            item['icon']  = 'sparkle'
+            item['url']   = '/applications/'
+        elif n.notif_type == Notification.APPLICATION_REJECTED:
+            item['actor'] = n.company.name if n.company else 'Employer'
+            item['verb']  = 'declined your application.'
+            item['icon']  = 'sparkle'
+            item['url']   = '/applications/'
+        elif n.notif_type == Notification.APPLICATION_HIRED:
+            item['actor'] = n.company.name if n.company else 'Employer'
+            item['verb']  = 'hired you — congratulations!'
+            item['icon']  = 'sparkle'
+            item['url']   = '/applications/'
         data.append(item)
 
     return JsonResponse({'notifications': data, 'count': len(data)})

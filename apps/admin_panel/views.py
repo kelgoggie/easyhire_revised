@@ -85,7 +85,7 @@ def _admin_context(request):
             'actor': f'{r.profile.first_name} {r.profile.last_name}',
             'verb':  'requested a change of personal information.',
             'when':  _relative(r.submitted_at),
-            'url':   '#',
+            'url':   f'/admin-panel/jobseekers/{r.profile.id}/',
             'at':    r.submitted_at,
         })
     for ur in (UserReport.objects.filter(status=UserReport.STATUS_OPEN)
@@ -194,12 +194,13 @@ def employer_detail(request, company_id):
 
     profile = company.representatives.first()
 
-    return render(request, 'admin_panel/employer_detail.html', {
-        'company': company,
-        'profile': profile,
+    ctx = _admin_context(request)
+    ctx.update({
+        'company':   company,
+        'profile':   profile,
         'checklist': checklist,
-        'pending_count': Company.objects.filter(verification_status=Company.PENDING).count(),
     })
+    return render(request, 'admin_panel/employer_detail.html', ctx)
 
 
 @staff_required
@@ -295,6 +296,11 @@ def jobseeker_detail(request, pk):
 
     prev_id, next_id = _surrounding_jobseeker_ids(pk)
 
+    from apps.jobseekers.models import PersonalInfoChangeRequest
+    pending_change = (PersonalInfoChangeRequest.objects
+                      .filter(profile=jobseeker, status=PersonalInfoChangeRequest.STATUS_PENDING)
+                      .order_by('-submitted_at').first())
+
     ctx = _admin_context(request)
     ctx.update({
         'jobseeker':      jobseeker,
@@ -305,6 +311,7 @@ def jobseeker_detail(request, pk):
         'applications':   applications,
         'prev_id':        prev_id,
         'next_id':        next_id,
+        'pending_change': pending_change,
     })
     return render(request, 'admin_panel/jobseeker_detail.html', ctx)
 
@@ -724,3 +731,184 @@ def report_submit(request):
         return JsonResponse({'ok': False, 'error': 'Invalid target.'}, status=400)
 
     return JsonResponse({'ok': True})
+
+
+# ── Phase 4: Algorithm settings ─────────────────────────────────────
+
+@staff_required
+def algorithm_settings(request):
+    from .models import SiteSettings, AuditLog
+    settings = SiteSettings.get()
+    saved = False
+    error = None
+
+    if request.method == 'POST':
+        # Accept whole-number percentages (e.g. 40, 25, 25, 10) — UI uses %.
+        try:
+            sk = int(request.POST.get('weight_skills', 0))
+            ed = int(request.POST.get('weight_education', 0))
+            ex = int(request.POST.get('weight_experience', 0))
+            ce = int(request.POST.get('weight_certifications', 0))
+        except (TypeError, ValueError):
+            error = 'Weights must be whole numbers.'
+            sk = ed = ex = ce = 0
+
+        if error is None:
+            if any(v < 0 or v > 100 for v in (sk, ed, ex, ce)):
+                error = 'Each weight must be between 0 and 100.'
+            elif (sk + ed + ex + ce) != 100:
+                error = f"Weights must add up to 100% (currently {sk + ed + ex + ce}%)."
+            else:
+                settings.weight_skills         = sk / 100.0
+                settings.weight_education      = ed / 100.0
+                settings.weight_experience     = ex / 100.0
+                settings.weight_certifications = ce / 100.0
+                settings.updated_by = request.user
+                settings.save(update_fields=[
+                    'weight_skills', 'weight_education', 'weight_experience',
+                    'weight_certifications', 'updated_by', 'updated_at',
+                ])
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_EDIT,
+                    target_model='SiteSettings', target_id=settings.id,
+                    notes=f'Updated matching weights to S{sk}/E{ed}/X{ex}/C{ce}.',
+                )
+                saved = True
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'settings': settings,
+        'weight_skills_pct':         round(settings.weight_skills * 100),
+        'weight_education_pct':      round(settings.weight_education * 100),
+        'weight_experience_pct':     round(settings.weight_experience * 100),
+        'weight_certifications_pct': round(settings.weight_certifications * 100),
+        'saved': saved,
+        'error': error,
+    })
+    return render(request, 'admin_panel/algorithm_settings.html', ctx)
+
+
+# ── Phase 4: Reports admin ──────────────────────────────────────────
+
+@staff_required
+def report_list(request):
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    from .models import UserReport
+
+    search = (request.GET.get('q') or '').strip()
+    status = (request.GET.get('status') or 'open').strip()
+
+    qs = UserReport.objects.select_related(
+        'reported_jobseeker', 'reported_company', 'filed_by'
+    ).order_by('-created_at')
+    if status in {'open', 'reviewed', 'dismissed'}:
+        qs = qs.filter(status=status)
+    elif status == 'all':
+        pass
+    else:
+        qs = qs.filter(status='open')
+
+    if search:
+        qs = qs.filter(
+            Q(description__icontains=search) |
+            Q(reported_jobseeker__first_name__icontains=search) |
+            Q(reported_jobseeker__last_name__icontains=search)  |
+            Q(reported_company__name__icontains=search)         |
+            Q(filed_by__email__icontains=search)
+        )
+
+    paginator = Paginator(qs, 25)
+    page = paginator.get_page(request.GET.get('page') or 1)
+
+    ctx = _admin_context(request)
+    ctx.update({'page': page, 'search': search, 'status': status})
+    return render(request, 'admin_panel/report_list.html', ctx)
+
+
+@staff_required
+def report_review(request, report_id):
+    """POST mark a report as reviewed or dismissed."""
+    from django.http import JsonResponse
+    from django.utils import timezone
+    from .models import UserReport, AuditLog
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    report = get_object_or_404(UserReport, id=report_id)
+    decision = (request.POST.get('decision') or '').strip()
+    if decision not in {'reviewed', 'dismissed'}:
+        return JsonResponse({'ok': False, 'error': 'Pick a decision.'}, status=400)
+
+    report.status = decision
+    report.reviewed_at = timezone.now()
+    report.save(update_fields=['status', 'reviewed_at'])
+    AuditLog.objects.create(
+        admin=request.user, action=AuditLog.ACTION_EDIT,
+        target_model='UserReport', target_id=report.id,
+        notes=f'Marked report as {decision}.',
+    )
+    return JsonResponse({'ok': True, 'status': report.status})
+
+
+# ── Phase 5: Personal-info change-request review ────────────────────
+
+@staff_required
+def change_request_review(request, request_id):
+    """POST decision=approve|reject for a PersonalInfoChangeRequest.
+
+    On approve: copy requested values onto the JobseekerProfile.
+    On reject : leave the profile alone; the user just sees the request go away.
+    Both paths stamp reviewed_at + write an AuditLog entry.
+    """
+    from django.http import JsonResponse
+    from django.utils import timezone
+    from apps.jobseekers.models import PersonalInfoChangeRequest
+    from .models import AuditLog
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    req = get_object_or_404(PersonalInfoChangeRequest, id=request_id)
+    decision = (request.POST.get('decision') or '').strip()
+    if decision not in {'approve', 'reject'}:
+        return JsonResponse({'ok': False, 'error': 'Pick a decision.'}, status=400)
+    if req.status != PersonalInfoChangeRequest.STATUS_PENDING:
+        return JsonResponse({
+            'ok': False, 'error': f"Request is already '{req.get_status_display()}'.",
+        }, status=409)
+
+    if decision == 'approve':
+        profile = req.profile
+        profile.first_name  = req.first_name
+        profile.middle_name = req.middle_name
+        profile.last_name   = req.last_name
+        profile.suffix      = req.suffix
+        if req.date_of_birth:
+            profile.date_of_birth = req.date_of_birth
+        if req.sex:
+            profile.sex = req.sex
+        profile.save()
+        req.status = PersonalInfoChangeRequest.STATUS_APPROVED
+    else:
+        req.status = PersonalInfoChangeRequest.STATUS_REJECTED
+
+    req.reviewed_at = timezone.now()
+    req.save(update_fields=['status', 'reviewed_at'])
+
+    AuditLog.objects.create(
+        admin=request.user, action=AuditLog.ACTION_EDIT,
+        target_model='PersonalInfoChangeRequest', target_id=req.id,
+        notes=f"{decision.title()}d personal-info change for {req.profile.first_name} {req.profile.last_name}.",
+    )
+
+    # Notify the jobseeker.
+    from apps.notifications.models import Notification
+    Notification.objects.create(
+        recipient=req.profile.user,
+        notif_type=(Notification.PERSONAL_INFO_APPROVED if decision == 'approve'
+                    else Notification.PERSONAL_INFO_REJECTED),
+        jobseeker=req.profile,
+    )
+    return JsonResponse({'ok': True, 'status': req.status})

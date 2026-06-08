@@ -3,10 +3,23 @@ from apps.jobseekers.models import Education, Skill, Certification, WorkExperien
 
 
 # ── Weights (core 4 add up to 1.0) ────────────────────────────────
+# Defaults. The active values come from SiteSettings (admin-editable);
+# get_weights() falls back to these if SiteSettings isn't reachable yet
+# (e.g. during initial migrations).
 WEIGHT_SKILLS = 0.40
 WEIGHT_EDUCATION = 0.25
 WEIGHT_EXPERIENCE = 0.25
 WEIGHT_CERTIFICATIONS = 0.10
+
+
+def get_weights():
+    """Return current matching weights from SiteSettings, with safe fallbacks."""
+    try:
+        from apps.admin_panel.models import SiteSettings
+        s = SiteSettings.get()
+        return (s.weight_skills, s.weight_education, s.weight_experience, s.weight_certifications)
+    except Exception:
+        return (WEIGHT_SKILLS, WEIGHT_EDUCATION, WEIGHT_EXPERIENCE, WEIGHT_CERTIFICATIONS)
 
 # ── Post-score boosters ────────────────────────────────────────────
 QUERY_BOOST_MAX = 0.10   # up to 10% boost
@@ -484,11 +497,12 @@ def compute_match_score(job, profile):
     skills = score_skills(job, profile)
     certs = score_certifications(job, profile)
 
+    w_skills, w_edu, w_exp, w_certs = get_weights()
     base_score = (
-        skills * WEIGHT_SKILLS +
-        edu * WEIGHT_EDUCATION +
-        exp * WEIGHT_EXPERIENCE +
-        certs * WEIGHT_CERTIFICATIONS
+        skills * w_skills +
+        edu    * w_edu +
+        exp    * w_exp +
+        certs  * w_certs
     )
 
     query_boost = score_query_boost(job, profile)
@@ -567,7 +581,18 @@ def compute_match_score(job, profile):
 
 def get_ranked_jobseekers(job, sector_filter=False):
     from apps.jobseekers.models import JobseekerProfile
-    jobseekers = JobseekerProfile.objects.filter(profile_complete=True)
+    # Honor privacy: hide deactivated accounts, and hide profiles that have
+    # been tagged Hired anywhere when the user opted to disappear after-hire.
+    hidden_after_hire_ids = (
+        JobseekerProfile.objects
+        .filter(profile_visibility='hidden', applications__status='hired')
+        .values_list('id', flat=True).distinct()
+    )
+    jobseekers = (
+        JobseekerProfile.objects
+        .filter(profile_complete=True, user__is_active=True)
+        .exclude(id__in=hidden_after_hire_ids)
+    )
     results = []
     for profile in jobseekers:
         score = compute_match_score(job, profile)

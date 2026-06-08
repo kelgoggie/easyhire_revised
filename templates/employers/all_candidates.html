@@ -123,11 +123,13 @@
                     </span>
                     {% endfor %}
 
+                    {% if js.show_badges %}
                     {% for sector in js.sectors.all|slice:":1" %}
                     <span class="flex items-center gap-1 bg-taupe/20 text-muted text-xs px-2 py-0.5 rounded-full border border-taupe/30 w-fit">
                         {{ sector.label }}
                     </span>
                     {% endfor %}
+                    {% endif %}
                 </div>
 
                 <!-- Actions -->

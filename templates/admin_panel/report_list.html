@@ -1,0 +1,183 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}User Reports — EasyHire Admin{% endblock %}
+
+{% with active_nav="reports" %}
+{% block admin_content %}
+<div class="py-8 max-w-6xl">
+
+  <div class="flex items-end justify-between gap-6 mb-2">
+    <h1 class="text-5xl font-extrabold text-primary">User Reports</h1>
+    <form method="GET" action="/admin-panel/reports/" class="flex-1 max-w-md">
+      <input type="hidden" name="status" value="{{ status }}">
+      <div class="relative">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search Reports..."
+               class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
+        <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/></svg>
+        </button>
+      </div>
+    </form>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <!-- Status filter tabs -->
+  <div class="flex items-center gap-1.5 mb-5">
+    {% with q=search %}
+    <a href="?status=open&q={{ q }}"      class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'open' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">Open</a>
+    <a href="?status=reviewed&q={{ q }}"  class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'reviewed' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">Reviewed</a>
+    <a href="?status=dismissed&q={{ q }}" class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'dismissed' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">Dismissed</a>
+    <a href="?status=all&q={{ q }}"       class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'all' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">All</a>
+    {% endwith %}
+  </div>
+
+  <div class="border border-taupe/40 rounded-2xl overflow-hidden">
+    {% if page.object_list %}
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left border-b border-taupe/30 bg-surface/40">
+          <th class="px-5 py-3 text-xs font-bold text-primary">Account Name</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Account Type</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Report Description</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Filed by</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Report Filed</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in page.object_list %}
+        <tr class="report-row border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition"
+            data-report-id="{{ r.id }}"
+            data-account-name="{{ r.account_label }}"
+            data-account-type="{{ r.get_account_type_display }}"
+            data-description="{{ r.description }}"
+            data-filed-by="{{ r.filed_by_label }}"
+            data-status="{{ r.status }}"
+            data-filed-at="{{ r.created_at|date:'M j, Y g:i A' }}">
+          <td class="px-5 py-3 font-bold text-primary">
+            {% if r.reported_jobseeker %}
+            <a href="/admin-panel/jobseekers/{{ r.reported_jobseeker.id }}/" class="hover:text-teal transition">{{ r.account_label }}</a>
+            {% elif r.reported_company %}
+            <a href="/admin-panel/companies/{{ r.reported_company.id }}/" class="hover:text-teal transition">{{ r.account_label }}</a>
+            {% else %}{{ r.account_label }}{% endif %}
+          </td>
+          <td class="px-4 py-3 text-muted italic">{{ r.get_account_type_display }}</td>
+          <td class="px-4 py-3 text-muted italic">{{ r.description|truncatechars:60 }}</td>
+          <td class="px-4 py-3 text-muted italic">{{ r.filed_by_label }}</td>
+          <td class="px-4 py-3 text-muted italic">{{ r.created_at|date:"M j, Y g:i A" }}</td>
+          <td class="px-4 py-3 text-right">
+            {% if r.status == 'open' %}
+            <button type="button" class="review-btn text-muted italic underline hover:text-primary transition">Review...</button>
+            {% else %}
+            <span class="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full
+              {% if r.status == 'reviewed' %}bg-teal/15 text-teal{% else %}bg-gray-100 text-muted{% endif %}">
+              {{ r.get_status_display }}
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted text-xs text-center py-10">No reports match this filter.</p>
+    {% endif %}
+  </div>
+
+  {% if page.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between mt-6 text-sm">
+    {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&status={{ status }}&q={{ search }}" class="text-muted hover:text-primary">&lt; Previous</a>{% else %}<span></span>{% endif %}
+    <span class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?page={{ page.next_page_number }}&status={{ status }}&q={{ search }}" class="text-muted hover:text-primary">Next &gt;</a>{% else %}<span></span>{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ── Review modal ───────────────────────────────────────────────── -->
+<div id="review-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" data-close-review></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+    <p class="text-primary font-bold text-base mb-3">Review Report</p>
+
+    <div class="space-y-2 text-sm mb-5">
+      <p><span class="text-muted text-xs">About:</span> <span id="rv-account" class="text-primary font-semibold"></span> <span id="rv-account-type" class="text-muted text-xs italic"></span></p>
+      <p><span class="text-muted text-xs">Reason:</span> <span id="rv-description" class="text-primary"></span></p>
+      <p><span class="text-muted text-xs">Filed by:</span> <span id="rv-filed-by" class="text-primary"></span> <span class="text-muted text-xs">·</span> <span id="rv-filed-at" class="text-muted text-xs italic"></span></p>
+    </div>
+
+    <p id="rv-error" class="text-xs text-red-500 mb-2 hidden"></p>
+
+    <div class="flex gap-3 justify-end">
+      <button type="button" data-close-review
+              class="bg-gray-100 text-primary font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition text-sm">
+        Cancel
+      </button>
+      <button type="button" id="rv-dismiss"
+              class="bg-white border border-gray-300 text-muted font-semibold px-5 py-2 rounded-full hover:bg-gray-50 transition text-sm">
+        Dismiss
+      </button>
+      <button type="button" id="rv-reviewed"
+              class="bg-teal text-white font-semibold px-5 py-2 rounded-full hover:bg-teal/90 transition text-sm">
+        Mark Reviewed
+      </button>
+    </div>
+  </div>
+</div>
+
+{% block admin_scripts %}
+<script>
+(function() {
+  function getCookie(n) {
+    const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+  function show(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+  function hide(m) { m.classList.add('hidden');    m.classList.remove('flex'); }
+
+  const modal = document.getElementById('review-modal');
+  const errEl = document.getElementById('rv-error');
+  let activeRow = null;
+
+  document.querySelectorAll('.review-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      activeRow = btn.closest('.report-row');
+      document.getElementById('rv-account').textContent      = activeRow.dataset.accountName;
+      document.getElementById('rv-account-type').textContent = '(' + activeRow.dataset.accountType + ')';
+      document.getElementById('rv-description').textContent  = activeRow.dataset.description;
+      document.getElementById('rv-filed-by').textContent     = activeRow.dataset.filedBy;
+      document.getElementById('rv-filed-at').textContent     = activeRow.dataset.filedAt;
+      errEl.classList.add('hidden');
+      show(modal);
+    });
+  });
+  modal.querySelectorAll('[data-close-review]').forEach(function(el) {
+    el.addEventListener('click', function() { hide(modal); });
+  });
+
+  function decide(value) {
+    if (!activeRow) return;
+    const fd = new FormData();
+    fd.append('decision', value);
+    fetch('/admin-panel/reports/' + activeRow.dataset.reportId + '/review/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      body: fd,
+    }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
+      .then(function(pair) {
+        const [ok, d] = pair;
+        if (ok && d.ok) {
+          activeRow.remove();
+          hide(modal);
+        } else {
+          errEl.textContent = (d && d.error) || 'Something went wrong.';
+          errEl.classList.remove('hidden');
+        }
+      });
+  }
+  document.getElementById('rv-reviewed').addEventListener('click', function(){ decide('reviewed'); });
+  document.getElementById('rv-dismiss') .addEventListener('click', function(){ decide('dismissed'); });
+})();
+</script>
+{% endblock %}
+{% endblock %}
+{% endwith %}

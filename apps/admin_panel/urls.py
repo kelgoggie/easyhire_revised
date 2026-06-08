@@ -25,4 +25,12 @@ urlpatterns = [
 
     # User-facing report submission (jobseeker reports company, employer reports jobseeker)
     path('api/report/',                                                   views.report_submit,                   name='report_submit'),
+
+    # Phase 4 — Algorithm settings + Reports admin
+    path('admin-panel/settings/',                                         views.algorithm_settings,              name='algorithm_settings'),
+    path('admin-panel/reports/',                                          views.report_list,                     name='report_list'),
+    path('admin-panel/reports/<int:report_id>/review/',                   views.report_review,                   name='report_review'),
+
+    # Phase 5 — Pending Approvals (personal-info change requests)
+    path('admin-panel/change-requests/<int:request_id>/review/',          views.change_request_review,           name='change_request_review'),
 ]

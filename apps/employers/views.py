@@ -495,6 +495,22 @@ def application_update_status(request, app_id):
                 )
 
     app.save(update_fields=update_fields)
+
+    # Notify the jobseeker on decision-points (skip 'view' and 'unhire').
+    notif_for = {
+        'accept': 'application_accepted',
+        'reject': 'application_rejected',
+        'hire':   'application_hired',
+    }
+    if action in notif_for:
+        from apps.notifications.models import Notification
+        Notification.objects.create(
+            recipient=app.jobseeker.user,
+            notif_type=notif_for[action],
+            company=app.job.company,
+            job=app.job,
+        )
+
     return JsonResponse({
         'ok': True,
         'status': app.status,
@@ -594,6 +610,7 @@ def candidate_detail(request, jobseeker_id):
         'experiences': experiences,
         'is_liked': is_liked,
         'active_hire': active_hire,
+        'can_see_badges': jobseeker.can_show_badges_to(company),
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -658,7 +675,18 @@ def all_candidates(request):
         company=company
     ).values_list('jobseeker_id', flat=True))
 
-    candidates = JobseekerProfile.objects.filter(profile_complete=True, user__is_active=True)
+    # Honor privacy: hide deactivated accounts AND profiles that opted to
+    # disappear after being tagged Hired.
+    hidden_after_hire_ids = (
+        JobseekerProfile.objects
+        .filter(profile_visibility='hidden', applications__status='hired')
+        .values_list('id', flat=True).distinct()
+    )
+    candidates = (
+        JobseekerProfile.objects
+        .filter(profile_complete=True, user__is_active=True)
+        .exclude(id__in=hidden_after_hire_ids)
+    )
 
     if search:
         candidates = candidates.filter(
@@ -675,13 +703,64 @@ def all_candidates(request):
     elif sort == 'recent':
         candidates = candidates.order_by('-created_at')
 
+    total = candidates.count()
+    # Materialize and annotate per-candidate badge visibility so the template
+    # can decide what to render without re-querying.
+    candidates = list(candidates.prefetch_related('sectors'))
+    for cand in candidates:
+        cand.show_badges = cand.can_show_badges_to(company)
+
     return render(request, 'employers/all_candidates.html', {
         'company': company,
         'candidates': candidates,
         'liked_ids': liked_ids,
         'search': search,
         'sort': sort,
-        'total': candidates.count(),
+        'total': total,
+        'unread_notifications': False,
+        'unread_messages': False,
+    })
+
+
+@employer_required
+def employer_settings(request):
+    """Employer-side settings: edit representative info, change password, deactivate.
+
+    Mirrors the jobseeker settings page but without the PESO-review workflow —
+    employer reps can edit their info directly.
+    """
+    from datetime import datetime
+    profile = request.user.employer_profile
+    saved_section = None
+
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+
+        if form_type == 'personal':
+            profile.first_name  = request.POST.get('first_name',  profile.first_name).strip()
+            profile.middle_name = request.POST.get('middle_name', '').strip()
+            profile.last_name   = request.POST.get('last_name',   profile.last_name).strip()
+            profile.suffix      = request.POST.get('suffix',      '').strip()
+            profile.position    = request.POST.get('position',    profile.position).strip()
+            profile.phone       = request.POST.get('phone',       profile.phone).strip()
+            sex = request.POST.get('sex', '').strip()
+            if sex in {'M', 'F'}:
+                profile.sex = sex
+            dob_raw = request.POST.get('date_of_birth', '').strip()
+            if dob_raw:
+                for fmt in ('%m/%d/%Y', '%B %d, %Y'):
+                    try:
+                        profile.birthday = datetime.strptime(dob_raw, fmt).date()
+                        break
+                    except ValueError:
+                        continue
+            profile.save()
+            saved_section = 'personal'
+
+    return render(request, 'employers/settings.html', {
+        'profile': profile,
+        'company': profile.company,
+        'saved_section': saved_section,
         'unread_notifications': False,
         'unread_messages': False,
     })

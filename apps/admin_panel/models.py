@@ -115,6 +115,17 @@ class SiteSettings(models.Model):
     maintenance_message = models.TextField(blank=True,
         help_text="Message shown to users during maintenance mode.")
 
+    # Matching engine weights (must sum to 1.0). Defaults mirror the
+    # historical constants in apps.matching.engine.
+    weight_skills         = models.FloatField(default=0.40,
+        help_text="Weight for skills match in the compatibility score (0.0-1.0).")
+    weight_education      = models.FloatField(default=0.25,
+        help_text="Weight for education match (0.0-1.0).")
+    weight_experience     = models.FloatField(default=0.25,
+        help_text="Weight for experience match (0.0-1.0).")
+    weight_certifications = models.FloatField(default=0.10,
+        help_text="Weight for certifications match (0.0-1.0).")
+
     updated_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="settings_updates"
     )

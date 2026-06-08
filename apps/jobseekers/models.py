@@ -74,6 +74,23 @@ class JobseekerProfile(models.Model):
         parts = [self.first_name, self.middle_name, self.last_name, self.suffix]
         return " ".join(p for p in parts if p)
 
+    def can_show_badges_to(self, company):
+        """Whether this jobseeker's sector badges should be shown to a given employer.
+
+        Honors the user's `sector_badge_visibility` preference:
+          - 'public'  : always show
+          - 'similar' : show only when this profile shares at least one sector with the company
+          - 'hidden'  : never show
+        """
+        v = self.sector_badge_visibility
+        if v == 'hidden':
+            return False
+        if v == 'similar':
+            mine  = set(self.sectors.values_list('id', flat=True))
+            theirs = set(company.sector_badges.values_list('id', flat=True)) if company else set()
+            return bool(mine & theirs)
+        return True  # 'public' (default) or any unrecognized value
+
 
 class Education(models.Model):
     LEVELS = [

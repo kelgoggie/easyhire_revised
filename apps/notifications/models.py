@@ -9,12 +9,24 @@ class Notification(models.Model):
     JOBSEEKERS_LIKED_JOB = 'jobseekers_liked_job'
     MATCH = 'match'
     JOB_DELETED_BY_ADMIN = 'job_deleted_by_admin'
+    PERSONAL_INFO_APPROVED = 'personal_info_approved'
+    PERSONAL_INFO_REJECTED = 'personal_info_rejected'
+    NEW_APPLICATION       = 'new_application'        # employer-facing: new job application received
+    APPLICATION_ACCEPTED  = 'application_accepted'   # jobseeker-facing
+    APPLICATION_REJECTED  = 'application_rejected'   # jobseeker-facing
+    APPLICATION_HIRED     = 'application_hired'      # jobseeker-facing
 
     TYPE_CHOICES = [
-        (COMPANY_LIKED_YOU,    'Company Liked You'),
-        (JOBSEEKERS_LIKED_JOB, 'Jobseekers Liked Job'),
-        (MATCH,                'Match'),
-        (JOB_DELETED_BY_ADMIN, 'Job Deleted by Admin'),
+        (COMPANY_LIKED_YOU,      'Company Liked You'),
+        (JOBSEEKERS_LIKED_JOB,   'Jobseekers Liked Job'),
+        (MATCH,                  'Match'),
+        (JOB_DELETED_BY_ADMIN,   'Job Deleted by Admin'),
+        (PERSONAL_INFO_APPROVED, 'Personal Info Change Approved'),
+        (PERSONAL_INFO_REJECTED, 'Personal Info Change Rejected'),
+        (NEW_APPLICATION,        'New Job Application'),
+        (APPLICATION_ACCEPTED,   'Application Accepted'),
+        (APPLICATION_REJECTED,   'Application Rejected'),
+        (APPLICATION_HIRED,      'Application Hired'),
     ]
 
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_notifications')
