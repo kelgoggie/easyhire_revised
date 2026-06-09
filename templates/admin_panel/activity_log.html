@@ -1,0 +1,70 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}Activity Log — EasyHire Admin{% endblock %}
+
+{% with active_nav="activity" %}
+{% block admin_content %}
+<div class="py-8 max-w-6xl">
+
+  <div class="flex items-end justify-between gap-6 mb-2">
+    <h1 class="text-5xl font-extrabold text-primary">Activity Log</h1>
+    <form method="GET" action="/admin-panel/activity/" class="flex-1 max-w-md">
+      <input type="hidden" name="action" value="{{ action }}">
+      <div class="relative">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search notes, model, admin..."
+               class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
+        <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/></svg>
+        </button>
+      </div>
+    </form>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <!-- Action filter tabs -->
+  <div class="flex items-center gap-1.5 mb-5 flex-wrap">
+    <a href="?q={{ search }}" class="px-3 py-1 rounded-full text-xs font-semibold transition {% if not action %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">All</a>
+    {% for code, label in action_choices %}
+    <a href="?action={{ code }}&q={{ search }}" class="px-3 py-1 rounded-full text-xs font-semibold transition {% if action == code %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="border border-taupe/40 rounded-2xl overflow-hidden">
+    {% if page.object_list %}
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left border-b border-taupe/30 bg-surface/40">
+          <th class="px-5 py-3 text-xs font-bold text-primary">When</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Admin</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Action</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Target</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in page.object_list %}
+        <tr class="border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition">
+          <td class="px-5 py-3 text-muted italic whitespace-nowrap">{{ entry.created_at|date:"M j, Y g:i A" }}</td>
+          <td class="px-4 py-3 text-primary">{{ entry.admin.email|default:"(deleted)" }}</td>
+          <td class="px-4 py-3 font-bold text-primary">{{ entry.get_action_display }}</td>
+          <td class="px-4 py-3 text-muted italic">{{ entry.target_model }} <span class="text-muted/60">#{{ entry.target_id }}</span></td>
+          <td class="px-4 py-3 text-muted text-xs">{{ entry.notes|truncatechars:120 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted text-xs text-center py-10">No activity matches this filter.</p>
+    {% endif %}
+  </div>
+
+  {% if page.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between mt-6 text-sm">
+    {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&action={{ action }}&q={{ search }}" class="text-muted hover:text-primary">&lt; Previous</a>{% else %}<span></span>{% endif %}
+    <span class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?page={{ page.next_page_number }}&action={{ action }}&q={{ search }}" class="text-muted hover:text-primary">Next &gt;</a>{% else %}<span></span>{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+{% endwith %}

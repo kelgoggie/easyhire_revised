@@ -1,0 +1,213 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}Edit Resume — {{ jobseeker.first_name }} {{ jobseeker.last_name }}{% endblock %}
+
+{% with active_nav="jobseekers" %}
+{% block admin_content %}
+<div class="py-8 max-w-5xl">
+
+  <div class="flex items-end justify-between gap-4 mb-2">
+    <div>
+      <h1 class="text-5xl font-extrabold text-primary">Edit Resume</h1>
+      <p class="text-muted text-sm">{{ jobseeker.first_name }} {{ jobseeker.last_name }} · {{ jobseeker.user.email }}</p>
+    </div>
+    <a href="/admin-panel/jobseekers/{{ jobseeker.id }}/" class="text-muted text-sm hover:text-primary transition">&lt; Back to profile</a>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  {% if saved %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">
+    Resume changes saved. The matching engine will reflect them on the next score recompute.
+  </div>
+  {% endif %}
+
+  <p class="text-xs text-muted italic mb-4">
+    Edits made here overwrite the jobseeker's resume. The jobseeker can still update their own resume afterward.
+  </p>
+
+  <form method="POST" class="space-y-6">
+    {% csrf_token %}
+
+    <!-- Bio -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-5">
+      <p class="text-sm font-bold text-primary mb-2">Personal Bio</p>
+      <textarea name="bio" rows="3" placeholder="Short bio shown to employers..."
+                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ jobseeker.bio|default:'' }}</textarea>
+    </div>
+
+    <!-- Education -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-sm font-bold text-primary">Education</p>
+        <button type="button" onclick="addRow('education-container', 'edu-row')" class="text-xs text-teal hover:underline">+ Add entry</button>
+      </div>
+      <div id="education-container" class="space-y-3">
+        {% for edu in educations %}
+        <div class="edu-row grid grid-cols-5 gap-2 border border-gray-100 rounded-xl p-3 relative">
+          <button type="button" onclick="removeRow(this)" class="absolute top-2 right-2 text-muted hover:text-red-500 text-xs">×</button>
+          <div class="relative">
+            <select name="edu_level" class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+              <option value="">Level</option>
+              {% for code, label in edu_levels %}<option value="{{ code }}" {% if edu.level == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <input type="text" name="edu_course" value="{{ edu.course_degree|default:'' }}" placeholder="Course/Degree" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          <input type="text" name="edu_institution" value="{{ edu.institution|default:'' }}" placeholder="Institution" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          <select name="edu_start" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+            <option value="">Start year</option>
+            {% for y in year_range %}<option value="{{ y }}" {% if edu.year_started == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+          </select>
+          <select name="edu_end" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+            <option value="">End year</option>
+            {% for y in year_range %}<option value="{{ y }}" {% if edu.year_ended == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+          </select>
+        </div>
+        {% empty %}
+        <div class="edu-row grid grid-cols-5 gap-2 border border-gray-100 rounded-xl p-3 relative">
+          <button type="button" onclick="removeRow(this)" class="absolute top-2 right-2 text-muted hover:text-red-500 text-xs">×</button>
+          <select name="edu_level" class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary"><option value="">Level</option>{% for code, label in edu_levels %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select>
+          <input type="text" name="edu_course" placeholder="Course/Degree" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          <input type="text" name="edu_institution" placeholder="Institution" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          <select name="edu_start" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary"><option value="">Start year</option>{% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select>
+          <select name="edu_end" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary"><option value="">End year</option>{% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Skills -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-sm font-bold text-primary">Skills</p>
+        <button type="button" onclick="addSkillInput()" class="text-xs text-teal hover:underline">+ Add skill</button>
+      </div>
+      <div id="skills-container" class="grid grid-cols-3 gap-2">
+        {% for skill in skills %}
+        <div class="skill-row flex gap-1">
+          <input type="text" name="skill_name" value="{{ skill.name }}" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          <button type="button" onclick="this.parentElement.remove()" class="text-muted hover:text-red-500 text-xs px-2">×</button>
+        </div>
+        {% empty %}
+        <div class="skill-row flex gap-1">
+          <input type="text" name="skill_name" placeholder="e.g. Microsoft Excel" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          <button type="button" onclick="this.parentElement.remove()" class="text-muted hover:text-red-500 text-xs px-2">×</button>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Work Experience -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-sm font-bold text-primary">Work Experience</p>
+        <button type="button" onclick="addRow('exp-container', 'exp-row')" class="text-xs text-teal hover:underline">+ Add entry</button>
+      </div>
+      <div id="exp-container" class="space-y-3">
+        {% for exp in experiences %}
+        <div class="exp-row border border-gray-100 rounded-xl p-3 relative">
+          <button type="button" onclick="removeRow(this)" class="absolute top-2 right-2 text-muted hover:text-red-500 text-xs">×</button>
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <input type="text" name="exp_position" value="{{ exp.position }}" placeholder="Position" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+            <input type="text" name="exp_company" value="{{ exp.company|default:'' }}" placeholder="Company" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          </div>
+          <div class="flex gap-2 items-center mb-2">
+            <input type="text" name="exp_start_month_year" data-datepicker="month" readonly value="{% if exp.year_started %}{{ exp.year_started }}-{% if exp.month_started %}{{ exp.month_started|stringformat:'02d' }}{% else %}01{% endif %}{% endif %}" placeholder="Start" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary cursor-pointer">
+            <span class="text-gray-300 text-xs">–</span>
+            <input type="text" name="exp_end_month_year" data-datepicker="month" readonly {% if exp.is_current %}disabled{% endif %} value="{% if exp.year_ended and not exp.is_current %}{{ exp.year_ended }}-{% if exp.month_ended %}{{ exp.month_ended|stringformat:'02d' }}{% else %}01{% endif %}{% endif %}" placeholder="End" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary cursor-pointer disabled:opacity-40">
+            <label class="text-xs text-muted flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" name="exp_is_current" value="{{ forloop.counter0 }}" {% if exp.is_current %}checked{% endif %} class="accent-teal exp-current-cb">
+              Present
+            </label>
+          </div>
+          <textarea name="exp_description" rows="2" placeholder="Brief description..." class="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary resize-none">{{ exp.description|default:'' }}</textarea>
+        </div>
+        {% empty %}
+        <div class="exp-row border border-gray-100 rounded-xl p-3 relative">
+          <button type="button" onclick="removeRow(this)" class="absolute top-2 right-2 text-muted hover:text-red-500 text-xs">×</button>
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <input type="text" name="exp_position" placeholder="Position" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+            <input type="text" name="exp_company" placeholder="Company" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          </div>
+          <div class="flex gap-2 items-center mb-2">
+            <input type="text" name="exp_start_month_year" data-datepicker="month" readonly placeholder="Start" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary cursor-pointer">
+            <span class="text-gray-300 text-xs">–</span>
+            <input type="text" name="exp_end_month_year" data-datepicker="month" readonly placeholder="End" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary cursor-pointer disabled:opacity-40">
+            <label class="text-xs text-muted flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" name="exp_is_current" value="0" class="accent-teal exp-current-cb"> Present
+            </label>
+          </div>
+          <textarea name="exp_description" rows="2" placeholder="Brief description..." class="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary resize-none"></textarea>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Certifications -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-sm font-bold text-primary">Certifications</p>
+        <button type="button" onclick="addRow('cert-container', 'cert-row')" class="text-xs text-teal hover:underline">+ Add entry</button>
+      </div>
+      <div id="cert-container" class="space-y-2">
+        {% for cert in certifications %}
+        <div class="cert-row grid grid-cols-2 gap-2 relative">
+          <button type="button" onclick="removeRow(this)" class="absolute top-1 right-1 text-muted hover:text-red-500 text-xs z-10">×</button>
+          <input type="text" name="cert_name" value="{{ cert.name }}" placeholder="Certification" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          <input type="text" name="cert_org" value="{{ cert.issuing_org|default:'' }}" placeholder="Issuing organization" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+        </div>
+        {% empty %}
+        <div class="cert-row grid grid-cols-2 gap-2 relative">
+          <button type="button" onclick="removeRow(this)" class="absolute top-1 right-1 text-muted hover:text-red-500 text-xs z-10">×</button>
+          <input type="text" name="cert_name" placeholder="Certification" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+          <input type="text" name="cert_org" placeholder="Issuing organization" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Save -->
+    <div class="flex justify-end gap-3">
+      <a href="/admin-panel/jobseekers/{{ jobseeker.id }}/" class="bg-gray-100 text-primary font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition text-sm">Cancel</a>
+      <button type="submit" class="bg-amber text-white font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition text-sm">Save Resume</button>
+    </div>
+  </form>
+</div>
+
+<script>
+function addRow(containerId, rowClass) {
+  const container = document.getElementById(containerId);
+  const first = container.querySelector('.' + rowClass);
+  if (!first) return;
+  const clone = first.cloneNode(true);
+  clone.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea').forEach(el => {
+    el.value = '';
+    if (el.dataset && el.dataset.autocomplete) delete el.dataset.autocomplete;
+    if (el.dataset && el.dataset.datepicker)   delete el.dataset.autocomplete; // re-arm
+  });
+  clone.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
+  container.appendChild(clone);
+}
+function removeRow(btn) {
+  const row = btn.closest('.edu-row, .exp-row, .cert-row');
+  if (!row) return;
+  const container = row.parentElement;
+  if (container.children.length > 1) row.remove();
+  else row.querySelectorAll('input:not([type=hidden]), select, textarea').forEach(el => el.value = '');
+}
+function addSkillInput() {
+  const container = document.getElementById('skills-container');
+  const div = document.createElement('div');
+  div.className = 'skill-row flex gap-1';
+  div.innerHTML = '<input type="text" name="skill_name" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary"><button type="button" onclick="this.parentElement.remove()" class="text-muted hover:text-red-500 text-xs px-2">×</button>';
+  container.appendChild(div);
+}
+// "Present" checkbox disables the end-date input
+document.addEventListener('change', function(e) {
+  if (e.target.classList && e.target.classList.contains('exp-current-cb')) {
+    const row = e.target.closest('.exp-row');
+    const end = row.querySelector('[name="exp_end_month_year"]');
+    if (end) end.disabled = e.target.checked;
+  }
+});
+</script>
+{% endblock %}
+{% endwith %}

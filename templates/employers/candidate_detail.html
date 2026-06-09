@@ -73,13 +73,26 @@
             <!-- Un-hire confirm modal -->
             <div id="unhire-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
               <div class="absolute inset-0 bg-black/40" data-close-unhire></div>
-              <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10 text-center">
-                <p class="text-red-500 font-bold text-base mb-2">Un-hire this employee?</p>
-                <p class="text-muted text-sm mb-6">
-                  This marks the employment as ended today and updates {{ jobseeker.first_name }}'s work history.
-                  The hire stays on record in your Employees list.
+              <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+                <p class="text-red-500 font-bold text-base mb-2 text-center">Un-hire this employee?</p>
+                <p class="text-muted text-sm mb-4 text-center">
+                  This marks the employment as ended and updates {{ jobseeker.first_name }}'s work history.
+                  The hire stays on record in your Employees list and the slot reopens.
                 </p>
-                <div class="flex gap-3 justify-center">
+
+                <label class="block text-primary text-xs mb-1">End date <span class="text-muted">(defaults to today; backdate if needed)</span></label>
+                <div class="relative mb-3">
+                  <input type="text" id="unhire-end-date" data-datepicker="date" data-display-format="long"
+                         placeholder="Leave blank for today" readonly autocomplete="off"
+                         class="w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-red-400 transition cursor-pointer">
+                  <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+
+                <p id="unhire-error" class="text-xs text-red-500 mb-2 hidden"></p>
+
+                <div class="flex gap-3 justify-center mt-3">
                   <button type="button" data-close-unhire
                           class="bg-gray-100 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
                     Cancel
@@ -109,17 +122,27 @@
               modal.querySelectorAll('[data-close-unhire]').forEach(el =>
                 el.addEventListener('click', () => hide(modal)));
 
+              const errEl = document.getElementById('unhire-error');
               yes.addEventListener('click', function() {
                 const appId = btn.dataset.appId;
+                const endDate = document.getElementById('unhire-end-date').value.trim();
                 const fd = new FormData();
                 fd.append('action', 'unhire');
+                if (endDate) fd.append('end_date', endDate);
+                errEl.classList.add('hidden');
                 fetch('/employers/applications/' + appId + '/status/', {
                   method: 'POST',
                   headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
                   body: fd,
-                }).then(r => r.json()).then(function(d) {
-                  hide(modal);
-                  if (d.ok) window.location.reload();
+                }).then(r => r.json().then(d => [r.ok, d])).then(function(pair) {
+                  const [ok, d] = pair;
+                  if (ok && d.ok) {
+                    hide(modal);
+                    window.location.reload();
+                  } else {
+                    errEl.textContent = (d && d.error) || 'Something went wrong.';
+                    errEl.classList.remove('hidden');
+                  }
                 });
               });
             })();

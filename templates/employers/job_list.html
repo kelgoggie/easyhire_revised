@@ -81,6 +81,13 @@
           <div class="hidden absolute right-0 top-7 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-40 py-1">
             <a href="/employers/jobs/{{ job.id }}/edit/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">Edit Job</a>
             <a href="/employers/jobs/{{ job.id }}/candidates/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">View Applicants</a>
+            <form method="POST" action="/employers/jobs/{{ job.id }}/close/">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="/employers/jobs/">
+              <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">
+                {% if job.status == 'closed' %}Reopen Job{% else %}Close Job{% endif %}
+              </button>
+            </form>
             <hr class="my-1 border-gray-100">
             <form method="POST" action="/employers/jobs/{{ job.id }}/delete/"
                   onsubmit="return confirm('Delete this job post permanently?')">

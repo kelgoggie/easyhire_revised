@@ -224,6 +224,21 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'
+
+# ── Email backend ──────────────────────────────────────────────────
+# In dev (no SMTP credentials set), emails print to the console.
+# In prod, configure EMAIL_HOST_USER + EMAIL_HOST_PASSWORD via env.
+if os.getenv('EMAIL_HOST_USER'):
+    EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST          = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_PORT          = int(os.getenv('EMAIL_PORT', '587'))
+    EMAIL_USE_TLS       = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+    EMAIL_HOST_USER     = os.getenv('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+    DEFAULT_FROM_EMAIL  = os.getenv('DEFAULT_FROM_EMAIL', f'EasyHire <{EMAIL_HOST_USER}>')
+else:
+    EMAIL_BACKEND      = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'EasyHire <noreply@easyhire.local>'
 ACCOUNT_ADAPTER = 'apps.accounts.adapters.AccountAdapter'
 
 # ── Allauth social account settings ───────────────────────────────

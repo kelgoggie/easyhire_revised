@@ -336,6 +336,21 @@ def job_delete(request, job_id):
         job.delete()
     return redirect('/employers/jobs/')
 
+
+@employer_required
+def job_close(request, job_id):
+    """Toggle a job between OPEN and CLOSED. Closed jobs hide from jobseeker
+    recommendations and stop receiving new applications, but stay on record."""
+    profile = request.user.employer_profile
+    job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
+    if request.method == 'POST':
+        if job.status == JobPosting.STATUS_OPEN:
+            job.status = JobPosting.STATUS_CLOSED
+        elif job.status == JobPosting.STATUS_CLOSED:
+            job.status = JobPosting.STATUS_OPEN
+        job.save(update_fields=['status'])
+    return redirect(request.POST.get('next') or '/employers/jobs/')
+
     
 @employer_required
 def job_detail(request, job_id):
@@ -457,14 +472,33 @@ def application_update_status(request, app_id):
         # Status stays 'hired' for historical record; stamp employed_until.
         if app.employed_until:
             return JsonResponse({'ok': False, 'error': 'Employment is already marked as ended.'}, status=409)
-        app.employed_until = now.date()
+        # Optional explicit end date (accepts MM/DD/YYYY or 'Month D, YYYY'); default to today.
+        end_raw = (request.POST.get('end_date') or '').strip()
+        end_date = now.date()
+        if end_raw:
+            from datetime import datetime as _dt
+            for fmt in ('%m/%d/%Y', '%B %d, %Y'):
+                try:
+                    end_date = _dt.strptime(end_raw, fmt).date()
+                    break
+                except ValueError:
+                    continue
+            if end_date > now.date():
+                return JsonResponse({'ok': False, 'error': "End date can't be in the future."}, status=400)
+            if app.hired_at and end_date < app.hired_at.date():
+                return JsonResponse({'ok': False, 'error': "End date can't be before the hire date."}, status=400)
+        app.employed_until = end_date
         update_fields.append('employed_until')
+        # Re-open the slot since the employee is no longer occupying it.
+        if app.job:
+            app.job.slots = (app.job.slots or 0) + 1
+            app.job.save(update_fields=['slots'])
         # End the linked work-experience entry (if it still exists).
         we = WorkExperience.objects.filter(from_application=app).first()
         if we and we.is_current:
             we.is_current = False
-            we.month_ended = str(now.month)
-            we.year_ended  = now.year
+            we.month_ended = str(end_date.month)
+            we.year_ended  = end_date.year
             we.save(update_fields=['is_current', 'month_ended', 'year_ended'])
     else:
         # All other actions update the status field.
@@ -480,6 +514,10 @@ def application_update_status(request, app_id):
             if not app.hired_at:
                 app.hired_at = now
                 update_fields.append('hired_at')
+            # Decrement the job's open slots (clamped at 0).
+            if app.job and (app.job.slots or 0) > 0:
+                app.job.slots -= 1
+                app.job.save(update_fields=['slots'])
             # Auto-create a work-experience entry on the jobseeker's resume
             # (idempotent — only one per application).
             if not WorkExperience.objects.filter(from_application=app).exists():
@@ -504,12 +542,15 @@ def application_update_status(request, app_id):
     }
     if action in notif_for:
         from apps.notifications.models import Notification
+        from apps.notifications.email import email_application_status_change
         Notification.objects.create(
             recipient=app.jobseeker.user,
             notif_type=notif_for[action],
             company=app.job.company,
             job=app.job,
         )
+        # Best-effort transactional email.
+        email_application_status_change(app, action)
 
     return JsonResponse({
         'ok': True,

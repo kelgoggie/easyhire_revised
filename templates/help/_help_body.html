@@ -9,6 +9,106 @@
   <!-- FAQ accordion -->
   <div class="space-y-2 mb-12">
 
+  {% if request.user.is_employer %}
+    {# ── Employer FAQs ─────────────────────────────────────── #}
+    <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 open:bg-surface transition">
+      <summary class="flex items-center justify-between cursor-pointer list-none">
+        <span class="text-primary font-semibold text-sm">How do I post a new job?</span>
+        <svg class="w-4 h-4 text-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <p class="text-muted text-sm leading-relaxed mt-3">
+        From your dashboard, click <strong>My Job Posts</strong> in the sidebar, then <strong>Create New Job</strong>. Fill in
+        the title, description, location, requirements (skills, education, experience, certifications), and the number of slots. Save to publish.
+      </p>
+    </details>
+
+    <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 open:bg-surface transition">
+      <summary class="flex items-center justify-between cursor-pointer list-none">
+        <span class="text-primary font-semibold text-sm">How do I review applications?</span>
+        <svg class="w-4 h-4 text-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <p class="text-muted text-sm leading-relaxed mt-3">
+        Open the job from <strong>My Job Posts</strong> and click <strong>View Applicants</strong>. Each applicant card has a
+        <strong>View Application</strong> button that opens their message in a modal. From there you can <strong>Accept</strong>,
+        <strong>Reject</strong>, or just close out. Accepted candidates get a <strong>Mark as Hired</strong> button afterwards.
+      </p>
+    </details>
+
+    <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 open:bg-surface transition">
+      <summary class="flex items-center justify-between cursor-pointer list-none">
+        <span class="text-primary font-semibold text-sm">What's the difference between Accepted and Hired?</span>
+        <svg class="w-4 h-4 text-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <p class="text-muted text-sm leading-relaxed mt-3">
+        <strong>Accepted</strong> means you've moved the applicant forward but haven't formally hired them yet — you can still
+        reject from this state. <strong>Hired</strong> is final: it adds the role to the jobseeker's work history, reduces the
+        job's open slots by one, and adds the person to the Employees list on your company profile.
+      </p>
+    </details>
+
+    <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 open:bg-surface transition">
+      <summary class="flex items-center justify-between cursor-pointer list-none">
+        <span class="text-primary font-semibold text-sm">How do I close a job that's been filled?</span>
+        <svg class="w-4 h-4 text-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <p class="text-muted text-sm leading-relaxed mt-3">
+        On <strong>My Job Posts</strong>, open the dot menu (top right of each card) and pick <strong>Close Job</strong>.
+        Closed jobs stop receiving new applications and disappear from jobseeker recommendations, but stay on record so you
+        can reopen them anytime from the same menu. EasyHire also auto-decrements your slot count each time you mark someone Hired.
+      </p>
+    </details>
+
+    <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 open:bg-surface transition">
+      <summary class="flex items-center justify-between cursor-pointer list-none">
+        <span class="text-primary font-semibold text-sm">Someone we hired has left — what do I do?</span>
+        <svg class="w-4 h-4 text-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <p class="text-muted text-sm leading-relaxed mt-3">
+        Open the candidate's profile from your Employees list and click <strong>Un-hire</strong>. You can backdate the end
+        date if needed. The hire stays on record (so you can still see who worked for you and when) and the corresponding job
+        slot reopens automatically.
+      </p>
+    </details>
+
+    <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 open:bg-surface transition">
+      <summary class="flex items-center justify-between cursor-pointer list-none">
+        <span class="text-primary font-semibold text-sm">What do the match scores mean?</span>
+        <svg class="w-4 h-4 text-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <p class="text-muted text-sm leading-relaxed mt-3">
+        Each applicant gets a score from 0-100 based on how closely their resume matches your job's requirements
+        (skills, education, experience, certifications). Tiers range from <strong>Perfect Match</strong> (98+) down to
+        <strong>Poor Match</strong>. Recommended Candidates surfaces people who haven't applied but match strongly — useful when
+        you have a hard-to-fill role.
+      </p>
+    </details>
+
+    <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 open:bg-surface transition">
+      <summary class="flex items-center justify-between cursor-pointer list-none">
+        <span class="text-primary font-semibold text-sm">How do I update my company information?</span>
+        <svg class="w-4 h-4 text-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <p class="text-muted text-sm leading-relaxed mt-3">
+        Click your company avatar on the navbar and choose <strong>Company Profile</strong>. To change your personal contact
+        details, password, or to deactivate your account, go to <strong>Settings</strong> in the sidebar.
+      </p>
+    </details>
+
+    <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 open:bg-surface transition">
+      <summary class="flex items-center justify-between cursor-pointer list-none">
+        <span class="text-primary font-semibold text-sm">Why did PESO remove one of my job posts?</span>
+        <svg class="w-4 h-4 text-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </summary>
+      <p class="text-muted text-sm leading-relaxed mt-3">
+        PESO administrators may remove postings that violate platform policy (duplicate listings, misleading content,
+        discriminatory language, etc.). You'll receive a notification with the specific reason. If you believe the removal
+        was a mistake, contact PESO Iloilo City below.
+      </p>
+    </details>
+
+  {% else %}
+    {# ── Jobseeker FAQs ────────────────────────────────────── #}
+
     <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 open:bg-surface transition">
       <summary class="flex items-center justify-between cursor-pointer list-none">
         <span class="text-primary font-semibold text-sm">How do I apply for a job?</span>
@@ -122,6 +222,7 @@
         or to request permanent deletion, contact PESO Iloilo City directly.
       </p>
     </details>
+  {% endif %}
 
   </div>
 

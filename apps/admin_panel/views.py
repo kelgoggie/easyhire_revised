@@ -905,10 +905,293 @@ def change_request_review(request, request_id):
 
     # Notify the jobseeker.
     from apps.notifications.models import Notification
+    from apps.notifications.email import email_personal_info_decision
     Notification.objects.create(
         recipient=req.profile.user,
         notif_type=(Notification.PERSONAL_INFO_APPROVED if decision == 'approve'
                     else Notification.PERSONAL_INFO_REJECTED),
         jobseeker=req.profile,
     )
+    email_personal_info_decision(req, approved=(decision == 'approve'))
     return JsonResponse({'ok': True, 'status': req.status})
+
+
+# ── Activity log viewer ────────────────────────────────────────────
+
+@staff_required
+def activity_log(request):
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    from .models import AuditLog
+
+    search = (request.GET.get('q') or '').strip()
+    action = (request.GET.get('action') or '').strip()
+
+    qs = AuditLog.objects.select_related('admin').order_by('-created_at')
+    if search:
+        qs = qs.filter(
+            Q(notes__icontains=search) |
+            Q(target_model__icontains=search) |
+            Q(admin__email__icontains=search)
+        )
+    if action:
+        qs = qs.filter(action=action)
+
+    paginator = Paginator(qs, 50)
+    page = paginator.get_page(request.GET.get('page') or 1)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'page':           page,
+        'search':         search,
+        'action':         action,
+        'action_choices': AuditLog.ACTION_CHOICES,
+    })
+    return render(request, 'admin_panel/activity_log.html', ctx)
+
+
+# ── Bulk import (CSV) ──────────────────────────────────────────────
+
+@staff_required
+def bulk_import(request):
+    """Sync CSV upload + processing. Suitable for small batches (<1000 rows).
+    For larger files, swap the per-row loop for a Celery task later.
+    """
+    from django.utils import timezone
+    from .models import ImportBatch, AuditLog
+    import csv, io
+
+    saved_results = None
+    error = None
+
+    if request.method == 'POST':
+        import_type = request.POST.get('import_type', '').strip()
+        upload      = request.FILES.get('file')
+        if import_type not in {ImportBatch.IMPORT_JOBSEEKERS, ImportBatch.IMPORT_COMPANIES}:
+            error = 'Pick what you are importing.'
+        elif not upload:
+            error = 'Choose a CSV file to upload.'
+        elif upload.size > 5 * 1024 * 1024:
+            error = 'File too large (5MB max).'
+        else:
+            # Read the file's bytes BEFORE saving — saving consumes the pointer.
+            raw_bytes = upload.read()
+            upload.seek(0)
+            batch = ImportBatch.objects.create(
+                imported_by=request.user, import_type=import_type,
+                file=upload, status=ImportBatch.STATUS_PROCESSING,
+            )
+            try:
+                decoded = raw_bytes.decode('utf-8-sig')
+                reader  = list(csv.DictReader(io.StringIO(decoded)))
+                batch.total_rows = len(reader)
+                ok, fail, errs = _process_import(reader, import_type)
+                batch.successful_imports = ok
+                batch.failed_imports     = fail
+                batch.error_log          = errs[:200]   # cap log
+                batch.status             = ImportBatch.STATUS_COMPLETE
+                batch.completed_at       = timezone.now()
+                batch.save()
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_IMPORT,
+                    target_model='ImportBatch', target_id=batch.id,
+                    notes=f'Imported {ok} {import_type} ({fail} failed) from {upload.name}.',
+                )
+                saved_results = {
+                    'total': batch.total_rows, 'ok': ok, 'fail': fail,
+                    'errors': errs[:20], 'type': import_type,
+                }
+            except Exception as exc:
+                batch.status = ImportBatch.STATUS_FAILED
+                batch.error_log = [{'row': 0, 'error': str(exc)}]
+                batch.save()
+                error = f'Import failed: {exc}'
+
+    recent_batches = ImportBatch.objects.select_related('imported_by').order_by('-created_at')[:10]
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'saved_results': saved_results,
+        'error':         error,
+        'recent_batches': recent_batches,
+    })
+    return render(request, 'admin_panel/bulk_import.html', ctx)
+
+
+def _process_import(rows, import_type):
+    """Per-row import. Returns (success_count, failure_count, error_list)."""
+    from apps.accounts.models import User
+    ok, fail, errs = 0, 0, []
+    if import_type == 'jobseekers':
+        from apps.jobseekers.models import JobseekerProfile
+        for i, row in enumerate(rows, start=2):  # row 1 is the header
+            try:
+                email = (row.get('email') or '').strip().lower()
+                if not email:
+                    raise ValueError('Missing email')
+                if User.objects.filter(email=email).exists():
+                    raise ValueError(f'User with email {email} already exists')
+                user = User.objects.create_user(
+                    email=email, user_type='jobseeker', is_active=True,
+                    is_imported=True, is_claimed=False,
+                )
+                JobseekerProfile.objects.create(
+                    user=user,
+                    first_name=(row.get('first_name') or '').strip() or '(unknown)',
+                    middle_name=(row.get('middle_name') or '').strip(),
+                    last_name=(row.get('last_name') or '').strip() or '(unknown)',
+                    sex=(row.get('sex') or 'M').strip().upper()[:1] if (row.get('sex') or '').strip().upper()[:1] in {'M', 'F'} else 'M',
+                    street_barangay=(row.get('street_barangay') or row.get('address') or '').strip(),
+                    phone=(row.get('phone') or '').strip(),
+                    contact_email=email,
+                )
+                ok += 1
+            except Exception as exc:
+                fail += 1
+                errs.append({'row': i, 'error': str(exc)})
+    else:  # companies
+        from apps.employers.models import Company
+        from django.utils.text import slugify
+        for i, row in enumerate(rows, start=2):
+            try:
+                name = (row.get('name') or '').strip()
+                if not name:
+                    raise ValueError('Missing name')
+                base_slug = slugify(name)[:280] or 'company'
+                slug = base_slug
+                n = 1
+                while Company.objects.filter(slug=slug).exists():
+                    n += 1
+                    slug = f'{base_slug}-{n}'
+                Company.objects.create(
+                    name=name, slug=slug,
+                    type_of_company=(row.get('type_of_company') or 'local').strip(),
+                    nature_of_company=(row.get('nature_of_company') or '').strip(),
+                    company_email=(row.get('company_email') or '').strip(),
+                    recruitment_email=(row.get('recruitment_email') or row.get('company_email') or '').strip(),
+                    main_branch_address=(row.get('main_branch_address') or row.get('address') or '').strip(),
+                )
+                ok += 1
+            except Exception as exc:
+                fail += 1
+                errs.append({'row': i, 'error': str(exc)})
+    return ok, fail, errs
+
+
+# ── Admin: edit a jobseeker's resume ───────────────────────────────
+
+@staff_required
+def admin_edit_resume(request, pk):
+    """Slimmer resume editor for admins. Same model writes as the jobseeker's
+    own resume page, but framed in neutral pronouns ('the jobseeker') and
+    targeting any profile by id.
+    """
+    from apps.jobseekers.models import (
+        JobseekerProfile, Education, Skill, Certification, WorkExperience,
+    )
+    from .models import AuditLog
+
+    jobseeker = get_object_or_404(JobseekerProfile.objects.select_related('user'), pk=pk)
+    saved = False
+
+    if request.method == 'POST':
+        # Bio
+        jobseeker.bio = (request.POST.get('bio') or '').strip()
+        jobseeker.save(update_fields=['bio'])
+
+        # Wipe-and-recreate the four list-style sections (same pattern the
+        # jobseeker view uses) — kept simple to mirror that flow.
+        Education.objects.filter(profile=jobseeker).delete()
+        for level, course, inst, ystart, yend, current in zip(
+            request.POST.getlist('edu_level'),
+            request.POST.getlist('edu_course'),
+            request.POST.getlist('edu_institution'),
+            request.POST.getlist('edu_start'),
+            request.POST.getlist('edu_end'),
+            [str(i) for i in range(len(request.POST.getlist('edu_level')))],
+        ):
+            if level or course or inst:
+                Education.objects.create(
+                    profile=jobseeker,
+                    level=(level or '').strip(),
+                    course_degree=(course or '').strip(),
+                    institution=(inst or '').strip(),
+                    year_started=int(ystart) if (ystart or '').isdigit() else None,
+                    year_ended=int(yend) if (yend or '').isdigit() else None,
+                )
+
+        Skill.objects.filter(profile=jobseeker).delete()
+        for name in request.POST.getlist('skill_name'):
+            n = (name or '').strip()
+            if n:
+                Skill.objects.create(profile=jobseeker, name=n)
+
+        Certification.objects.filter(profile=jobseeker).delete()
+        for cname, corg in zip(
+            request.POST.getlist('cert_name'),
+            request.POST.getlist('cert_org'),
+        ):
+            if (cname or '').strip():
+                Certification.objects.create(
+                    profile=jobseeker,
+                    name=(cname or '').strip(),
+                    issuing_org=(corg or '').strip(),
+                )
+
+        # Work experience
+        WorkExperience.objects.filter(profile=jobseeker).delete()
+        positions    = request.POST.getlist('exp_position')
+        companies    = request.POST.getlist('exp_company')
+        descs        = request.POST.getlist('exp_description')
+        starts       = request.POST.getlist('exp_start_month_year')
+        ends         = request.POST.getlist('exp_end_month_year')
+        currents_idx = set(request.POST.getlist('exp_is_current'))
+        for i, pos in enumerate(positions):
+            if not (pos or '').strip():
+                continue
+            def _split(v):
+                if v and '-' in v:
+                    parts = v.split('-')
+                    return parts[1].lstrip('0') or '0', parts[0]
+                return '', None
+            s_month, s_year = _split(starts[i] if i < len(starts) else '')
+            e_month, e_year = _split(ends[i]   if i < len(ends)   else '')
+            is_current = str(i) in currents_idx
+            WorkExperience.objects.create(
+                profile=jobseeker,
+                position=(pos or '').strip(),
+                company=(companies[i] if i < len(companies) else '').strip(),
+                description=(descs[i] if i < len(descs) else '').strip(),
+                month_started=s_month, year_started=int(s_year) if s_year else None,
+                month_ended=e_month if not is_current else '',
+                year_ended=int(e_year) if e_year and not is_current else None,
+                is_current=is_current,
+            )
+
+        AuditLog.objects.create(
+            admin=request.user, action=AuditLog.ACTION_EDIT,
+            target_model='JobseekerProfile', target_id=jobseeker.id,
+            notes='Admin edited resume.',
+        )
+        saved = True
+
+    educations     = Education.objects.filter(profile=jobseeker).order_by('-year_started')
+    skills         = Skill.objects.filter(profile=jobseeker)
+    certifications = Certification.objects.filter(profile=jobseeker)
+    experiences    = WorkExperience.objects.filter(profile=jobseeker).order_by('-year_started', '-id')
+
+    from apps.jobseekers.models import Education as Edu
+    edu_levels = Edu.LEVELS
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'jobseeker':      jobseeker,
+        'educations':     educations,
+        'skills':         skills,
+        'certifications': certifications,
+        'experiences':    experiences,
+        'edu_levels':     edu_levels,
+        'year_range':     range(1980, 2031),
+        'saved':          saved,
+    })
+    return render(request, 'admin_panel/admin_edit_resume.html', ctx)

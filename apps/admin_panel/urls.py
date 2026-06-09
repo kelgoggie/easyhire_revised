@@ -33,4 +33,13 @@ urlpatterns = [
 
     # Phase 5 — Pending Approvals (personal-info change requests)
     path('admin-panel/change-requests/<int:request_id>/review/',          views.change_request_review,           name='change_request_review'),
+
+    # Activity log (audit trail of admin actions)
+    path('admin-panel/activity/',                                         views.activity_log,                    name='activity_log'),
+
+    # Bulk import (CSV upload for jobseekers / companies)
+    path('admin-panel/import/',                                           views.bulk_import,                     name='bulk_import'),
+
+    # Admin edit a jobseeker's resume
+    path('admin-panel/jobseekers/<int:pk>/edit-resume/',                  views.admin_edit_resume,               name='admin_edit_resume'),
 ]
