@@ -18,6 +18,14 @@ class Migration(migrations.Migration):
                     field=models.ImageField(blank=True, null=True, upload_to='profile_pictures/'),
                 ),
             ],
-            database_operations=[],
+            database_operations=[
+                migrations.RunSQL(
+                    sql="""
+                        ALTER TABLE jobseeker_profiles
+                            ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(100);
+                    """,
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+            ],
         ),
     ]

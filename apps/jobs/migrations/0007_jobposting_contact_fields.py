@@ -32,6 +32,9 @@ class Migration(migrations.Migration):
             database_operations=[
                 migrations.RunSQL(
                     sql="""
+                        ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS contact_email   VARCHAR(254) DEFAULT '';
+                        ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS contact_phone   VARCHAR(20)  DEFAULT '';
+                        ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS search_keywords VARCHAR(500) DEFAULT '';
                         UPDATE job_postings SET contact_email   = '' WHERE contact_email   IS NULL;
                         UPDATE job_postings SET contact_phone   = '' WHERE contact_phone   IS NULL;
                         UPDATE job_postings SET search_keywords = '' WHERE search_keywords IS NULL;

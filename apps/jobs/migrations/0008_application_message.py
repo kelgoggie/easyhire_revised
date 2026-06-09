@@ -19,6 +19,7 @@ class Migration(migrations.Migration):
             database_operations=[
                 migrations.RunSQL(
                     sql="""
+                        ALTER TABLE applications ADD COLUMN IF NOT EXISTS application_message TEXT DEFAULT '';
                         UPDATE applications SET application_message = '' WHERE application_message IS NULL;
                         ALTER TABLE applications ALTER COLUMN application_message SET DEFAULT '';
                     """,

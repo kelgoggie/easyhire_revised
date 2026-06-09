@@ -21,6 +21,8 @@ class Migration(migrations.Migration):
             database_operations=[
                 migrations.RunSQL(
                     sql="""
+                        ALTER TABLE jobseeker_profiles
+                            ADD COLUMN IF NOT EXISTS profile_visibility VARCHAR(20) DEFAULT 'public';
                         UPDATE jobseeker_profiles
                            SET profile_visibility = 'public'
                          WHERE profile_visibility IS NULL;
