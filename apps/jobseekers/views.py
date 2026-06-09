@@ -127,7 +127,12 @@ def parse_resume_pdf(request):
     try:
         result = parse_resume(pdf.read(), known_skills=known_skills)
     except Exception as e:
-        return JsonResponse({'ok': False, 'error': f'Parsing failed: {e}'}, status=500)
+        # Log the technical details for ops but show users a friendly message.
+        print(f'[resume_parser] {type(e).__name__}: {e}')
+        return JsonResponse({
+            'ok': False,
+            'error': "We couldn't read that PDF. Try a text-based PDF (not a photo or scan), or fill in your resume manually.",
+        }, status=400)
 
     return JsonResponse(result)
 

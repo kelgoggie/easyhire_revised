@@ -7,6 +7,31 @@
 {% block page_content %}
 <div class="py-8">
 
+  {% if not company.is_verified %}
+  <!-- ── Pending verification banner ───────────────────────────── -->
+  <div class="bg-amber/10 border border-amber/40 rounded-2xl p-4 mb-6 flex items-start gap-3">
+    <svg class="w-5 h-5 text-amber flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <div class="flex-1 min-w-0">
+      <p class="text-primary font-bold text-sm">Your account is pending verification.</p>
+      <p class="text-muted text-xs mt-0.5">
+        {% if pending_block_msg %}<span class="text-red-500">{{ pending_block_msg }}</span> {% endif %}
+        You can browse around and finish setting up your company profile while PESO reviews your application.
+        <strong class="text-primary">Posting jobs and browsing candidates is disabled until you're verified.</strong>
+      </p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <a href="/employers/pending/" class="inline-flex items-center gap-1 bg-amber text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition">
+          Submit verification documents
+        </a>
+        <a href="/employers/profile/" class="inline-flex items-center gap-1 bg-white border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-surface transition">
+          Edit company profile
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── Company header ─────────────────────────────────────────── -->
   <div class="flex items-center justify-between gap-6 mb-6">
 

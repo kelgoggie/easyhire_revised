@@ -19,11 +19,10 @@ class AccountAdapter(DefaultAccountAdapter):
                 return '/register/info/'
         if user.user_type == 'EMPLOYER':
             try:
-                if not user.employer_profile.company.is_verified:
-                    return '/employers/pending/'
+                _ = user.employer_profile.company
                 return '/employers/dashboard/'
             except Exception:
-                return '/employers/pending/'
+                return '/employers/register/'
         return '/dashboard/'
 
     def save_user(self, request, user, form=None, commit=True):

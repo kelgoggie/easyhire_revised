@@ -162,10 +162,9 @@ class EmployerLoginView(View):
         login(request, user)
 
         try:
-            if not user.employer_profile.company.is_verified:
-                return redirect('/employers/pending/')
+            _ = user.employer_profile.company  # ensure profile exists
         except Exception:
-            return redirect('/employers/pending/')
+            return redirect('/employers/register/')
 
         return redirect('/employers/dashboard/')
 
@@ -322,7 +321,7 @@ class EmployerRegisterStep2View(View):
             del request.session['employer_reg_email']
             del request.session['employer_reg_password']
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            return redirect('/employers/pending/')
+            return redirect('/employers/dashboard/')
 
         except Exception as e:
             return render(request, self.template_name, {

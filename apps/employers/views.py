@@ -10,6 +10,29 @@ def landing(request):
 
 
 def employer_required(view_func):
+    """Allow any logged-in employer with a profile — verified OR pending.
+    Use this for pages that should stay usable while a company waits for verification
+    (dashboard, settings, company profile, etc.). The pending banner on the dashboard
+    tells the user what's still gated.
+    """
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('/employers/login/')
+        if not request.user.is_employer:
+            return redirect('/employers/login/')
+        try:
+            _ = request.user.employer_profile
+        except Exception:
+            return redirect('/employers/register/')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def employer_verified_required(view_func):
+    """Stricter gate — require the company to be verified.
+    Pending companies hit this and bounce to dashboard with a session flag the
+    banner uses to show a 'why was I redirected' note.
+    """
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect('/employers/login/')
@@ -17,10 +40,13 @@ def employer_required(view_func):
             return redirect('/employers/login/')
         try:
             profile = request.user.employer_profile
-            if not profile.company.is_verified:
-                return redirect('/employers/pending/')
         except Exception:
             return redirect('/employers/register/')
+        if not profile.company.is_verified:
+            request.session['pending_block_msg'] = (
+                'This action is unavailable until your company is verified.'
+            )
+            return redirect('/employers/dashboard/')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -109,10 +135,14 @@ def dashboard(request):
         .order_by('-created_at')[:5]
     )
 
+    # Drain any "you can't do that yet" message from a verified-required redirect.
+    pending_block_msg = request.session.pop('pending_block_msg', None)
+
     return render(request, 'employers/dashboard.html', {
         'profile': profile,
         'company': company,
         'recent_jobs': recent_jobs,
+        'pending_block_msg': pending_block_msg,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -165,7 +195,7 @@ def job_list(request):
         'unread_messages': False,
     })
 
-@employer_required
+@employer_verified_required
 def job_create(request):
     profile = request.user.employer_profile
     company = profile.company
@@ -249,7 +279,7 @@ def job_create(request):
 
 
 
-@employer_required
+@employer_verified_required
 def job_edit(request, job_id):
     profile = request.user.employer_profile
     company = profile.company
@@ -328,7 +358,7 @@ def job_edit(request, job_id):
     })
 
 
-@employer_required
+@employer_verified_required
 def job_delete(request, job_id):
     profile = request.user.employer_profile
     job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
@@ -337,7 +367,7 @@ def job_delete(request, job_id):
     return redirect('/employers/jobs/')
 
 
-@employer_required
+@employer_verified_required
 def job_close(request, job_id):
     """Toggle a job between OPEN and CLOSED. Closed jobs hide from jobseeker
     recommendations and stop receiving new applications, but stay on record."""
@@ -366,7 +396,7 @@ def job_detail(request, job_id):
     })
 
 
-@employer_required
+@employer_verified_required
 def candidates(request, job_id):
     from apps.matching.engine import get_ranked_jobseekers, compute_match_score
     from apps.jobseekers.models import JobInteraction, JobseekerProfile
@@ -438,7 +468,7 @@ _ALLOWED_TRANSITIONS = {
 }
 
 
-@employer_required
+@employer_verified_required
 def application_update_status(request, app_id):
     """Single endpoint for view/accept/reject/hire transitions on an Application."""
     from django.http import JsonResponse
@@ -618,7 +648,7 @@ def company_profile(request):
         'unread_messages': False,
     })
 
-@employer_required
+@employer_verified_required
 def candidate_detail(request, jobseeker_id):
     profile = request.user.employer_profile
     company = profile.company
@@ -657,7 +687,7 @@ def candidate_detail(request, jobseeker_id):
     })
 
 
-@employer_required
+@employer_verified_required
 def candidate_like(request, jobseeker_id):
     if request.method != 'POST':
         return redirect('/employers/candidates/')
@@ -702,7 +732,7 @@ def candidate_like(request, jobseeker_id):
 # (a thin wrapper around templates/analytics/_dashboard_body.html).
 # No duplicate view needed here.
 
-@employer_required
+@employer_verified_required
 def all_candidates(request):
     from apps.matching.engine import get_ranked_jobseekers
     from apps.jobseekers.models import JobseekerProfile
