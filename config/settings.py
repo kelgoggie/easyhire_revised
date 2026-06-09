@@ -123,20 +123,25 @@ DATABASES = {
 }
 
 # If DATABASE_URL is set (Render's Postgres add-on provides this), it wins.
-if os.getenv('DATABASE_URL'):
+_db_url = os.getenv('DATABASE_URL')
+print(f"[settings] DEBUG={DEBUG}  DATABASE_URL_set={bool(_db_url)}", flush=True)
+if _db_url:
     import dj_database_url
     DATABASES['default'] = dj_database_url.config(
-        default=os.environ['DATABASE_URL'],
+        default=_db_url,
         conn_max_age=600,
         ssl_require=True,
     )
-elif not DEBUG:
-    raise RuntimeError(
-        "DATABASE_URL environment variable is not set. "
-        "In production (DEBUG=False) you must provide a DATABASE_URL. "
-        "On Render: web service -> Environment tab -> add DATABASE_URL "
-        "with the Internal Database URL from your Postgres service."
-    )
+    print(f"[settings] DB host parsed: {DATABASES['default'].get('HOST', '?')}", flush=True)
+else:
+    # Hard-fail if we're on Render (or any env that isn't local dev)
+    if os.getenv('RENDER') or os.getenv('IS_PRODUCTION') or not DEBUG:
+        raise RuntimeError(
+            "DATABASE_URL environment variable is not set. "
+            "On Render: web service -> Environment tab -> add DATABASE_URL "
+            "with the Internal Database URL from your Postgres service. "
+            "Then click Save Changes AND trigger Manual Deploy -> Deploy latest commit."
+        )
 
 
 # Password validation
