@@ -1,0 +1,115 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}About — EasyHire{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_jobseeker.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="bg-surface min-h-screen py-12 px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <!-- Hero -->
+    <div class="text-center mb-12">
+      <h1 class="text-5xl font-extrabold text-primary mb-3">
+        About <span class="text-teal">EasyHire</span>
+      </h1>
+      <p class="text-muted text-base max-w-2xl mx-auto">
+        The official digital platform of the Public Employment Service Office (PESO) of Iloilo City —
+        connecting Ilonggos with meaningful local work.
+      </p>
+    </div>
+
+    <!-- Mission card -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-8 mb-6">
+      <h2 class="text-2xl font-bold text-primary mb-3">Our Mission</h2>
+      <p class="text-primary text-sm leading-relaxed mb-3">
+        EasyHire exists to make finding work in Iloilo City simpler, more transparent, and more equitable.
+        Built in partnership with PESO Iloilo City, the platform lowers the friction between local jobseekers
+        and the companies who want to hire them.
+      </p>
+      <p class="text-primary text-sm leading-relaxed">
+        We focus on jobs that are actually here — Iloilo-first matching ensures the openings you see are
+        nearby, real, and from verified employers.
+      </p>
+    </div>
+
+    <!-- What we do — feature grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white border border-gray-200 rounded-2xl p-5">
+        <div class="w-10 h-10 rounded-full bg-teal/15 text-teal flex items-center justify-center mb-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        </div>
+        <p class="font-bold text-primary text-sm mb-1">For Jobseekers</p>
+        <p class="text-muted text-xs leading-relaxed">
+          Build a resume once, get matched to every relevant opening. Filter by location, sector, and proximity to where you live.
+        </p>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-2xl p-5">
+        <div class="w-10 h-10 rounded-full bg-amber/15 text-amber flex items-center justify-center mb-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        </div>
+        <p class="font-bold text-primary text-sm mb-1">For Employers</p>
+        <p class="text-muted text-xs leading-relaxed">
+          Post openings, review applications, and discover candidates whose skills, education, and experience actually fit the role.
+        </p>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-2xl p-5">
+        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        </div>
+        <p class="font-bold text-primary text-sm mb-1">PESO-verified</p>
+        <p class="text-muted text-xs leading-relaxed">
+          Every employer is reviewed by PESO Iloilo City before they can post. Look for the Verified badge.
+        </p>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-8 mb-6">
+      <h2 class="text-2xl font-bold text-primary mb-4">How it works</h2>
+      <div class="space-y-3">
+        <div class="flex items-start gap-3">
+          <span class="w-7 h-7 rounded-full bg-teal/15 text-teal text-sm font-bold flex items-center justify-center flex-shrink-0">1</span>
+          <p class="text-primary text-sm"><strong>Sign up.</strong> Pick whether you're looking for work or hiring. Fill in your basics — it takes a few minutes.</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="w-7 h-7 rounded-full bg-teal/15 text-teal text-sm font-bold flex items-center justify-center flex-shrink-0">2</span>
+          <p class="text-primary text-sm"><strong>Match.</strong> Our matching engine weighs skills, education, experience, certifications, and proximity to find the best fits.</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="w-7 h-7 rounded-full bg-teal/15 text-teal text-sm font-bold flex items-center justify-center flex-shrink-0">3</span>
+          <p class="text-primary text-sm"><strong>Apply.</strong> Send your application with a short message. Employers respond directly through EasyHire.</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="w-7 h-7 rounded-full bg-teal/15 text-teal text-sm font-bold flex items-center justify-center flex-shrink-0">4</span>
+          <p class="text-primary text-sm"><strong>Get hired.</strong> When the employer marks you Hired, the role lands on your resume automatically.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="bg-primary rounded-2xl p-8 text-center text-white">
+      <h2 class="text-2xl font-bold mb-2">Get in touch with PESO Iloilo City</h2>
+      <p class="text-white/70 text-sm mb-4">For questions about the platform, your account, or employment services in Iloilo.</p>
+      <div class="flex flex-wrap items-center justify-center gap-4 text-sm">
+        <a href="mailto:peso@iloilocity.gov.ph" class="inline-flex items-center gap-2 text-white hover:text-amber transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          peso@iloilocity.gov.ph
+        </a>
+        <a href="tel:+63333370800" class="inline-flex items-center gap-2 text-white hover:text-amber transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h2.5a1 1 0 01.95.68l1.5 4.5a1 1 0 01-.27 1.05L8.2 10.71a16 16 0 005.09 5.09l1.48-1.48a1 1 0 011.05-.27l4.5 1.5a1 1 0 01.68.95V19a2 2 0 01-2 2h-1A16 16 0 013 6V5z"/></svg>
+          (033) 337-0800
+        </a>
+      </div>
+    </div>
+
+  </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}
