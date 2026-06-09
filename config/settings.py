@@ -130,6 +130,13 @@ if os.getenv('DATABASE_URL'):
         conn_max_age=600,
         ssl_require=True,
     )
+elif not DEBUG:
+    raise RuntimeError(
+        "DATABASE_URL environment variable is not set. "
+        "In production (DEBUG=False) you must provide a DATABASE_URL. "
+        "On Render: web service -> Environment tab -> add DATABASE_URL "
+        "with the Internal Database URL from your Postgres service."
+    )
 
 
 # Password validation
