@@ -1,6 +1,6 @@
 {% load match_tags %}
 {% if ranked_jobs %}
-<div class="grid grid-cols-4 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
   {% for item in ranked_jobs %}
   <div class="job-card bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col"
        data-job-id="{{ item.job.id }}">

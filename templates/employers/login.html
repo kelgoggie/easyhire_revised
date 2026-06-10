@@ -9,32 +9,30 @@
 <div class="flex flex-col min-h-screen">
 
   <!-- Navbar -->
-  <nav class="bg-surface px-8 py-3 flex items-center justify-between shadow-sm">
-    <a href="/employers/" class="flex items-center gap-2">
-      <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-9 h-9">
-      <span class="font-bold text-xl">
+  <nav class="bg-surface px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
+    <a href="/employers/" class="flex items-center gap-2 min-w-0">
+      <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0">
+      <span class="font-bold text-lg sm:text-xl truncate">
         <span class="text-primary">Easy</span><span class="text-teal">Hire</span>
-        <span class="text-primary/50 font-normal text-base"> for Employers</span>
+        <span class="hidden sm:inline text-primary/50 font-normal text-base"> for Employers</span>
       </span>
     </a>
-    <div class="flex items-center gap-8">
-      <div class="flex items-center gap-6 text-sm">
+    <div class="flex items-center gap-4 sm:gap-8 flex-shrink-0">
+      <div class="hidden md:flex items-center gap-6 text-sm">
         <a href="/about/" class="text-muted hover:text-primary transition">About</a>
         <a href="/jobs/" class="text-muted hover:text-primary transition">Jobs</a>
         <a href="/analytics/" class="text-muted hover:text-primary transition">Analytics</a>
         <a href="/login/" class="text-primary font-semibold hover:text-teal transition">EasyHire for Jobseekers</a>
       </div>
-      <a href="/employers/login/" class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/80 transition">
-        Sign In
-      </a>
+      <a href="/login/" class="md:hidden text-primary text-xs font-semibold hover:text-teal transition">For Jobseekers</a>
     </div>
   </nav>
 
   <!-- Split content -->
-  <div class="flex flex-1">
+  <div class="flex flex-col md:flex-row flex-1">
 
     <!-- Left panel -->
-    <div class="w-1/2 bg-surface flex items-center justify-center py-12 px-8">
+    <div class="w-full md:w-1/2 bg-surface flex items-center justify-center py-8 md:py-12 px-4 sm:px-8">
       <div class="bg-white border border-gray-200 rounded-2xl p-8 w-72 shadow-sm relative">
 
         <!-- eH icon -->
@@ -111,8 +109,8 @@
       </div>
     </div>
 
-    <!-- Right panel: building photo -->
-    <div class="w-1/2 relative overflow-hidden min-h-[500px]">
+    <!-- Right panel: building photo (hidden on small screens) -->
+    <div class="hidden md:block w-full md:w-1/2 relative overflow-hidden min-h-[500px]">
       <div class="absolute inset-0 bg-cover bg-center"
            style="background-image: url('{% static 'images/iloilo_city_hall.jpg' %}');"></div>
       <div class="absolute inset-0 bg-primary/65"></div>

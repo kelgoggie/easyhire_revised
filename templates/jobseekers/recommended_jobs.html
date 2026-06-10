@@ -26,7 +26,7 @@
     </form>
 
     <!-- Heading -->
-    <h1 id="page-heading" class="text-4xl font-extrabold text-primary mb-4">
+    <h1 id="page-heading" class="text-3xl sm:text-4xl font-extrabold text-primary mb-4">
       {% if tab == 'liked' %}Liked <span>Jobs</span>
       {% elif tab == 'hidden' %}Hidden <span>Jobs</span>
       {% else %}Jobs <span>For You</span>{% endif %}
@@ -73,12 +73,12 @@
 
     <!-- Incomplete profile nudge -->
     {% if not profile.profile_complete %}
-    <div class="bg-amber/10 border border-amber/30 rounded-2xl px-6 py-4 mb-6 flex items-center justify-between">
+    <div class="bg-amber/10 border border-amber/30 rounded-2xl px-4 sm:px-6 py-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
         <p class="text-primary font-semibold text-sm">Your resume is incomplete</p>
         <p class="text-muted text-xs mt-0.5">Complete your resume to get personalised job recommendations.</p>
       </div>
-      <a href="/resume/" class="bg-amber text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-amber/90 transition flex-shrink-0 ml-4">
+      <a href="/resume/" class="bg-amber text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-amber/90 transition flex-shrink-0 sm:ml-4 w-fit">
         Complete Resume
       </a>
     </div>

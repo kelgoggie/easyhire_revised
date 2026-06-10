@@ -9,28 +9,28 @@
 <div class="flex flex-col min-h-screen bg-surface">
 
   <!-- Navbar -->
-  <nav class="bg-surface px-8 py-3 flex items-center justify-between shadow-sm">
-    <a href="/employers/" class="flex items-center gap-2">
-      <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-9 h-9">
-      <span class="font-bold text-xl">
+  <nav class="bg-surface px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
+    <a href="/employers/" class="flex items-center gap-2 min-w-0">
+      <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0">
+      <span class="font-bold text-lg sm:text-xl truncate">
         <span class="text-primary">Easy</span><span class="text-teal">Hire</span>
-        <span class="text-primary/50 font-normal text-base"> for Employers</span>
+        <span class="hidden sm:inline text-primary/50 font-normal text-base"> for Employers</span>
       </span>
     </a>
-    <div class="flex items-center gap-8">
-      <div class="flex items-center gap-6 text-sm">
+    <div class="flex items-center gap-4 sm:gap-8 flex-shrink-0">
+      <div class="hidden md:flex items-center gap-6 text-sm">
         <a href="/about/" class="text-muted hover:text-primary transition">About</a>
         <a href="/jobs/" class="text-muted hover:text-primary transition">Jobs</a>
         <a href="/analytics/" class="text-muted hover:text-primary transition">Analytics</a>
         <a href="/login/" class="text-primary font-semibold hover:text-teal transition">EasyHire for Jobseekers</a>
       </div>
-      <a href="/employers/login/" class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
+      <a href="/employers/login/" class="bg-amber text-white text-xs sm:text-sm font-semibold px-5 sm:px-6 py-2 rounded-full hover:bg-amber/90 transition">
         Sign In
       </a>
     </div>
   </nav>
 
-  <main class="flex-1 px-10 py-10">
+  <main class="flex-1 px-4 sm:px-6 md:px-10 py-6 md:py-10">
     <div class="max-w-6xl mx-auto">
 
       <!-- Title -->
@@ -49,7 +49,7 @@
 
       <!-- Main card -->
       <form method="POST" action="/employers/register/info/"
-            class="bg-white border border-gray-200 rounded-2xl px-10 py-8 shadow-sm">
+            class="bg-white border border-gray-200 rounded-2xl px-4 sm:px-6 md:px-10 py-6 md:py-8 shadow-sm">
         {% csrf_token %}
 
         <!-- ── Business Information ──────────────────────────────── -->
@@ -58,7 +58,7 @@
           <span class="text-xs text-muted">*Required fields</span>
         </div>
 
-        <div class="grid grid-cols-2 gap-x-10 gap-y-5 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5 mb-8">
 
           <!-- LEFT column -->
           <div class="space-y-5">
@@ -163,7 +163,7 @@
         <!-- ── Representative Information ────────────────────────── -->
         <h2 class="text-base font-bold text-primary mb-5">Representative Information</h2>
 
-        <div class="grid grid-cols-4 gap-3 mb-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-5">
           <div>
             <label class="block text-primary text-xs font-medium mb-1">First Name*</label>
             <input type="text" name="first_name" value="{{ form.first_name|default:'' }}"
@@ -186,7 +186,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-3 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
           <div>
             <label class="block text-primary text-xs font-medium mb-1">Position*</label>
             <input type="text" name="position" value="{{ form.position|default:'' }}" placeholder="e.g. HR Manager, CEO, Owner, etc."

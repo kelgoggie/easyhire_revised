@@ -24,7 +24,7 @@
     </form>
 
     <!-- Heading + Sort row -->
-    <h1 class="text-4xl font-extrabold text-primary mb-4">Your Applications</h1>
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-4">Your Applications</h1>
 
     <div class="flex items-center gap-2 mb-6">
       <div class="relative" id="sort-dropdown-wrapper">
@@ -47,8 +47,8 @@
     </div>
 
     {% if items %}
-    <!-- 2-column grid of application cards -->
-    <div class="grid grid-cols-2 gap-5">
+    <!-- application cards: 1 column on phones, 2 from sm+ -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
       {% for item in items %}
       <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
 

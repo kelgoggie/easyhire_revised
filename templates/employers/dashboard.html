@@ -33,11 +33,11 @@
   {% endif %}
 
   <!-- ── Company header ─────────────────────────────────────────── -->
-  <div class="flex items-center justify-between gap-6 mb-6">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-6">
 
-    <div class="flex items-center gap-5 min-w-0">
+    <div class="flex items-center gap-4 sm:gap-5 min-w-0">
       <!-- Company logo / avatar -->
-      <div class="w-20 h-20 rounded-full bg-primary flex items-center justify-center flex-shrink-0 overflow-hidden">
+      <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary flex items-center justify-center flex-shrink-0 overflow-hidden">
         {% if company.logo %}
           <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="w-full h-full object-cover">
         {% else %}
@@ -49,7 +49,7 @@
 
       <!-- Company info -->
       <div class="min-w-0">
-        <h2 class="text-2xl text-primary leading-tight mb-1">
+        <h2 class="text-xl sm:text-2xl text-primary leading-tight mb-1">
           <span class="font-bold">{{ company.name }}</span>
         </h2>
         <p class="text-primary text-sm mb-0.5">
@@ -68,7 +68,7 @@
     </div>
 
     <a href="/employers/jobs/new/"
-       class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-taupe/30 transition flex-shrink-0">
+       class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-taupe/30 transition flex-shrink-0 w-fit">
       Create New Job
     </a>
   </div>
@@ -76,7 +76,7 @@
   <div class="border-b border-taupe/30 mb-8"></div>
 
   <!-- ── Welcome heading ────────────────────────────────────────── -->
-  <h1 class="text-4xl font-extrabold text-primary mb-8">
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-8">
     Welcome to <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">!</span>
   </h1>
 
@@ -93,8 +93,8 @@
       <a href="/employers/jobs/" class="underline hover:text-primary transition">View My Job Posts.</a>
     </p>
 
-    <div class="border border-gray-200 rounded-xl overflow-hidden bg-white">
-      <table class="w-full text-sm">
+    <div class="border border-gray-200 rounded-xl overflow-hidden overflow-x-auto bg-white">
+      <table class="w-full text-sm min-w-[640px]">
         <thead class="border-b border-gray-100">
           <tr class="text-left">
             <th class="px-5 py-3 text-xs font-medium text-muted">Job Title</th>
