@@ -1,21 +1,47 @@
 {% load static %}
-<nav class="fixed top-0 left-0 right-0 z-50 bg-surface px-8 py-3 flex items-center justify-between shadow-md">
-    <a href="/" class="flex items-center gap-2">
-        <img src="{% static 'images/navbar_logo.svg' %}"
-             alt="EasyHire"
-             class="w-9 h-9">
-        <span class="font-bold text-xl">
-            <span class="text-primary">Easy</span><span class="text-teal">Hire</span>
-        </span>
-    </a>
+<nav class="fixed top-0 left-0 right-0 z-50 bg-surface px-4 sm:px-8 py-3 shadow-md">
+    <div class="flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2">
+            <img src="{% static 'images/navbar_logo.svg' %}"
+                 alt="EasyHire"
+                 class="w-8 h-8 sm:w-9 sm:h-9">
+            <span class="font-bold text-lg sm:text-xl">
+                <span class="text-primary">Easy</span><span class="text-teal">Hire</span>
+            </span>
+        </a>
 
-    <div class="flex items-center gap-8">
-        <a href="/about/" class="text-muted hover:text-primary transition text-sm">About</a>
-        <a href="/jobs/" class="text-muted hover:text-primary transition text-sm">Jobs</a>
-        <a href="/analytics/" class="text-muted hover:text-primary transition text-sm">Analytics</a>
-        <a href="/employers/login/" class="text-primary font-semibold hover:text-teal transition text-sm">EasyHire for Employers</a>
+        <!-- Desktop links -->
+        <div class="hidden md:flex items-center gap-8">
+            <a href="/about/" class="text-muted hover:text-primary transition text-sm">About</a>
+            <a href="/jobs/" class="text-muted hover:text-primary transition text-sm">Jobs</a>
+            <a href="/analytics/" class="text-muted hover:text-primary transition text-sm">Analytics</a>
+            <a href="/employers/login/" class="text-primary font-semibold hover:text-teal transition text-sm">EasyHire for Employers</a>
+            <a href="/login/"
+               class="bg-teal text-white font-semibold px-6 py-2 rounded-full hover:bg-primary transition text-sm">
+                Sign In
+            </a>
+        </div>
+
+        <!-- Mobile hamburger -->
+        <button id="public-nav-toggle" type="button" title="Open menu"
+                class="md:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/8 transition">
+            <svg id="public-nav-icon-open" class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            <svg id="public-nav-icon-close" class="w-6 h-6 text-primary hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="public-nav-menu" class="md:hidden hidden mt-3 pt-3 border-t border-gray-200 flex-col gap-1">
+        <a href="/about/" class="block px-3 py-2 rounded-lg text-primary hover:bg-primary/5 transition text-sm">About</a>
+        <a href="/jobs/" class="block px-3 py-2 rounded-lg text-primary hover:bg-primary/5 transition text-sm">Jobs</a>
+        <a href="/analytics/" class="block px-3 py-2 rounded-lg text-primary hover:bg-primary/5 transition text-sm">Analytics</a>
+        <a href="/employers/login/" class="block px-3 py-2 rounded-lg text-primary font-semibold hover:bg-primary/5 transition text-sm">EasyHire for Employers</a>
         <a href="/login/"
-           class="bg-teal text-white font-semibold px-6 py-2 rounded-full hover:bg-primary transition text-sm">
+           class="block mt-2 mx-3 mb-1 bg-teal text-white text-center font-semibold px-6 py-2.5 rounded-full hover:bg-primary transition text-sm">
             Sign In
         </a>
     </div>
@@ -23,3 +49,27 @@
 
 <!-- Spacer -->
 <div class="h-[57px]"></div>
+
+<script>
+(function() {
+  const btn  = document.getElementById('public-nav-toggle');
+  const menu = document.getElementById('public-nav-menu');
+  const iOpen  = document.getElementById('public-nav-icon-open');
+  const iClose = document.getElementById('public-nav-icon-close');
+  if (!btn || !menu) return;
+  btn.addEventListener('click', function() {
+    const isOpen = !menu.classList.contains('hidden');
+    if (isOpen) {
+      menu.classList.add('hidden');
+      menu.classList.remove('flex');
+      iOpen.classList.remove('hidden');
+      iClose.classList.add('hidden');
+    } else {
+      menu.classList.remove('hidden');
+      menu.classList.add('flex');
+      iOpen.classList.add('hidden');
+      iClose.classList.remove('hidden');
+    }
+  });
+})();
+</script>

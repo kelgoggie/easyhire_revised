@@ -6,17 +6,50 @@
 {% block navbar %}{% endblock %}
 {% block footer %}{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* ── Mobile (default): off-canvas drawer ───────────────────── */
+  #admin-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  body.sidebar-open #admin-sidebar { transform: translateX(0); }
+  #admin-main      { margin-left: 0; }
+  #mobile-overlay  {
+    position: fixed; top: 3.5rem; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4); z-index: 20; display: none;
+  }
+  body.sidebar-open #mobile-overlay { display: block; }
+
+  /* ── Desktop (≥768px): static sidebar ──────────────────────── */
+  @media (min-width: 768px) {
+    #admin-sidebar { transform: translateX(0); }
+    #admin-main    { margin-left: 16rem; }
+    #mobile-overlay { display: none !important; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="min-h-screen flex flex-col bg-surface">
 
   <!-- ── Topbar ───────────────────────────────────────────────────── -->
-  <header class="fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-40">
-    <a href="/admin-panel/" class="flex items-center gap-2">
-      <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-8 h-8">
-      <span class="font-extrabold text-lg">
-        <span class="text-primary">Easy</span><span class="text-teal">Hire Admin.</span>
-      </span>
-    </a>
+  <header class="fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 z-40">
+    <div class="flex items-center gap-2 min-w-0">
+      <!-- Mobile hamburger (drawer trigger) -->
+      <button id="mobile-menu-btn" title="Open menu"
+              class="md:hidden w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full hover:bg-primary/8 transition">
+        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+      <a href="/admin-panel/" class="flex items-center gap-2 min-w-0">
+        <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0">
+        <span class="font-extrabold text-base sm:text-lg truncate">
+          <span class="text-primary">Easy</span><span class="text-teal">Hire Admin.</span>
+        </span>
+      </a>
+    </div>
     <div class="flex items-center gap-1">
       <!-- Bell -->
       <div class="relative" id="admin-notif-container">
@@ -91,11 +124,14 @@
     </div>
   </header>
 
+  <!-- Mobile backdrop overlay -->
+  <div id="mobile-overlay"></div>
+
   <!-- ── Body ─────────────────────────────────────────────────────── -->
   <div class="flex flex-1 pt-14">
 
     <!-- Sidebar -->
-    <aside class="fixed top-14 left-0 w-64 h-[calc(100vh_-_3.5rem)] bg-surface border-r border-gray-200 flex flex-col py-6 px-6 z-30 overflow-y-auto">
+    <aside id="admin-sidebar" class="fixed top-14 left-0 w-64 h-[calc(100vh_-_3.5rem)] bg-surface border-r border-gray-200 flex flex-col py-6 px-6 z-30 overflow-y-auto">
       <a href="/admin-panel/" class="font-extrabold text-2xl mb-8">
         <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
       </a>
@@ -163,8 +199,8 @@
     </aside>
 
     <!-- Page content + footer -->
-    <main class="flex-1 ml-64 flex flex-col bg-white min-h-[calc(100vh_-_3.5rem)]">
-      <div class="flex-1 px-8 pb-16">
+    <main id="admin-main" class="flex-1 flex flex-col bg-white min-h-[calc(100vh_-_3.5rem)]">
+      <div class="flex-1 px-4 sm:px-6 lg:px-8 pb-16">
         {% block admin_content %}{% endblock %}
       </div>
       {% include "base/footer.html" %}
@@ -174,6 +210,19 @@
 </div>
 
 <script>
+// ── Sidebar drawer (mobile) ─────────────────────────────────────────
+(function() {
+  const open  = function() { document.body.classList.add('sidebar-open'); };
+  const close = function() { document.body.classList.remove('sidebar-open'); };
+  document.getElementById('mobile-menu-btn').addEventListener('click', function(e) {
+    e.stopPropagation(); open();
+  });
+  document.getElementById('mobile-overlay').addEventListener('click', close);
+  document.querySelectorAll('#admin-sidebar a').forEach(function(el) {
+    el.addEventListener('click', close);
+  });
+})();
+
 // Dropdown toggles
 document.getElementById('admin-notif-btn').addEventListener('click', function(e) {
   e.stopPropagation();
