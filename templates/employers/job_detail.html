@@ -8,9 +8,9 @@
 <div class="py-8">
 
   <!-- ── Title row ──────────────────────────────────────────────── -->
-  <div class="flex items-start justify-between gap-4 mb-2">
-    <h1 class="text-4xl font-extrabold text-primary leading-tight">{{ job.title }}</h1>
-    <div class="flex items-center gap-2 flex-shrink-0 pt-2">
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-2">
+    <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">{{ job.title }}</h1>
+    <div class="flex items-center gap-2 flex-shrink-0 sm:pt-2 flex-wrap">
       <span class="inline-flex items-center bg-gray-100 text-muted text-xs font-semibold px-3 py-1.5 rounded-full">
         {{ job.slots }} slot{{ job.slots|pluralize }} open
       </span>
@@ -26,7 +26,7 @@
   <div class="border-b border-taupe/30 mb-6"></div>
 
   <!-- ── Action row: View Applicants + View Recommended ─────────── -->
-  <div class="flex gap-4 mb-8">
+  <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8">
     <a href="/employers/jobs/{{ job.id }}/candidates/?tab=applicants"
        class="flex-1 bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-teal/30 transition flex items-center gap-4">
       <div class="w-12 h-12 rounded-xl bg-teal/10 flex items-center justify-center flex-shrink-0">
@@ -55,9 +55,9 @@
   </div>
 
   <!-- ── Two-column: Description + Requirements ─────────────────── -->
-  <div class="grid grid-cols-3 gap-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
-    <div class="col-span-2 bg-white border border-gray-200 rounded-2xl p-6">
+    <div class="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-4 sm:p-6">
       <p class="text-sm font-bold text-primary mb-4">Job Description:</p>
       <p class="text-primary text-sm leading-relaxed whitespace-pre-line">{{ job.description }}</p>
 

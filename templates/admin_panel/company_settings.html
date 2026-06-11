@@ -39,7 +39,7 @@
     {% csrf_token %}
     <input type="hidden" name="form" value="company">
 
-    <div class="grid grid-cols-2 gap-4 mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
       <div>
         <label class="block text-primary text-xs mb-1">Company Name</label>
         <input type="text" name="name" value="{{ company.name }}" required
@@ -82,7 +82,7 @@
   <form method="POST" class="mb-12">
     {% csrf_token %}
     <input type="hidden" name="form" value="password">
-    <div class="grid grid-cols-4 gap-4 items-end">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
       <div>
         <label class="block text-primary text-xs mb-1">New Password</label>
         <input type="password" name="new_password" minlength="8" required

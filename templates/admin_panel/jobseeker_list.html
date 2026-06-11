@@ -46,7 +46,7 @@
 
   <!-- Cards -->
   {% if page.object_list %}
-  <div class="grid grid-cols-4 gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for js in page.object_list %}
     <a href="/admin-panel/jobseekers/{{ js.id }}/"
        class="block bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition relative">

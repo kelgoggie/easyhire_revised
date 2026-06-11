@@ -1,53 +1,58 @@
 {% load static %}
-<footer class="bg-gray-900 py-8 px-12">
+<footer class="bg-gray-900 py-8 px-4 sm:px-8 md:px-12">
   <div class="max-w-6xl mx-auto">
-    <div class="flex items-start gap-10">
+    <div class="flex flex-col md:flex-row md:items-start gap-6 md:gap-10">
 
-      <!-- Left: Partner logos -->
-      <div class="flex items-center gap-4 flex-shrink-0 mt-1">
-        <div class="w-14 h-14 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
-          <img src="{% static 'images/iloilo_logo.png' %}" alt="Iloilo City" class="w-full h-full object-contain">
+      <!-- Top row on mobile: logos + description side by side -->
+      <div class="flex items-start gap-4">
+        <!-- Partner logos -->
+        <div class="flex items-center gap-3 sm:gap-4 flex-shrink-0 mt-1">
+          <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
+            <img src="{% static 'images/iloilo_logo.png' %}" alt="Iloilo City" class="w-full h-full object-contain">
+          </div>
+          <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
+            <img src="{% static 'images/peso_logo.png' %}" alt="PESO" class="w-full h-full object-contain">
+          </div>
         </div>
-        <div class="w-14 h-14 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
-          <img src="{% static 'images/peso_logo.png' %}" alt="PESO" class="w-full h-full object-contain">
+
+        <!-- EasyHire description -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-6 h-6">
+            <span class="text-white font-extrabold text-base">EasyHire.</span>
+          </div>
+          <p class="text-white/60 text-xs leading-relaxed">
+            The Official Digital Platform of Public Employment Services Office (PESO) Iloilo City
+          </p>
         </div>
       </div>
 
-      <!-- EasyHire description -->
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2 mb-1">
-          <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-6 h-6">
-          <span class="text-white font-extrabold text-base">EasyHire.</span>
+      <!-- About Us + Contact: side by side on mobile, separate columns on desktop -->
+      <div class="flex flex-row gap-8 sm:gap-12 md:contents">
+        <!-- About Us -->
+        <div class="flex-shrink-0">
+          <p class="text-white font-bold text-xs mb-2 tracking-wide">ABOUT US</p>
+          <ul class="space-y-1">
+            <li><a href="/terms/" class="text-white/60 text-xs hover:text-white transition">Terms &amp; Conditions</a></li>
+            <li><a href="/privacy/" class="text-white/60 text-xs hover:text-white transition">Privacy Policy</a></li>
+          </ul>
         </div>
-        <p class="text-white/60 text-xs leading-relaxed">
-          The Official Digital Platform of Public<br>
-          Employment Services Office (PESO) Iloilo City
-        </p>
-      </div>
 
-      <!-- About Us -->
-      <div class="flex-shrink-0">
-        <p class="text-white font-bold text-xs mb-2 tracking-wide">ABOUT US</p>
-        <ul class="space-y-1">
-          <li><a href="/terms/" class="text-white/60 text-xs hover:text-white transition">Terms &amp; Conditions</a></li>
-          <li><a href="/privacy/" class="text-white/60 text-xs hover:text-white transition">Privacy Policy</a></li>
-        </ul>
-      </div>
-
-      <!-- Contact -->
-      <div class="flex-shrink-0">
-        <p class="text-white font-bold text-xs mb-2 tracking-wide">CONTACT PESO ILOILO CITY</p>
-        <div class="flex items-center gap-3">
-          <a href="#" class="text-white/60 hover:text-white transition" aria-label="Facebook">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
-            </svg>
-          </a>
-          <a href="mailto:peso@iloilocity.gov.ph" class="text-white/60 hover:text-white transition" aria-label="Email">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-            </svg>
-          </a>
+        <!-- Contact -->
+        <div class="flex-shrink-0">
+          <p class="text-white font-bold text-xs mb-2 tracking-wide">CONTACT PESO ILOILO CITY</p>
+          <div class="flex items-center gap-3">
+            <a href="#" class="text-white/60 hover:text-white transition" aria-label="Facebook">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+              </svg>
+            </a>
+            <a href="mailto:peso@iloilocity.gov.ph" class="text-white/60 hover:text-white transition" aria-label="Email">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+              </svg>
+            </a>
+          </div>
         </div>
       </div>
 

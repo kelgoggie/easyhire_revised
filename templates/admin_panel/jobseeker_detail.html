@@ -56,7 +56,7 @@
     </div>
 
     {% with j=jobseeker p=pending_change %}
-    <div class="grid grid-cols-6 gap-3 text-xs mb-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs mb-4">
       <div>
         <p class="text-muted">First Name</p>
         <p class="text-primary {% if j.first_name != p.first_name %}font-bold{% endif %}">{{ p.first_name }}</p>
@@ -156,7 +156,7 @@
       {% endif %}
     </div>
 
-    <div class="grid grid-cols-4 gap-3 mt-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
       <!-- Education -->
       <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
         <p class="font-bold text-primary text-base mb-3">Education</p>

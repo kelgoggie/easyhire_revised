@@ -8,25 +8,25 @@
 {% endblock %}
 
 {% block content %}
-<main class="bg-surface min-h-screen py-10 px-6">
+<main class="bg-surface min-h-screen py-6 sm:py-10 px-4 sm:px-6">
 
     <!-- Header -->
-    <div class="max-w-5xl mx-auto mb-6 flex items-end justify-between">
+    <div class="max-w-5xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
-            <p class="text-primary text-lg font-normal">Welcome to</p>
-            <h1 class="font-extrabold text-4xl leading-tight">
+            <p class="text-primary text-base sm:text-lg font-normal">Welcome to</p>
+            <h1 class="font-extrabold text-3xl sm:text-4xl leading-tight">
                 <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
             </h1>
         </div>
-        <p class="text-muted text-sm pb-1">We're going to need a few more things from you.</p>
+        <p class="text-muted text-xs sm:text-sm pb-1">We're going to need a few more things from you.</p>
     </div>
 
     <!-- Form Card -->
-    <div class="max-w-5xl mx-auto bg-white border border-gray-200 rounded-2xl px-10 py-10 shadow-sm">
+    <div class="max-w-5xl mx-auto bg-white border border-gray-200 rounded-2xl px-4 sm:px-6 md:px-10 py-6 md:py-10 shadow-sm">
         <form method="POST" action="/register/info/" id="reg-form">
             {% csrf_token %}
 
-            <div class="grid grid-cols-2 gap-x-14 gap-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 md:gap-x-14 gap-y-6">
 
                 <!-- ── LEFT: Personal Information ─────────────────── -->
                 <div>

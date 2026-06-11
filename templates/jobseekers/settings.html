@@ -18,7 +18,7 @@
     <input type="hidden" name="form_type" value="personal_change">
     <input type="file"   name="id_document" id="personal-id-doc" class="hidden" accept="image/*,application/pdf">
 
-    <div class="grid grid-cols-4 gap-4 mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
       <div>
         <label class="block text-primary text-xs mb-1">First Name</label>
         <input type="text" name="first_name" value="{{ display.first_name|default:'' }}" required disabled
@@ -41,7 +41,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-4 gap-4 items-end">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
       <div>
         <label class="block text-primary text-xs mb-1">Birthday</label>
         <div class="relative">

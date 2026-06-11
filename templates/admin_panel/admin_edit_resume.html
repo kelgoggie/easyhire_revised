@@ -42,7 +42,7 @@
       </div>
       <div id="education-container" class="space-y-3">
         {% for edu in educations %}
-        <div class="edu-row grid grid-cols-5 gap-2 border border-gray-100 rounded-xl p-3 relative">
+        <div class="edu-row grid grid-cols-2 md:grid-cols-5 gap-2 border border-gray-100 rounded-xl p-3 relative">
           <button type="button" onclick="removeRow(this)" class="absolute top-2 right-2 text-muted hover:text-red-500 text-xs">×</button>
           <div class="relative">
             <select name="edu_level" class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
@@ -62,7 +62,7 @@
           </select>
         </div>
         {% empty %}
-        <div class="edu-row grid grid-cols-5 gap-2 border border-gray-100 rounded-xl p-3 relative">
+        <div class="edu-row grid grid-cols-2 md:grid-cols-5 gap-2 border border-gray-100 rounded-xl p-3 relative">
           <button type="button" onclick="removeRow(this)" class="absolute top-2 right-2 text-muted hover:text-red-500 text-xs">×</button>
           <select name="edu_level" class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary"><option value="">Level</option>{% for code, label in edu_levels %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select>
           <input type="text" name="edu_course" placeholder="Course/Degree" class="bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
@@ -80,7 +80,7 @@
         <p class="text-sm font-bold text-primary">Skills</p>
         <button type="button" onclick="addSkillInput()" class="text-xs text-teal hover:underline">+ Add skill</button>
       </div>
-      <div id="skills-container" class="grid grid-cols-3 gap-2">
+      <div id="skills-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
         {% for skill in skills %}
         <div class="skill-row flex gap-1">
           <input type="text" name="skill_name" value="{{ skill.name }}" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-primary">
