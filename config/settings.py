@@ -100,6 +100,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.accounts.context_processors.email_verification_status',
             ],
         },
     },
@@ -235,7 +236,11 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-ACCOUNT_EMAIL_VERIFICATION = 'none'
+# Optional verification: users can log in immediately, but unverified accounts see
+# a banner prompting them to confirm their email. allauth handles the link + resend.
+# (Email is already required via ACCOUNT_SIGNUP_FIELDS above.)
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7
 
 # ── Email backend ──────────────────────────────────────────────────
 # In dev (no SMTP credentials set), emails print to the console.

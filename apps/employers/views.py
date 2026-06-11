@@ -662,7 +662,7 @@ def candidate_detail(request, jobseeker_id):
     ).exists()
 
     # Currently-employed hire at this company (if any).
-    from apps.jobs.models import Application
+    from apps.jobs.models import Application, JobPosting
     active_hire = (
         Application.objects
         .filter(jobseeker=jobseeker, job__company=company,
@@ -671,6 +671,17 @@ def candidate_detail(request, jobseeker_id):
         .order_by('-hired_at')
         .first()
     )
+
+    # Open jobs at this company — used in the Contact modal's "Re: which job?" dropdown.
+    open_jobs = JobPosting.objects.filter(
+        company=company, status=JobPosting.STATUS_OPEN
+    ).order_by('-created_at')
+
+    # Past contacts to this candidate from this company (most recent first).
+    from apps.employers.models import EmployerContact
+    past_contacts = EmployerContact.objects.filter(
+        company=company, recipient=jobseeker
+    ).order_by('-sent_at')[:5]
 
     return render(request, 'employers/candidate_detail.html', {
         'company': company,
@@ -681,6 +692,8 @@ def candidate_detail(request, jobseeker_id):
         'experiences': experiences,
         'is_liked': is_liked,
         'active_hire': active_hire,
+        'open_jobs': open_jobs,
+        'past_contacts': past_contacts,
         'can_see_badges': jobseeker.can_show_badges_to(company),
         'unread_notifications': False,
         'unread_messages': False,
@@ -726,6 +739,84 @@ def candidate_like(request, jobseeker_id):
                 
             next_url = request.POST.get('next', '/employers/candidates/')
             return redirect(next_url)
+
+
+@employer_verified_required
+def candidate_contact(request, jobseeker_id):
+    """Employer sends an email (job requirements or interview schedule) to a
+    jobseeker. Also creates an in-app bell notification."""
+    if request.method != 'POST':
+        return redirect(f'/employers/candidates/{jobseeker_id}/')
+
+    from apps.employers.models import EmployerContact
+    from apps.notifications.models import Notification
+    from apps.notifications.email import email_employer_contact
+    from apps.jobs.models import JobPosting
+    from datetime import datetime
+    from django.utils import timezone
+    from django.contrib import messages
+
+    profile = request.user.employer_profile
+    company = profile.company
+    jobseeker = get_object_or_404(JobseekerProfile, id=jobseeker_id)
+
+    kind = (request.POST.get('kind') or '').strip()
+    subject = (request.POST.get('subject') or '').strip()
+    body = (request.POST.get('body') or '').strip()
+    job_id_raw = (request.POST.get('job_id') or '').strip()
+    interview_at_raw = (request.POST.get('interview_at') or '').strip()
+    interview_location = (request.POST.get('interview_location') or '').strip()
+
+    if kind not in (EmployerContact.KIND_REQUIREMENTS, EmployerContact.KIND_INTERVIEW):
+        messages.error(request, 'Please pick a message type.')
+        return redirect(f'/employers/candidates/{jobseeker_id}/')
+    if not subject or not body:
+        messages.error(request, 'Subject and body are required.')
+        return redirect(f'/employers/candidates/{jobseeker_id}/')
+
+    job = None
+    if job_id_raw:
+        job = JobPosting.objects.filter(id=job_id_raw, company=company).first()
+
+    interview_at = None
+    if kind == EmployerContact.KIND_INTERVIEW and interview_at_raw:
+        try:
+            naive = datetime.strptime(interview_at_raw, '%Y-%m-%dT%H:%M')
+            interview_at = timezone.make_aware(naive)
+        except Exception:
+            pass
+
+    contact = EmployerContact.objects.create(
+        sender=request.user,
+        company=company,
+        recipient=jobseeker,
+        job=job,
+        kind=kind,
+        subject=subject,
+        body=body,
+        interview_at=interview_at,
+        interview_location=interview_location if kind == EmployerContact.KIND_INTERVIEW else '',
+    )
+
+    # Send the email (gracefully no-ops on SMTP failure).
+    email_employer_contact(contact)
+
+    # In-app notification for the jobseeker.
+    if jobseeker.user:
+        kind_label = 'job requirements' if kind == EmployerContact.KIND_REQUIREMENTS else 'interview details'
+        Notification.objects.create(
+            recipient=jobseeker.user,
+            notif_type=Notification.EMPLOYER_CONTACTED,
+            company=company,
+            jobseeker=jobseeker,
+            job=job,
+            liker_preview=kind_label,
+            admin_message=subject,
+        )
+
+    messages.success(request, f'Your message has been sent to {jobseeker.first_name}.')
+    return redirect(f'/employers/candidates/{jobseeker_id}/')
+
 
 # Analytics for employers is served by apps/analytics/views.analytics,
 # which forks by user type and renders templates/employers/analytics.html

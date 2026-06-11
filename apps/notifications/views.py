@@ -95,6 +95,12 @@ def notifications_api(request):
             item['verb']  = 'hired you — congratulations!'
             item['icon']  = 'sparkle'
             item['url']   = '/applications/'
+        elif n.notif_type == Notification.EMPLOYER_CONTACTED:
+            item['actor']  = n.company.name if n.company else 'An employer'
+            item['verb']   = f'sent you {n.liker_preview or "a message"}. Check your email.'
+            item['quoted'] = n.admin_message or ''
+            item['icon']   = 'briefcase'
+            item['url']    = '/applications/'
         data.append(item)
 
     return JsonResponse({'notifications': data, 'count': len(data)})

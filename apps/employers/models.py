@@ -165,3 +165,38 @@ class CandidateInteraction(models.Model):
     class Meta:
         db_table = "candidate_interactions"
         unique_together = ("company", "jobseeker", "job")
+
+
+class EmployerContact(models.Model):
+    """An email sent from an employer rep to a jobseeker — replacing in-app
+    messaging. Two flavors: Send Requirements (free-form), or Schedule Interview
+    (free-form + structured date/time/location)."""
+    KIND_REQUIREMENTS = "requirements"
+    KIND_INTERVIEW = "interview"
+    KIND_CHOICES = [
+        (KIND_REQUIREMENTS, "Job Requirements"),
+        (KIND_INTERVIEW, "Interview Schedule"),
+    ]
+
+    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="sent_contacts")
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="contacts")
+    recipient = models.ForeignKey("jobseekers.JobseekerProfile", on_delete=models.CASCADE, related_name="received_contacts")
+    job = models.ForeignKey("jobs.JobPosting", on_delete=models.SET_NULL, null=True, blank=True, related_name="contacts")
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+
+    subject = models.CharField(max_length=200)
+    body = models.TextField()
+    # Only used when kind=='interview'.
+    interview_at = models.DateTimeField(null=True, blank=True)
+    interview_location = models.CharField(max_length=200, blank=True, default="")
+
+    delivered_to_email = models.EmailField(blank=True, default="",
+        help_text="Snapshot of the email address we tried to deliver to.")
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "employer_contacts"
+        ordering = ["-sent_at"]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} → {self.recipient} ({self.sent_at:%Y-%m-%d})"

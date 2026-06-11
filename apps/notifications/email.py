@@ -74,6 +74,48 @@ def email_application_status_change(application, action):
     _send(user.email, subject, body)
 
 
+def email_employer_contact(contact):
+    """Deliver an employer's outbound message (requirements or interview schedule)
+    to the jobseeker's contact email. Returns True on send, False otherwise.
+    """
+    if not contact or not contact.recipient:
+        return False
+    js = contact.recipient
+    to_email = js.contact_email or (js.user.email if js.user else '')
+    if not to_email:
+        return False
+
+    sender_name = ''
+    if contact.sender:
+        prof = getattr(contact.sender, 'employer_profile', None)
+        if prof:
+            sender_name = f"{prof.first_name} {prof.last_name}".strip()
+    if not sender_name:
+        sender_name = contact.company.name if contact.company else 'An employer'
+
+    company = contact.company.name if contact.company else ''
+    job_line = f" regarding {contact.job.title}" if contact.job else ''
+
+    header = (
+        f"Hi {js.first_name},\n\n"
+        f"{sender_name} from {company} has reached out to you{job_line} through EasyHire.\n"
+        f"-----\n\n"
+    )
+    footer = (
+        f"\n\n-----\n"
+        f"This message was sent via EasyHire. You can reply directly to this email "
+        f"to respond to {sender_name}.\n"
+        f"— EasyHire"
+    )
+    body = header + (contact.body or '') + footer
+    ok = _send(to_email, contact.subject or '(no subject)', body)
+    # Snapshot what we actually delivered to.
+    if ok:
+        contact.delivered_to_email = to_email
+        contact.save(update_fields=['delivered_to_email'])
+    return ok
+
+
 def email_personal_info_decision(change_request, approved):
     """Email the jobseeker when the admin approves or rejects their info change."""
     if not change_request:

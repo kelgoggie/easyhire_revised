@@ -15,6 +15,7 @@ class Notification(models.Model):
     APPLICATION_ACCEPTED  = 'application_accepted'   # jobseeker-facing
     APPLICATION_REJECTED  = 'application_rejected'   # jobseeker-facing
     APPLICATION_HIRED     = 'application_hired'      # jobseeker-facing
+    EMPLOYER_CONTACTED    = 'employer_contacted'     # jobseeker-facing: employer sent requirements or interview
 
     TYPE_CHOICES = [
         (COMPANY_LIKED_YOU,      'Company Liked You'),
@@ -27,6 +28,7 @@ class Notification(models.Model):
         (APPLICATION_ACCEPTED,   'Application Accepted'),
         (APPLICATION_REJECTED,   'Application Rejected'),
         (APPLICATION_HIRED,      'Application Hired'),
+        (EMPLOYER_CONTACTED,     'Employer Sent Contact'),
     ]
 
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_notifications')

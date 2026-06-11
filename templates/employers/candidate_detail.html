@@ -52,6 +52,15 @@
                     </button>
                     {% endif %}
 
+                    <!-- Contact button -->
+                    <button type="button" onclick="openContactModal()"
+                            class="flex items-center gap-2 px-5 py-2.5 rounded-full border border-amber/40 bg-amber/10 text-amber text-sm font-semibold hover:bg-amber/20 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        Contact Candidate
+                    </button>
+
                     <!-- Like button -->
                     <form method="POST" action="/employers/candidates/{{ jobseeker.id }}/like/">
                         {% csrf_token %}
@@ -285,6 +294,174 @@
         </div>
     </div>
 </main>
+
+<!-- ── Contact Candidate modal ─────────────────────────────────── -->
+<div id="contact-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="closeContactModal()"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto z-10">
+    <form method="POST" action="/employers/candidates/{{ jobseeker.id }}/contact/" id="contact-form">
+      {% csrf_token %}
+      <input type="hidden" name="kind" id="contact-kind" value="requirements">
+
+      <div class="px-6 pt-5 pb-3 border-b border-gray-100">
+        <p class="text-primary font-bold text-base">Contact {{ jobseeker.first_name }} {{ jobseeker.last_name }}</p>
+        <p class="text-muted text-xs mt-0.5 break-all">Email will be sent to: {{ jobseeker.contact_email|default:jobseeker.user.email }}</p>
+      </div>
+
+      <!-- Kind tabs -->
+      <div class="px-6 pt-4 flex gap-2">
+        <button type="button" id="tab-requirements" onclick="switchKind('requirements')"
+                class="flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-amber text-white">
+          Send Job Requirements
+        </button>
+        <button type="button" id="tab-interview" onclick="switchKind('interview')"
+                class="flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary">
+          Schedule Interview
+        </button>
+      </div>
+
+      <div class="px-6 py-4 space-y-3">
+        <!-- Job dropdown -->
+        <div>
+          <label class="block text-primary text-xs font-medium mb-1">Re: which job? <span class="text-muted">(optional)</span></label>
+          <div class="relative">
+            <select name="job_id" id="contact-job"
+                    class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+              <option value="">— Not job-specific —</option>
+              {% for j in open_jobs %}
+              <option value="{{ j.id }}">{{ j.title }}</option>
+              {% endfor %}
+            </select>
+            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+        </div>
+
+        <!-- Subject -->
+        <div>
+          <label class="block text-primary text-xs font-medium mb-1">Subject*</label>
+          <input type="text" name="subject" id="contact-subject" required
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        </div>
+
+        <!-- Interview-only fields -->
+        <div id="interview-fields" class="hidden space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-primary text-xs font-medium mb-1">Interview date &amp; time</label>
+              <input type="datetime-local" name="interview_at"
+                     class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+            </div>
+            <div>
+              <label class="block text-primary text-xs font-medium mb-1">Location</label>
+              <input type="text" name="interview_location" placeholder="e.g. Zoom link, office address"
+                     class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+            </div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div>
+          <label class="block text-primary text-xs font-medium mb-1">Message*</label>
+          <textarea name="body" id="contact-body" rows="8" required
+                    class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition resize-none"></textarea>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+        <button type="button" onclick="closeContactModal()"
+                class="bg-gray-100 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
+          Send Email
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if past_contacts %}
+<!-- Past-contacts panel slotted just above the resume grid -->
+<div class="hidden"></div>
+{% endif %}
+
+<script>
+const COMPANY_NAME = "{{ company.name|escapejs }}";
+const FIRST_NAME   = "{{ jobseeker.first_name|escapejs }}";
+
+function openContactModal() {
+  document.getElementById('contact-modal').classList.remove('hidden');
+  document.getElementById('contact-modal').classList.add('flex');
+  document.body.style.overflow = 'hidden';
+  switchKind('requirements');
+}
+function closeContactModal() {
+  document.getElementById('contact-modal').classList.add('hidden');
+  document.getElementById('contact-modal').classList.remove('flex');
+  document.body.style.overflow = '';
+}
+
+function switchKind(kind) {
+  document.getElementById('contact-kind').value = kind;
+  const tabR = document.getElementById('tab-requirements');
+  const tabI = document.getElementById('tab-interview');
+  const intF = document.getElementById('interview-fields');
+  const subj = document.getElementById('contact-subject');
+  const body = document.getElementById('contact-body');
+
+  if (kind === 'requirements') {
+    tabR.className = 'flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-amber text-white';
+    tabI.className = 'flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary';
+    intF.classList.add('hidden');
+    if (!subj.value || subj.dataset.preset) {
+      subj.value = `Requirements for the role at ${COMPANY_NAME}`;
+      subj.dataset.preset = '1';
+    }
+    if (!body.value || body.dataset.preset) {
+      body.value =
+`Hi ${FIRST_NAME},
+
+We're excited about your application. Before we move forward, please send the following requirements so we can finalize next steps:
+
+  • Updated resume (PDF)
+  • Valid government ID
+  • Proof of past employment / certifications (if applicable)
+
+You can reply directly to this email with the documents attached. Let us know if you have any questions.
+
+Thanks,
+${COMPANY_NAME} Recruitment Team`;
+      body.dataset.preset = '1';
+    }
+  } else {
+    tabI.className = 'flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-amber text-white';
+    tabR.className = 'flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary';
+    intF.classList.remove('hidden');
+    if (!subj.value || subj.dataset.preset) {
+      subj.value = `Interview invitation — ${COMPANY_NAME}`;
+      subj.dataset.preset = '1';
+    }
+    if (!body.value || body.dataset.preset) {
+      body.value =
+`Hi ${FIRST_NAME},
+
+We'd like to invite you to an interview for the role at ${COMPANY_NAME}.
+
+Please confirm by replying to this email whether the proposed date and time work for you, or let us know your availability if they don't.
+
+Looking forward to hearing from you.
+
+Thanks,
+${COMPANY_NAME} Recruitment Team`;
+      body.dataset.preset = '1';
+    }
+  }
+  // Once the user types anything, stop auto-overwriting.
+  subj.addEventListener('input', () => { delete subj.dataset.preset; }, { once: true });
+  body.addEventListener('input', () => { delete body.dataset.preset; }, { once: true });
+}
+</script>
 {% endblock %}
 
 {% block footer %}
