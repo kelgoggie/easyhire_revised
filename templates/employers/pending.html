@@ -10,25 +10,25 @@
 <main class="min-h-screen bg-primary flex flex-col">
 
     <!-- Navbar -->
-    <nav class="bg-surface flex items-center justify-between px-12 py-3 shadow-sm">
-        <a href="/employers/" class="flex items-center gap-2">
-            <img src="{% static 'images/navbar_logo.svg' %}" class="w-9 h-9">
-            <span class="text-xl">
+    <nav class="bg-surface flex items-center justify-between px-4 sm:px-8 md:px-12 py-3 shadow-sm">
+        <a href="/employers/" class="flex items-center gap-2 min-w-0">
+            <img src="{% static 'images/navbar_logo.svg' %}" class="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0">
+            <span class="text-base sm:text-xl truncate">
                 <span class="font-bold text-primary">Easy</span><span class="font-bold text-teal">Hire</span>
-                <span class="text-primary/50 font-normal"> for Employers</span>
+                <span class="hidden sm:inline text-primary/50 font-normal"> for Employers</span>
             </span>
         </a>
-        <div class="flex items-center gap-4">
-            <span class="text-primary/50 text-sm">{{ profile.first_name }} {{ profile.last_name }}</span>
+        <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <span class="hidden sm:inline text-primary/50 text-sm">{{ profile.first_name }} {{ profile.last_name }}</span>
             <a href="/logout/"
-               class="bg-taupe/30 text-primary text-sm font-semibold px-4 py-2 rounded-full hover:bg-taupe/50 transition">
+               class="bg-taupe/30 text-primary text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-full hover:bg-taupe/50 transition">
                 Log Out
             </a>
         </div>
     </nav>
     {% include "base/partner_logos.html" %}
     <!-- Content -->
-    <div class="flex-1 px-12 py-10 max-w-4xl mx-auto w-full">
+    <div class="flex-1 px-4 sm:px-8 md:px-12 py-6 md:py-10 max-w-4xl mx-auto w-full">
 
         <!-- Status banner -->
         <div class="mb-8">
