@@ -135,20 +135,37 @@
                 <!-- Actions -->
                 <div class="flex items-center justify-between mt-auto pt-3 border-t border-taupe/10">
 
-                    <!-- Like -->
-                    <form method="POST" action="/employers/candidates/{{ js.id }}/like/"
-                          onclick="event.stopPropagation()">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="/employers/all_candidates/?sort={{ sort }}&q={{ search }}">
-                        <button type="submit"
-                                class="w-8 h-8 flex items-center justify-center rounded-full border transition
-                                       {% if js.id in liked_ids %}text-amber border-amber/30{% else %}border-taupe/30 text-taupe hover:border-amber hover:text-amber{% endif %}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
-                                 {% if js.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
-                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                            </svg>
-                        </button>
-                    </form>
+                    <div class="flex items-center gap-2">
+                      <!-- Like -->
+                      <form method="POST" action="/employers/candidates/{{ js.id }}/like/"
+                            onclick="event.stopPropagation()">
+                          {% csrf_token %}
+                          <input type="hidden" name="next" value="/employers/all_candidates/?sort={{ sort }}&q={{ search }}">
+                          <button type="submit"
+                                  class="w-8 h-8 flex items-center justify-center rounded-full border transition
+                                         {% if js.id in liked_ids %}text-amber border-amber/30{% else %}border-taupe/30 text-taupe hover:border-amber hover:text-amber{% endif %}">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
+                                   {% if js.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
+                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                              </svg>
+                          </button>
+                      </form>
+
+                      <!-- Email via Gmail -->
+                      {% with to_email=js.contact_email|default:js.user.email %}
+                      {% if to_email %}
+                      <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire profile — '|add:company.name|urlencode }}"
+                         target="_blank" rel="noopener"
+                         onclick="event.stopPropagation();"
+                         title="Email {{ js.first_name }} via Gmail"
+                         class="w-8 h-8 flex items-center justify-center rounded-full border border-taupe/30 text-taupe hover:border-teal hover:text-teal transition">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M22 5.5v13c0 .83-.67 1.5-1.5 1.5H19V8.99l-7 5.17-7-5.17V20H3.5C2.67 20 2 19.33 2 18.5v-13c0-.41.17-.79.44-1.06C2.7 4.17 3.09 4 3.5 4H4l8 5.91L20 4h.5c.41 0 .8.17 1.06.44.27.27.44.65.44 1.06z"/>
+                          </svg>
+                      </a>
+                      {% endif %}
+                      {% endwith %}
+                    </div>
 
                     <!-- View resume -->
                     <a href="/employers/candidates/{{ js.id }}/"

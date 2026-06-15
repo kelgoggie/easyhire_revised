@@ -79,7 +79,22 @@
             {% endif %}
           </p>
         </div>
-        {% match_badge item.score True %}
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          {% with to_email=item.profile.contact_email|default:item.profile.user.email %}
+          {% if to_email %}
+          <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire application — '|add:company.name|urlencode }}"
+             target="_blank" rel="noopener"
+             onclick="event.stopPropagation();"
+             title="Email {{ item.profile.first_name }} via Gmail"
+             class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-teal transition">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M22 5.5v13c0 .83-.67 1.5-1.5 1.5H19V8.99l-7 5.17-7-5.17V20H3.5C2.67 20 2 19.33 2 18.5v-13c0-.41.17-.79.44-1.06C2.7 4.17 3.09 4 3.5 4H4l8 5.91L20 4h.5c.41 0 .8.17 1.06.44.27.27.44.65.44 1.06z"/>
+            </svg>
+          </a>
+          {% endif %}
+          {% endwith %}
+          {% match_badge item.score True %}
+        </div>
       </div>
 
       <!-- Requirement tags (from the JOB, with checkmarks/X for what the candidate has) -->
