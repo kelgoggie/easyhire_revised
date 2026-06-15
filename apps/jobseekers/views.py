@@ -287,6 +287,56 @@ def change_password(request):
 
 
 @login_required
+def companies_list(request):
+    """Jobseeker-facing browse-all-companies page."""
+    from django.db.models import Count, Q as DjQ
+    from apps.employers.models import Company
+    from apps.jobs.models import JobPosting
+    from apps.core.pagination import paginate, querystring_without
+
+    search = request.GET.get('q', '').strip()
+    sort = request.GET.get('sort', 'name')
+
+    qs = Company.objects.filter(verification_status=Company.VERIFIED)
+
+    if search:
+        qs = qs.filter(name__icontains=search)
+
+    qs = qs.annotate(
+        open_jobs_count=Count('job_postings',
+                              filter=DjQ(job_postings__status=JobPosting.STATUS_OPEN)),
+    )
+
+    if sort == 'jobs':
+        qs = qs.order_by('-open_jobs_count', 'name')
+    else:  # 'name'
+        qs = qs.order_by('name')
+
+    # Companies the current jobseeker already follows (for filled-vs-empty heart)
+    followed_ids = set()
+    try:
+        profile = request.user.jobseeker_profile
+        followed_ids = set(profile.followed_companies.values_list('id', flat=True))
+    except Exception:
+        pass
+
+    total = qs.count()
+    page = paginate(request, qs, per_page=12)
+
+    return render(request, 'jobseekers/companies_list.html', {
+        'companies': list(page.object_list),
+        'total': total,
+        'search': search,
+        'sort': sort,
+        'followed_ids': followed_ids,
+        'page': page,
+        'qs_base': querystring_without(request, 'page'),
+        'unread_notifications': False,
+        'unread_messages': False,
+    })
+
+
+@login_required
 def company_public(request, pk):
     """Jobseeker-facing read-only company profile (mirrors employer-side layout)."""
     from django.db.models import Count, Q as DjQ

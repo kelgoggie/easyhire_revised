@@ -12,6 +12,7 @@ urlpatterns = [
     path('settings/', views.settings_view, name='settings'),
     path('settings/password/', views.change_password, name='change_password'),
     path('settings/deactivate/', views.deactivate_account, name='deactivate_account'),
+    path('companies/',                 views.companies_list,  name='companies_list'),
     path('companies/<int:pk>/',        views.company_public,  name='company_public'),
     path('companies/<int:pk>/follow/', views.follow_company,  name='follow_company'),
     path('profile/picture/upload/', views.profile_picture_upload, name='profile_picture_upload'),
