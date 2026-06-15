@@ -218,10 +218,18 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 
 # ── Session Security ──────────────────────────────────────────────
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 hours
-SESSION_SAVE_EVERY_REQUEST = True
+# Keep sessions persistent across browser restarts so Render cold-starts
+# and tab closures don't surprise-logout users. SESSION_COOKIE_AGE
+# controls the actual lifetime.
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 14  # 14 days
+SESSION_SAVE_EVERY_REQUEST = True       # slides the expiry forward on every request
 SESSION_COOKIE_HTTPONLY = True
+
+# Render terminates TLS at its edge proxy and forwards as HTTP. Without
+# this header Django doesn't know the original request was HTTPS, which
+# trips up secure cookies + redirects.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # ── Sites ──────────────────────────────────────────────────────────
 SITE_ID = 1
