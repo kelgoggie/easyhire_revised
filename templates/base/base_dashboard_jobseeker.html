@@ -137,20 +137,6 @@
   <!-- Mobile backdrop overlay -->
   <div id="mobile-overlay"></div>
 
-  {% if not user_email_verified %}
-  <!-- Email verification banner -->
-  <div class="fixed top-14 left-0 right-0 z-30 bg-amber/15 border-b border-amber/30 px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-    <p class="text-primary">
-      <strong>Verify your email.</strong>
-      <span class="text-muted">Check {{ request.user.email }} for a confirmation link.</span>
-    </p>
-    <a href="/accounts/email/" class="bg-amber text-white font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition flex-shrink-0">
-      Resend
-    </a>
-  </div>
-  <div class="h-10"></div>
-  {% endif %}
-
   <!-- Body below header -->
   <div class="flex flex-1 pt-14">
 
@@ -261,6 +247,18 @@
 
     <!-- ── Page content + sticky footer ──────────────────────────── -->
     <main id="main-content" class="flex-1 flex flex-col bg-white min-h-[calc(100vh_-_3.5rem)]">
+      {% if not user_email_verified %}
+      <!-- Email verification banner (in-flow so the sidebar can't cover it) -->
+      <div class="bg-amber/15 border-b border-amber/30 px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+        <p class="text-primary">
+          <strong>Verify your email.</strong>
+          <span class="text-muted">Check {{ request.user.email }} for a confirmation link.</span>
+        </p>
+        <a href="/accounts/email/" class="bg-amber text-white font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition flex-shrink-0">
+          Resend
+        </a>
+      </div>
+      {% endif %}
       <div class="flex-1 px-4 sm:px-6 lg:px-8 pb-16">
         {% block page_content %}{% endblock %}
       </div>
