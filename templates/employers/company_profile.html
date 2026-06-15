@@ -108,10 +108,11 @@
                 </button>
               </form>
               <hr class="my-1 border-gray-100">
-              <form method="POST" action="/employers/jobs/{{ job.id }}/delete/"
-                    onsubmit="return confirm('Delete this job post permanently?')">
+              <form method="POST" action="/employers/jobs/{{ job.id }}/delete/" id="delete-job-form-cp-{{ job.id }}">
                 {% csrf_token %}
-                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Delete</button>
+                <button type="button"
+                        onclick="confirmAction({title:'Delete this job post?', body:'This permanently removes the job and all of its applications. This cannot be undone.', ctaLabel:'Yes, delete', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('delete-job-form-cp-{{ job.id }}').submit();}})"
+                        class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Delete</button>
               </form>
             </div>
           </div>

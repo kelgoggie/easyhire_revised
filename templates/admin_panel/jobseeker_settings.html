@@ -118,11 +118,12 @@
 
   <!-- ── Disable / Enable Account ──────────────────────────────── -->
   <div class="flex justify-center">
-    <form method="POST">
+    <form method="POST" id="disable-account-form">
       {% csrf_token %}
       {% if jobseeker.user.is_active %}
       <input type="hidden" name="form" value="disable">
-      <button type="submit" onclick="return confirm('Disable this account? The user will no longer be able to log in.')"
+      <button type="button"
+              onclick="confirmAction({title:'Disable this account?', body:'The user will no longer be able to log in.', ctaLabel:'Yes, disable', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('disable-account-form').submit();}})"
               class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-12 py-2.5 rounded-full hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition">
         Disable Account
       </button>

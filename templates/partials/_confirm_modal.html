@@ -1,0 +1,74 @@
+{% comment %}
+  Reusable styled replacement for the browser's native confirm() dialog.
+  Include this partial ONCE per page that needs it (the dashboard bases
+  could include it globally if we end up using it everywhere).
+
+  Usage from any button/link:
+
+    <button type="button"
+            onclick="confirmAction({
+              title:    'Disable this account?',
+              body:     'The user will no longer be able to log in.',
+              ctaLabel: 'Yes, disable',
+              ctaClass: 'bg-red-500 hover:bg-red-600',
+              onConfirm: function() { document.getElementById('my-form').submit(); }
+            })">
+      Disable
+    </button>
+{% endcomment %}
+<div id="confirm-modal" class="fixed inset-0 z-[100] hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="closeConfirmModal()"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10 text-center">
+    <div id="confirm-modal-icon" class="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
+      <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+    <p id="confirm-modal-title" class="text-primary font-bold text-base mb-1">Are you sure?</p>
+    <p id="confirm-modal-body" class="text-muted text-sm mb-5">This action cannot be undone.</p>
+    <div class="flex gap-3 justify-center">
+      <button type="button" onclick="closeConfirmModal()"
+              class="bg-gray-100 text-primary text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-200 transition">
+        Cancel
+      </button>
+      <button type="button" id="confirm-modal-cta"
+              class="bg-red-500 text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-red-600 transition">
+        Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let _confirmCallback = null;
+
+  window.confirmAction = function(opts) {
+    opts = opts || {};
+    const modal = document.getElementById('confirm-modal');
+    document.getElementById('confirm-modal-title').textContent = opts.title || 'Are you sure?';
+    document.getElementById('confirm-modal-body').textContent  = opts.body  || 'This action cannot be undone.';
+    const cta = document.getElementById('confirm-modal-cta');
+    cta.textContent = opts.ctaLabel || 'Confirm';
+    cta.className = 'text-white text-sm font-semibold px-6 py-2.5 rounded-full transition ' + (opts.ctaClass || 'bg-red-500 hover:bg-red-600');
+    _confirmCallback = opts.onConfirm || null;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeConfirmModal = function() {
+    const modal = document.getElementById('confirm-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.style.overflow = '';
+    _confirmCallback = null;
+  };
+
+  document.getElementById('confirm-modal-cta').addEventListener('click', function() {
+    const cb = _confirmCallback;
+    window.closeConfirmModal();
+    if (typeof cb === 'function') cb();
+  });
+})();
+</script>
