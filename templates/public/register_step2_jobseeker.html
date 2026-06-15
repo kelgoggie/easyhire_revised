@@ -40,6 +40,7 @@
                         <div>
                             <label class="block text-primary text-xs font-medium mb-1">First Name*</label>
                             <input type="text" name="first_name" id="first_name" required
+                                   value="{{ prefill.first_name|default:'' }}"
                                    placeholder="Juan"
                                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
                         </div>
@@ -56,6 +57,7 @@
                         <div class="col-span-3">
                             <label class="block text-primary text-xs font-medium mb-1">Last Name*</label>
                             <input type="text" name="last_name" id="last_name" required
+                                   value="{{ prefill.last_name|default:'' }}"
                                    placeholder="Dela Cruz"
                                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
                         </div>

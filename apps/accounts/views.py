@@ -73,7 +73,29 @@ class RegisterStep2JobseekerView(View):
     def get(self, request):
         if not request.user.is_authenticated or not request.user.is_jobseeker:
             return redirect('/login/')
-        return render(request, self.template_name)
+
+        # If the user signed up via Google, pre-fill first/last name from the
+        # OAuth profile so they don't have to re-type it. Still fully editable.
+        prefill = {}
+        try:
+            from allauth.socialaccount.models import SocialAccount
+            sa = SocialAccount.objects.filter(user=request.user, provider='google').first()
+            if sa and sa.extra_data:
+                given  = (sa.extra_data.get('given_name')  or '').strip()
+                family = (sa.extra_data.get('family_name') or '').strip()
+                # Fallback: split full 'name' if given/family aren't present.
+                if not (given or family):
+                    full = (sa.extra_data.get('name') or '').strip()
+                    if full:
+                        parts = full.split(' ', 1)
+                        given = parts[0]
+                        family = parts[1] if len(parts) > 1 else ''
+                if given:  prefill['first_name'] = given
+                if family: prefill['last_name']  = family
+        except Exception:
+            pass
+
+        return render(request, self.template_name, {'prefill': prefill})
 
     def post(self, request):
         from apps.jobseekers.models import JobseekerProfile
