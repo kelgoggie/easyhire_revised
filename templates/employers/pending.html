@@ -124,6 +124,7 @@
                             </svg>
                             {% if item.uploaded %}Replace{% else %}Upload{% endif %}
                             <input type="file" name="file" class="hidden"
+                                   accept="image/*,.heic,.heif,application/pdf"
                                    onchange="this.closest('form').submit()">
                         </label>
                     </form>

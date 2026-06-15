@@ -4,6 +4,7 @@ psycopg2-binary>=2.9          # PostgreSQL adapter
 dj-database-url>=2.1          # parse DATABASE_URL connection strings
 python-dotenv>=1.0            # .env file support
 Pillow>=10.0                  # ImageField support
+pillow-heif>=0.16             # HEIC/HEIF support (iPhone photos)
 
 # Auth
 django-allauth>=0.61          # Extended auth (password reset, email verification)

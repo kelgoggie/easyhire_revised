@@ -16,7 +16,7 @@
   <form id="personal-form" method="POST" action="/settings/" enctype="multipart/form-data" class="mb-6">
     {% csrf_token %}
     <input type="hidden" name="form_type" value="personal_change">
-    <input type="file"   name="id_document" id="personal-id-doc" class="hidden" accept="image/*,application/pdf">
+    <input type="file"   name="id_document" id="personal-id-doc" class="hidden" accept="image/*,.heic,.heif,application/pdf">
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
       <div>
