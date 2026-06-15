@@ -1,13 +1,15 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
-    path('', TemplateView.as_view(template_name='public/landing_jobseeker.html'), name='landing'),
+    # Root takes everyone straight to the jobseeker sign-in. Already-logged-in
+    # users get bounced to their dashboard by JobseekerLoginView.
+    path('', RedirectView.as_view(url='/login/', permanent=False), name='landing'),
     path('about/', TemplateView.as_view(template_name='public/about.html'), name='about'),
     path('', include('apps.jobs.urls')),
     path('', include('apps.accounts.urls')),

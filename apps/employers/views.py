@@ -6,7 +6,10 @@ from apps.employers.models import CandidateInteraction
 
 
 def landing(request):
-    return render(request, 'employers/landing.html')
+    # The employer marketing page is unused — the navbar CTA and root /employers/
+    # both jump straight to sign-in. EmployerLoginView redirects authenticated
+    # employers on to their dashboard from there.
+    return redirect('/employers/login/')
 
 
 def employer_required(view_func):
