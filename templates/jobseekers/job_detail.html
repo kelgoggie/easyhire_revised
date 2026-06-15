@@ -43,7 +43,7 @@
         </svg>
       </button>
 
-      {% if match_score %}{% match_badge match_score.total %}{% endif %}
+      {% if match_score and request.user.is_staff %}{% match_badge match_score.total %}{% endif %}
     </div>
   </div>
   <div class="border-b border-taupe/30 mb-6"></div>

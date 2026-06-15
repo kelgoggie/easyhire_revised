@@ -3,10 +3,6 @@
   + pagination. This whole partial is what gets swapped by AJAX when the user
   changes tab/sort/search, so pagination + toggle stay consistent with the grid.
 {% endcomment %}
-{% with qs_base=qs_base_no_poor %}
-{% include "partials/_poor_match_toggle.html" %}
-{% endwith %}
-
 <div id="jobs-grid-wrapper">
   {% include "jobseekers/_jobs_grid.html" %}
 </div>

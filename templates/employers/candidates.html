@@ -42,10 +42,6 @@
     {% endif %}
   </div>
 
-  {% with qs_base=qs_base_no_poor %}
-  {% include "partials/_poor_match_toggle.html" %}
-  {% endwith %}
-
   {% if ranked %}
   <!-- ── candidate cards: 1 col on phones, scales up ──────────────────────── -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -93,7 +89,7 @@
           </a>
           {% endif %}
           {% endwith %}
-          {% match_badge item.score True %}
+          {% if request.user.is_staff %}{% match_badge item.score True %}{% endif %}
         </div>
       </div>
 

@@ -92,31 +92,6 @@
   </div>
 </div>
 
-<!-- Job Detail Modal -->
-<div id="job-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <div class="absolute inset-0 bg-black/40" onclick="closeJobModal()"></div>
-  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto z-10">
-    <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between rounded-t-2xl">
-      <div>
-        <h2 id="modal-title" class="text-xl font-extrabold text-primary"></h2>
-        <p id="modal-company" class="text-sm text-muted mt-0.5"></p>
-      </div>
-      <button onclick="closeJobModal()" class="text-muted hover:text-primary transition ml-4 flex-shrink-0">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="px-6 py-5" id="modal-body">
-      <div class="flex items-center justify-center py-8">
-        <div class="w-6 h-6 border-2 border-teal border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    </div>
-    <div class="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-between rounded-b-2xl">
-      <div id="modal-score" class="text-sm text-muted"></div>
-      <div class="flex gap-3" id="modal-actions"></div>
-    </div>
-  </div>
-</div>
-
 {% block page_scripts %}
 {{ jobs_json|json_script:"jobs-json-data" }}
 {{ posted_map|json_script:"posted-map-data" }}
@@ -297,37 +272,7 @@ window.addEventListener('popstate', function(e){
     reloadGrid(false);
 });
 
-// ── Job Detail Modal ──────────────────────────────────────────────────
-function openJobModal(jobId) {
-    const job = jobData[jobId];
-    if (!job) { window.location = '/jobs/view/' + jobId + '/'; return; }
-    document.getElementById('modal-title').textContent = job.title;
-    document.getElementById('modal-company').textContent = job.company + ' · ' + job.location;
-    const scoreEl = document.getElementById('modal-score');
-    scoreEl.innerHTML = job.score !== null ? 'Match: <span class="text-teal font-bold">' + job.score + '/100</span>' : '';
-
-    let body = '<div class="mb-5"><h3 class="text-sm font-bold text-primary mb-2">Job Description</h3>'
-             + '<p class="text-sm text-primary/80 leading-relaxed whitespace-pre-line">' + job.description + '</p></div>'
-             + '<div class="mb-5"><h3 class="text-sm font-bold text-primary mb-3">Requirements</h3><div class="flex flex-col gap-2">';
-    if (job.education) body += '<span class="bg-teal/10 text-teal text-xs px-2 py-0.5 rounded-full border border-teal/20 w-fit">' + job.education + '</span>';
-    if (job.experience !== null && job.experience >= 0) body += '<span class="bg-orange-50 text-orange-400 text-xs px-2 py-0.5 rounded-full border border-orange-200 w-fit">' + (job.experience === 0 ? 'No experience required' : job.experience + ' yr' + (job.experience !== 1 ? 's' : '') + ' experience') + '</span>';
-    if (job.skills.length) body += '<div class="flex flex-wrap gap-1.5">' + job.skills.map(function(s){ return '<span class="bg-blue-50 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-200">' + s + '</span>'; }).join('') + '</div>';
-    if (job.certs.length) body += '<div class="flex flex-wrap gap-1.5">' + job.certs.map(function(c){ return '<span class="bg-gray-100 text-muted text-xs px-2 py-0.5 rounded-full border border-gray-200">' + c + '</span>'; }).join('') + '</div>';
-    body += '</div></div><p class="text-xs text-muted">Posted ' + job.posted + ' · ' + job.slots + ' slot' + (job.slots !== 1 ? 's' : '') + ' available</p>';
-    document.getElementById('modal-body').innerHTML = body;
-
-    document.getElementById('modal-actions').innerHTML =
-        '<a href="/jobs/view/' + jobId + '/" class="flex items-center gap-2 bg-primary text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-teal transition">View &amp; Apply</a>';
-
-    const modal = document.getElementById('job-modal');
-    modal.classList.remove('hidden'); modal.classList.add('flex');
-    document.body.style.overflow = 'hidden';
-}
-function closeJobModal() {
-    const modal = document.getElementById('job-modal');
-    modal.classList.add('hidden'); modal.classList.remove('flex');
-    document.body.style.overflow = '';
-}
+// Close sort dropdown when clicking outside.
 document.addEventListener('click', function(e) {
     const w = document.getElementById('sort-dropdown-wrapper');
     if (w && !w.contains(e.target)) document.getElementById('sort-menu').classList.add('hidden');

@@ -492,8 +492,7 @@ def applications(request):
         for app in qs:
             items.append({'app': app, 'score': None})
 
-    from apps.core.pagination import filter_poor_matches, paginate, querystring_without
-    items, poor_hidden_count, show_poor = filter_poor_matches(items, request)
+    from apps.core.pagination import paginate, querystring_without
     page = paginate(request, items, per_page=10)
 
     return render(request, 'jobseekers/applications.html', {
@@ -503,9 +502,6 @@ def applications(request):
         'search': search,
         'page': page,
         'qs_base': querystring_without(request, 'page'),
-        'qs_base_no_poor': querystring_without(request, 'page', 'show_poor'),
-        'poor_hidden_count': poor_hidden_count,
-        'show_poor': show_poor,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -784,14 +780,9 @@ def recommended_jobs(request):
         else:
             ranked_jobs = []
 
-    # ── Hide weak (Poor Match) cards on the "for_you" tab by default. ──
-    # Liked/Hidden tabs always show everything — those are user-curated lists.
-    from apps.core.pagination import filter_poor_matches, paginate, querystring_without
-    if tab == 'for_you':
-        ranked_jobs, poor_hidden_count, show_poor = filter_poor_matches(ranked_jobs, request)
-    else:
-        poor_hidden_count, show_poor = 0, True
-
+    # Match score is internal — never filter cards out based on it. Sorting still
+    # puts strongest matches first via the engine's ranking.
+    from apps.core.pagination import paginate, querystring_without
     page = paginate(request, ranked_jobs, per_page=12)
     page_items = list(page.object_list)
 
@@ -843,9 +834,6 @@ def recommended_jobs(request):
         'posted_map': posted_map,
         'page': page,
         'qs_base': querystring_without(request, 'page'),
-        'qs_base_no_poor': querystring_without(request, 'page', 'show_poor'),
-        'poor_hidden_count': poor_hidden_count,
-        'show_poor': show_poor,
         'unread_notifications': False,
         'unread_messages': False,
     }

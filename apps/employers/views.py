@@ -445,8 +445,7 @@ def candidates(request, job_id):
             })
         ranked.sort(key=lambda x: -x['score'])
 
-    from apps.core.pagination import filter_poor_matches, paginate, querystring_without
-    ranked, poor_hidden_count, show_poor = filter_poor_matches(ranked, request)
+    from apps.core.pagination import paginate, querystring_without
     page = paginate(request, ranked, per_page=12)
 
     return render(request, 'employers/candidates.html', {
@@ -459,9 +458,6 @@ def candidates(request, job_id):
         'tab': tab,
         'page': page,
         'qs_base': querystring_without(request, 'page'),
-        'qs_base_no_poor': querystring_without(request, 'page', 'show_poor'),
-        'poor_hidden_count': poor_hidden_count,
-        'show_poor': show_poor,
         'unread_notifications': False,
         'unread_messages': False,
     })
