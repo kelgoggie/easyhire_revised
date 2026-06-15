@@ -52,7 +52,7 @@
                     </button>
                     {% endif %}
 
-                    <!-- Contact button -->
+                    <!-- Contact button (EasyHire-templated email + bell notification) -->
                     <button type="button" onclick="openContactModal()"
                             class="flex items-center gap-2 px-5 py-2.5 rounded-full border border-amber/40 bg-amber/10 text-amber text-sm font-semibold hover:bg-amber/20 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -60,6 +60,21 @@
                         </svg>
                         Contact Candidate
                     </button>
+
+                    <!-- Quick email via Gmail compose (opens new tab from employer's own account) -->
+                    {% with to_email=jobseeker.contact_email|default:jobseeker.user.email %}
+                    {% if to_email %}
+                    <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire application — '|add:company.name|urlencode }}"
+                       target="_blank" rel="noopener"
+                       title="Open Gmail compose with {{ to_email }}"
+                       class="flex items-center gap-2 px-5 py-2.5 rounded-full border border-taupe/30 bg-white text-primary text-sm font-semibold hover:border-teal hover:text-teal transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22 5.5v13c0 .83-.67 1.5-1.5 1.5H19V8.99l-7 5.17-7-5.17V20H3.5C2.67 20 2 19.33 2 18.5v-13c0-.41.17-.79.44-1.06C2.7 4.17 3.09 4 3.5 4H4l8 5.91L20 4h.5c.41 0 .8.17 1.06.44.27.27.44.65.44 1.06z"/>
+                        </svg>
+                        Email Jobseeker
+                    </a>
+                    {% endif %}
+                    {% endwith %}
 
                     <!-- Like button -->
                     <form method="POST" action="/employers/candidates/{{ jobseeker.id }}/like/">
