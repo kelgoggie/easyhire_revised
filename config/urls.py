@@ -10,7 +10,9 @@ urlpatterns = [
     # Root takes everyone straight to the jobseeker sign-in. Already-logged-in
     # users get bounced to their dashboard by JobseekerLoginView.
     path('', RedirectView.as_view(url='/login/', permanent=False), name='landing'),
-    path('about/', TemplateView.as_view(template_name='public/about.html'), name='about'),
+    path('about/',   TemplateView.as_view(template_name='public/about.html'),   name='about'),
+    path('terms/',   TemplateView.as_view(template_name='public/terms.html'),   name='terms'),
+    path('privacy/', TemplateView.as_view(template_name='public/privacy.html'), name='privacy'),
     path('', include('apps.jobs.urls')),
     path('', include('apps.accounts.urls')),
     path('', include('apps.core.urls')),

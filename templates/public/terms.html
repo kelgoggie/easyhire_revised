@@ -1,0 +1,120 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Terms &amp; Conditions — EasyHire{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_jobseeker.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="bg-surface min-h-screen py-10 sm:py-12 px-4 sm:px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <!-- Heading -->
+    <div class="mb-8">
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">Terms &amp; Conditions</h1>
+      <p class="text-muted text-sm">Last updated: June 16, 2026</p>
+    </div>
+
+    <!-- Body card -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 space-y-6 text-sm leading-relaxed text-primary">
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">1. About EasyHire</h2>
+        <p class="text-primary/80">
+          EasyHire is the official digital platform of the Public Employment Service Office (PESO) of Iloilo City.
+          It connects jobseekers and employers in Iloilo City and surrounding areas. Use of EasyHire is free for
+          both jobseekers and employers.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">2. Account Eligibility</h2>
+        <p class="text-primary/80">
+          You must be at least 15 years old to create a jobseeker account. Employer accounts must be created by
+          authorized representatives of a real business or organization registered to operate in the Philippines.
+          PESO reserves the right to verify employer accounts before activating posting privileges.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">3. Acceptable Use</h2>
+        <p class="text-primary/80 mb-2">By using EasyHire you agree not to:</p>
+        <ul class="list-disc list-inside text-primary/80 space-y-1 pl-2">
+          <li>Post false, misleading, or fraudulent information in your profile or job listings</li>
+          <li>Use the platform to harass, intimidate, or discriminate against other users</li>
+          <li>Attempt to access accounts, data, or systems you are not authorized to use</li>
+          <li>Scrape, copy, or redistribute platform content without permission</li>
+          <li>Post jobs that violate Philippine labor laws or PESO recruitment guidelines</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">4. Content You Submit</h2>
+        <p class="text-primary/80">
+          You retain ownership of the resume, profile, and other content you submit. You grant PESO a limited
+          license to display this content on EasyHire for the purpose of matching you with relevant opportunities
+          (jobseekers) or candidates (employers). You can deactivate your account at any time from Settings.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">5. Job Matching</h2>
+        <p class="text-primary/80">
+          EasyHire uses an automated matching engine to surface relevant jobs and candidates based on your profile
+          information. Match scores are guidance, not guarantees. Employment decisions remain the responsibility of
+          the hiring employer; PESO does not employ jobseekers directly through EasyHire.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">6. Communication Outside the Platform</h2>
+        <p class="text-primary/80">
+          When an employer sends you job requirements or an interview schedule, the email is delivered to your
+          contact address. Any communication that takes place outside EasyHire (email replies, phone calls,
+          in-person meetings) is between you and the other party. PESO is not a party to and not responsible for
+          the outcome of those off-platform exchanges.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">7. Account Suspension</h2>
+        <p class="text-primary/80">
+          PESO administrators may suspend or remove accounts that violate these terms, repeatedly receive valid
+          user reports, or are flagged for fraudulent activity. Suspended users will be notified by email at the
+          address on file.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">8. Changes to These Terms</h2>
+        <p class="text-primary/80">
+          PESO may update these terms from time to time as the platform evolves. Continued use of EasyHire after
+          an update constitutes acceptance of the updated terms. Material changes will be announced via the
+          in-app inbox.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">9. Contact</h2>
+        <p class="text-primary/80">
+          Questions about these terms can be sent to
+          <a href="mailto:peso@iloilocity.gov.ph" class="text-teal hover:underline">peso@iloilocity.gov.ph</a>
+          or by phone at (033) 337-0800.
+        </p>
+      </section>
+
+    </div>
+
+    <p class="text-muted text-xs text-center mt-6">
+      See also: <a href="/privacy/" class="text-teal hover:underline">Privacy Policy</a>
+    </p>
+
+  </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}

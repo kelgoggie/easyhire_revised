@@ -1,0 +1,155 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Privacy Policy — EasyHire{% endblock %}
+
+{% block navbar %}
+    {% include "base/navbar_jobseeker.html" %}
+{% endblock %}
+
+{% block content %}
+<main class="bg-surface min-h-screen py-10 sm:py-12 px-4 sm:px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <!-- Heading -->
+    <div class="mb-8">
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">Privacy Policy</h1>
+      <p class="text-muted text-sm">Last updated: June 16, 2026</p>
+    </div>
+
+    <!-- Compliance banner -->
+    <div class="bg-teal/10 border border-teal/30 rounded-2xl px-5 py-4 mb-6 text-sm text-primary">
+      <p class="leading-relaxed">
+        EasyHire is operated by PESO Iloilo City and complies with the
+        <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong> and the implementing rules issued by the
+        National Privacy Commission (NPC).
+      </p>
+    </div>
+
+    <!-- Body card -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 space-y-6 text-sm leading-relaxed text-primary">
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">1. What We Collect</h2>
+        <p class="text-primary/80 mb-2">When you create a jobseeker account, we collect:</p>
+        <ul class="list-disc list-inside text-primary/80 space-y-1 pl-2 mb-3">
+          <li>Identifying information: name, date of birth, sex, civil status</li>
+          <li>Contact details: email address, phone, home address</li>
+          <li>Resume data: education, work experience, skills, certifications, bio</li>
+          <li>Optional sector membership (LGBTQIA+, PWD, OSY, etc.) for priority-employment programs</li>
+          <li>Uploaded files: profile photo, valid ID (for personal-info changes), resume PDF (optional)</li>
+        </ul>
+        <p class="text-primary/80 mb-2">For employer accounts, we additionally collect:</p>
+        <ul class="list-disc list-inside text-primary/80 space-y-1 pl-2">
+          <li>Company information: name, address, sector, recruitment contact</li>
+          <li>Representative information: name, position, contact details</li>
+          <li>Verification documents: Mayor's Permit, PhilJobNet accreditation, and other DOLE-required documents</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">2. How We Use It</h2>
+        <p class="text-primary/80 mb-2">Your personal information is used to:</p>
+        <ul class="list-disc list-inside text-primary/80 space-y-1 pl-2">
+          <li>Match jobseekers with relevant job opportunities and employers with qualified candidates</li>
+          <li>Display your profile to employers (visibility is controlled by your privacy settings)</li>
+          <li>Allow PESO administrators to verify and moderate accounts</li>
+          <li>Generate aggregate, anonymized labor-market analytics for PESO Iloilo City reporting</li>
+          <li>Send transactional emails: applications, interview schedules, password resets, announcements</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">3. Who Sees Your Information</h2>
+        <p class="text-primary/80 mb-2">
+          Profile information is visible to verified employers actively recruiting through EasyHire. You can
+          restrict this further in Settings:
+        </p>
+        <ul class="list-disc list-inside text-primary/80 space-y-1 pl-2">
+          <li><strong>Profile visibility</strong> — opt to hide your profile from employers after you are tagged as Hired</li>
+          <li><strong>Sector badge visibility</strong> — opt to hide sector membership (e.g. PWD, LGBTQIA+) from employer-side views</li>
+        </ul>
+        <p class="text-primary/80 mt-3">
+          PESO administrators have full access to all profiles and accounts for moderation and verification purposes.
+          We do not sell or share your personal information with third parties outside this platform.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">4. Cookies &amp; Session Storage</h2>
+        <p class="text-primary/80">
+          EasyHire uses essential cookies to keep you signed in and remember UI preferences (e.g. sidebar collapse
+          state). We do not use third-party advertising or tracking cookies.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">5. Data Retention</h2>
+        <p class="text-primary/80">
+          Your account and resume data are retained for as long as your account is active. If you deactivate your
+          account from Settings, your profile is hidden from employers immediately and queued for deletion after a
+          30-day grace period. Aggregate analytics derived from your data (and stripped of identifiers) may be
+          retained indefinitely.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">6. Your Rights Under RA 10173</h2>
+        <p class="text-primary/80 mb-2">As a data subject, you have the right to:</p>
+        <ul class="list-disc list-inside text-primary/80 space-y-1 pl-2">
+          <li>Be informed about what data we hold on you</li>
+          <li>Access your personal data and request a copy</li>
+          <li>Request corrections via the Settings page (changes affecting identity are reviewed by PESO admins)</li>
+          <li>Object to processing or withdraw consent (by deactivating your account)</li>
+          <li>File a complaint with the National Privacy Commission</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">7. Security</h2>
+        <p class="text-primary/80">
+          Passwords are stored using one-way cryptographic hashing. Connections to EasyHire are encrypted via HTTPS.
+          Uploaded documents are stored on managed cloud infrastructure with access limited to PESO administrators.
+          We follow reasonable industry practices to prevent unauthorized access, but no platform can guarantee
+          absolute security.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">8. Children</h2>
+        <p class="text-primary/80">
+          EasyHire is intended for users aged 15 and above, consistent with the legal working age in the Philippines.
+          We do not knowingly collect data from children under 15.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">9. Updates to This Policy</h2>
+        <p class="text-primary/80">
+          Material changes to this policy will be announced via the in-app inbox and email. The "Last updated" date
+          at the top of this page reflects the most recent revision.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-primary mb-2">10. Data Protection Officer</h2>
+        <p class="text-primary/80">
+          For privacy-related concerns, contact PESO Iloilo City's Data Protection Officer at
+          <a href="mailto:peso@iloilocity.gov.ph" class="text-teal hover:underline">peso@iloilocity.gov.ph</a>
+          or by phone at (033) 337-0800.
+        </p>
+      </section>
+
+    </div>
+
+    <p class="text-muted text-xs text-center mt-6">
+      See also: <a href="/terms/" class="text-teal hover:underline">Terms &amp; Conditions</a>
+    </p>
+
+  </div>
+</main>
+{% endblock %}
+
+{% block footer %}
+    {% include "base/footer.html" %}
+{% endblock %}
