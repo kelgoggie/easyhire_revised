@@ -658,6 +658,7 @@ def company_profile(request):
 
 @employer_verified_required
 def candidate_detail(request, jobseeker_id):
+    from apps.matching.engine import compute_match_score
     profile = request.user.employer_profile
     company = profile.company
     jobseeker = get_object_or_404(JobseekerProfile, id=jobseeker_id)
@@ -691,6 +692,47 @@ def candidate_detail(request, jobseeker_id):
         company=company, recipient=jobseeker
     ).order_by('-sent_at')[:5]
 
+    # If the employer landed here from /employers/jobs/<id>/candidates/, we get
+    # the job context via ?job=<id>. Use that to surface the application message
+    # and offer Previous/Next nav across the applicant list for that job.
+    job_id_raw = request.GET.get('job', '').strip()
+    current_job = None
+    application = None
+    prev_id = None
+    next_id = None
+    match_score = None
+    if job_id_raw:
+        try:
+            current_job = JobPosting.objects.select_related('company').get(
+                id=job_id_raw, company=company,
+            )
+        except (JobPosting.DoesNotExist, ValueError):
+            current_job = None
+
+    if current_job:
+        application = (Application.objects
+                       .filter(jobseeker=jobseeker, job=current_job)
+                       .first())
+
+        # Match score for the current job (admin sees the badge; everyone else
+        # gets the number computed but it's hidden in the template).
+        try:
+            match_score = compute_match_score(current_job, jobseeker)
+        except Exception:
+            match_score = None
+
+        # Build applicant order — same sort as the candidates page.
+        ordered_ids = list(Application.objects
+                           .filter(job=current_job)
+                           .order_by('-created_at')
+                           .values_list('jobseeker_id', flat=True))
+        if jobseeker.id in ordered_ids:
+            idx = ordered_ids.index(jobseeker.id)
+            if idx > 0:
+                prev_id = ordered_ids[idx - 1]
+            if idx < len(ordered_ids) - 1:
+                next_id = ordered_ids[idx + 1]
+
     return render(request, 'employers/candidate_detail.html', {
         'company': company,
         'jobseeker': jobseeker,
@@ -703,6 +745,11 @@ def candidate_detail(request, jobseeker_id):
         'open_jobs': open_jobs,
         'past_contacts': past_contacts,
         'can_see_badges': jobseeker.can_show_badges_to(company),
+        'current_job': current_job,
+        'application': application,
+        'match_score': match_score,
+        'prev_id': prev_id,
+        'next_id': next_id,
         'unread_notifications': False,
         'unread_messages': False,
     })

@@ -1,316 +1,295 @@
-{% extends "base/base.html" %}
+{% extends "base/base_dashboard_employer.html" %}
 {% load static match_tags %}
 
 {% block title %}{{ jobseeker.full_name }} — EasyHire{% endblock %}
 
-{% block navbar %}
-    {% include "base/navbar_dashboard_employer.html" %}
-{% endblock %}
+{% block page_content %}
+<div class="py-6">
 
-{% block content %}
-<main class="bg-surface min-h-screen py-8 px-12">
-    <div class="max-w-4xl mx-auto">
-
-        <!-- Back -->
-        <a href="javascript:history.back()" class="text-muted text-sm hover:text-primary transition mb-6 inline-block">← Back</a>
-
-        <!-- Header Card -->
-        <div class="bg-white border border-taupe/20 rounded-2xl p-8 shadow-sm mb-4">
-
-            <!-- Name + Sector Badges -->
-            <div class="flex items-start justify-between mb-2">
-                <div>
-                    <h1 class="text-3xl font-extrabold text-primary">{{ jobseeker.full_name }}</h1>
-                    <!-- Sector badges (gated by jobseeker's privacy preference) -->
-                    {% if can_see_badges and jobseeker.sectors.all %}
-                    <div class="flex flex-wrap gap-2 mt-2">
-                        {% for sector in jobseeker.sectors.all %}
-                        <span class="text-xs font-semibold px-3 py-1 rounded-full
-                            {% if sector.code == 'fresh_graduate' %}bg-teal/10 text-teal border border-teal/20
-                            {% elif sector.code == 'lgbtqia' %}bg-purple-100 text-purple-500 border border-purple-200
-                            {% elif sector.code == 'pwd' %}bg-blue-100 text-blue-500 border border-blue-200
-                            {% elif sector.code == 'solo_parent' %}bg-amber/10 text-amber border border-amber/20
-                            {% elif sector.code == 'osy' %}bg-orange-100 text-orange-500 border border-orange-200
-                            {% elif sector.code == 'senior_citizen' %}bg-gray-100 text-gray-500 border border-gray-200
-                            {% elif sector.code == 'tesda_graduate' %}bg-green-100 text-green-600 border border-green-200
-                            {% endif %}">
-                            {{ sector.label }}
-                        </span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-
-                <div class="flex items-center gap-2 flex-shrink-0">
-                    {% if active_hire %}
-                    <button type="button" id="unhire-btn" data-app-id="{{ active_hire.id }}"
-                            class="flex items-center gap-2 px-5 py-2.5 rounded-full border border-red-300 bg-white text-red-500 text-sm font-semibold hover:bg-red-50 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
-                        </svg>
-                        Un-hire
-                    </button>
-                    {% endif %}
-
-                    <!-- Contact button (EasyHire-templated email + bell notification) -->
-                    <button type="button" onclick="openContactModal()"
-                            class="flex items-center gap-2 px-5 py-2.5 rounded-full border border-amber/40 bg-amber/10 text-amber text-sm font-semibold hover:bg-amber/20 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                        </svg>
-                        Contact Candidate
-                    </button>
-
-                    <!-- Quick email via Gmail compose (opens new tab from employer's own account) -->
-                    {% with to_email=jobseeker.contact_email|default:jobseeker.user.email %}
-                    {% if to_email %}
-                    <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire application — '|add:company.name|urlencode }}"
-                       target="_blank" rel="noopener"
-                       title="Open Gmail compose with {{ to_email }}"
-                       class="flex items-center gap-2 px-5 py-2.5 rounded-full border border-taupe/30 bg-white text-primary text-sm font-semibold hover:border-teal hover:text-teal transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M22 5.5v13c0 .83-.67 1.5-1.5 1.5H19V8.99l-7 5.17-7-5.17V20H3.5C2.67 20 2 19.33 2 18.5v-13c0-.41.17-.79.44-1.06C2.7 4.17 3.09 4 3.5 4H4l8 5.91L20 4h.5c.41 0 .8.17 1.06.44.27.27.44.65.44 1.06z"/>
-                        </svg>
-                        Email Jobseeker
-                    </a>
-                    {% endif %}
-                    {% endwith %}
-
-                    <!-- Like button -->
-                    <form method="POST" action="/employers/candidates/{{ jobseeker.id }}/like/">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.path }}">
-                        <button type="submit"
-                                class="flex items-center gap-2 px-5 py-2.5 rounded-full border transition text-sm font-semibold
-                                    {% if is_liked %}bg-teal text-white border-teal hover:bg-teal/80
-                                    {% else %}bg-white text-primary border-taupe/30 hover:border-teal hover:text-teal{% endif %}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                            </svg>
-                            {% if is_liked %}Liked{% else %}Like Candidate{% endif %}
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            {% if active_hire %}
-            <!-- Un-hire confirm modal -->
-            <div id="unhire-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-              <div class="absolute inset-0 bg-black/40" data-close-unhire></div>
-              <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
-                <p class="text-red-500 font-bold text-base mb-2 text-center">Un-hire this employee?</p>
-                <p class="text-muted text-sm mb-4 text-center">
-                  This marks the employment as ended and updates {{ jobseeker.first_name }}'s work history.
-                  The hire stays on record in your Employees list and the slot reopens.
-                </p>
-
-                <label class="block text-primary text-xs mb-1">End date <span class="text-muted">(defaults to today; backdate if needed)</span></label>
-                <div class="relative mb-3">
-                  <input type="text" id="unhire-end-date" data-datepicker="date" data-display-format="long"
-                         placeholder="Leave blank for today" readonly autocomplete="off"
-                         class="w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-red-400 transition cursor-pointer">
-                  <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                  </svg>
-                </div>
-
-                <p id="unhire-error" class="text-xs text-red-500 mb-2 hidden"></p>
-
-                <div class="flex gap-3 justify-center mt-3">
-                  <button type="button" data-close-unhire
-                          class="bg-gray-100 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
-                    Cancel
-                  </button>
-                  <button type="button" id="unhire-confirm-yes"
-                          class="bg-red-500 text-white font-semibold px-8 py-2.5 rounded-full hover:bg-red-600 transition text-sm">
-                    Yes, un-hire
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <script>
-            (function() {
-              function getCookie(n) {
-                const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
-                if (p.length === 2) return p.pop().split(';').shift();
-              }
-              function show(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
-              function hide(m) { m.classList.add('hidden');    m.classList.remove('flex'); }
-
-              const btn   = document.getElementById('unhire-btn');
-              const modal = document.getElementById('unhire-modal');
-              const yes   = document.getElementById('unhire-confirm-yes');
-
-              btn.addEventListener('click', () => show(modal));
-              modal.querySelectorAll('[data-close-unhire]').forEach(el =>
-                el.addEventListener('click', () => hide(modal)));
-
-              const errEl = document.getElementById('unhire-error');
-              yes.addEventListener('click', function() {
-                const appId = btn.dataset.appId;
-                const endDate = document.getElementById('unhire-end-date').value.trim();
-                const fd = new FormData();
-                fd.append('action', 'unhire');
-                if (endDate) fd.append('end_date', endDate);
-                errEl.classList.add('hidden');
-                fetch('/employers/applications/' + appId + '/status/', {
-                  method: 'POST',
-                  headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
-                  body: fd,
-                }).then(r => r.json().then(d => [r.ok, d])).then(function(pair) {
-                  const [ok, d] = pair;
-                  if (ok && d.ok) {
-                    hide(modal);
-                    window.location.reload();
-                  } else {
-                    errEl.textContent = (d && d.error) || 'Something went wrong.';
-                    errEl.classList.remove('hidden');
-                  }
-                });
-              });
-            })();
-            </script>
-            {% endif %}
-
-            <!-- Address + Contact -->
-            <div class="flex items-center gap-4 text-muted text-sm mt-4 flex-wrap">
-                {% if jobseeker.barangay %}
-                <span class="flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                    {{ jobseeker.barangay }}, {{ jobseeker.city_municipality }}
-                </span>
-                {% endif %}
-                {% if jobseeker.phone %}
-                <span>·</span>
-                <span class="flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
-                    </svg>
-                    {{ jobseeker.phone }}
-                </span>
-                {% endif %}
-                {% if jobseeker.contact_email %}
-                <span>·</span>
-                <span class="flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                    </svg>
-                    {{ jobseeker.contact_email }}
-                </span>
-                {% endif %}
-            </div>
-
-            <!-- Bio -->
-            {% if jobseeker.bio %}
-            <p class="mt-4 text-sm text-primary/80 leading-relaxed border-t border-taupe/20 pt-4">{{ jobseeker.bio }}</p>
-            {% endif %}
-        </div>
-
-        <!-- Resume Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            <!-- Skills -->
-            <div class="bg-white border border-taupe/20 rounded-2xl p-6 shadow-sm">
-                <h2 class="font-bold text-primary text-sm mb-4 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-teal" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
-                    </svg>
-                    Skills
-                </h2>
-                {% if skills %}
-                <div class="flex flex-wrap gap-2">
-                    {% for skill in skills %}
-                    <span class="bg-blue-50 text-blue-500 border border-blue-200 text-xs px-3 py-1 rounded-full">{{ skill.name }}</span>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-sm">No skills listed.</p>
-                {% endif %}
-            </div>
-
-            <!-- Education -->
-            <div class="bg-white border border-taupe/20 rounded-2xl p-6 shadow-sm">
-                <h2 class="font-bold text-primary text-sm mb-4 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-teal" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
-                    </svg>
-                    Education
-                </h2>
-                {% if education %}
-                <div class="space-y-3">
-                    {% for edu in education %}
-                    <div>
-                        <p class="text-sm font-semibold text-primary">{{ edu.get_level_display }}</p>
-                        {% if edu.course_degree %}<p class="text-xs text-muted">{{ edu.course_degree }}</p>{% endif %}
-                        {% if edu.institution %}<p class="text-xs text-muted">{{ edu.institution }}</p>{% endif %}
-                        <p class="text-xs text-taupe">
-                            {{ edu.year_started|default:"" }}{% if edu.year_started and edu.year_ended %} – {% endif %}{% if edu.is_current %}Present{% else %}{{ edu.year_ended|default:"" }}{% endif %}
-                        </p>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-sm">No education listed.</p>
-                {% endif %}
-            </div>
-
-            <!-- Experience -->
-            <div class="bg-white border border-taupe/20 rounded-2xl p-6 shadow-sm">
-                <h2 class="font-bold text-primary text-sm mb-4 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-teal" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.99 16.21 1.5 14 1.5c-1.12 0-2.09.49-2.81 1.25L10 4.07l-1.19-1.32C8.09 1.99 7.12 1.5 6 1.5 3.79 1.5 2 2.99 2 4.65c0 .47.11.91.18 1.35H0v14h24V6h-4z"/>
-                    </svg>
-                    Work Experience
-                </h2>
-                {% if experiences %}
-                <div class="space-y-4">
-                    {% for exp in experiences %}
-                    <div>
-                        <p class="text-sm font-semibold text-primary">{{ exp.position }}</p>
-                        {% if exp.company %}<p class="text-xs text-teal font-medium">{{ exp.company }}</p>{% endif %}
-                        <p class="text-xs text-taupe">
-                            {{ exp.month_started|month_name }} {{ exp.year_started }} – {% if exp.is_current %}Present{% else %}{{ exp.month_ended|month_name }} {{ exp.year_ended }}{% endif %}
-                        </p>
-                        {% if exp.description %}<p class="text-xs text-muted mt-1">{{ exp.description }}</p>{% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-sm">No experience listed.</p>
-                {% endif %}
-            </div>
-
-            <!-- Certifications -->
-            <div class="bg-white border border-taupe/20 rounded-2xl p-6 shadow-sm">
-                <h2 class="font-bold text-primary text-sm mb-4 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-teal" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 1l2.39 7.26H22l-6.19 4.5 2.39 7.26L12 15.51l-6.2 5.51 2.39-7.26L2 9.26h7.61z"/>
-                    </svg>
-                    Certifications
-                </h2>
-                {% if certifications %}
-                <div class="space-y-2">
-                    {% for cert in certifications %}
-                    <div>
-                        <p class="text-sm font-semibold text-primary">{{ cert.name }}</p>
-                        {% if cert.issuing_org %}<p class="text-xs text-muted">{{ cert.issuing_org }}</p>{% endif %}
-                        {% if cert.year_received %}<p class="text-xs text-taupe">{{ cert.year_received }}</p>{% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-sm">No certifications listed.</p>
-                {% endif %}
-            </div>
-
-        </div>
+  {# ── Job context header (only when we came from /jobs/<id>/candidates/) ── #}
+  {% if current_job %}
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+    <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">{{ current_job.title }}</h1>
+    <div class="flex items-center gap-2 flex-shrink-0 sm:pt-2">
+      {% if prev_id %}
+      <a href="/employers/candidates/{{ prev_id }}/?job={{ current_job.id }}"
+         class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+      {% else %}
+      <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">&lt; Previous</span>
+      {% endif %}
+      {% if next_id %}
+      <a href="/employers/candidates/{{ next_id }}/?job={{ current_job.id }}"
+         class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+      {% else %}
+      <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">Next &gt;</span>
+      {% endif %}
     </div>
-</main>
+  </div>
+  <div class="border-b border-taupe/30 mb-6"></div>
+  {% else %}
+  <a href="javascript:history.back()" class="text-muted text-sm hover:text-primary transition mb-4 inline-block">&larr; Back</a>
+  {% endif %}
 
-<!-- ── Contact Candidate modal ─────────────────────────────────── -->
+  {# ── Name + Address + primary actions ──────────────────────────────── #}
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+    <div class="min-w-0">
+      <h2 class="text-xl sm:text-2xl font-extrabold text-primary mb-1">{{ jobseeker.full_name }}</h2>
+      <p class="text-muted text-sm">
+        {% if jobseeker.house_unit %}{{ jobseeker.house_unit }}, {% endif %}{{ jobseeker.street_barangay|default:"—" }}{% if jobseeker.barangay %}, {{ jobseeker.barangay }}{% endif %}, {{ jobseeker.city_municipality }}
+      </p>
+      <p class="text-muted text-sm">
+        {{ jobseeker.contact_email|default:jobseeker.user.email }}{% if jobseeker.phone %} | +63 {{ jobseeker.phone|slice:"1:" }}{% endif %}
+      </p>
+
+      {% if can_see_badges and jobseeker.sectors.all %}
+      <div class="flex flex-wrap gap-2 mt-2">
+        {% for sector in jobseeker.sectors.all %}
+        <span class="text-xs font-semibold px-3 py-1 rounded-full
+            {% if sector.code == 'fresh_graduate' %}bg-teal/10 text-teal border border-teal/20
+            {% elif sector.code == 'lgbtqia' %}bg-purple-100 text-purple-500 border border-purple-200
+            {% elif sector.code == 'pwd' %}bg-blue-100 text-blue-500 border border-blue-200
+            {% elif sector.code == 'solo_parent' %}bg-amber/10 text-amber border border-amber/20
+            {% elif sector.code == 'osy' %}bg-orange-100 text-orange-500 border border-orange-200
+            {% elif sector.code == 'senior_citizen' %}bg-gray-100 text-gray-500 border border-gray-200
+            {% elif sector.code == 'tesda_graduate' %}bg-green-100 text-green-600 border border-green-200
+            {% endif %}">
+          {{ sector.label }}
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
+      {% if active_hire %}
+      <button type="button" id="unhire-btn" data-app-id="{{ active_hire.id }}"
+              class="flex items-center gap-2 px-4 py-2 rounded-full border border-red-300 bg-white text-red-500 text-xs font-semibold hover:bg-red-50 transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
+        </svg>
+        Un-hire
+      </button>
+      {% endif %}
+
+      <!-- Like -->
+      <form method="POST" action="/employers/candidates/{{ jobseeker.id }}/like/">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}{% if current_job %}?job={{ current_job.id }}{% endif %}">
+        <button type="submit" title="{% if is_liked %}Liked{% else %}Like this candidate{% endif %}"
+                class="w-9 h-9 flex items-center justify-center rounded-full border transition
+                       {% if is_liked %}bg-teal text-white border-teal{% else %}bg-white text-muted border-taupe/30 hover:border-teal hover:text-teal{% endif %}">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+        </button>
+      </form>
+
+      {% with to_email=jobseeker.contact_email|default:jobseeker.user.email %}
+      {% if to_email %}
+      <!-- Quick Gmail -->
+      <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire application — '|add:company.name|urlencode }}"
+         target="_blank" rel="noopener"
+         title="Open Gmail compose"
+         class="w-9 h-9 flex items-center justify-center rounded-full border border-taupe/30 bg-white text-muted hover:border-teal hover:text-teal transition">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22 5.5v13c0 .83-.67 1.5-1.5 1.5H19V8.99l-7 5.17-7-5.17V20H3.5C2.67 20 2 19.33 2 18.5v-13c0-.41.17-.79.44-1.06C2.7 4.17 3.09 4 3.5 4H4l8 5.91L20 4h.5c.41 0 .8.17 1.06.44.27.27.44.65.44 1.06z"/>
+        </svg>
+      </a>
+      {% endif %}
+      {% endwith %}
+
+      <!-- Message (Contact via EasyHire modal) -->
+      <button type="button" onclick="openContactModal()"
+              class="bg-amber text-white text-sm font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition">
+        Message
+      </button>
+    </div>
+  </div>
+
+  {# ── Main card: application msg + bio + resume grid ───────────────── #}
+  <div class="bg-surface border border-taupe/30 rounded-2xl p-5 sm:p-6 relative">
+
+    {% if request.user.is_staff and match_score %}
+    <div class="absolute top-4 right-4">
+      {% match_badge match_score.total %}
+    </div>
+    {% endif %}
+
+    {% if application and application.message %}
+    <div class="mb-6">
+      <p class="text-sm font-bold text-primary mb-2">Application Message</p>
+      <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-primary leading-relaxed whitespace-pre-line">{{ application.message }}</div>
+      <p class="text-muted text-[11px] italic mt-1.5">Applied {{ application.created_at|date:"F j, Y · g:i A" }}</p>
+    </div>
+    {% endif %}
+
+    <div class="mb-6">
+      <p class="text-sm font-bold text-primary mb-2">Personal Bio</p>
+      <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-primary leading-relaxed whitespace-pre-line min-h-[80px]">
+        {% if jobseeker.bio %}{{ jobseeker.bio }}{% else %}<span class="text-muted italic">A short introduction for employers.</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+      <!-- Education -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-sm mb-3">Education</p>
+        {% if education %}
+        <div class="space-y-3">
+          {% for edu in education %}
+          <div>
+            <p class="text-sm font-semibold text-primary leading-tight">{{ edu.course_degree|default:edu.get_level_display }}</p>
+            {% if edu.institution %}<p class="text-xs text-muted leading-tight">{{ edu.institution }}</p>{% endif %}
+            <p class="text-[11px] text-taupe">
+              {{ edu.year_started|default:"" }}{% if edu.year_started and edu.year_ended %} – {% endif %}{% if edu.is_current %}Present{% else %}{{ edu.year_ended|default:"" }}{% endif %}
+            </p>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-xs italic">No education listed.</p>
+        {% endif %}
+      </div>
+
+      <!-- Experience -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-sm mb-3">Experience</p>
+        {% if experiences %}
+        <div class="space-y-3">
+          {% for exp in experiences %}
+          <div>
+            <p class="text-sm font-semibold text-primary leading-tight">{{ exp.position }}</p>
+            {% if exp.company %}<p class="text-xs text-teal leading-tight">{{ exp.company }}</p>{% endif %}
+            <p class="text-[11px] text-taupe">
+              {{ exp.year_started|default:"" }}{% if exp.year_started and exp.year_ended %} – {% endif %}{% if exp.is_current %}Present{% else %}{{ exp.year_ended|default:"" }}{% endif %}
+            </p>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-xs italic">No experience listed.</p>
+        {% endif %}
+      </div>
+
+      <!-- Certifications -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-sm mb-3">Certifications</p>
+        {% if certifications %}
+        <div class="space-y-3">
+          {% for cert in certifications %}
+          <div>
+            <p class="text-sm font-semibold text-primary leading-tight">{{ cert.name }}</p>
+            {% if cert.issuing_org %}<p class="text-xs text-muted leading-tight">{{ cert.issuing_org }}</p>{% endif %}
+            {% if cert.year_received %}<p class="text-[11px] text-taupe">{{ cert.year_received }}</p>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-xs italic">No certifications added.</p>
+        {% endif %}
+      </div>
+
+      <!-- Skills -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-sm mb-3">Skills</p>
+        {% if skills %}
+        <div class="flex flex-wrap gap-1.5">
+          {% for skill in skills %}
+          <span class="inline-flex items-center bg-taupe/20 text-primary text-xs px-3 py-1 rounded-full">{{ skill.name }}</span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-xs italic">No skills listed.</p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{# ── Un-hire modal (only when there's an active hire) ─────────────── #}
+{% if active_hire %}
+<div id="unhire-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" data-close-unhire></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+    <p class="text-red-500 font-bold text-base mb-2 text-center">Un-hire this employee?</p>
+    <p class="text-muted text-sm mb-4 text-center">
+      This marks the employment as ended and updates {{ jobseeker.first_name }}'s work history.
+      The hire stays on record in your Employees list and the slot reopens.
+    </p>
+
+    <label class="block text-primary text-xs mb-1">End date <span class="text-muted">(defaults to today; backdate if needed)</span></label>
+    <div class="relative mb-3">
+      <input type="text" id="unhire-end-date" data-datepicker="date" data-display-format="long"
+             placeholder="Leave blank for today" readonly autocomplete="off"
+             class="w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-red-400 transition cursor-pointer">
+      <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+
+    <p id="unhire-error" class="text-xs text-red-500 mb-2 hidden"></p>
+
+    <div class="flex gap-3 justify-center mt-3">
+      <button type="button" data-close-unhire
+              class="bg-gray-100 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
+        Cancel
+      </button>
+      <button type="button" id="unhire-confirm-yes"
+              class="bg-red-500 text-white font-semibold px-8 py-2.5 rounded-full hover:bg-red-600 transition text-sm">
+        Yes, un-hire
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  function getCookie(n) {
+    const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+  function show(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+  function hide(m) { m.classList.add('hidden');    m.classList.remove('flex'); }
+
+  const btn   = document.getElementById('unhire-btn');
+  const modal = document.getElementById('unhire-modal');
+  const yes   = document.getElementById('unhire-confirm-yes');
+
+  btn.addEventListener('click', () => show(modal));
+  modal.querySelectorAll('[data-close-unhire]').forEach(el =>
+    el.addEventListener('click', () => hide(modal)));
+
+  const errEl = document.getElementById('unhire-error');
+  yes.addEventListener('click', function() {
+    const appId = btn.dataset.appId;
+    const endDate = document.getElementById('unhire-end-date').value.trim();
+    const fd = new FormData();
+    fd.append('action', 'unhire');
+    if (endDate) fd.append('end_date', endDate);
+    errEl.classList.add('hidden');
+    fetch('/employers/applications/' + appId + '/status/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      body: fd,
+    }).then(r => r.json().then(d => [r.ok, d])).then(function(pair) {
+      const [ok, d] = pair;
+      if (ok && d.ok) {
+        hide(modal);
+        window.location.reload();
+      } else {
+        errEl.textContent = (d && d.error) || 'Something went wrong.';
+        errEl.classList.remove('hidden');
+      }
+    });
+  });
+})();
+</script>
+{% endif %}
+
+{# ── Contact Candidate modal ─────────────────────────────────────── #}
 <div id="contact-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
   <div class="absolute inset-0 bg-black/40" onclick="closeContactModal()"></div>
   <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto z-10">
@@ -323,7 +302,6 @@
         <p class="text-muted text-xs mt-0.5 break-all">Email will be sent to: {{ jobseeker.contact_email|default:jobseeker.user.email }}</p>
       </div>
 
-      <!-- Kind tabs -->
       <div class="px-6 pt-4 flex gap-2">
         <button type="button" id="tab-requirements" onclick="switchKind('requirements')"
                 class="flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-amber text-white">
@@ -336,7 +314,6 @@
       </div>
 
       <div class="px-6 py-4 space-y-3">
-        <!-- Job dropdown -->
         <div>
           <label class="block text-primary text-xs font-medium mb-1">Re: which job? <span class="text-muted">(optional)</span></label>
           <div class="relative">
@@ -344,21 +321,19 @@
                     class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
               <option value="">— Not job-specific —</option>
               {% for j in open_jobs %}
-              <option value="{{ j.id }}">{{ j.title }}</option>
+              <option value="{{ j.id }}" {% if current_job and current_job.id == j.id %}selected{% endif %}>{{ j.title }}</option>
               {% endfor %}
             </select>
             <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
         </div>
 
-        <!-- Subject -->
         <div>
           <label class="block text-primary text-xs font-medium mb-1">Subject*</label>
           <input type="text" name="subject" id="contact-subject" required
                  class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
         </div>
 
-        <!-- Interview-only fields -->
         <div id="interview-fields" class="hidden space-y-3">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -374,7 +349,6 @@
           </div>
         </div>
 
-        <!-- Body -->
         <div>
           <label class="block text-primary text-xs font-medium mb-1">Message*</label>
           <textarea name="body" id="contact-body" rows="8" required
@@ -395,11 +369,6 @@
     </form>
   </div>
 </div>
-
-{% if past_contacts %}
-<!-- Past-contacts panel slotted just above the resume grid -->
-<div class="hidden"></div>
-{% endif %}
 
 <script>
 const COMPANY_NAME = "{{ company.name|escapejs }}";
@@ -472,13 +441,9 @@ ${COMPANY_NAME} Recruitment Team`;
       body.dataset.preset = '1';
     }
   }
-  // Once the user types anything, stop auto-overwriting.
   subj.addEventListener('input', () => { delete subj.dataset.preset; }, { once: true });
   body.addEventListener('input', () => { delete body.dataset.preset; }, { once: true });
 }
 </script>
-{% endblock %}
 
-{% block footer %}
-    {% include "base/footer.html" %}
 {% endblock %}
