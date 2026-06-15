@@ -84,9 +84,9 @@
     </div>
     {% endif %}
 
-    <!-- Cards grid (swapped via AJAX) -->
-    <div id="jobs-grid-wrapper">
-      {% include "jobseekers/_jobs_grid.html" %}
+    <!-- Results: toggle + grid + pagination (whole region swapped on tab/sort/search) -->
+    <div id="jobs-results-wrapper">
+      {% include "jobseekers/_jobs_results.html" %}
     </div>
 
   </div>
@@ -224,7 +224,7 @@ function reloadGrid(pushState) {
     const url = buildUrl();
     if (pushState) history.pushState({tab: currentTab, sort: currentSort, q: currentQ}, '', url);
 
-    const wrapper = document.getElementById('jobs-grid-wrapper');
+    const wrapper = document.getElementById('jobs-results-wrapper');
     wrapper.innerHTML = '<div class="flex justify-center py-12"><div class="w-6 h-6 border-2 border-teal border-t-transparent rounded-full animate-spin"></div></div>';
 
     fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })

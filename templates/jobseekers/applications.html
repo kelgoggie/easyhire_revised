@@ -46,6 +46,10 @@
       </div>
     </div>
 
+    {% with qs_base=qs_base_no_poor %}
+    {% include "partials/_poor_match_toggle.html" %}
+    {% endwith %}
+
     {% if items %}
     <!-- application cards: 1 column on phones, 2 from sm+ -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
@@ -172,6 +176,8 @@
       </div>
     </div>
     {% endif %}
+
+    {% include "partials/_pagination.html" %}
 
   </div>
 </div>

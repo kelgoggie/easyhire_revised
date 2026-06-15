@@ -442,11 +442,20 @@ def applications(request):
         for app in qs:
             items.append({'app': app, 'score': None})
 
+    from apps.core.pagination import filter_poor_matches, paginate, querystring_without
+    items, poor_hidden_count, show_poor = filter_poor_matches(items, request)
+    page = paginate(request, items, per_page=10)
+
     return render(request, 'jobseekers/applications.html', {
         'profile': profile,
-        'items': items,
+        'items': list(page.object_list),
         'sort': sort,
         'search': search,
+        'page': page,
+        'qs_base': querystring_without(request, 'page'),
+        'qs_base_no_poor': querystring_without(request, 'page', 'show_poor'),
+        'poor_hidden_count': poor_hidden_count,
+        'show_poor': show_poor,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -725,9 +734,20 @@ def recommended_jobs(request):
         else:
             ranked_jobs = []
 
+    # ── Hide weak (Poor Match) cards on the "for_you" tab by default. ──
+    # Liked/Hidden tabs always show everything — those are user-curated lists.
+    from apps.core.pagination import filter_poor_matches, paginate, querystring_without
+    if tab == 'for_you':
+        ranked_jobs, poor_hidden_count, show_poor = filter_poor_matches(ranked_jobs, request)
+    else:
+        poor_hidden_count, show_poor = 0, True
+
+    page = paginate(request, ranked_jobs, per_page=12)
+    page_items = list(page.object_list)
+
     jobs_json = []
     posted_map = {}
-    for item in ranked_jobs:
+    for item in page_items:
         job = item['job']
 
         edu = None
@@ -763,7 +783,7 @@ def recommended_jobs(request):
 
     context = {
         'profile': profile,
-        'ranked_jobs': ranked_jobs,
+        'ranked_jobs': page_items,
         'liked_ids': liked_ids,
         'hidden_ids': hidden_ids,
         'tab': tab,
@@ -771,13 +791,18 @@ def recommended_jobs(request):
         'search': search,
         'jobs_json': jobs_json,
         'posted_map': posted_map,
+        'page': page,
+        'qs_base': querystring_without(request, 'page'),
+        'qs_base_no_poor': querystring_without(request, 'page', 'show_poor'),
+        'poor_hidden_count': poor_hidden_count,
+        'show_poor': show_poor,
         'unread_notifications': False,
         'unread_messages': False,
     }
 
     if _is_ajax(request):
         from django.template.loader import render_to_string
-        html = render_to_string('jobseekers/_jobs_grid.html', context, request=request)
+        html = render_to_string('jobseekers/_jobs_results.html', context, request=request)
         return JsonResponse({
             'html': html,
             'jobs_json': jobs_json,

@@ -442,14 +442,23 @@ def candidates(request, job_id):
             })
         ranked.sort(key=lambda x: -x['score'])
 
+    from apps.core.pagination import filter_poor_matches, paginate, querystring_without
+    ranked, poor_hidden_count, show_poor = filter_poor_matches(ranked, request)
+    page = paginate(request, ranked, per_page=12)
+
     return render(request, 'employers/candidates.html', {
         'company': company,
         'job': job,
-        'ranked': ranked,
+        'ranked': list(page.object_list),
         'liked_ids': liked_ids,
         'liked_by_count': liked_by_count,
         'applicants_count': applicants_count,
         'tab': tab,
+        'page': page,
+        'qs_base': querystring_without(request, 'page'),
+        'qs_base_no_poor': querystring_without(request, 'page', 'show_poor'),
+        'poor_hidden_count': poor_hidden_count,
+        'show_poor': show_poor,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -872,13 +881,20 @@ def all_candidates(request):
     for cand in candidates:
         cand.show_badges = cand.can_show_badges_to(company)
 
+    # All-candidates view doesn't compute per-pair scores (no specific job in
+    # context), so only pagination applies — no poor-match toggle here.
+    from apps.core.pagination import paginate, querystring_without
+    page = paginate(request, candidates, per_page=12)
+
     return render(request, 'employers/all_candidates.html', {
         'company': company,
-        'candidates': candidates,
+        'candidates': list(page.object_list),
         'liked_ids': liked_ids,
         'search': search,
         'sort': sort,
         'total': total,
+        'page': page,
+        'qs_base': querystring_without(request, 'page'),
         'unread_notifications': False,
         'unread_messages': False,
     })

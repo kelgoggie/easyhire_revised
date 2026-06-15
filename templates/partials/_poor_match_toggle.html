@@ -1,0 +1,21 @@
+{% comment %}
+  Banner shown when poor-match cards have been hidden. Lets the user opt in.
+  Required context:
+    poor_hidden_count — int, number of cards filtered out
+    show_poor         — bool, whether the filter is currently OFF (showing all)
+    qs_base           — current querystring minus the show_poor param
+{% endcomment %}
+{% if show_poor %}
+<div class="mb-5 bg-surface border border-taupe/30 rounded-2xl px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+  <p class="text-muted">Showing all results, including weak matches.</p>
+  <a href="?{{ qs_base }}" class="text-teal font-semibold hover:underline flex-shrink-0">Hide weak matches</a>
+</div>
+{% elif poor_hidden_count %}
+<div class="mb-5 bg-amber/10 border border-amber/30 rounded-2xl px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+  <p class="text-primary">
+    <strong>{{ poor_hidden_count }}</strong> weak match{{ poor_hidden_count|pluralize }} hidden.
+    <span class="text-muted">We're only showing results above a 60% match score.</span>
+  </p>
+  <a href="?{% if qs_base %}{{ qs_base }}&{% endif %}show_poor=1" class="text-amber font-semibold hover:underline flex-shrink-0">Show me anyway →</a>
+</div>
+{% endif %}
