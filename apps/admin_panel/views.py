@@ -1018,6 +1018,62 @@ def bulk_import(request):
     return render(request, 'admin_panel/bulk_import.html', ctx)
 
 
+# ── Announcements ──────────────────────────────────────────────────
+
+@staff_required
+def announcements(request):
+    """Compose + browse broadcast announcements from PESO admin to users.
+    The audience radio buttons control who sees it in their inbox: all users,
+    jobseekers only, or employers only.
+    """
+    from .models import AdminAnnouncement, AuditLog
+    from apps.core.pagination import paginate, querystring_without
+
+    error = None
+    saved = False
+
+    if request.method == 'POST':
+        audience = (request.POST.get('audience') or '').strip()
+        subject  = (request.POST.get('subject') or '').strip()
+        body     = (request.POST.get('body') or '').strip()
+        valid_audiences = {
+            AdminAnnouncement.AUDIENCE_ALL,
+            AdminAnnouncement.AUDIENCE_JOBSEEKERS,
+            AdminAnnouncement.AUDIENCE_EMPLOYERS,
+        }
+        if audience not in valid_audiences:
+            error = 'Pick an audience.'
+        elif not subject:
+            error = 'Subject is required.'
+        elif not body:
+            error = 'Body is required.'
+        else:
+            ann = AdminAnnouncement.objects.create(
+                sender=request.user, audience=audience, subject=subject, body=body,
+            )
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_EDIT,
+                target_model='AdminAnnouncement', target_id=ann.id,
+                notes=f'Sent announcement to {ann.get_audience_display()}: {subject[:80]}',
+            )
+            saved = True
+
+    recent = AdminAnnouncement.objects.select_related('sender').all()
+    page = paginate(request, recent, per_page=10)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'active_nav': 'announcements',
+        'error': error,
+        'saved': saved,
+        'recent_announcements': list(page.object_list),
+        'page': page,
+        'qs_base': querystring_without(request, 'page'),
+        'audience_choices': AdminAnnouncement.AUDIENCE_CHOICES,
+    })
+    return render(request, 'admin_panel/announcements.html', ctx)
+
+
 def _process_import(rows, import_type):
     """Per-row import. Returns (success_count, failure_count, error_list)."""
     from apps.accounts.models import User

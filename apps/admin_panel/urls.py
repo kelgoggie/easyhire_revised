@@ -42,4 +42,7 @@ urlpatterns = [
 
     # Admin edit a jobseeker's resume
     path('admin-panel/jobseekers/<int:pk>/edit-resume/',                  views.admin_edit_resume,               name='admin_edit_resume'),
+
+    # Announcements (broadcast to jobseekers / employers / all)
+    path('admin-panel/announcements/',                                    views.announcements,                   name='announcements'),
 ]

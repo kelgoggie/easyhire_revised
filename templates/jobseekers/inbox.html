@@ -1,0 +1,26 @@
+{% extends "base/base_dashboard_jobseeker.html" %}
+{% load static %}
+
+{% block title %}Inbox — EasyHire{% endblock %}
+
+{% with active_nav="inbox" %}
+{% block page_content %}
+<div class="py-8 max-w-5xl">
+
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">Inbox</h1>
+  <div class="border-b border-taupe/30 mb-2"></div>
+  <p class="text-muted italic text-xs mb-6">
+    This is where admin announcements, applications, and interview schedules live.
+    Messaging is not yet available on EasyHire.
+  </p>
+
+  {% include "partials/_inbox_rows.html" %}
+
+  {% include "partials/_pagination.html" %}
+
+</div>
+
+{% include "partials/_report_modal.html" %}
+
+{% endblock %}
+{% endwith %}

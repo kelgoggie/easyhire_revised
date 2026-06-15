@@ -217,3 +217,32 @@ class UserReport(models.Model):
         except Exception:
             pass
         return self.filed_by.email
+
+
+class AdminAnnouncement(models.Model):
+    """A broadcast message from a PESO admin to jobseekers, employers, or both.
+    Appears in the recipients' inboxes alongside applications and interview schedules.
+    """
+    AUDIENCE_ALL = "all"
+    AUDIENCE_JOBSEEKERS = "jobseekers"
+    AUDIENCE_EMPLOYERS = "employers"
+    AUDIENCE_CHOICES = [
+        (AUDIENCE_ALL, "All Users"),
+        (AUDIENCE_JOBSEEKERS, "Jobseekers Only"),
+        (AUDIENCE_EMPLOYERS, "Employers Only"),
+    ]
+
+    sender = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="announcements_sent"
+    )
+    audience = models.CharField(max_length=20, choices=AUDIENCE_CHOICES, default=AUDIENCE_ALL)
+    subject = models.CharField(max_length=200)
+    body = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "admin_announcements"
+        ordering = ["-sent_at"]
+
+    def __str__(self):
+        return f"{self.subject} → {self.get_audience_display()} ({self.sent_at:%Y-%m-%d})"

@@ -1,0 +1,90 @@
+{% comment %}
+  Shared inbox table body. Renders one row per item with sender / verb / time
+  and an expandable detail panel for rows that have a body.
+  Required context:
+    items — list of dicts with keys: kind, actor, verb, context, timestamp,
+            url, report_target_type (str), report_target_id (int|None),
+            report_label (str), and optionally detail_body, detail_interview_at,
+            detail_interview_location, detail_company.
+{% endcomment %}
+{% if items %}
+<div class="bg-surface border border-taupe/30 rounded-2xl overflow-hidden">
+  {% for item in items %}
+  <div class="border-b border-taupe/20 last:border-0">
+    <div class="flex items-start gap-3 px-4 sm:px-6 py-4 hover:bg-white/40 transition">
+      <!-- Kind icon -->
+      <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
+        {% if item.kind == 'announcement' %}bg-amber/15 text-amber
+        {% elif item.kind == 'interview' %}bg-teal/15 text-teal
+        {% elif item.kind == 'requirements' %}bg-purple-100 text-purple-500
+        {% else %}bg-primary/10 text-primary{% endif %}">
+        {% if item.kind == 'announcement' %}
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18 11v3l4 2V9l-4 2zM3 9v6h4l5 3V6L7 9H3z"/></svg>
+        {% elif item.kind == 'interview' %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        {% elif item.kind == 'requirements' %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        {% else %}
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 6h-4V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H4a2 2 0 00-2 2v11a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 0h-4V4h4v2z"/></svg>
+        {% endif %}
+      </div>
+
+      <!-- Body: clickable to expand -->
+      <button type="button"
+              {% if item.detail_body %}onclick="toggleInboxDetail({{ forloop.counter0 }})"{% else %}onclick="window.location.href='{{ item.url }}'"{% endif %}
+              class="flex-1 min-w-0 text-left">
+        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+          <p class="font-bold text-primary text-sm leading-tight truncate">{{ item.actor }}</p>
+          <p class="text-muted text-[11px] italic flex-shrink-0">{{ item.timestamp|date:"M j, g:i A" }}</p>
+        </div>
+        <p class="text-muted italic text-xs leading-snug mt-0.5">{{ item.verb }}</p>
+        {% if item.context and item.kind == 'announcement' %}
+        <p class="text-primary text-xs font-semibold mt-1 truncate">{{ item.context }}</p>
+        {% endif %}
+      </button>
+
+      <!-- Report menu -->
+      {% if item.report_target_type %}
+      <div class="relative flex-shrink-0">
+        <button type="button" onclick="event.stopPropagation(); window.openReportModal({targetType:'{{ item.report_target_type }}', targetId:{{ item.report_target_id }}, contextLabel:'{{ item.report_label|escapejs }}'});"
+                class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-red-500 transition" title="Report">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if item.detail_body %}
+    <!-- Expandable detail panel -->
+    <div id="inbox-detail-{{ forloop.counter0 }}" class="hidden px-4 sm:px-6 pb-4 pl-16">
+      {% if item.detail_interview_at %}
+      <div class="mb-3 bg-teal/5 border border-teal/20 rounded-xl px-4 py-2 text-xs">
+        <p class="text-teal font-bold mb-0.5">Interview details</p>
+        <p class="text-primary"><strong>When:</strong> {{ item.detail_interview_at|date:"l, F j, Y · g:i A" }}</p>
+        {% if item.detail_interview_location %}
+        <p class="text-primary"><strong>Where:</strong> {{ item.detail_interview_location }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+      <p class="text-primary text-sm whitespace-pre-line leading-relaxed">{{ item.detail_body }}</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="bg-white border border-gray-200 rounded-2xl p-12 text-center">
+  <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+  </svg>
+  <p class="text-primary font-semibold text-sm mb-1">Your inbox is empty.</p>
+  <p class="text-muted text-xs">When you have applications, interview schedules, or PESO announcements, they'll show up here.</p>
+</div>
+{% endif %}
+
+<script>
+function toggleInboxDetail(idx) {
+  const el = document.getElementById('inbox-detail-' + idx);
+  if (el) el.classList.toggle('hidden');
+}
+</script>
