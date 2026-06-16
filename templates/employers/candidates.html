@@ -46,20 +46,19 @@
   <!-- ── candidate cards: 1 col on phones, scales up ──────────────────────── -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for item in ranked %}
-    <div class="applicant-card bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col"
+    <div class="applicant-card bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col cursor-pointer"
          data-app-id="{{ item.application_id|default:'' }}"
          data-app-status="{{ item.application_status|default:'' }}"
-         data-app-message="{{ item.application_message|default:'' }}"
          data-applicant-name="{{ item.profile.first_name }} {{ item.profile.last_name }}"
          data-applicant-id="{{ item.profile.id }}"
-         data-applied-at="{% if item.applied_at %}{{ item.applied_at|date:'F j, Y' }}{% endif %}">
+         data-applied-at="{% if item.applied_at %}{{ item.applied_at|date:'F j, Y' }}{% endif %}"
+         data-href="/employers/candidates/{{ item.profile.id }}/?job={{ job.id }}"
+         onclick="if (event.target.closest('a, button, form')) return; window.location=this.dataset.href;">
 
       <!-- Top row: name + match smiley -->
       <div class="flex items-start justify-between gap-2 mb-3">
         <div class="min-w-0">
-          <p class="font-bold text-primary text-base leading-tight">
-            <a href="/employers/candidates/{{ item.profile.id }}/?job={{ job.id }}" class="hover:text-teal transition">{{ item.profile.first_name }} {{ item.profile.last_name }}</a>
-          </p>
+          <p class="font-bold text-primary text-base leading-tight">{{ item.profile.first_name }} {{ item.profile.last_name }}</p>
           <p class="status-label text-xs mt-0.5
             {% if item.application_status == 'hired' %}text-teal font-semibold
             {% elif item.application_status == 'accepted' %}text-teal
@@ -123,24 +122,6 @@
         {% endwith %}
       </div>
 
-      {% if tab == 'recommended' %}
-      <a href="/employers/candidates/{{ item.profile.id }}/?job={{ job.id }}"
-         class="block w-full text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
-        View Profile
-      </a>
-      {% else %}
-      <button type="button"
-              class="view-app-btn block w-full text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition mb-2">
-        View Application
-      </button>
-      {% if item.application_status == 'accepted' %}
-      <button type="button"
-              class="mark-hired-btn block w-full text-center bg-teal text-white text-xs font-semibold py-2.5 rounded-full hover:bg-teal/90 transition">
-        Mark as Hired
-      </button>
-      {% endif %}
-      {% endif %}
-
     </div>
     {% endfor %}
   </div>
@@ -165,267 +146,6 @@
 
 </div>
 
-{# ── Application modal (one shared instance; populated from card data on open) ── #}
-<div id="app-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <div class="absolute inset-0 bg-black/40" data-close-app></div>
-  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 z-10">
-    <div class="mb-4">
-      <p id="app-modal-title" class="text-primary font-bold text-base leading-tight"></p>
-      <p id="app-modal-meta"  class="text-muted text-xs mt-1"></p>
-    </div>
-    <div class="bg-surface/60 border border-gray-100 rounded-xl px-4 py-3 mb-5">
-      <p class="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">Application message</p>
-      <p id="app-modal-message" class="text-primary text-sm leading-relaxed whitespace-pre-line"></p>
-    </div>
-    <div class="flex items-center justify-between gap-3">
-      <button type="button" id="app-modal-report"
-              class="text-muted text-xs italic hover:text-red-500 transition underline-offset-2 hover:underline">
-        Report this application
-      </button>
-      <div class="flex gap-3">
-        <button type="button" id="app-modal-reject"
-                class="bg-white border border-red-300 text-red-500 font-semibold px-6 py-2.5 rounded-full hover:bg-red-50 transition text-sm">
-          Reject
-        </button>
-        <button type="button" id="app-modal-accept"
-                class="bg-teal text-white font-semibold px-6 py-2.5 rounded-full hover:bg-teal/90 transition text-sm">
-          Accept
-        </button>
-        <button type="button" data-close-app
-                class="bg-gray-100 text-primary font-semibold px-6 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
-          Exit
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-{# Accept confirmation #}
-<div id="accept-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <div class="absolute inset-0 bg-black/40" data-close-accept></div>
-  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10 text-center">
-    <p class="text-primary font-bold text-base mb-2">Accept this application?</p>
-    <p class="text-muted text-sm mb-6">
-      You're about to accept this jobseeker's application. This can be rejected anytime from this point. Proceed to confirm.
-    </p>
-    <div class="flex gap-3 justify-center">
-      <button type="button" data-close-accept
-              class="bg-gray-100 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
-        Cancel
-      </button>
-      <button type="button" id="accept-confirm-yes"
-              class="bg-teal text-white font-semibold px-8 py-2.5 rounded-full hover:bg-teal/90 transition text-sm">
-        Accept
-      </button>
-    </div>
-  </div>
-</div>
-
-{# Reject confirmation #}
-<div id="reject-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <div class="absolute inset-0 bg-black/40" data-close-reject></div>
-  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10 text-center">
-    <p class="text-red-500 font-bold text-base mb-2">Reject this application?</p>
-    <p class="text-muted text-sm mb-6">
-      You're about to reject this jobseeker's application. <span class="text-red-500">This action cannot be undone.</span>
-    </p>
-    <div class="flex gap-3 justify-center">
-      <button type="button" data-close-reject
-              class="bg-gray-100 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
-        Cancel
-      </button>
-      <button type="button" id="reject-confirm-yes"
-              class="bg-red-500 text-white font-semibold px-8 py-2.5 rounded-full hover:bg-red-600 transition text-sm">
-        Yes, reject
-      </button>
-    </div>
-  </div>
-</div>
-
-{# Hire confirmation #}
-<div id="hire-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <div class="absolute inset-0 bg-black/40" data-close-hire></div>
-  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10 text-center">
-    <p class="text-primary font-bold text-base mb-2">Tag as Hired?</p>
-    <p class="text-muted text-sm mb-6">
-      This marks the jobseeker as Hired and closes their application as final. <span class="text-red-500">This action cannot be undone.</span>
-    </p>
-    <div class="flex gap-3 justify-center">
-      <button type="button" data-close-hire
-              class="bg-gray-100 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
-        Cancel
-      </button>
-      <button type="button" id="hire-confirm-yes"
-              class="bg-teal text-white font-semibold px-8 py-2.5 rounded-full hover:bg-teal/90 transition text-sm">
-        Yes, mark Hired
-      </button>
-    </div>
-  </div>
-</div>
-
-{% block page_scripts %}
-<script>
-(function() {
-  function getCookie(n) {
-    const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
-    if (p.length === 2) return p.pop().split(';').shift();
-  }
-  function show(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
-  function hide(m) { m.classList.add('hidden');    m.classList.remove('flex'); }
-
-  const appModal      = document.getElementById('app-modal');
-  const acceptModal   = document.getElementById('accept-confirm-modal');
-  const rejectModal   = document.getElementById('reject-confirm-modal');
-  const hireModal     = document.getElementById('hire-confirm-modal');
-
-  // The card currently driving open modals.
-  let activeCard = null;
-
-  function postStatus(appId, action) {
-    const fd = new FormData();
-    fd.append('action', action);
-    return fetch('/employers/applications/' + appId + '/status/', {
-      method: 'POST',
-      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
-      body: fd,
-    }).then(function(r){ return r.json(); });
-  }
-
-  function updateCardStatus(card, status) {
-    card.dataset.appStatus = status;
-    const label = card.querySelector('.status-label');
-    if (!label) return;
-    label.className = 'status-label text-xs mt-0.5';
-    if (status === 'hired')    { label.classList.add('text-teal', 'font-semibold'); label.textContent = 'Hired'; }
-    else if (status === 'accepted') { label.classList.add('text-teal');             label.textContent = 'Accepted'; }
-    else if (status === 'rejected') { label.classList.add('text-red-500');          label.textContent = 'Rejected'; }
-    else if (status === 'viewed')   { label.classList.add('text-muted');            label.textContent = 'Viewed'; }
-    else if (status === 'pending')  { label.classList.add('text-amber');            label.textContent = 'Pending review'; }
-
-    // Show/hide the "Mark as Hired" button based on new status.
-    let hireBtn = card.querySelector('.mark-hired-btn');
-    if (status === 'accepted' && !hireBtn) {
-      hireBtn = document.createElement('button');
-      hireBtn.type = 'button';
-      hireBtn.className = 'mark-hired-btn block w-full text-center bg-teal text-white text-xs font-semibold py-2.5 rounded-full hover:bg-teal/90 transition';
-      hireBtn.textContent = 'Mark as Hired';
-      card.appendChild(hireBtn);
-    } else if (status !== 'accepted' && hireBtn) {
-      hireBtn.remove();
-    }
-  }
-
-  // ── Open application modal ──────────────────────────────────────────
-  document.querySelectorAll('.view-app-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      activeCard = btn.closest('.applicant-card');
-      const appId  = activeCard.dataset.appId;
-      const name   = activeCard.dataset.applicantName;
-      const date   = activeCard.dataset.appliedAt;
-      const msg    = activeCard.dataset.appMessage;
-      const status = activeCard.dataset.appStatus;
-
-      document.getElementById('app-modal-title').textContent = name;
-      document.getElementById('app-modal-meta').textContent  = date ? ('Applied ' + date) : '';
-      const msgEl = document.getElementById('app-modal-message');
-      if (msg && msg.trim()) {
-        msgEl.textContent = msg;
-        msgEl.classList.remove('italic', 'text-muted');
-      } else {
-        msgEl.textContent = 'No message was sent with this application.';
-        msgEl.classList.add('italic', 'text-muted');
-      }
-
-      // Disable Accept/Reject if application is in a terminal state.
-      const acceptBtn = document.getElementById('app-modal-accept');
-      const rejectBtn = document.getElementById('app-modal-reject');
-      acceptBtn.disabled = (status === 'hired' || status === 'accepted');
-      rejectBtn.disabled = (status === 'hired' || status === 'rejected');
-      acceptBtn.classList.toggle('opacity-50', acceptBtn.disabled);
-      rejectBtn.classList.toggle('opacity-50', rejectBtn.disabled);
-      acceptBtn.classList.toggle('cursor-not-allowed', acceptBtn.disabled);
-      rejectBtn.classList.toggle('cursor-not-allowed', rejectBtn.disabled);
-
-      show(appModal);
-
-      // Auto-mark as viewed if currently pending.
-      if (status === 'pending' && appId) {
-        postStatus(appId, 'view').then(function(d) {
-          if (d.ok && d.status) updateCardStatus(activeCard, d.status);
-        });
-      }
-    });
-  });
-
-  appModal.querySelectorAll('[data-close-app]').forEach(function(el) {
-    el.addEventListener('click', function(){ hide(appModal); });
-  });
-
-  // ── Accept flow ─────────────────────────────────────────────────────
-  document.getElementById('app-modal-accept').addEventListener('click', function() {
-    if (this.disabled) return;
-    show(acceptModal);
-  });
-  acceptModal.querySelectorAll('[data-close-accept]').forEach(function(el) {
-    el.addEventListener('click', function(){ hide(acceptModal); });
-  });
-  document.getElementById('accept-confirm-yes').addEventListener('click', function() {
-    if (!activeCard) return;
-    const appId = activeCard.dataset.appId;
-    postStatus(appId, 'accept').then(function(d) {
-      hide(acceptModal); hide(appModal);
-      if (d.ok) updateCardStatus(activeCard, d.status);
-    });
-  });
-
-  // ── Reject flow (from modal) ────────────────────────────────────────
-  // Report this applicant
-  document.getElementById('app-modal-report').addEventListener('click', function() {
-    if (!activeCard || !window.openReportModal) return;
-    window.openReportModal({
-      targetType:   'jobseeker',
-      targetId:     activeCard.dataset.applicantId,
-      contextLabel: 'About: ' + (activeCard.dataset.applicantName || 'this applicant') + "'s application",
-    });
-  });
-
-  document.getElementById('app-modal-reject').addEventListener('click', function() {
-    if (this.disabled) return;
-    show(rejectModal);
-  });
-  rejectModal.querySelectorAll('[data-close-reject]').forEach(function(el) {
-    el.addEventListener('click', function(){ hide(rejectModal); });
-  });
-  document.getElementById('reject-confirm-yes').addEventListener('click', function() {
-    if (!activeCard) return;
-    const appId = activeCard.dataset.appId;
-    postStatus(appId, 'reject').then(function(d) {
-      hide(rejectModal); hide(appModal);
-      if (d.ok) updateCardStatus(activeCard, d.status);
-    });
-  });
-
-  // ── Mark as Hired flow (on the card itself, accepted-only) ─────────
-  document.addEventListener('click', function(e) {
-    const hireBtn = e.target.closest('.mark-hired-btn');
-    if (!hireBtn) return;
-    activeCard = hireBtn.closest('.applicant-card');
-    show(hireModal);
-  });
-  hireModal.querySelectorAll('[data-close-hire]').forEach(function(el) {
-    el.addEventListener('click', function(){ hide(hireModal); });
-  });
-  document.getElementById('hire-confirm-yes').addEventListener('click', function() {
-    if (!activeCard) return;
-    const appId = activeCard.dataset.appId;
-    postStatus(appId, 'hire').then(function(d) {
-      hide(hireModal);
-      if (d.ok) updateCardStatus(activeCard, d.status);
-    });
-  });
-})();
-</script>
-{% endblock %}
 
 {% endblock %}
 {% endwith %}

@@ -481,6 +481,20 @@ ${COMPANY_NAME} Recruitment Team`;
   subj.addEventListener('input', () => { delete subj.dataset.preset; }, { once: true });
   body.addEventListener('input', () => { delete body.dataset.preset; }, { once: true });
 }
+
+// If the page loaded with ?open_interview=1 (set by the Accept flow above),
+// pop open the Contact modal in Schedule Interview mode automatically.
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('open_interview') === '1') {
+    setTimeout(function() {
+      try {
+        openContactModal();
+        switchKind('interview');
+      } catch (e) { /* modal may not exist on this view */ }
+    }, 80);
+  }
+})();
 </script>
 
 <script>
@@ -503,7 +517,15 @@ ${COMPANY_NAME} Recruitment Team`;
     }).then(function(r) { return r.json().then(function(d){ return [r.ok, d]; }); }).then(function(pair) {
       const [ok, d] = pair;
       if (ok && d.ok) {
-        window.location.reload();
+        if (action === 'accept') {
+          // After accept, bounce back with a flag that auto-opens the
+          // Schedule Interview composer (next step in the hiring flow).
+          const url = new URL(window.location);
+          url.searchParams.set('open_interview', '1');
+          window.location = url.toString();
+        } else {
+          window.location.reload();
+        }
       } else {
         alert((d && d.error) || 'Something went wrong.');
       }

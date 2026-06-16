@@ -50,7 +50,8 @@
     <!-- application cards: 1 column on phones, 2 from sm+ -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
       {% for item in items %}
-      <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
+      <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col cursor-pointer"
+           onclick="if (event.target.closest('a, button, form')) return; window.location='/jobs/view/{{ item.app.job.id }}/';">
 
         <!-- Top row: title block (left) + status + match badge (right) -->
         <div class="flex items-start justify-between mb-3">
@@ -138,13 +139,6 @@
           {% endif %}
         </div>
 
-        <!-- View Application button -->
-        <div class="text-center">
-          <a href="/jobs/view/{{ item.app.job.id }}/"
-             class="inline-block bg-surface border border-taupe/40 text-primary text-xs font-semibold px-12 py-2.5 rounded-full hover:bg-taupe/30 transition">
-            View Application
-          </a>
-        </div>
 
       </div>
       {% endfor %}
