@@ -1,0 +1,160 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load match_tags %}
+
+{% block title %}{{ job.title }} — {{ company.name }} — EasyHire Admin{% endblock %}
+
+{% block admin_content %}
+<div class="py-8 max-w-7xl mx-auto">
+
+  <!-- Breadcrumb-ish back -->
+  <a href="/admin-panel/companies/{{ company.id }}/"
+     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back to {{ company.name }}
+  </a>
+
+  <!-- Heading -->
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-primary leading-tight">{{ job.title }}</h1>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <span class="inline-flex items-center bg-gray-100 text-muted text-xs font-semibold px-3 py-1.5 rounded-full">
+        {{ job.slots }} slot{{ job.slots|pluralize }} open
+      </span>
+      <span class="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full
+        {% if job.status == 'open' %}bg-teal/15 text-teal{% elif job.status == 'closed' %}bg-gray-100 text-muted{% else %}bg-amber/15 text-amber{% endif %}">
+        {{ job.get_status_display }}
+      </span>
+    </div>
+  </div>
+  <p class="text-muted text-sm mb-2">
+    Posted by <strong class="text-primary">{{ company.name }}</strong> on {{ job.created_at|date:"F j, Y" }} ·
+    {{ applicants_count }} applicant{{ applicants_count|pluralize }}
+  </p>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <!-- Description + Requirements -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-10">
+    <div class="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-4 sm:p-6">
+      <p class="text-sm font-bold text-primary mb-4">Job Description</p>
+      <p class="text-primary text-sm leading-relaxed whitespace-pre-line">{{ job.description }}</p>
+
+      {% if job.location_type != 'remote' %}
+      <div class="mt-6 pt-4 border-t border-gray-100">
+        <p class="text-xs font-bold text-primary mb-1">Location</p>
+        <p class="text-muted text-sm">{{ job.location_display }}</p>
+      </div>
+      {% endif %}
+
+      {% if job.salary_min or job.salary_max %}
+      <div class="mt-4 pt-4 border-t border-gray-100">
+        <p class="text-xs font-bold text-primary mb-1">Salary Range</p>
+        <p class="text-muted text-sm">
+          {% if job.salary_min %}₱{{ job.salary_min|floatformat:0 }}{% endif %}
+          {% if job.salary_min and job.salary_max %} – {% endif %}
+          {% if job.salary_max %}₱{{ job.salary_max|floatformat:0 }}{% endif %}
+        </p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 space-y-5">
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Skills</p>
+        {% with skills=job.skill_requirements.all %}
+        {% if skills %}
+        <div class="flex flex-wrap gap-1.5">
+          {% for skill in skills %}
+          <span class="inline-flex items-center bg-[#D6E4D1] text-primary text-xs px-3 py-1 rounded-full">{{ skill.name }}</span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-xs italic">None specified</p>
+        {% endif %}
+        {% endwith %}
+      </div>
+
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Education</p>
+        {% if job.education_requirement %}
+        <span class="inline-flex items-center bg-[#D6E4D1] text-primary text-xs px-3 py-1 rounded-full">
+          {{ job.education_requirement.get_level_display }}{% if job.education_requirement.course_degree %} — {{ job.education_requirement.course_degree }}{% endif %}
+        </span>
+        {% else %}
+        <p class="text-muted text-xs italic">None required</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Experience</p>
+        <span class="inline-flex items-center bg-purple-100 text-primary text-xs px-3 py-1 rounded-full">
+          {% if job.experience_requirement %}{{ job.experience_requirement.display_experience }}{% else %}None Required{% endif %}
+        </span>
+      </div>
+
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Certifications</p>
+        {% with certs=job.certification_requirements.all %}
+        {% if certs %}
+        <div class="flex flex-wrap gap-1.5">
+          {% for cert in certs %}
+          <span class="inline-flex items-center bg-purple-100 text-primary text-xs px-3 py-1 rounded-full">{{ cert.name }}</span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <span class="inline-flex items-center bg-purple-100 text-primary text-xs px-3 py-1 rounded-full">None Required</span>
+        {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Matches -->
+  <section>
+    <div class="flex items-baseline justify-between gap-3 mb-1">
+      <h2 class="text-xl text-primary"><span class="font-extrabold">Top Matches</span></h2>
+      <p class="text-muted text-xs italic">Jobseekers ranked by the matching engine (excludes applicants).</p>
+    </div>
+    <p class="text-muted text-xs mb-4">Click any candidate to open their profile.</p>
+
+    {% if ranked %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {% for item in ranked %}
+      <a href="/admin-panel/jobseekers/{{ item.profile.id }}/"
+         class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
+
+        <div class="flex items-start justify-between gap-2 mb-3">
+          <div class="min-w-0 flex-1">
+            <p class="font-bold text-primary text-base leading-tight">{{ item.profile.first_name }} {{ item.profile.last_name }}</p>
+            <p class="text-muted text-xs italic truncate">{{ item.profile.barangay|default:item.profile.city_municipality }}</p>
+          </div>
+          {% match_badge item.score True %}
+        </div>
+
+        <div class="flex flex-wrap gap-1.5 flex-1">
+          {% for edu in item.profile.educations.all|slice:":1" %}
+          <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20">
+            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+            <span class="truncate">{{ edu.course_degree|default:edu.get_level_display|truncatechars:24 }}</span>
+          </span>
+          {% endfor %}
+          {% for skill in item.profile.skills.all|slice:":3" %}
+          <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2.5 py-0.5 rounded-full border border-green-200">
+            <span class="truncate">{{ skill.name }}</span>
+          </span>
+          {% endfor %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+      <p class="text-primary font-semibold text-sm mb-1">No jobseekers to rank yet.</p>
+      <p class="text-muted text-xs">Encourage more jobseekers to complete their resume — they'll show up here ranked by fit.</p>
+    </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

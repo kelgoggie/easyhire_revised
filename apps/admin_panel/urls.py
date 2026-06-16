@@ -21,6 +21,7 @@ urlpatterns = [
     path('admin-panel/companies/',                                        views.company_list,                    name='company_list'),
     path('admin-panel/companies/<int:pk>/',                               views.company_detail,                  name='company_detail'),
     path('admin-panel/companies/<int:pk>/settings/',                      views.company_settings,                name='company_settings'),
+    path('admin-panel/companies/<int:pk>/jobs/<int:job_id>/',             views.company_job_detail,              name='company_job_detail'),
     path('admin-panel/companies/<int:pk>/jobs/<int:job_id>/delete/',      views.company_delete_job,              name='company_delete_job'),
 
     # User-facing report submission (jobseeker reports company, employer reports jobseeker)

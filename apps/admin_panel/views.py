@@ -610,6 +610,31 @@ def company_settings(request, pk):
 
 
 @staff_required
+def company_job_detail(request, pk, job_id):
+    """Admin read-only view of a company job post + top-ranked jobseekers."""
+    from apps.jobs.models import JobPosting, Application
+    from apps.matching.engine import get_ranked_jobseekers
+
+    company = get_object_or_404(Company, pk=pk)
+    job = get_object_or_404(JobPosting.objects.select_related('company'), pk=job_id, company=company)
+
+    # Top 8 matches across all jobseekers (excluding people who already applied).
+    applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
+    ranked = get_ranked_jobseekers(job)
+    ranked = [r for r in ranked if r['profile'].id not in applicant_ids][:8]
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'active_nav':       'companies',
+        'company':          company,
+        'job':              job,
+        'ranked':           ranked,
+        'applicants_count': len(applicant_ids),
+    })
+    return render(request, 'admin_panel/company_job_detail.html', ctx)
+
+
+@staff_required
 def company_delete_job(request, pk, job_id):
     """Delete a job posting and notify the company with the admin's reason."""
     from django.http import JsonResponse
@@ -733,7 +758,6 @@ def report_submit(request):
     return JsonResponse({'ok': True})
 
 
-# ── Phase 4: Algorithm settings ─────────────────────────────────────
 
 @staff_required
 def algorithm_settings(request):
@@ -743,7 +767,7 @@ def algorithm_settings(request):
     error = None
 
     if request.method == 'POST':
-        # Accept whole-number percentages (e.g. 40, 25, 25, 10) — UI uses %.
+
         try:
             sk = int(request.POST.get('weight_skills', 0))
             ed = int(request.POST.get('weight_education', 0))
@@ -937,12 +961,15 @@ def activity_log(request):
     if action:
         qs = qs.filter(action=action)
 
-    paginator = Paginator(qs, 50)
+    paginator = Paginator(qs, 25)
     page = paginator.get_page(request.GET.get('page') or 1)
+
+    from apps.core.pagination import querystring_without
 
     ctx = _admin_context(request)
     ctx.update({
         'page':           page,
+        'qs_base':        querystring_without(request, 'page'),
         'search':         search,
         'action':         action,
         'action_choices': AuditLog.ACTION_CHOICES,
