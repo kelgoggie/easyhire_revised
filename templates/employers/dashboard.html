@@ -106,14 +106,19 @@
         </thead>
         <tbody>
           {% for job in recent_jobs %}
-          <tr class="border-b border-gray-50 last:border-0 hover:bg-surface/40 transition">
-            <td class="px-5 py-3 font-semibold text-primary">
-              <a href="/employers/jobs/{{ job.id }}/" class="hover:text-teal transition">{{ job.title }}</a>
-            </td>
+          <tr class="job-row border-b border-gray-50 last:border-0 hover:bg-surface/40 transition cursor-pointer"
+              data-href="/employers/jobs/{{ job.id }}/">
+            <td class="px-5 py-3 font-semibold text-primary">{{ job.title }}</td>
             <td class="px-4 py-3 text-muted italic text-xs">{{ job.location_display|truncatechars:30 }}</td>
             <td class="px-4 py-3 text-muted italic text-xs">{{ job.created_at|date:"F j, Y" }}</td>
             <td class="px-4 py-3 text-muted italic text-xs">{{ job.slots }} slot{{ job.slots|pluralize }} open</td>
-            <td class="px-4 py-3 text-primary italic text-xs">{{ job.applicants_count|default:0 }}</td>
+            <td class="px-4 py-3">
+              <a href="/employers/jobs/{{ job.id }}/candidates/?tab=applicants"
+                 onclick="event.stopPropagation();"
+                 class="text-primary text-xs font-semibold hover:text-teal hover:underline transition">
+                {{ job.applicants_count|default:0 }} applicant{{ job.applicants_count|default:0|pluralize }} &rsaquo;
+              </a>
+            </td>
           </tr>
           {% empty %}
           <tr>
@@ -129,5 +134,16 @@
   </section>
 
 </div>
+
+<script>
+// Whole row → job detail; clicks inside the Applicants link pass through.
+document.querySelectorAll('tr.job-row').forEach(function(tr) {
+  tr.addEventListener('click', function(e) {
+    if (e.target.closest('a, button')) return;
+    const href = tr.dataset.href;
+    if (href) window.location = href;
+  });
+});
+</script>
 {% endblock %}
 {% endwith %}

@@ -156,7 +156,7 @@
                       {% if to_email %}
                       <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire profile — '|add:company.name|urlencode }}"
                          target="_blank" rel="noopener"
-                         onclick="event.stopPropagation();"
+                         onclick="event.stopPropagation(); event.preventDefault(); var h=this.href; confirmAction({title:'Leave EasyHire?', body:'You are about to be redirected to gmail.com. Any communication that takes place outside the platform is not the liability of EasyHire.', ctaLabel:'Continue to Gmail', ctaClass:'bg-amber hover:bg-amber/90', onConfirm:function(){ window.open(h, '_blank', 'noopener'); }});"
                          title="Email {{ js.first_name }} via Gmail"
                          class="w-8 h-8 flex items-center justify-center rounded-full border border-taupe/30 text-taupe hover:border-teal hover:text-teal transition">
                           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -202,6 +202,8 @@
         </svg>
     </button>
 </div>
+
+{% include "partials/_confirm_modal.html" %}
 
 {% endblock %}
 

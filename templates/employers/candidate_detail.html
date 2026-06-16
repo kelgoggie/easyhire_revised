@@ -90,6 +90,7 @@
       <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire application — '|add:company.name|urlencode }}"
          target="_blank" rel="noopener"
          title="Open Gmail compose"
+         onclick="event.preventDefault(); var h=this.href; confirmAction({title:'Leave EasyHire?', body:'You are about to be redirected to gmail.com. Any communication that takes place outside the platform is not the liability of EasyHire.', ctaLabel:'Continue to Gmail', ctaClass:'bg-amber hover:bg-amber/90', onConfirm:function(){ window.open(h, '_blank', 'noopener'); }});"
          class="w-9 h-9 flex items-center justify-center rounded-full border border-taupe/30 bg-white text-muted hover:border-teal hover:text-teal transition">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
           <path d="M22 5.5v13c0 .83-.67 1.5-1.5 1.5H19V8.99l-7 5.17-7-5.17V20H3.5C2.67 20 2 19.33 2 18.5v-13c0-.41.17-.79.44-1.06C2.7 4.17 3.09 4 3.5 4H4l8 5.91L20 4h.5c.41 0 .8.17 1.06.44.27.27.44.65.44 1.06z"/>
@@ -115,10 +116,46 @@
     </div>
     {% endif %}
 
-    {% if application and application.message %}
+    {% if application %}
     <div class="mb-6">
-      <p class="text-sm font-bold text-primary mb-2">Application Message</p>
+      <div class="flex items-baseline justify-between gap-2 mb-2 flex-wrap">
+        <p class="text-sm font-bold text-primary">Application
+          <span class="ml-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full
+                {% if application.status == 'hired' %}bg-teal text-white
+                {% elif application.status == 'accepted' %}bg-teal/15 text-teal
+                {% elif application.status == 'rejected' %}bg-red-50 text-red-500
+                {% elif application.status == 'viewed' %}bg-gray-100 text-muted
+                {% else %}bg-amber/15 text-amber{% endif %}">
+            {{ application.get_status_display }}
+          </span>
+        </p>
+        <div class="flex items-center gap-2" id="app-actions" data-app-id="{{ application.id }}" data-status="{{ application.status }}">
+          {% if application.status == 'pending' or application.status == 'viewed' %}
+          <button type="button" data-action="accept"
+                  class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">
+            Accept
+          </button>
+          <button type="button" data-action="reject"
+                  class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">
+            Reject
+          </button>
+          {% elif application.status == 'accepted' %}
+          <button type="button" data-action="hire"
+                  class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">
+            Mark as Hired
+          </button>
+          <button type="button" data-action="reject"
+                  class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">
+            Reject
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      {% if application.message %}
       <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-primary leading-relaxed whitespace-pre-line">{{ application.message }}</div>
+      {% else %}
+      <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs text-muted italic">No message was sent with this application.</div>
+      {% endif %}
       <p class="text-muted text-[11px] italic mt-1.5">Applied {{ application.created_at|date:"F j, Y · g:i A" }}</p>
     </div>
     {% endif %}
@@ -444,6 +481,55 @@ ${COMPANY_NAME} Recruitment Team`;
   subj.addEventListener('input', () => { delete subj.dataset.preset; }, { once: true });
   body.addEventListener('input', () => { delete body.dataset.preset; }, { once: true });
 }
+</script>
+
+<script>
+// Application lifecycle actions (Accept / Reject / Mark as Hired).
+(function() {
+  const wrap = document.getElementById('app-actions');
+  if (!wrap) return;
+  const appId = wrap.dataset.appId;
+  function getCookie(n) {
+    const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+  function send(action) {
+    const fd = new FormData();
+    fd.append('action', action);
+    fetch('/employers/applications/' + appId + '/status/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      body: fd,
+    }).then(function(r) { return r.json().then(function(d){ return [r.ok, d]; }); }).then(function(pair) {
+      const [ok, d] = pair;
+      if (ok && d.ok) {
+        window.location.reload();
+      } else {
+        alert((d && d.error) || 'Something went wrong.');
+      }
+    });
+  }
+
+  wrap.querySelectorAll('button[data-action]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const action = btn.dataset.action;
+      const confirmTexts = {
+        accept: { title: 'Accept this application?', body: "You'll be able to mark them as Hired later.", cta: 'Yes, accept', cls: 'bg-teal hover:bg-teal/90' },
+        reject: { title: 'Reject this application?',  body: 'This is terminal — the applicant cannot be revived.', cta: 'Yes, reject', cls: 'bg-red-500 hover:bg-red-600' },
+        hire:   { title: 'Mark as Hired?',            body: 'This decrements the open slot for the job and adds the role to the jobseeker resume. You can un-hire later.', cta: 'Yes, mark hired', cls: 'bg-teal hover:bg-teal/90' },
+      };
+      const t = confirmTexts[action];
+      if (window.confirmAction) {
+        window.confirmAction({
+          title: t.title, body: t.body, ctaLabel: t.cta, ctaClass: t.cls,
+          onConfirm: function() { send(action); },
+        });
+      } else {
+        if (confirm(t.title)) send(action);
+      }
+    });
+  });
+})();
 </script>
 
 {% endblock %}

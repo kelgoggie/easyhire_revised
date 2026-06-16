@@ -100,7 +100,11 @@ def notifications_api(request):
             item['verb']   = f'sent you {n.liker_preview or "a message"}. Check your email.'
             item['quoted'] = n.admin_message or ''
             item['icon']   = 'briefcase'
-            item['url']    = '/applications/'
+            # Invites → go to the job detail; other contacts → inbox.
+            if n.job and 'invitation to apply' in (n.liker_preview or '').lower():
+                item['url'] = f'/jobs/view/{n.job.id}/'
+            else:
+                item['url'] = '/inbox/'
         data.append(item)
 
     return JsonResponse({'notifications': data, 'count': len(data)})

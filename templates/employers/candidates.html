@@ -80,7 +80,7 @@
           {% if to_email %}
           <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire application — '|add:company.name|urlencode }}"
              target="_blank" rel="noopener"
-             onclick="event.stopPropagation();"
+             onclick="event.stopPropagation(); event.preventDefault(); var h=this.href; confirmAction({title:'Leave EasyHire?', body:'You are about to be redirected to gmail.com. Any communication that takes place outside the platform is not the liability of EasyHire.', ctaLabel:'Continue to Gmail', ctaClass:'bg-amber hover:bg-amber/90', onConfirm:function(){ window.open(h, '_blank', 'noopener'); }});"
              title="Email {{ item.profile.first_name }} via Gmail"
              class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-teal transition">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">

@@ -387,16 +387,103 @@ def job_close(request, job_id):
     
 @employer_required
 def job_detail(request, job_id):
+    from apps.matching.engine import get_ranked_jobseekers
+    from apps.jobs.models import Application
+    from apps.employers.models import EmployerContact
+
     profile = request.user.employer_profile
     company = profile.company
     job = get_object_or_404(JobPosting, id=job_id, company=company)
 
+    # Top ranked jobseekers for this job (excluding people who already applied).
+    applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
+    ranked = get_ranked_jobseekers(job)
+    ranked = [r for r in ranked if r['profile'].id not in applicant_ids][:8]
+
+    # Jobseekers who have already been invited to apply for this job.
+    invited_ids = set(EmployerContact.objects.filter(
+        company=company, job=job, kind=EmployerContact.KIND_REQUIREMENTS,
+    ).values_list('recipient_id', flat=True))
+
     return render(request, 'employers/job_detail.html', {
         'company': company,
         'job': job,
+        'ranked': ranked,
+        'invited_ids': invited_ids,
+        'applicants_count': len(applicant_ids),
         'unread_notifications': False,
         'unread_messages': False,
     })
+
+
+@employer_verified_required
+def invite_to_apply(request, job_id, jobseeker_id):
+    """Send a jobseeker an email + bell notification inviting them to apply for
+    a specific job. Idempotent — won't double-send to the same jobseeker.
+    """
+    from django.http import JsonResponse
+    from django.contrib import messages as flash
+    from apps.jobseekers.models import JobseekerProfile
+    from apps.employers.models import EmployerContact
+    from apps.notifications.models import Notification
+    from apps.notifications.email import _send
+
+    if request.method != 'POST':
+        return redirect(f'/employers/jobs/{job_id}/')
+
+    profile = request.user.employer_profile
+    company = profile.company
+    job = get_object_or_404(JobPosting, id=job_id, company=company)
+    jobseeker = get_object_or_404(JobseekerProfile, id=jobseeker_id)
+
+    # Skip if already invited (idempotent).
+    already = EmployerContact.objects.filter(
+        company=company, job=job, recipient=jobseeker,
+        kind=EmployerContact.KIND_REQUIREMENTS,
+    ).exists()
+
+    if not already:
+        subject = f'Invitation to apply — {job.title} at {company.name}'
+        body = (
+            f"Hi {jobseeker.first_name},\n\n"
+            f"{company.name} thinks you'd be a great fit for our open {job.title} role and would like to invite you to apply.\n\n"
+            f"View the full job posting and submit your application on EasyHire:\n"
+            f"https://easyhire-iloilo.onrender.com/jobs/{job.id}/\n\n"
+            f"— {company.name} Recruitment Team"
+        )
+
+        # Record as an EmployerContact (kind=requirements is closest fit).
+        contact = EmployerContact.objects.create(
+            sender=request.user, company=company, recipient=jobseeker, job=job,
+            kind=EmployerContact.KIND_REQUIREMENTS,
+            subject=subject, body=body,
+        )
+
+        # Email the jobseeker.
+        to_email = jobseeker.contact_email or (jobseeker.user.email if jobseeker.user else '')
+        if to_email:
+            _send(to_email, subject, body)
+            contact.delivered_to_email = to_email
+            contact.save(update_fields=['delivered_to_email'])
+
+        # Bell notification.
+        if jobseeker.user:
+            Notification.objects.create(
+                recipient=jobseeker.user,
+                notif_type=Notification.EMPLOYER_CONTACTED,
+                company=company, jobseeker=jobseeker, job=job,
+                liker_preview=f'an invitation to apply for {job.title}',
+                admin_message=subject,
+            )
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True, 'already': already})
+
+    if already:
+        flash.info(request, f'{jobseeker.first_name} has already been invited.')
+    else:
+        flash.success(request, f'Invitation sent to {jobseeker.first_name}.')
+    return redirect(f'/employers/jobs/{job_id}/')
 
 
 @employer_verified_required
@@ -713,6 +800,11 @@ def candidate_detail(request, jobseeker_id):
         application = (Application.objects
                        .filter(jobseeker=jobseeker, job=current_job)
                        .first())
+
+        # Auto-bump pending → viewed when the employer opens the detail page.
+        if application and application.status == Application.STATUS_PENDING:
+            application.status = Application.STATUS_VIEWED
+            application.save(update_fields=['status'])
 
         # Match score for the current job (admin sees the badge; everyone else
         # gets the number computed but it's hidden in the template).
