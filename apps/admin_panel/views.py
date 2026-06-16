@@ -610,6 +610,66 @@ def company_settings(request, pk):
 
 
 @staff_required
+def job_match_detail(request, pk, job_id, jobseeker_id):
+    """Admin view of a jobseeker in the context of a specific job match.
+    Mirrors jobseeker_application_detail but works for non-applicants too —
+    used when admin clicks a Top Match on the company job detail page.
+    """
+    from apps.jobseekers.models import (
+        JobseekerProfile, Education, Skill, Certification, WorkExperience,
+    )
+    from apps.jobs.models import JobPosting, Application
+    from apps.matching.engine import compute_match_score, get_ranked_jobseekers
+
+    company = get_object_or_404(Company, pk=pk)
+    job = get_object_or_404(JobPosting, pk=job_id, company=company)
+    jobseeker = get_object_or_404(JobseekerProfile.objects.select_related('user'), pk=jobseeker_id)
+
+    score_data = compute_match_score(job, jobseeker) if jobseeker.profile_complete else {
+        'total': 0, 'breakdown': {}
+    }
+
+    educations    = Education.objects.filter(profile=jobseeker).order_by('-year_started')
+    skills        = Skill.objects.filter(profile=jobseeker)
+    certifications = Certification.objects.filter(profile=jobseeker)
+    experiences   = WorkExperience.objects.filter(profile=jobseeker).order_by('-year_started', '-id')
+
+    # Prev/Next walks the ranked non-applicant jobseekers for this job.
+    applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
+    ranked_ids = [r['profile'].id for r in get_ranked_jobseekers(job) if r['profile'].id not in applicant_ids]
+    prev_id = next_id = None
+    try:
+        idx = ranked_ids.index(jobseeker.id)
+        if idx > 0:
+            prev_id = ranked_ids[idx - 1]
+        if idx < len(ranked_ids) - 1:
+            next_id = ranked_ids[idx + 1]
+    except ValueError:
+        pass
+
+    # Whether they actually applied (for the small status hint at the top).
+    application = Application.objects.filter(jobseeker=jobseeker, job=job).first()
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'active_nav':    'companies',
+        'company':       company,
+        'job':           job,
+        'jobseeker':     jobseeker,
+        'application':   application,
+        'score':         score_data.get('total', 0),
+        'breakdown':     score_data.get('breakdown', {}),
+        'educations':    educations,
+        'skills':        skills,
+        'certifications': certifications,
+        'experiences':   experiences,
+        'prev_id':       prev_id,
+        'next_id':       next_id,
+    })
+    return render(request, 'admin_panel/job_match_detail.html', ctx)
+
+
+@staff_required
 def company_job_detail(request, pk, job_id):
     """Admin read-only view of a company job post + top-ranked jobseekers."""
     from apps.jobs.models import JobPosting, Application

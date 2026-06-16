@@ -1,6 +1,4 @@
 {% extends "admin_panel/base_admin.html" %}
-{% load match_tags %}
-
 {% block title %}{{ job.title }} — {{ company.name }} — EasyHire Admin{% endblock %}
 
 {% block admin_content %}
@@ -121,7 +119,7 @@
     {% if ranked %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {% for item in ranked %}
-      <a href="/admin-panel/jobseekers/{{ item.profile.id }}/"
+      <a href="/admin-panel/companies/{{ company.id }}/jobs/{{ job.id }}/match/{{ item.profile.id }}/"
          class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
 
         <div class="flex items-start justify-between gap-2 mb-3">
@@ -129,7 +127,7 @@
             <p class="font-bold text-primary text-base leading-tight">{{ item.profile.first_name }} {{ item.profile.last_name }}</p>
             <p class="text-muted text-xs italic truncate">{{ item.profile.barangay|default:item.profile.city_municipality }}</p>
           </div>
-          {% match_badge item.score True %}
+          <span class="text-primary text-sm font-extrabold flex-shrink-0">{{ item.score }}%</span>
         </div>
 
         <div class="flex flex-wrap gap-1.5 flex-1">
