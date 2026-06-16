@@ -372,18 +372,58 @@
         </div>
 
         <div id="interview-fields" class="hidden space-y-3">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-primary text-xs font-medium mb-1">Interview date &amp; time</label>
-              <input type="datetime-local" name="interview_at"
-                     class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-            </div>
-            <div>
-              <label class="block text-primary text-xs font-medium mb-1">Location</label>
-              <input type="text" name="interview_location" placeholder="e.g. Zoom link, office address"
-                     class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+          <div>
+            <label class="block text-primary text-xs font-medium mb-1">Interview date &amp; time</label>
+            <input type="datetime-local" name="interview_at"
+                   class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+          </div>
+
+          <div>
+            <p class="text-primary text-xs font-medium mb-1">Format</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2" id="interview-format-group">
+              <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
+                <input type="radio" name="interview_format" value="onsite" checked class="accent-teal">
+                On-site
+              </label>
+              <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
+                <input type="radio" name="interview_format" value="online" class="accent-teal">
+                Remote (online)
+              </label>
+              <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
+                <input type="radio" name="interview_format" value="phone" class="accent-teal">
+                Remote (phone)
+              </label>
             </div>
           </div>
+
+          <!-- On-site: address (prefilled with the company's Iloilo branch) -->
+          <div data-loc-field="onsite">
+            <label class="block text-primary text-xs font-medium mb-1">Office address</label>
+            <input type="text" data-loc-input="onsite"
+                   value="{% if company.iloilo_street or company.iloilo_barangay_name %}{% if company.iloilo_bldg_unit %}{{ company.iloilo_bldg_unit }}, {% endif %}{{ company.iloilo_street }}{% if company.iloilo_street and company.iloilo_barangay_name %}, {% endif %}{{ company.iloilo_barangay_name }}, Iloilo City{% else %}{{ company.main_branch_address|default:'' }}{% endif %}"
+                   placeholder="Office or meeting venue"
+                   class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+          </div>
+
+          <!-- Online: meeting link -->
+          <div data-loc-field="online" class="hidden">
+            <label class="block text-primary text-xs font-medium mb-1">Meeting link</label>
+            <input type="url" data-loc-input="online" disabled
+                   placeholder="e.g. https://meet.google.com/abc-defg-hij"
+                   class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+          </div>
+
+          <!-- Phone: rep's phone (prefilled if available) -->
+          <div data-loc-field="phone" class="hidden">
+            <label class="block text-primary text-xs font-medium mb-1">Phone number</label>
+            <input type="tel" data-loc-input="phone" disabled
+                   value="{% if request.user.employer_profile.phone %}+63 {{ request.user.employer_profile.phone|slice:'1:' }}{% endif %}"
+                   placeholder="e.g. +63 917 123 4567"
+                   class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+          </div>
+
+          <!-- Hidden field the backend actually reads: format prefix + value. -->
+          <input type="hidden" name="interview_location" id="interview-location-final" value="">
         </div>
 
         <div>
@@ -493,6 +533,49 @@ ${COMPANY_NAME} Recruitment Team`;
         switchKind('interview');
       } catch (e) { /* modal may not exist on this view */ }
     }, 80);
+  }
+})();
+
+// ── Interview format radio + dynamic location field ─────────────────
+(function() {
+  const group = document.getElementById('interview-format-group');
+  if (!group) return;
+  const prefixes = {
+    onsite: 'Office: ',
+    online: 'Online meeting: ',
+    phone:  'Phone call: ',
+  };
+
+  function applyFormat(fmt) {
+    ['onsite', 'online', 'phone'].forEach(function(f) {
+      const wrapper = document.querySelector('[data-loc-field="' + f + '"]');
+      const input   = document.querySelector('[data-loc-input="' + f + '"]');
+      if (!wrapper || !input) return;
+      const active = (f === fmt);
+      wrapper.classList.toggle('hidden', !active);
+      input.disabled = !active;
+    });
+  }
+
+  group.querySelectorAll('input[type="radio"]').forEach(function(r) {
+    r.addEventListener('change', function() { applyFormat(r.value); });
+  });
+
+  // When the contact form submits, copy the active value (with format prefix)
+  // into the hidden interview_location field the backend reads.
+  const form = document.getElementById('contact-form');
+  if (form) {
+    form.addEventListener('submit', function() {
+      const kind = (document.getElementById('contact-kind') || {}).value || '';
+      if (kind !== 'interview') return;
+      const checked = group.querySelector('input[type="radio"]:checked');
+      const fmt = checked ? checked.value : 'onsite';
+      const input = document.querySelector('[data-loc-input="' + fmt + '"]');
+      const raw = (input && input.value || '').trim();
+      const final = raw ? (prefixes[fmt] + raw) : '';
+      const hidden = document.getElementById('interview-location-final');
+      if (hidden) hidden.value = final;
+    });
   }
 })();
 </script>
