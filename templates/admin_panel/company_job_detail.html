@@ -146,6 +146,12 @@
       </a>
       {% endfor %}
     </div>
+
+    {% if matches_page.paginator.num_pages > 1 %}
+    {% with page=matches_page qs_base=matches_qs_base %}
+    {% include "partials/_pagination.html" %}
+    {% endwith %}
+    {% endif %}
     {% else %}
     <div class="bg-white border border-gray-200 rounded-2xl p-10 text-center">
       <p class="text-primary font-semibold text-sm mb-1">No jobseekers to rank yet.</p>

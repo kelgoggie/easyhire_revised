@@ -283,13 +283,15 @@ def jobseeker_detail(request, pk):
     from apps.jobseekers.models import (
         JobseekerProfile, Education, Skill, Certification, WorkExperience,
     )
+    from apps.core.pagination import paginate, querystring_without
+
     jobseeker = get_object_or_404(JobseekerProfile.objects.select_related('user'), pk=pk)
     educations    = Education.objects.filter(profile=jobseeker).order_by('-year_started')
     skills        = Skill.objects.filter(profile=jobseeker)
     certifications = Certification.objects.filter(profile=jobseeker)
     experiences   = WorkExperience.objects.filter(profile=jobseeker).order_by('-year_started', '-id')
 
-    from apps.jobs.models import Application
+    from apps.jobs.models import Application, JobPosting
     applications = (Application.objects.filter(jobseeker=jobseeker)
                     .select_related('job', 'job__company')
                     .order_by('-created_at')[:10])
@@ -300,6 +302,29 @@ def jobseeker_detail(request, pk):
     pending_change = (PersonalInfoChangeRequest.objects
                       .filter(profile=jobseeker, status=PersonalInfoChangeRequest.STATUS_PENDING)
                       .order_by('-submitted_at').first())
+
+    # Top compatible jobs across the platform (excludes jobs they already applied to).
+    ranked_jobs = []
+    if jobseeker.profile_complete:
+        from apps.matching.engine import compute_match_score
+        already_applied = set(
+            Application.objects.filter(jobseeker=jobseeker).values_list('job_id', flat=True)
+        )
+        scored = []
+        for job in (JobPosting.objects
+                    .filter(status=JobPosting.STATUS_OPEN)
+                    .exclude(id__in=already_applied)
+                    .select_related('company', 'experience_requirement')
+                    .prefetch_related('skill_requirements', 'education_requirements')):
+            try:
+                s = compute_match_score(job, jobseeker)
+                scored.append({'job': job, 'score': s.get('total', 0)})
+            except Exception:
+                continue
+        scored.sort(key=lambda x: -x['score'])
+        ranked_jobs = scored
+
+    jobs_page = paginate(request, ranked_jobs, per_page=8, page_param='jobs_page')
 
     ctx = _admin_context(request)
     ctx.update({
@@ -312,6 +337,9 @@ def jobseeker_detail(request, pk):
         'prev_id':        prev_id,
         'next_id':        next_id,
         'pending_change': pending_change,
+        'jobs_page':           jobs_page,
+        'jobs_ranked':         list(jobs_page.object_list),
+        'jobs_qs_base':        querystring_without(request, 'jobs_page'),
     })
     return render(request, 'admin_panel/jobseeker_detail.html', ctx)
 
@@ -674,21 +702,25 @@ def company_job_detail(request, pk, job_id):
     """Admin read-only view of a company job post + top-ranked jobseekers."""
     from apps.jobs.models import JobPosting, Application
     from apps.matching.engine import get_ranked_jobseekers
+    from apps.core.pagination import paginate, querystring_without
 
     company = get_object_or_404(Company, pk=pk)
     job = get_object_or_404(JobPosting.objects.select_related('company'), pk=job_id, company=company)
 
-    # Top 8 matches across all jobseekers (excluding people who already applied).
+    # All matches across all jobseekers (excluding people who already applied),
+    # then paginate eight per page.
     applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
-    ranked = get_ranked_jobseekers(job)
-    ranked = [r for r in ranked if r['profile'].id not in applicant_ids][:8]
+    ranked = [r for r in get_ranked_jobseekers(job) if r['profile'].id not in applicant_ids]
+    matches_page = paginate(request, ranked, per_page=8, page_param='matches_page')
 
     ctx = _admin_context(request)
     ctx.update({
         'active_nav':       'companies',
         'company':          company,
         'job':              job,
-        'ranked':           ranked,
+        'ranked':           list(matches_page.object_list),
+        'matches_page':     matches_page,
+        'matches_qs_base':  querystring_without(request, 'matches_page'),
         'applicants_count': len(applicant_ids),
     })
     return render(request, 'admin_panel/company_job_detail.html', ctx)

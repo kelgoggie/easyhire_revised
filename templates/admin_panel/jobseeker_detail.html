@@ -206,6 +206,51 @@
     </div>
   </div>
 
+  <!-- Top compatible jobs -->
+  <div class="bg-surface/60 border border-taupe/40 rounded-2xl p-5 mt-5">
+    <div class="flex items-baseline justify-between mb-1">
+      <p class="text-primary font-bold text-sm">Top Compatible Jobs</p>
+      <p class="text-muted text-xs italic">Open jobs ranked by match score for this jobseeker.</p>
+    </div>
+    <p class="text-muted text-xs mb-4">Click any job to inspect the per-category breakdown.</p>
+
+    {% if jobs_ranked %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      {% for item in jobs_ranked %}
+      <a href="/admin-panel/companies/{{ item.job.company.id }}/jobs/{{ item.job.id }}/match/{{ jobseeker.id }}/"
+         class="bg-white border border-gray-200 rounded-xl p-4 hover:border-teal/30 hover:shadow-sm transition flex flex-col">
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <div class="min-w-0 flex-1">
+            <p class="font-bold text-primary text-sm leading-tight truncate">{{ item.job.title }}</p>
+            <p class="text-muted text-xs truncate">{{ item.job.company.name }}</p>
+          </div>
+          <span class="text-primary text-sm font-extrabold flex-shrink-0">{{ item.score }}%</span>
+        </div>
+        <p class="text-muted text-xs italic truncate">{{ item.job.location_display|truncatechars:30 }}</p>
+        {% if item.job.education_requirement or item.job.skill_requirements.exists %}
+        <div class="flex flex-wrap gap-1 mt-2">
+          {% if item.job.education_requirement %}
+          <span class="inline-flex items-center bg-teal/10 text-teal text-[10px] px-2 py-0.5 rounded-full border border-teal/20 truncate max-w-full">{{ item.job.education_requirement.get_level_display|truncatechars:20 }}</span>
+          {% endif %}
+          {% for skill in item.job.skill_requirements.all|slice:":2" %}
+          <span class="inline-flex items-center bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full border border-green-200 truncate max-w-full">{{ skill.name|truncatechars:18 }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+
+    {% if jobs_page.paginator.num_pages > 1 %}
+    {% with page=jobs_page qs_base=jobs_qs_base %}
+    {% include "partials/_pagination.html" %}
+    {% endwith %}
+    {% endif %}
+    {% else %}
+    <p class="text-muted text-xs italic text-center py-4">No open jobs available right now, or this jobseeker hasn't completed their profile.</p>
+    {% endif %}
+  </div>
+
   <!-- Applications list -->
   <div class="bg-surface/60 border border-taupe/40 rounded-2xl p-5">
     <div class="flex items-baseline justify-between mb-3">
