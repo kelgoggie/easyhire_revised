@@ -5,7 +5,7 @@
 <div class="py-8 max-w-7xl mx-auto">
 
   <!-- Back to job -->
-  <a href="/admin-panel/companies/{{ company.id }}/jobs/{{ job.id }}/"
+  <a href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
@@ -22,7 +22,7 @@
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
     <div>
       <h2 class="text-xl sm:text-2xl font-extrabold text-primary leading-tight">
-        {{ job.title }}<span class="font-normal text-primary">, </span><a href="/admin-panel/companies/{{ company.id }}/" class="font-normal text-primary text-base sm:text-xl align-middle hover:text-teal transition">{{ company.name }}</a>
+        {{ job.title }}<span class="font-normal text-primary">, </span><a href="/admin-panel/companies/{{ company.id|hashid }}/" class="font-normal text-primary text-base sm:text-xl align-middle hover:text-teal transition">{{ company.name }}</a>
       </h2>
       {% if application %}
       <p class="text-muted text-sm mt-0.5">Applied {{ application.created_at|date:"M j, Y g:i A" }} · Status: <strong>{{ application.get_status_display }}</strong></p>
@@ -32,12 +32,12 @@
     </div>
     <div class="flex items-center gap-2 flex-shrink-0">
       {% if prev_id %}
-      <a href="/admin-panel/companies/{{ company.id }}/jobs/{{ job.id }}/match/{{ prev_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+      <a href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/match/{{ prev_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
       {% else %}
       <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">&lt; Previous</span>
       {% endif %}
       {% if next_id %}
-      <a href="/admin-panel/companies/{{ company.id }}/jobs/{{ job.id }}/match/{{ next_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+      <a href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/match/{{ next_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
       {% else %}
       <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">Next &gt;</span>
       {% endif %}
@@ -103,6 +103,7 @@
 
     <!-- RIGHT: Job requirements -->
     <div class="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
+      <p class="text-base font-extrabold text-primary border-b border-gray-100 pb-3 -mt-1">Job Requirements</p>
       <div>
         <p class="text-sm font-bold text-primary mb-2">Skills:</p>
         {% with sk=job.skill_requirements.all %}

@@ -16,7 +16,7 @@
              value="{{ job.title|default:'' }}"
              placeholder="Job Title"
              class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary bg-transparent border-b-2 border-transparent focus:border-teal focus:outline-none transition flex-1 min-w-0 py-1">
-      <a href="{% if job %}/employers/jobs/{{ job.id }}/{% else %}/employers/jobs/{% endif %}"
+      <a href="{% if job %}/employers/jobs/{{ job.id|hashid }}/{% else %}/employers/jobs/{% endif %}"
          class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition flex-shrink-0">
         Cancel
       </a>

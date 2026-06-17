@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from apps.core.hashids import encode as _hashid
 from .models import Notification
 
 
@@ -38,7 +39,7 @@ def notifications_api(request):
             item['actor'] = n.company.name if n.company else 'Employer'
             item['verb']  = 'liked your resume.'
             item['icon']  = 'heart'
-            item['url']   = f'/jobs/view/{n.job.id}/' if n.job else '#'
+            item['url']   = f'/jobs/view/{_hashid(n.job.id)}/' if n.job else '#'
         elif n.notif_type == Notification.MATCH:
             item['icon'] = 'sparkle'
             if request.user.is_jobseeker:
@@ -47,12 +48,12 @@ def notifications_api(request):
             else:
                 item['actor'] = f"{n.jobseeker.first_name} {n.jobseeker.last_name}" if n.jobseeker else 'Jobseeker'
                 item['verb']  = "is a match!"
-            item['url'] = f'/jobs/view/{n.job.id}/' if n.job else '#'
+            item['url'] = f'/jobs/view/{_hashid(n.job.id)}/' if n.job else '#'
         elif n.notif_type == Notification.JOBSEEKERS_LIKED_JOB:
             item['actor'] = n.liker_preview or 'Someone'
             item['verb']  = 'liked your job post.'
             item['icon']  = 'heart'
-            item['url']   = f'/employers/jobs/{n.job.id}/candidates/?tab=liked_by' if n.job else '#'
+            item['url']   = f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=liked_by' if n.job else '#'
         elif n.notif_type == Notification.JOB_DELETED_BY_ADMIN:
             item['actor']  = 'PESO Admin'
             item['verb']   = f'removed your job post "{n.liker_preview or "Untitled"}".'
@@ -78,7 +79,7 @@ def notifications_api(request):
             item['actor'] = actor_name
             item['verb']  = 'applied to your job post.'
             item['icon']  = 'briefcase'
-            item['url']   = (f'/employers/jobs/{n.job.id}/candidates/?tab=applicants'
+            item['url']   = (f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=applicants'
                              if n.job else '/employers/jobs/')
         elif n.notif_type == Notification.APPLICATION_ACCEPTED:
             item['actor'] = n.company.name if n.company else 'Employer'
@@ -102,7 +103,7 @@ def notifications_api(request):
             item['icon']   = 'briefcase'
             # Invites → go to the job detail; other contacts → inbox.
             if n.job and 'invitation to apply' in (n.liker_preview or '').lower():
-                item['url'] = f'/jobs/view/{n.job.id}/'
+                item['url'] = f'/jobs/view/{_hashid(n.job.id)}/'
             else:
                 item['url'] = '/inbox/'
         data.append(item)

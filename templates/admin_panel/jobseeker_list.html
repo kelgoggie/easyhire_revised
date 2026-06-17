@@ -48,7 +48,7 @@
   {% if page.object_list %}
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for js in page.object_list %}
-    <a href="/admin-panel/jobseekers/{{ js.id }}/"
+    <a href="/admin-panel/jobseekers/{{ js.id|hashid }}/"
        class="block bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition relative">
       <p class="font-bold text-primary text-base leading-tight">{{ js.first_name }} {{ js.last_name }}</p>
       <p class="text-muted text-xs italic mb-3">Joined {{ js.created_at|date:"M j Y" }}</p>
@@ -72,18 +72,7 @@
     {% endfor %}
   </div>
 
-  <!-- Pagination -->
-  {% if page.paginator.num_pages > 1 %}
-  <div class="flex items-center justify-between mt-8 text-sm">
-    {% if page.has_previous %}
-    <a href="?page={{ page.previous_page_number }}&sort={{ sort }}&q={{ search }}" class="text-muted hover:text-primary transition">&lt; Previous</a>
-    {% else %}<span></span>{% endif %}
-    <span class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-    {% if page.has_next %}
-    <a href="?page={{ page.next_page_number }}&sort={{ sort }}&q={{ search }}" class="text-muted hover:text-primary transition">Next &gt;</a>
-    {% else %}<span></span>{% endif %}
-  </div>
-  {% endif %}
+  {% include "partials/_pagination.html" %}
   {% else %}
   <div class="border border-gray-200 rounded-2xl p-12 text-center text-muted text-sm">
     {% if search %}No jobseekers match &ldquo;{{ search }}&rdquo;.{% else %}No jobseekers yet.{% endif %}

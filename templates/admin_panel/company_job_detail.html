@@ -5,7 +5,7 @@
 <div class="py-8 max-w-7xl mx-auto">
 
   <!-- Breadcrumb-ish back -->
-  <a href="/admin-panel/companies/{{ company.id }}/"
+  <a href="/admin-panel/companies/{{ company.id|hashid }}/"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
@@ -58,6 +58,7 @@
     </div>
 
     <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 space-y-5">
+      <p class="text-base font-extrabold text-primary border-b border-gray-100 pb-3 -mt-1">Job Requirements</p>
       <div>
         <p class="text-sm font-bold text-primary mb-2">Skills</p>
         {% with skills=job.skill_requirements.all %}
@@ -109,7 +110,7 @@
   </div>
 
   <!-- Top Matches -->
-  <section>
+  <section id="top-matches" class="scroll-mt-20">
     <div class="flex items-baseline justify-between gap-3 mb-1">
       <h2 class="text-xl text-primary"><span class="font-extrabold">Top Matches</span></h2>
       <p class="text-muted text-xs italic">Jobseekers ranked by the matching engine (excludes applicants).</p>
@@ -119,7 +120,7 @@
     {% if ranked %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {% for item in ranked %}
-      <a href="/admin-panel/companies/{{ company.id }}/jobs/{{ job.id }}/match/{{ item.profile.id }}/"
+      <a href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/match/{{ item.profile.id|hashid }}/"
          class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
 
         <div class="flex items-start justify-between gap-2 mb-3">
@@ -148,7 +149,7 @@
     </div>
 
     {% if matches_page.paginator.num_pages > 1 %}
-    {% with page=matches_page qs_base=matches_qs_base %}
+    {% with page=matches_page qs_base=matches_qs_base page_param="matches_page" anchor="top-matches" %}
     {% include "partials/_pagination.html" %}
     {% endwith %}
     {% endif %}

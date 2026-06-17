@@ -12,13 +12,13 @@
     <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">{{ current_job.title }}</h1>
     <div class="flex items-center gap-2 flex-shrink-0 sm:pt-2">
       {% if prev_id %}
-      <a href="/employers/candidates/{{ prev_id }}/?job={{ current_job.id }}"
+      <a href="/employers/candidates/{{ prev_id|hashid }}/?job={{ current_job.id|hashid }}"
          class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
       {% else %}
       <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">&lt; Previous</span>
       {% endif %}
       {% if next_id %}
-      <a href="/employers/candidates/{{ next_id }}/?job={{ current_job.id }}"
+      <a href="/employers/candidates/{{ next_id|hashid }}/?job={{ current_job.id|hashid }}"
          class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
       {% else %}
       <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">Next &gt;</span>
@@ -62,7 +62,7 @@
 
     <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
       {% if active_hire %}
-      <button type="button" id="unhire-btn" data-app-id="{{ active_hire.id }}"
+      <button type="button" id="unhire-btn" data-app-id="{{ active_hire.id|hashid }}"
               class="flex items-center gap-2 px-4 py-2 rounded-full border border-red-300 bg-white text-red-500 text-xs font-semibold hover:bg-red-50 transition">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
@@ -72,9 +72,9 @@
       {% endif %}
 
       <!-- Like -->
-      <form method="POST" action="/employers/candidates/{{ jobseeker.id }}/like/">
+      <form method="POST" action="/employers/candidates/{{ jobseeker.id|hashid }}/like/">
         {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.path }}{% if current_job %}?job={{ current_job.id }}{% endif %}">
+        <input type="hidden" name="next" value="{{ request.path }}{% if current_job %}?job={{ current_job.id|hashid }}{% endif %}">
         <button type="submit" title="{% if is_liked %}Liked{% else %}Like this candidate{% endif %}"
                 class="w-9 h-9 flex items-center justify-center rounded-full border transition
                        {% if is_liked %}bg-teal text-white border-teal{% else %}bg-white text-muted border-taupe/30 hover:border-teal hover:text-teal{% endif %}">
@@ -129,7 +129,7 @@
             {{ application.get_status_display }}
           </span>
         </p>
-        <div class="flex items-center gap-2" id="app-actions" data-app-id="{{ application.id }}" data-status="{{ application.status }}">
+        <div class="flex items-center gap-2" id="app-actions" data-app-id="{{ application.id|hashid }}" data-status="{{ application.status }}">
           {% if application.status == 'pending' or application.status == 'viewed' %}
           <button type="button" data-action="accept"
                   class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">
@@ -330,7 +330,7 @@
 <div id="contact-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
   <div class="absolute inset-0 bg-black/40" onclick="closeContactModal()"></div>
   <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto z-10">
-    <form method="POST" action="/employers/candidates/{{ jobseeker.id }}/contact/" id="contact-form">
+    <form method="POST" action="/employers/candidates/{{ jobseeker.id|hashid }}/contact/" id="contact-form">
       {% csrf_token %}
       <input type="hidden" name="kind" id="contact-kind" value="requirements">
 

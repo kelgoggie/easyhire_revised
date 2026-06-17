@@ -1,5 +1,6 @@
 from django.views import View
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
+from apps.core.hashids import encode as _hashid
 from .models import JobPosting
 
 from apps.matching.engine import (
@@ -122,7 +123,7 @@ class JobseekerJobDetailView(View):
 
     def get(self, request, pk):
         if not request.user.is_authenticated or not request.user.is_jobseeker:
-            return redirect(f'/jobs/{pk}/')
+            return redirect(f'/jobs/{_hashid(pk)}/')
 
         job = get_object_or_404(
             JobPosting.objects.select_related(

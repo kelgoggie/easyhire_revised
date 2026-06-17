@@ -9,10 +9,10 @@
     <h1 class="text-3xl sm:text-4xl font-extrabold text-primary leading-tight">Companies</h1>
     <div class="flex items-center gap-2 pt-2">
       {% if prev_id %}
-      <a href="/admin-panel/companies/{{ prev_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+      <a href="/admin-panel/companies/{{ prev_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
       {% else %}<span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">&lt; Previous</span>{% endif %}
       {% if next_id %}
-      <a href="/admin-panel/companies/{{ next_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+      <a href="/admin-panel/companies/{{ next_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
       {% else %}<span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">Next &gt;</span>{% endif %}
     </div>
   </div>
@@ -50,9 +50,9 @@
       </div>
     </div>
     <div class="flex flex-col items-end gap-2">
-      <a href="/admin-panel/companies/{{ company.id }}/settings/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-taupe/30 transition">Account Settings</a>
+      <a href="/admin-panel/companies/{{ company.id|hashid }}/settings/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-taupe/30 transition">Account Settings</a>
       {% if company.verification_status == 'pending' %}
-      <a href="/admin-panel/employers/{{ company.id }}/" class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">Review Verification</a>
+      <a href="/admin-panel/employers/{{ company.id|hashid }}/" class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">Review Verification</a>
       {% endif %}
     </div>
   </div>
@@ -91,8 +91,9 @@
     {% if jobs %}
     <div class="space-y-2">
       {% for job in jobs %}
-      <div class="job-row bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3"
-           data-job-id="{{ job.id }}" data-job-title="{{ job.title }}">
+      <div class="job-row bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3 hover:border-teal/30 hover:shadow-sm transition cursor-pointer"
+           data-job-id="{{ job.id|hashid }}" data-job-title="{{ job.title }}"
+           onclick="window.location='/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/'">
         <div class="min-w-0">
           <p class="font-bold text-primary text-sm leading-tight truncate">{{ job.title }}</p>
           <p class="text-muted text-xs">{{ job.location_display|truncatechars:40 }} · Posted {{ job.created_at|date:"M j, Y" }}</p>
@@ -101,8 +102,7 @@
             <span class="font-semibold {% if job.status == 'open' %}text-teal{% elif job.status == 'closed' %}text-muted{% else %}text-amber{% endif %}">{{ job.get_status_display }}</span>
           </p>
         </div>
-        <div class="flex gap-2 flex-shrink-0">
-          <a href="/admin-panel/companies/{{ company.id }}/jobs/{{ job.id }}/" class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">View</a>
+        <div class="flex gap-2 flex-shrink-0" onclick="event.stopPropagation()">
           <button type="button" class="delete-job-btn bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">Delete</button>
         </div>
       </div>
@@ -186,7 +186,7 @@
     if (!activeRow) return;
     submitBtn.disabled = true;
     const jobId = activeRow.dataset.jobId;
-    fetch('/admin-panel/companies/{{ company.id }}/jobs/' + jobId + '/delete/', {
+    fetch('/admin-panel/companies/{{ company.id|hashid }}/jobs/' + jobId + '/delete/', {
       method: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
       body: new FormData(form),

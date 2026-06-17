@@ -78,7 +78,7 @@
         <div class="flex items-start justify-between mb-3">
           <div class="min-w-0 pr-3">
             <p class="font-bold text-primary text-base leading-tight mb-0.5">
-              <a href="/jobs/view/{{ job.id }}/" class="hover:text-teal transition">{{ job.title }}</a>
+              <a href="/jobs/view/{{ job.id|hashid }}/" class="hover:text-teal transition">{{ job.title }}</a>
             </p>
             <p class="text-primary text-xs italic mb-0.5">{{ job.location_display|truncatechars:40 }}</p>
             <p class="text-muted text-xs italic mb-1">Posted on {{ job.created_at|date:"F j, Y" }}</p>
@@ -125,7 +125,7 @@
         </div>
 
         <div class="flex items-center justify-between gap-3">
-          <a href="/jobs/view/{{ job.id }}/"
+          <a href="/jobs/view/{{ job.id|hashid }}/"
              class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
             View Job
           </a>
@@ -162,7 +162,7 @@
 
   btn.addEventListener('click', function() {
     btn.disabled = true;
-    fetch('/companies/{{ company.id }}/follow/', {
+    fetch('/companies/{{ company.id|hashid }}/follow/', {
       method: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
     }).then(function(r){ return r.json(); }).then(function(d){

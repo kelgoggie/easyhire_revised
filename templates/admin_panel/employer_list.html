@@ -61,7 +61,7 @@
                         <td class="py-3 text-muted">{{ company.nature_of_company }}</td>
                         <td class="py-3 text-muted">{{ company.created_at|date:"M d, Y" }}</td>
                         <td class="py-3 text-right">
-                            <a href="/admin-panel/employers/{{ company.id }}/"
+                            <a href="/admin-panel/employers/{{ company.id|hashid }}/"
                                class="text-teal text-xs font-semibold hover:text-primary transition">
                                 Review →
                             </a>

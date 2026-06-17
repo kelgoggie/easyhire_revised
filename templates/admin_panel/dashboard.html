@@ -68,7 +68,7 @@
               {% endwith %}
             </td>
             <td class="px-4 py-3 text-right">
-              <a href="/admin-panel/employers/{{ company.id }}/" class="text-muted italic underline hover:text-primary transition">View</a>
+              <a href="/admin-panel/employers/{{ company.id|hashid }}/" class="text-muted italic underline hover:text-primary transition">View</a>
             </td>
           </tr>
           {% endfor %}

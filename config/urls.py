@@ -1,8 +1,13 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, register_converter
 from django.views.generic import TemplateView, RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
+
+from apps.core.hashids import HashidConverter
+
+# Register once so URL patterns app-wide can use ``<hashid:pk>``.
+register_converter(HashidConverter, 'hashid')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

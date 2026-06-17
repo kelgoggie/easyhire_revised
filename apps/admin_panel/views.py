@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from apps.core.hashids import encode as _hashid
 from apps.employers.models import Company, VerificationDocument
 
 
@@ -74,7 +75,7 @@ def _admin_context(request):
             'actor': c.name,
             'verb':  'is awaiting partnership approval.',
             'when':  _relative(c.created_at),
-            'url':   f'/admin-panel/employers/{c.id}/',
+            'url':   f'/admin-panel/employers/{_hashid(c.id)}/',
             'at':    c.created_at,
         })
     for r in (PersonalInfoChangeRequest.objects
@@ -85,7 +86,7 @@ def _admin_context(request):
             'actor': f'{r.profile.first_name} {r.profile.last_name}',
             'verb':  'requested a change of personal information.',
             'when':  _relative(r.submitted_at),
-            'url':   f'/admin-panel/jobseekers/{r.profile.id}/',
+            'url':   f'/admin-panel/jobseekers/{_hashid(r.profile.id)}/',
             'at':    r.submitted_at,
         })
     for ur in (UserReport.objects.filter(status=UserReport.STATUS_OPEN)
@@ -253,14 +254,16 @@ def jobseeker_list(request):
     elif sort == 'name_za':    qs = qs.order_by('-first_name', '-last_name')
     else:                      qs = qs.order_by('-created_at')   # 'newest'
 
+    from apps.core.pagination import querystring_without
     paginator = Paginator(qs, 24)
     page = paginator.get_page(request.GET.get('page') or 1)
 
     ctx = _admin_context(request)
     ctx.update({
-        'page':   page,
-        'search': search,
-        'sort':   sort,
+        'page':    page,
+        'search':  search,
+        'sort':    sort,
+        'qs_base': querystring_without(request, 'page'),
     })
     return render(request, 'admin_panel/jobseeker_list.html', ctx)
 
@@ -509,11 +512,13 @@ def company_list(request):
     elif sort == 'name_za':  qs = qs.order_by('-name')
     else:                    qs = qs.order_by('-created_at')
 
+    from apps.core.pagination import querystring_without
     paginator = Paginator(qs, 24)
     page = paginator.get_page(request.GET.get('page') or 1)
 
     ctx = _admin_context(request)
-    ctx.update({'page': page, 'search': search, 'sort': sort})
+    ctx.update({'page': page, 'search': search, 'sort': sort,
+                'qs_base': querystring_without(request, 'page')})
     return render(request, 'admin_panel/company_list.html', ctx)
 
 
@@ -855,41 +860,82 @@ def report_submit(request):
 def algorithm_settings(request):
     from .models import SiteSettings, AuditLog
     settings = SiteSettings.get()
-    saved = False
+    saved_form = None   # 'weights' | 'site' on success — drives the success modal + active tab
     error = None
+    active_tab = request.GET.get('tab', 'algorithm')
 
     if request.method == 'POST':
+        form_name = request.POST.get('form_name', 'weights')
 
-        try:
-            sk = int(request.POST.get('weight_skills', 0))
-            ed = int(request.POST.get('weight_education', 0))
-            ex = int(request.POST.get('weight_experience', 0))
-            ce = int(request.POST.get('weight_certifications', 0))
-        except (TypeError, ValueError):
-            error = 'Weights must be whole numbers.'
-            sk = ed = ex = ce = 0
+        if form_name == 'weights':
+            active_tab = 'algorithm'
+            try:
+                sk = int(request.POST.get('weight_skills', 0))
+                ed = int(request.POST.get('weight_education', 0))
+                ex = int(request.POST.get('weight_experience', 0))
+                ce = int(request.POST.get('weight_certifications', 0))
+            except (TypeError, ValueError):
+                error = 'Weights must be whole numbers.'
+                sk = ed = ex = ce = 0
 
-        if error is None:
-            if any(v < 0 or v > 100 for v in (sk, ed, ex, ce)):
-                error = 'Each weight must be between 0 and 100.'
-            elif (sk + ed + ex + ce) != 100:
-                error = f"Weights must add up to 100% (currently {sk + ed + ex + ce}%)."
-            else:
-                settings.weight_skills         = sk / 100.0
-                settings.weight_education      = ed / 100.0
-                settings.weight_experience     = ex / 100.0
-                settings.weight_certifications = ce / 100.0
-                settings.updated_by = request.user
-                settings.save(update_fields=[
-                    'weight_skills', 'weight_education', 'weight_experience',
-                    'weight_certifications', 'updated_by', 'updated_at',
-                ])
-                AuditLog.objects.create(
-                    admin=request.user, action=AuditLog.ACTION_EDIT,
-                    target_model='SiteSettings', target_id=settings.id,
-                    notes=f'Updated matching weights to S{sk}/E{ed}/X{ex}/C{ce}.',
-                )
-                saved = True
+            if error is None:
+                if any(v < 0 or v > 100 for v in (sk, ed, ex, ce)):
+                    error = 'Each weight must be between 0 and 100.'
+                elif (sk + ed + ex + ce) != 100:
+                    error = f"Weights must add up to 100% (currently {sk + ed + ex + ce}%)."
+                else:
+                    settings.weight_skills         = sk / 100.0
+                    settings.weight_education      = ed / 100.0
+                    settings.weight_experience     = ex / 100.0
+                    settings.weight_certifications = ce / 100.0
+                    settings.updated_by = request.user
+                    settings.save(update_fields=[
+                        'weight_skills', 'weight_education', 'weight_experience',
+                        'weight_certifications', 'updated_by', 'updated_at',
+                    ])
+                    AuditLog.objects.create(
+                        admin=request.user, action=AuditLog.ACTION_EDIT,
+                        target_model='SiteSettings', target_id=settings.id,
+                        notes=f'Updated matching weights to S{sk}/E{ed}/X{ex}/C{ce}.',
+                    )
+                    saved_form = 'weights'
+
+        elif form_name == 'site':
+            active_tab = 'site'
+            office  = (request.POST.get('office_address') or '').strip()[:255]
+            email   = (request.POST.get('contact_email') or '').strip()[:254]
+            hotline = (request.POST.get('hotline') or '').strip()[:40]
+            try:
+                htf_days       = int(request.POST.get('hard_to_fill_days', settings.hard_to_fill_days))
+                htf_threshold  = int(request.POST.get('hard_to_fill_applicant_threshold', settings.hard_to_fill_applicant_threshold))
+                compat_thresh  = float(request.POST.get('compatibility_threshold', settings.compatibility_threshold))
+            except (TypeError, ValueError):
+                error = 'Numeric fields must be valid numbers.'
+                htf_days = htf_threshold = 0
+                compat_thresh = 0.0
+
+            if error is None:
+                if htf_days < 1 or htf_threshold < 0 or not (0 <= compat_thresh <= 100):
+                    error = 'Numeric fields are out of allowed range.'
+                else:
+                    settings.office_address = office
+                    settings.contact_email  = email
+                    settings.hotline        = hotline
+                    settings.hard_to_fill_days = htf_days
+                    settings.hard_to_fill_applicant_threshold = htf_threshold
+                    settings.compatibility_threshold = compat_thresh
+                    settings.updated_by = request.user
+                    settings.save(update_fields=[
+                        'office_address', 'contact_email', 'hotline',
+                        'hard_to_fill_days', 'hard_to_fill_applicant_threshold',
+                        'compatibility_threshold', 'updated_by', 'updated_at',
+                    ])
+                    AuditLog.objects.create(
+                        admin=request.user, action=AuditLog.ACTION_EDIT,
+                        target_model='SiteSettings', target_id=settings.id,
+                        notes='Updated site settings (contact info / thresholds).',
+                    )
+                    saved_form = 'site'
 
     ctx = _admin_context(request)
     ctx.update({
@@ -898,8 +944,9 @@ def algorithm_settings(request):
         'weight_education_pct':      round(settings.weight_education * 100),
         'weight_experience_pct':     round(settings.weight_experience * 100),
         'weight_certifications_pct': round(settings.weight_certifications * 100),
-        'saved': saved,
-        'error': error,
+        'active_tab':  active_tab,
+        'saved_form':  saved_form,
+        'error':       error,
     })
     return render(request, 'admin_panel/algorithm_settings.html', ctx)
 
@@ -934,11 +981,13 @@ def report_list(request):
             Q(filed_by__email__icontains=search)
         )
 
+    from apps.core.pagination import querystring_without
     paginator = Paginator(qs, 25)
     page = paginator.get_page(request.GET.get('page') or 1)
 
     ctx = _admin_context(request)
-    ctx.update({'page': page, 'search': search, 'status': status})
+    ctx.update({'page': page, 'search': search, 'status': status,
+                'qs_base': querystring_without(request, 'page')})
     return render(request, 'admin_panel/report_list.html', ctx)
 
 

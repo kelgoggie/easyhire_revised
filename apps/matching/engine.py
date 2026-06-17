@@ -2,10 +2,6 @@ from rapidfuzz import fuzz
 from apps.jobseekers.models import Education, Skill, Certification, WorkExperience
 
 
-# ── Weights (core 4 add up to 1.0) ────────────────────────────────
-# Defaults. The active values come from SiteSettings (admin-editable);
-# get_weights() falls back to these if SiteSettings isn't reachable yet
-# (e.g. during initial migrations).
 WEIGHT_SKILLS = 0.40
 WEIGHT_EDUCATION = 0.25
 WEIGHT_EXPERIENCE = 0.25

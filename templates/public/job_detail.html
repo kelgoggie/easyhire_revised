@@ -24,7 +24,7 @@
     <!-- Title row -->
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-2">
       <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">
-        {{ job.title }}<span class="font-normal text-primary">, </span><span class="font-normal text-primary text-lg sm:text-xl md:text-2xl align-middle">{{ job.company.name }}</span>
+        {{ job.title }}<span class="font-normal text-primary">, </span><a href="/companies/{{ job.company.id|hashid }}/" class="font-normal text-primary text-lg sm:text-xl md:text-2xl align-middle hover:text-teal transition">{{ job.company.name }}</a>
         {% if job.company.is_verified %}
         <span title="Verified by PESO Iloilo City"
               class="inline-flex items-center gap-1 bg-teal/15 text-teal text-xs font-semibold px-2.5 py-0.5 rounded-full border border-teal/30 align-middle ml-1">
@@ -70,6 +70,7 @@
 
       <!-- RIGHT: Requirements -->
       <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 space-y-5">
+        <p class="text-base font-extrabold text-primary border-b border-gray-100 pb-3 -mt-1">Job Requirements</p>
 
         <!-- Skills -->
         <div>
@@ -151,7 +152,7 @@
       <p class="text-primary font-bold text-base mb-1">Sign in to EasyHire to apply</p>
       <p class="text-muted text-sm mb-4">You'll need an EasyHire jobseeker account to send your application to {{ job.company.name }}.</p>
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
-        <a href="/login/?next=/jobs/{{ job.id }}/" class="bg-amber text-white font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition text-sm">
+        <a href="/login/?next=/jobs/{{ job.id|hashid }}/" class="bg-amber text-white font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition text-sm">
           Sign In
         </a>
         <a href="/register/" class="bg-white border border-taupe/40 text-primary font-semibold px-8 py-2.5 rounded-full hover:bg-surface transition text-sm">
@@ -164,14 +165,14 @@
     {% if prev_job or next_job %}
     <div class="flex items-center justify-between mt-8 max-w-2xl mx-auto text-xs">
       {% if prev_job %}
-      <a href="/jobs/{{ prev_job.id }}/" class="text-muted hover:text-primary transition flex items-center gap-1">
+      <a href="/jobs/{{ prev_job.id|hashid }}/" class="text-muted hover:text-primary transition flex items-center gap-1">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         Previous: {{ prev_job.title|truncatechars:30 }}
       </a>
       {% else %}<span></span>{% endif %}
 
       {% if next_job %}
-      <a href="/jobs/{{ next_job.id }}/" class="text-muted hover:text-primary transition flex items-center gap-1">
+      <a href="/jobs/{{ next_job.id|hashid }}/" class="text-muted hover:text-primary transition flex items-center gap-1">
         Next: {{ next_job.title|truncatechars:30 }}
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
       </a>

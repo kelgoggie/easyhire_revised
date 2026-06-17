@@ -14,7 +14,7 @@
       <span class="inline-flex items-center bg-gray-100 text-muted text-xs font-semibold px-3 py-1.5 rounded-full">
         {{ job.slots }} slot{{ job.slots|pluralize }} open
       </span>
-      <a href="/employers/jobs/{{ job.id }}/edit/"
+      <a href="/employers/jobs/{{ job.id|hashid }}/edit/"
          class="inline-flex items-center gap-1.5 bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -34,10 +34,10 @@
       </span>
     </h2>
     {% if tab == 'recommended' %}
-    <a href="/employers/jobs/{{ job.id }}/candidates/?tab=applicants"
+    <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=applicants"
        class="text-teal text-sm font-semibold hover:underline">View Applicants ({{ applicants_count }}) →</a>
     {% else %}
-    <a href="/employers/jobs/{{ job.id }}/candidates/?tab=recommended"
+    <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=recommended"
        class="text-teal text-sm font-semibold hover:underline">View Recommended Jobseekers →</a>
     {% endif %}
   </div>
@@ -47,12 +47,12 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for item in ranked %}
     <div class="applicant-card bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col cursor-pointer"
-         data-app-id="{{ item.application_id|default:'' }}"
+         data-app-id="{% if item.application_id %}{{ item.application_id|hashid }}{% endif %}"
          data-app-status="{{ item.application_status|default:'' }}"
          data-applicant-name="{{ item.profile.first_name }} {{ item.profile.last_name }}"
-         data-applicant-id="{{ item.profile.id }}"
+         data-applicant-id="{{ item.profile.id|hashid }}"
          data-applied-at="{% if item.applied_at %}{{ item.applied_at|date:'F j, Y' }}{% endif %}"
-         data-href="/employers/candidates/{{ item.profile.id }}/?job={{ job.id }}"
+         data-href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}"
          onclick="if (event.target.closest('a, button, form')) return; window.location=this.dataset.href;">
 
       <!-- Top row: name + match smiley -->
@@ -134,7 +134,7 @@
     {% else %}
     <p class="text-primary font-semibold text-sm mb-1">No applicants yet.</p>
     <p class="text-muted text-xs mb-4">When jobseekers apply to this post, their applications will appear here ranked by match score.</p>
-    <a href="/employers/jobs/{{ job.id }}/candidates/?tab=recommended"
+    <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=recommended"
        class="inline-block bg-primary text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-teal transition">
       View Recommended Candidates
     </a>

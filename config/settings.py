@@ -102,6 +102,9 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'apps.accounts.context_processors.email_verification_status',
             ],
+            'builtins': [
+                'apps.core.templatetags.hashid_tags',
+            ],
         },
     },
 ]

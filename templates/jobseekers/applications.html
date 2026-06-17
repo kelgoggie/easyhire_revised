@@ -51,14 +51,14 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
       {% for item in items %}
       <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col cursor-pointer"
-           onclick="if (event.target.closest('a, button, form')) return; window.location='/jobs/view/{{ item.app.job.id }}/';">
+           onclick="if (event.target.closest('a, button, form')) return; window.location='/jobs/view/{{ item.app.job.id|hashid }}/';">
 
         <!-- Top row: title block (left) + status + match badge (right) -->
         <div class="flex items-start justify-between mb-3">
           <div class="min-w-0 pr-3">
             <p class="font-bold text-primary text-base leading-tight mb-0.5">{{ item.app.job.title }}</p>
             <p class="text-primary text-xs mb-0.5">
-              <a href="/companies/{{ item.app.job.company.id }}/" class="hover:text-teal transition">{{ item.app.job.company.name }}</a>
+              <a href="/companies/{{ item.app.job.company.id|hashid }}/" class="hover:text-teal transition">{{ item.app.job.company.name }}</a>
             </p>
             <p class="text-muted text-xs italic mb-0.5">{{ item.app.job.location_display }}</p>
             <p class="text-gray-400 text-xs">Applied {{ item.app.created_at|timesince }} ago</p>

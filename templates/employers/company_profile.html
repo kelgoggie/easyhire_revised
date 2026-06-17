@@ -77,7 +77,7 @@
         <div class="flex items-start justify-between mb-3">
           <div class="min-w-0 pr-3">
             <p class="font-bold text-primary text-base leading-tight mb-0.5">
-              <a href="/employers/jobs/{{ job.id }}/" class="hover:text-teal transition">{{ job.title }}</a>
+              <a href="/employers/jobs/{{ job.id|hashid }}/" class="hover:text-teal transition">{{ job.title }}</a>
             </p>
             <p class="text-primary text-xs italic mb-0.5">{{ job.location_display|truncatechars:40 }}</p>
             <p class="text-muted text-xs italic mb-1">Posted on {{ job.created_at|date:"F j, Y" }}</p>
@@ -98,9 +98,9 @@
               </svg>
             </button>
             <div class="hidden absolute right-0 top-7 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-40 py-1">
-              <a href="/employers/jobs/{{ job.id }}/edit/"       class="block px-4 py-2 text-sm text-primary hover:bg-surface">Edit Job</a>
-              <a href="/employers/jobs/{{ job.id }}/candidates/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">View Applicants</a>
-              <form method="POST" action="/employers/jobs/{{ job.id }}/close/">
+              <a href="/employers/jobs/{{ job.id|hashid }}/edit/"       class="block px-4 py-2 text-sm text-primary hover:bg-surface">Edit Job</a>
+              <a href="/employers/jobs/{{ job.id|hashid }}/candidates/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">View Applicants</a>
+              <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/close/">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="/employers/profile/">
                 <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">
@@ -108,10 +108,10 @@
                 </button>
               </form>
               <hr class="my-1 border-gray-100">
-              <form method="POST" action="/employers/jobs/{{ job.id }}/delete/" id="delete-job-form-cp-{{ job.id }}">
+              <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/delete/" id="delete-job-form-cp-{{ job.id|hashid }}">
                 {% csrf_token %}
                 <button type="button"
-                        onclick="confirmAction({title:'Delete this job post?', body:'This permanently removes the job and all of its applications. This cannot be undone.', ctaLabel:'Yes, delete', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('delete-job-form-cp-{{ job.id }}').submit();}})"
+                        onclick="confirmAction({title:'Delete this job post?', body:'This permanently removes the job and all of its applications. This cannot be undone.', ctaLabel:'Yes, delete', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('delete-job-form-cp-{{ job.id|hashid }}').submit();}})"
                         class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Delete</button>
               </form>
             </div>
@@ -155,11 +155,11 @@
 
         <!-- Bottom actions -->
         <div class="flex items-center justify-between gap-3">
-          <a href="/employers/jobs/{{ job.id }}/candidates/"
+          <a href="/employers/jobs/{{ job.id|hashid }}/candidates/"
              class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
             View Applicants ({{ job.applicants_count|default:0 }})
           </a>
-          <a href="/employers/jobs/{{ job.id }}/edit/"
+          <a href="/employers/jobs/{{ job.id|hashid }}/edit/"
              class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
             Edit Job
           </a>
@@ -198,7 +198,7 @@
             {% for app in hired_employees %}
             <tr class="border-b border-gray-50 last:border-0 hover:bg-surface/40 transition">
               <td class="px-6 py-3 font-bold text-primary">
-                <a href="/employers/candidates/{{ app.jobseeker.id }}/" class="hover:text-teal transition">
+                <a href="/employers/candidates/{{ app.jobseeker.id|hashid }}/" class="hover:text-teal transition">
                   {{ app.jobseeker.first_name }} {{ app.jobseeker.last_name }}
                 </a>
               </td>

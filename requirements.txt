@@ -27,6 +27,7 @@ crispy-tailwind>=1.0
 
 # Utilities
 django-extensions>=3.2        # shell_plus, runserver_plus etc.
+hashids>=1.3                  # encode integer PKs to scrambled URL slugs
 django-storages>=1.14         # cloud file storage for production
 django-cloudinary-storage>=0.3 # Cloudinary backend for media files
 cloudinary>=1.36              # Cloudinary SDK

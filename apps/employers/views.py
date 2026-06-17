@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from apps.employers.models import Company, VerificationDocument
 from apps.jobseekers.models import JobseekerProfile, Education, Skill, Certification, WorkExperience
 from apps.employers.models import CandidateInteraction
+from apps.core.hashids import encode as _hashid
 
 
 def landing(request):
@@ -429,7 +430,7 @@ def invite_to_apply(request, job_id, jobseeker_id):
     from apps.notifications.email import _send
 
     if request.method != 'POST':
-        return redirect(f'/employers/jobs/{job_id}/')
+        return redirect(f'/employers/jobs/{_hashid(job_id)}/')
 
     profile = request.user.employer_profile
     company = profile.company
@@ -448,7 +449,7 @@ def invite_to_apply(request, job_id, jobseeker_id):
             f"Hi {jobseeker.first_name},\n\n"
             f"{company.name} thinks you'd be a great fit for our open {job.title} role and would like to invite you to apply.\n\n"
             f"View the full job posting and submit your application on EasyHire:\n"
-            f"https://easyhire-iloilo.onrender.com/jobs/{job.id}/\n\n"
+            f"https://easyhire-iloilo.onrender.com/jobs/{_hashid(job.id)}/\n\n"
             f"— {company.name} Recruitment Team"
         )
 
@@ -483,7 +484,7 @@ def invite_to_apply(request, job_id, jobseeker_id):
         flash.info(request, f'{jobseeker.first_name} has already been invited.')
     else:
         flash.success(request, f'Invitation sent to {jobseeker.first_name}.')
-    return redirect(f'/employers/jobs/{job_id}/')
+    return redirect(f'/employers/jobs/{_hashid(job_id)}/')
 
 
 @employer_verified_required
@@ -893,7 +894,7 @@ def candidate_contact(request, jobseeker_id):
     """Employer sends an email (job requirements or interview schedule) to a
     jobseeker. Also creates an in-app bell notification."""
     if request.method != 'POST':
-        return redirect(f'/employers/candidates/{jobseeker_id}/')
+        return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
 
     from apps.employers.models import EmployerContact
     from apps.notifications.models import Notification
@@ -916,10 +917,10 @@ def candidate_contact(request, jobseeker_id):
 
     if kind not in (EmployerContact.KIND_REQUIREMENTS, EmployerContact.KIND_INTERVIEW):
         messages.error(request, 'Please pick a message type.')
-        return redirect(f'/employers/candidates/{jobseeker_id}/')
+        return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
     if not subject or not body:
         messages.error(request, 'Subject and body are required.')
-        return redirect(f'/employers/candidates/{jobseeker_id}/')
+        return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
 
     job = None
     if job_id_raw:
@@ -962,7 +963,7 @@ def candidate_contact(request, jobseeker_id):
         )
 
     messages.success(request, f'Your message has been sent to {jobseeker.first_name}.')
-    return redirect(f'/employers/candidates/{jobseeker_id}/')
+    return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
 
 
 # Analytics for employers is served by apps/analytics/views.analytics,

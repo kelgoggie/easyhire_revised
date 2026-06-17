@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from apps.core.hashids import encode as _hashid
 from django.utils import timezone
 from apps.jobs.models import JobPosting
 from apps.jobseekers.models import (
@@ -69,7 +70,7 @@ def dashboard(request):
 def job_apply(request, job_id):
     """Create an Application for the logged-in jobseeker on the given job."""
     if request.method != 'POST' or not request.user.is_jobseeker:
-        return redirect(f'/jobs/view/{job_id}/')
+        return redirect(f'/jobs/view/{_hashid(job_id)}/')
     try:
         profile = request.user.jobseeker_profile
     except JobseekerProfile.DoesNotExist:

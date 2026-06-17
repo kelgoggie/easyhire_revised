@@ -11,12 +11,12 @@
     <h1 class="text-3xl sm:text-4xl font-extrabold text-primary leading-tight">Jobseekers</h1>
     <div class="flex items-center gap-2 pt-2">
       {% if prev_id %}
-      <a href="/admin-panel/jobseekers/{{ prev_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+      <a href="/admin-panel/jobseekers/{{ prev_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
       {% else %}
       <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">&lt; Previous</span>
       {% endif %}
       {% if next_id %}
-      <a href="/admin-panel/jobseekers/{{ next_id }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+      <a href="/admin-panel/jobseekers/{{ next_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
       {% else %}
       <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">Next &gt;</span>
       {% endif %}
@@ -39,8 +39,8 @@
       </p>
     </div>
     <div class="flex flex-col items-end gap-2">
-      <a href="/admin-panel/jobseekers/{{ jobseeker.id }}/settings/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-taupe/30 transition">Account Settings</a>
-      <a href="/admin-panel/jobseekers/{{ jobseeker.id }}/edit-resume/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-taupe/30 transition">Edit Resume</a>
+      <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/settings/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-taupe/30 transition">Account Settings</a>
+      <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/edit-resume/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-taupe/30 transition">Edit Resume</a>
     </div>
   </div>
 
@@ -102,11 +102,11 @@
         {% endif %}
       </div>
       <div class="flex gap-2">
-        <button type="button" id="change-reject-btn" data-request-id="{{ pending_change.id }}"
+        <button type="button" id="change-reject-btn" data-request-id="{{ pending_change.id|hashid }}"
                 class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-5 py-2 rounded-full hover:bg-red-50 transition">
           Reject
         </button>
-        <button type="button" id="change-approve-btn" data-request-id="{{ pending_change.id }}"
+        <button type="button" id="change-approve-btn" data-request-id="{{ pending_change.id|hashid }}"
                 class="bg-teal text-white text-xs font-semibold px-5 py-2 rounded-full hover:bg-teal/90 transition">
           Approve
         </button>
@@ -207,7 +207,7 @@
   </div>
 
   <!-- Top compatible jobs -->
-  <div class="bg-surface/60 border border-taupe/40 rounded-2xl p-5 mt-5">
+  <div id="top-compatible-jobs" class="bg-surface/60 border border-taupe/40 rounded-2xl p-5 mt-5 scroll-mt-20">
     <div class="flex items-baseline justify-between mb-1">
       <p class="text-primary font-bold text-sm">Top Compatible Jobs</p>
       <p class="text-muted text-xs italic">Open jobs ranked by match score for this jobseeker.</p>
@@ -217,7 +217,7 @@
     {% if jobs_ranked %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {% for item in jobs_ranked %}
-      <a href="/admin-panel/companies/{{ item.job.company.id }}/jobs/{{ item.job.id }}/match/{{ jobseeker.id }}/"
+      <a href="/admin-panel/companies/{{ item.job.company.id|hashid }}/jobs/{{ item.job.id|hashid }}/match/{{ jobseeker.id|hashid }}/"
          class="bg-white border border-gray-200 rounded-xl p-4 hover:border-teal/30 hover:shadow-sm transition flex flex-col">
         <div class="flex items-start justify-between gap-2 mb-2">
           <div class="min-w-0 flex-1">
@@ -242,7 +242,7 @@
     </div>
 
     {% if jobs_page.paginator.num_pages > 1 %}
-    {% with page=jobs_page qs_base=jobs_qs_base %}
+    {% with page=jobs_page qs_base=jobs_qs_base page_param="jobs_page" anchor="top-compatible-jobs" %}
     {% include "partials/_pagination.html" %}
     {% endwith %}
     {% endif %}
@@ -260,7 +260,7 @@
     {% if applications %}
     <div class="space-y-1.5">
       {% for app in applications %}
-      <a href="/admin-panel/jobseekers/{{ jobseeker.id }}/applications/{{ app.id }}/"
+      <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/applications/{{ app.id|hashid }}/"
          class="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-teal/30 hover:shadow-sm transition">
         <div class="min-w-0">
           <p class="font-bold text-primary text-sm leading-tight">{{ app.job.title }}</p>

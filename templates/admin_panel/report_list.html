@@ -46,7 +46,7 @@
       <tbody>
         {% for r in page.object_list %}
         <tr class="report-row border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition"
-            data-report-id="{{ r.id }}"
+            data-report-id="{{ r.id|hashid }}"
             data-account-name="{{ r.account_label }}"
             data-account-type="{{ r.get_account_type_display }}"
             data-description="{{ r.description }}"
@@ -55,9 +55,9 @@
             data-filed-at="{{ r.created_at|date:'M j, Y g:i A' }}">
           <td class="px-5 py-3 font-bold text-primary">
             {% if r.reported_jobseeker %}
-            <a href="/admin-panel/jobseekers/{{ r.reported_jobseeker.id }}/" class="hover:text-teal transition">{{ r.account_label }}</a>
+            <a href="/admin-panel/jobseekers/{{ r.reported_jobseeker.id|hashid }}/" class="hover:text-teal transition">{{ r.account_label }}</a>
             {% elif r.reported_company %}
-            <a href="/admin-panel/companies/{{ r.reported_company.id }}/" class="hover:text-teal transition">{{ r.account_label }}</a>
+            <a href="/admin-panel/companies/{{ r.reported_company.id|hashid }}/" class="hover:text-teal transition">{{ r.account_label }}</a>
             {% else %}{{ r.account_label }}{% endif %}
           </td>
           <td class="px-4 py-3 text-muted italic">{{ r.get_account_type_display }}</td>
@@ -83,13 +83,7 @@
     {% endif %}
   </div>
 
-  {% if page.paginator.num_pages > 1 %}
-  <div class="flex items-center justify-between mt-6 text-sm">
-    {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&status={{ status }}&q={{ search }}" class="text-muted hover:text-primary">&lt; Previous</a>{% else %}<span></span>{% endif %}
-    <span class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-    {% if page.has_next %}<a href="?page={{ page.next_page_number }}&status={{ status }}&q={{ search }}" class="text-muted hover:text-primary">Next &gt;</a>{% else %}<span></span>{% endif %}
-  </div>
-  {% endif %}
+  {% include "partials/_pagination.html" %}
 
 </div>
 

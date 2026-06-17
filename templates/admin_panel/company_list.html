@@ -34,10 +34,10 @@
         </span>
       </button>
       <div id="sort-menu" class="hidden absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
-        <a href="?sort=newest&q={{ search }}"  class="block px-4 py-2 text-sm text-primary hover:bg-surface">Newest first</a>
-        <a href="?sort=oldest&q={{ search }}"  class="block px-4 py-2 text-sm text-primary hover:bg-surface">Oldest first</a>
-        <a href="?sort=name_az&q={{ search }}" class="block px-4 py-2 text-sm text-primary hover:bg-surface">Name A-Z</a>
-        <a href="?sort=name_za&q={{ search }}" class="block px-4 py-2 text-sm text-primary hover:bg-surface">Name Z-A</a>
+        <a href="?sort=newest&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort != 'oldest' and sort != 'name_az' and sort != 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest first</a>
+        <a href="?sort=oldest&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
+        <a href="?sort=name_az&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
+        <a href="?sort=name_za&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
       </div>
     </div>
   </div>
@@ -45,7 +45,7 @@
   {% if page.object_list %}
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for c in page.object_list %}
-    <a href="/admin-panel/companies/{{ c.id }}/"
+    <a href="/admin-panel/companies/{{ c.id|hashid }}/"
        class="block bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition relative">
       <div class="flex items-start gap-3">
         <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -77,13 +77,7 @@
     {% endfor %}
   </div>
 
-  {% if page.paginator.num_pages > 1 %}
-  <div class="flex items-center justify-between mt-8 text-sm">
-    {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&sort={{ sort }}&q={{ search }}" class="text-muted hover:text-primary">&lt; Previous</a>{% else %}<span></span>{% endif %}
-    <span class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-    {% if page.has_next %}<a href="?page={{ page.next_page_number }}&sort={{ sort }}&q={{ search }}" class="text-muted hover:text-primary">Next &gt;</a>{% else %}<span></span>{% endif %}
-  </div>
-  {% endif %}
+  {% include "partials/_pagination.html" %}
   {% else %}
   <div class="border border-gray-200 rounded-2xl p-12 text-center text-muted text-sm">
     {% if search %}No companies match &ldquo;{{ search }}&rdquo;.{% else %}No companies yet.{% endif %}

@@ -115,6 +115,14 @@ class SiteSettings(models.Model):
     maintenance_message = models.TextField(blank=True,
         help_text="Message shown to users during maintenance mode.")
 
+    # PESO Iloilo contact info (surfaced in footer + Help page).
+    office_address = models.CharField(max_length=255, blank=True, default="",
+        help_text="PESO Iloilo City office address (street, city, ZIP).")
+    contact_email  = models.EmailField(blank=True, default="",
+        help_text="Public-facing contact email shown in the footer.")
+    hotline        = models.CharField(max_length=40, blank=True, default="",
+        help_text="Public-facing hotline / landline number.")
+
     # Matching engine weights (must sum to 1.0). Defaults mirror the
     # historical constants in apps.matching.engine.
     weight_skills         = models.FloatField(default=0.40,

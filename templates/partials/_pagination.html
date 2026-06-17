@@ -1,13 +1,22 @@
 {% comment %}
   Shared pagination control. Renders nothing if there's only one page.
+
   Required context:
-    page      — django.core.paginator.Page object
-    qs_base   — current querystring minus the page param (already urlencoded)
+    page        — django.core.paginator.Page object
+    qs_base     — current querystring minus the page param (urlencoded)
+  Optional context:
+    page_param  — name of the page querystring param (default: "page").
+                  Use a unique value when the page hosts >1 paginator,
+                  e.g. "jobs_page", "matches_page".
+    anchor      — URL fragment to append (without #), so the browser jumps
+                  back to that section after the page reloads. E.g.
+                  "top-compatible-jobs". Place an id="..." on the section.
 {% endcomment %}
 {% if page and page.paginator.num_pages > 1 %}
+{% with pp=page_param|default:"page" %}
 <nav class="flex items-center justify-center gap-2 mt-8 flex-wrap" aria-label="Pagination">
   {% if page.has_previous %}
-  <a href="?{% if qs_base %}{{ qs_base }}&{% endif %}page={{ page.previous_page_number }}"
+  <a href="?{% if qs_base %}{{ qs_base }}&{% endif %}{{ pp }}={{ page.previous_page_number }}{% if anchor %}#{{ anchor }}{% endif %}"
      class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 text-xs text-primary hover:bg-surface hover:border-teal/30 transition">
     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
     Previous
@@ -25,7 +34,7 @@
   </span>
 
   {% if page.has_next %}
-  <a href="?{% if qs_base %}{{ qs_base }}&{% endif %}page={{ page.next_page_number }}"
+  <a href="?{% if qs_base %}{{ qs_base }}&{% endif %}{{ pp }}={{ page.next_page_number }}{% if anchor %}#{{ anchor }}{% endif %}"
      class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 text-xs text-primary hover:bg-surface hover:border-teal/30 transition">
     Next
     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -37,4 +46,5 @@
   </span>
   {% endif %}
 </nav>
+{% endwith %}
 {% endif %}

@@ -10,7 +10,7 @@
   <!-- ── Title row ──────────────────────────────────────────────── -->
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-2">
     <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">
-      {{ job.title }}<span class="font-normal text-primary">, </span><a href="/companies/{{ job.company.id }}/" class="font-normal text-primary text-lg sm:text-xl md:text-2xl align-middle hover:text-teal transition">{{ job.company.name }}</a>
+      {{ job.title }}<span class="font-normal text-primary">, </span><a href="/companies/{{ job.company.id|hashid }}/" class="font-normal text-primary text-lg sm:text-xl md:text-2xl align-middle hover:text-teal transition">{{ job.company.name }}</a>
       {% if job.company.is_verified %}
       <span title="Verified by PESO Iloilo City"
             class="inline-flex items-center gap-1 bg-teal/15 text-teal text-xs font-semibold px-2.5 py-0.5 rounded-full border border-teal/30 align-middle ml-1">
@@ -78,6 +78,7 @@
 
     <!-- RIGHT: Requirements -->
     <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 space-y-5">
+      <p class="text-base font-extrabold text-primary border-b border-gray-100 pb-3 -mt-1">Job Requirements</p>
 
       <!-- Skills -->
       <div>
@@ -187,7 +188,7 @@
         </p>
       </div>
 
-      <form id="apply-form" method="POST" action="/jobs/{{ job.id }}/apply/">
+      <form id="apply-form" method="POST" action="/jobs/{{ job.id|hashid }}/apply/">
         {% csrf_token %}
         <label class="block text-primary text-xs font-medium mb-1">Application Message</label>
         <textarea name="message" rows="6" placeholder="Introduce yourself and tell the employer why you're a great fit. This is optional."
@@ -279,7 +280,7 @@
       });
     }
 
-    bind(document.getElementById('like-btn'), '/jobs/{{ job.id }}/save/', function(btn, on) {
+    bind(document.getElementById('like-btn'), '/jobs/{{ job.id|hashid }}/save/', function(btn, on) {
       const svg = btn.querySelector('svg');
       if (on) {
         btn.classList.remove('text-gray-300', 'hover:text-red-400');
@@ -297,7 +298,7 @@
       }
     }, null, null, 'liked');
 
-    bind(document.getElementById('hide-btn'), '/jobs/{{ job.id }}/hide/', function(btn, on) {
+    bind(document.getElementById('hide-btn'), '/jobs/{{ job.id|hashid }}/hide/', function(btn, on) {
       if (on) {
         btn.classList.remove('text-gray-300', 'hover:text-red-400');
         btn.classList.add('text-primary');
@@ -337,14 +338,14 @@
   {% if prev_job or next_job %}
   <div class="flex items-center justify-between mt-8 max-w-2xl mx-auto text-xs">
     {% if prev_job %}
-    <a href="/jobs/view/{{ prev_job.id }}/" class="text-muted hover:text-primary transition flex items-center gap-1">
+    <a href="/jobs/view/{{ prev_job.id|hashid }}/" class="text-muted hover:text-primary transition flex items-center gap-1">
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
       Previous: {{ prev_job.title|truncatechars:30 }}
     </a>
     {% else %}<span></span>{% endif %}
 
     {% if next_job %}
-    <a href="/jobs/view/{{ next_job.id }}/" class="text-muted hover:text-primary transition flex items-center gap-1">
+    <a href="/jobs/view/{{ next_job.id|hashid }}/" class="text-muted hover:text-primary transition flex items-center gap-1">
       Next: {{ next_job.title|truncatechars:30 }}
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
     </a>
