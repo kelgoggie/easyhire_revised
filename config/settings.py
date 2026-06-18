@@ -101,6 +101,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.accounts.context_processors.email_verification_status',
+                'apps.core.context_processors.inbox_status',
             ],
             'builtins': [
                 'apps.core.templatetags.hashid_tags',

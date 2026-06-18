@@ -78,10 +78,13 @@
       </div>
 
       <!-- Inbox -->
-      <a href="/inbox/" title="Inbox" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary/8 transition">
+      <a href="/inbox/" title="Inbox" class="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary/8 transition">
         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
         </svg>
+        {% if inbox_has_new %}
+        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full"></span>
+        {% endif %}
       </a>
 
       <!-- Avatar -->
@@ -297,8 +300,22 @@
 // ── Notification bell ───────────────────────────────────────────────
 document.getElementById('notif-btn').addEventListener('click', function(e) {
   e.stopPropagation();
-  document.getElementById('notif-dropdown').classList.toggle('hidden');
+  const dropdown = document.getElementById('notif-dropdown');
+  const wasHidden = dropdown.classList.contains('hidden');
+  dropdown.classList.toggle('hidden');
   document.getElementById('avatar-dropdown').classList.add('hidden');
+  // First open: clear the dot AND mark every visible item as read so the
+  // dot doesn't pop back on the next page load / polling tick. Items
+  // remain rendered in the dropdown for this view (the hire-offer Accept/
+  // Decline buttons still work) — they just disappear on the next fetch.
+  if (wasHidden) {
+    const dot = document.getElementById('notif-dot');
+    if (dot) dot.classList.add('hidden');
+    fetch('/api/notifications/read-all/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+  }
 });
 
 // ── More button (opens dropdown). Avatar itself navigates to /profile/.
@@ -351,7 +368,25 @@ function fetchNotifications() {
       var verb   = escapeNotif(n.verb);
       var quoted = n.quoted ? '<p class="text-sm text-primary italic mt-0.5">&ldquo;'+escapeNotif(n.quoted)+'&rdquo;</p>' : '';
       var meta   = n.meta ? ' <span class="text-muted">|</span> <span class="font-semibold text-muted">'+escapeNotif(n.meta)+'</span>' : '';
-      return '<a href="'+n.url+'" onclick="markRead('+n.id+')"'
+      // Hire offer — render inline Accept / Decline buttons instead of
+      // making the whole row a link. The buttons POST to confirm-hire
+      // and re-fetch on success.
+      if (n.hire_app_hashid) {
+        return '<div class="flex items-start gap-3 px-5 py-2.5">'
+          +'<span class="w-9 h-9 rounded-full bg-amber/15 flex items-center justify-center flex-shrink-0 text-amber mt-0.5">'+icon+'</span>'
+          +'<div class="flex-1 min-w-0">'
+            +'<p class="text-sm text-primary leading-snug"><span class="font-bold">'+actor+'</span> '+verb+'</p>'
+            +'<p class="text-[11px] text-muted italic mt-0.5 mb-2">'+escapeNotif(n.created_at)+meta+'</p>'
+            +'<div class="flex gap-2">'
+              +'<button type="button" data-hire-app="'+n.hire_app_hashid+'" data-hire-decision="accept" data-notif-id="'+n.id+'"'
+              +' class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">Accept</button>'
+              +'<button type="button" data-hire-app="'+n.hire_app_hashid+'" data-hire-decision="decline" data-notif-id="'+n.id+'"'
+              +' class="bg-white border border-gray-200 text-muted text-xs font-semibold px-4 py-1.5 rounded-full hover:text-primary hover:border-taupe/40 transition">Decline</button>'
+            +'</div>'
+          +'</div>'
+        +'</div>';
+      }
+      return '<a href="'+n.url+'" onclick="markRead(\''+n.id+'\')"'
         +' class="flex items-start gap-3 px-5 py-2.5 hover:bg-white/40 transition">'
         +'<span class="w-9 h-9 rounded-full bg-taupe/40 flex items-center justify-center flex-shrink-0 text-primary mt-0.5">'+icon+'</span>'
         +'<div class="flex-1 min-w-0">'
@@ -361,6 +396,38 @@ function fetchNotifications() {
         +'</div>'
       +'</a>';
     }).join('');
+
+    // Wire up the inline hire Accept/Decline buttons.
+    list.querySelectorAll('[data-hire-app]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const appHash = btn.dataset.hireApp;
+        const decision = btn.dataset.hireDecision;
+        const notifId = btn.dataset.notifId;
+        // Disable both sibling buttons during the request.
+        btn.parentElement.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+        const fd = new FormData();
+        fd.append('action', decision);
+        fetch('/applications/' + appHash + '/confirm-hire/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+          body: fd,
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          if (d.ok) {
+            markRead(notifId);
+            fetchNotifications();
+            // If we're on /applications/, refresh to surface the new status.
+            if (window.location.pathname === '/applications/') {
+              window.location.reload();
+            }
+          } else {
+            btn.parentElement.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
+            alert(d.error || 'Something went wrong.');
+          }
+        }).catch(function() {
+          btn.parentElement.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
+        });
+      });
+    });
   }).catch(function(){});
 }
 fetchNotifications();

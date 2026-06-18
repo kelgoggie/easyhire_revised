@@ -9,7 +9,13 @@
   {# ── Job context header (only when we came from /jobs/<id>/candidates/) ── #}
   {% if current_job %}
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
-    <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">{{ current_job.title }}</h1>
+    <div class="min-w-0">
+      <p class="text-muted text-xs uppercase tracking-wide font-semibold">Applied for</p>
+      <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">{{ current_job.title }}</h1>
+      {% if match_score %}
+      <div class="mt-2">{% match_badge match_score.total %}</div>
+      {% endif %}
+    </div>
     <div class="flex items-center gap-2 flex-shrink-0 sm:pt-2">
       {% if prev_id %}
       <a href="/employers/candidates/{{ prev_id|hashid }}/?job={{ current_job.id|hashid }}"
@@ -110,11 +116,6 @@
   {# ── Main card: application msg + bio + resume grid ───────────────── #}
   <div class="bg-surface border border-taupe/30 rounded-2xl p-5 sm:p-6 relative">
 
-    {% if request.user.is_staff and match_score %}
-    <div class="absolute top-4 right-4">
-      {% match_badge match_score.total %}
-    </div>
-    {% endif %}
 
     {% if application %}
     <div class="mb-6">
@@ -122,6 +123,7 @@
         <p class="text-sm font-bold text-primary">Application
           <span class="ml-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full
                 {% if application.status == 'hired' %}bg-teal text-white
+                {% elif application.status == 'hire_pending' %}bg-amber/15 text-amber border border-amber/30
                 {% elif application.status == 'accepted' %}bg-teal/15 text-teal
                 {% elif application.status == 'rejected' %}bg-red-50 text-red-500
                 {% elif application.status == 'viewed' %}bg-gray-100 text-muted
@@ -148,9 +150,23 @@
                   class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">
             Reject
           </button>
+          {% elif application.status == 'hire_pending' %}
+          <button type="button" data-action="cancel_hire"
+                  class="bg-white border border-gray-200 text-muted text-xs font-semibold px-4 py-1.5 rounded-full hover:text-primary hover:border-taupe/40 transition">
+            Cancel Offer
+          </button>
+          <button type="button" data-action="reject"
+                  class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">
+            Reject
+          </button>
           {% endif %}
         </div>
       </div>
+      {% if application.status == 'hire_pending' %}
+      <div class="mb-3 bg-amber/5 border border-amber/30 rounded-xl px-4 py-2.5 text-xs text-primary">
+        <strong>Hire offer sent.</strong> Awaiting {{ jobseeker.first_name }}'s confirmation. They'll see Accept / Decline buttons in their notifications.
+      </div>
+      {% endif %}
       {% if application.message %}
       <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-primary leading-relaxed whitespace-pre-line">{{ application.message }}</div>
       {% else %}
@@ -163,7 +179,7 @@
     <div class="mb-6">
       <p class="text-sm font-bold text-primary mb-2">Personal Bio</p>
       <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-primary leading-relaxed whitespace-pre-line min-h-[80px]">
-        {% if jobseeker.bio %}{{ jobseeker.bio }}{% else %}<span class="text-muted italic">A short introduction for employers.</span>{% endif %}
+        {% if jobseeker.bio %}{{ jobseeker.bio }}{% else %}<span class="text-muted italic">No bio provided.</span>{% endif %}
       </div>
     </div>
 
@@ -201,6 +217,9 @@
             <p class="text-[11px] text-taupe">
               {{ exp.year_started|default:"" }}{% if exp.year_started and exp.year_ended %} – {% endif %}{% if exp.is_current %}Present{% else %}{{ exp.year_ended|default:"" }}{% endif %}
             </p>
+            {% if exp.description %}
+            <p class="text-[11px] text-muted leading-snug mt-1 whitespace-pre-line">{{ exp.description }}</p>
+            {% endif %}
           </div>
           {% endfor %}
         </div>
@@ -433,15 +452,43 @@
         </div>
       </div>
 
-      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-        <button type="button" onclick="closeContactModal()"
-                class="bg-gray-100 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition">
-          Cancel
-        </button>
-        <button type="submit"
-                class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
-          Send Email
-        </button>
+      <div class="px-6 pt-3 pb-4 border-t border-gray-100">
+        <!-- Delivery toggle -->
+        <div class="mb-4">
+          <p class="text-primary text-xs font-medium mb-1.5">Delivery</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label class="flex items-start gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
+              <input type="radio" name="delivery" value="both" checked
+                     onchange="document.getElementById('contact-inbox-only').value = ''; document.getElementById('contact-send-btn').textContent = 'Send Email + Inbox';"
+                     class="accent-teal mt-0.5">
+              <span class="min-w-0">
+                <span class="font-semibold block">Email + EasyHire Inbox</span>
+                <span class="text-muted leading-tight">Email lands in their Gmail; copy also in their inbox.</span>
+              </span>
+            </label>
+            <label class="flex items-start gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
+              <input type="radio" name="delivery" value="inbox"
+                     onchange="document.getElementById('contact-inbox-only').value = '1'; document.getElementById('contact-send-btn').textContent = 'Send to Inbox';"
+                     class="accent-teal mt-0.5">
+              <span class="min-w-0">
+                <span class="font-semibold block">EasyHire Inbox only</span>
+                <span class="text-muted leading-tight">Skip email; deliver only on-platform.</span>
+              </span>
+            </label>
+          </div>
+          <input type="hidden" name="inbox_only" id="contact-inbox-only" value="">
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button type="button" onclick="closeContactModal()"
+                  class="bg-gray-100 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition">
+            Cancel
+          </button>
+          <button type="submit" id="contact-send-btn"
+                  class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
+            Send Email + Inbox
+          </button>
+        </div>
       </div>
     </form>
   </div>
@@ -450,6 +497,31 @@
 <script>
 const COMPANY_NAME = "{{ company.name|escapejs }}";
 const FIRST_NAME   = "{{ jobseeker.first_name|escapejs }}";
+// Sender + company contact details used in the "To respond" footer of
+// both presets. Falls back gracefully when any are missing.
+const HIRING_EMAIL = "{{ company.recruitment_email|default:company.company_email|default:''|escapejs }}";
+const REP_NAME     = "{{ request.user.employer_profile.first_name|default:'' }} {{ request.user.employer_profile.last_name|default:''|escapejs }}".trim();
+const REP_POSITION = "{{ request.user.employer_profile.position|default:''|escapejs }}";
+const REP_EMAIL    = "{{ request.user.employer_profile.email|default:request.user.email|default:''|escapejs }}";
+const REP_PHONE    = "{{ request.user.employer_profile.phone|default:''|escapejs }}";
+
+function buildReplyFooter() {
+  const parts = [];
+  if (HIRING_EMAIL) parts.push(`email ${COMPANY_NAME} at ${HIRING_EMAIL}`);
+  const repBits = [];
+  if (REP_NAME)     repBits.push(REP_NAME);
+  if (REP_POSITION) repBits.push(REP_POSITION);
+  if (COMPANY_NAME) repBits.push(COMPANY_NAME);
+  const repIdent = repBits.join(', ');
+  const repContacts = [];
+  if (REP_EMAIL) repContacts.push(REP_EMAIL);
+  if (REP_PHONE) repContacts.push(`+63 ${REP_PHONE.replace(/^0/, '')}`);
+  if (repIdent && repContacts.length) {
+    parts.push(`reach ${repIdent} at ${repContacts.join(' or ')}`);
+  }
+  if (!parts.length) return '';
+  return `\n\nTo respond, kindly ${parts.join(' or ')}.`;
+}
 
 function openContactModal() {
   document.getElementById('contact-modal').classList.remove('hidden');
@@ -489,7 +561,7 @@ We're excited about your application. Before we move forward, please send the fo
   • Valid government ID
   • Proof of past employment / certifications (if applicable)
 
-You can reply directly to this email with the documents attached. Let us know if you have any questions.
+You can reply directly to this email with the documents attached. Let us know if you have any questions.${buildReplyFooter()}
 
 Thanks,
 ${COMPANY_NAME} Recruitment Team`;
@@ -509,7 +581,7 @@ ${COMPANY_NAME} Recruitment Team`;
 
 We'd like to invite you to an interview for the role at ${COMPANY_NAME}.
 
-Please confirm by replying to this email whether the proposed date and time work for you, or let us know your availability if they don't.
+Please confirm by replying to this email whether the proposed date and time work for you, or let us know your availability if they don't.${buildReplyFooter()}
 
 Looking forward to hearing from you.
 
@@ -619,9 +691,10 @@ ${COMPANY_NAME} Recruitment Team`;
     btn.addEventListener('click', function() {
       const action = btn.dataset.action;
       const confirmTexts = {
-        accept: { title: 'Accept this application?', body: "You'll be able to mark them as Hired later.", cta: 'Yes, accept', cls: 'bg-teal hover:bg-teal/90' },
-        reject: { title: 'Reject this application?',  body: 'This is terminal — the applicant cannot be revived.', cta: 'Yes, reject', cls: 'bg-red-500 hover:bg-red-600' },
-        hire:   { title: 'Mark as Hired?',            body: 'This decrements the open slot for the job and adds the role to the jobseeker resume. You can un-hire later.', cta: 'Yes, mark hired', cls: 'bg-teal hover:bg-teal/90' },
+        accept:      { title: 'Accept this application?', body: "You'll be able to send them a hire offer later.", cta: 'Yes, accept', cls: 'bg-teal hover:bg-teal/90' },
+        reject:      { title: 'Reject this application?', body: 'This is terminal — the applicant cannot be revived.', cta: 'Yes, reject', cls: 'bg-red-500 hover:bg-red-600' },
+        hire:        { title: 'Send a hire offer?',       body: "The jobseeker will get a notification with Accept / Decline buttons. The slot decrement + work-experience entry only happen once they accept.", cta: 'Yes, send offer', cls: 'bg-teal hover:bg-teal/90' },
+        cancel_hire: { title: 'Cancel the hire offer?',   body: 'The offer disappears from the jobseeker’s notifications and the application goes back to Accepted.', cta: 'Yes, cancel offer', cls: 'bg-amber hover:bg-amber/90' },
       };
       const t = confirmTexts[action];
       if (window.confirmAction) {

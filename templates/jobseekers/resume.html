@@ -1,5 +1,5 @@
 {% extends "base/base_dashboard_jobseeker.html" %}
-{% load static %}
+{% load static match_tags %}
 
 {% block title %}My Resume — EasyHire{% endblock %}
 
@@ -20,9 +20,11 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
         </svg>
         <span id="pdf-upload-text" class="text-xs text-muted leading-tight">
-          Upload <strong>Resume File (.PDF)</strong> to<br>automatically fill out form fields
+          Upload <strong>Resume (PDF or photo)</strong> to<br>automatically fill out form fields
         </span>
-        <input type="file" name="resume_pdf" id="pdf-upload-input" accept="application/pdf,.pdf" class="hidden">
+        <input type="file" name="resume_pdf" id="pdf-upload-input"
+               accept="application/pdf,.pdf,image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif"
+               class="hidden">
       </label>
     </div>
 
@@ -239,7 +241,7 @@
                   <div class="relative flex-1">
                     <select name="edu_start" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none">
                       <option value="">Start Year</option>
-                      {% for y in year_range %}<option value="{{ y }}" {% if edu.year_started == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+                      {% for y in year_range_start %}<option value="{{ y }}" {% if edu.year_started == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
                     </select>
                     <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                   </div>
@@ -280,7 +282,7 @@
               <div>
                 <label class="block text-xs text-muted mb-1">Years Attended</label>
                 <div class="flex gap-2">
-                  <div class="relative flex-1"><select name="edu_start" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none"><option value="">Start Year</option>{% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select><svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+                  <div class="relative flex-1"><select name="edu_start" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none"><option value="">Start Year</option>{% for y in year_range_start %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select><svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
                   <div class="relative flex-1"><select name="edu_end" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none"><option value="">End Year</option>{% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select><svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
                 </div>
               </div>
@@ -314,8 +316,8 @@
                 <label class="block text-xs text-muted mb-1">Year Issued</label>
                 <div class="relative">
                   <select name="cert_year" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none">
-                    <option value="">Start Year</option>
-                    {% for y in year_range %}<option value="{{ y }}" {% if cert.year_received == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+                    <option value="">Year</option>
+                    {% for y in year_range_start %}<option value="{{ y }}" {% if cert.year_received == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
                   </select>
                   <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </div>
@@ -335,7 +337,7 @@
                 <label class="block text-xs text-muted mb-1">Year Issued</label>
                 <div class="relative">
                   <select name="cert_year" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none">
-                    <option value="">Start Year</option>{% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+                    <option value="">Year</option>{% for y in year_range_start %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
                   </select>
                   <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </div>
@@ -399,13 +401,13 @@
               <div>
                 <label class="block text-xs text-muted mb-1">Duration</label>
                 <div class="flex items-center gap-1">
-                  <input type="text" name="exp_start_month_year" data-datepicker="month" readonly autocomplete="off"
-                         value="{% if exp.year_started %}{{ exp.year_started }}-{% if exp.month_started %}{{ exp.month_started|stringformat:'02d' }}{% else %}01{% endif %}{% endif %}"
+                  <input type="text" name="exp_start_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off"
+                         value="{% if exp.year_started %}{% if exp.month_started %}{{ exp.month_started|month_name }} {% else %}Jan {% endif %}{{ exp.year_started }}{% endif %}"
                          placeholder="Select Start Date"
                          class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
                   <span class="text-gray-300 text-xs">–</span>
-                  <input type="text" name="exp_end_month_year" data-datepicker="month" readonly autocomplete="off" {% if exp.is_current %}disabled{% endif %}
-                         value="{% if exp.year_ended and not exp.is_current %}{{ exp.year_ended }}-{% if exp.month_ended %}{{ exp.month_ended|stringformat:'02d' }}{% else %}01{% endif %}{% endif %}"
+                  <input type="text" name="exp_end_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" {% if exp.is_current %}disabled{% endif %}
+                         value="{% if exp.year_ended and not exp.is_current %}{% if exp.month_ended %}{{ exp.month_ended|month_name }} {% else %}Jan {% endif %}{{ exp.year_ended }}{% endif %}"
                          placeholder="Select End Date"
                          class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
                 </div>
@@ -434,10 +436,10 @@
               <div>
                 <label class="block text-xs text-muted mb-1">Duration</label>
                 <div class="flex items-center gap-1">
-                  <input type="text" name="exp_start_month_year" data-datepicker="month" readonly autocomplete="off" placeholder="Select Start Date"
+                  <input type="text" name="exp_start_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" placeholder="Select Start Date"
                          class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
                   <span class="text-gray-300 text-xs">–</span>
-                  <input type="text" name="exp_end_month_year" data-datepicker="month" readonly autocomplete="off" placeholder="Select End Date"
+                  <input type="text" name="exp_end_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" placeholder="Select End Date"
                          class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
                 </div>
                 <label class="inline-flex items-center gap-1 text-xs text-muted mt-1 cursor-pointer">
@@ -753,44 +755,65 @@ watchAllEntries();
     });
   }
 
+  // Capture a blank row before wiping so we have something to clone from.
+  // Without this, addRow() silently no-ops (it clones .education-row, but
+  // we just innerHTML='d the container) and the section ends up empty.
+  function _snapshotBlankRow(container, rowClass) {
+    const src = container.querySelector('.' + rowClass);
+    if (!src) return null;
+    const blank = src.cloneNode(true);
+    delete blank.dataset.watched;
+    blank.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(function(el) {
+      el.value = '';
+      if (el.type === 'checkbox') el.checked = false;
+    });
+    return blank;
+  }
+
   function applyEducation(entries) {
     if (!entries || !entries.length) return;
     const container = document.getElementById('education-container');
-    // Wipe current rows (the form locks down which existing rows are kept)
+    const blank = _snapshotBlankRow(container, 'education-row');
+    if (!blank) return;
     container.innerHTML = '';
     entries.forEach(function(e) {
-      addRow('education');
-      const rows = container.querySelectorAll('.education-row');
-      const row = rows[rows.length - 1];
-      row.querySelector('[name="edu_level"]').value = e.level || '';
+      const row = blank.cloneNode(true);
+      row.querySelector('[name="edu_level"]').value  = e.level  || '';
       row.querySelector('[name="edu_course"]').value = e.course || '';
       if (e.year_started) row.querySelector('[name="edu_start"]').value = String(e.year_started);
       if (e.year_ended)   row.querySelector('[name="edu_end"]').value   = String(e.year_ended);
+      container.appendChild(row);
+      if (typeof watchEntry === 'function') watchEntry(row);
     });
+    if (typeof initAutocompletes === 'function') setTimeout(initAutocompletes, 50);
   }
 
   function applyExperiences(entries) {
     if (!entries || !entries.length) return;
     const container = document.getElementById('experience-container');
+    const blank = _snapshotBlankRow(container, 'exp-row');
+    if (!blank) return;
     container.innerHTML = '';
     entries.forEach(function(e) {
-      addRow('experience');
-      const rows = container.querySelectorAll('.exp-row');
-      const row = rows[rows.length - 1];
-      row.querySelector('[name="exp_position"]').value = e.position || '';
-      row.querySelector('[name="exp_company"]').value = e.company || '';
+      const row = blank.cloneNode(true);
+      row.querySelector('[name="exp_position"]').value    = e.position    || '';
+      row.querySelector('[name="exp_company"]').value     = e.company     || '';
       row.querySelector('[name="exp_description"]').value = e.description || '';
       if (e.year_started) {
-        row.querySelector('[name="exp_start_month_year"]').value = e.year_started + '-01';
+        row.querySelector('[name="exp_start_month_year"]').value = 'Jan ' + e.year_started;
       }
       if (e.is_current) {
-        row.querySelector('[name="exp_is_current"]').checked = true;
+        const cb = row.querySelector('[name="exp_is_current"]');
+        if (cb) cb.checked = true;
         const end = row.querySelector('[name="exp_end_month_year"]');
         if (end) end.disabled = true;
       } else if (e.year_ended) {
-        row.querySelector('[name="exp_end_month_year"]').value = e.year_ended + '-12';
+        row.querySelector('[name="exp_end_month_year"]').value = 'Dec ' + e.year_ended;
       }
+      container.appendChild(row);
+      if (typeof watchEntry === 'function') watchEntry(row);
     });
+    if (typeof initAutocompletes === 'function') setTimeout(initAutocompletes, 50);
   }
 
   input.addEventListener('change', function(e) {
@@ -809,7 +832,7 @@ watchAllEntries();
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (!data.ok) { setError(data.error || 'Could not parse PDF.'); return; }
+      if (!data.ok) { setError(data.error || 'Could not parse resume.'); return; }
       ensureUnlocked();
       setIfEmpty('contact_email', data.email);
       setIfEmpty('phone', data.phone);

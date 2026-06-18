@@ -51,6 +51,37 @@ def _relative(dt):
     return dt.strftime("%b %d")
 
 
+def _resolve_active_nav(path):
+    """Pick the sidebar item to highlight based on the current URL path.
+
+    Path matching is prefix-based so detail pages (e.g.
+    /admin-panel/companies/<id>/) still highlight 'Companies'. Order
+    matters — list longer prefixes first so 'jobs' wins before 'companies'.
+    Views can still override by passing their own ``active_nav`` after
+    calling _admin_context().
+    """
+    # (path_prefix, sidebar_key) — first match wins.
+    mapping = [
+        ('/admin-panel/jobs/',          'jobs'),
+        ('/admin-panel/jobseekers/',    'jobseekers'),
+        ('/admin-panel/companies/',     'companies'),
+        ('/admin-panel/employers/',     'companies'),  # legacy verify path
+        ('/admin-panel/reports/',       'reports'),
+        ('/admin-panel/announcements/', 'announcements'),
+        ('/admin-panel/activity/',      'activity'),
+        ('/admin-panel/import/',        'import'),
+        ('/admin-panel/settings/',      'settings'),
+        ('/admin-panel/change-requests/', 'jobseekers'),
+        ('/analytics/',                 'analytics'),
+        ('/help/',                      'help'),
+        ('/admin-panel/',               'dashboard'),
+    ]
+    for prefix, key in mapping:
+        if path.startswith(prefix):
+            return key
+    return ''
+
+
 def _admin_context(request):
     """Shared context for every admin page — sidebar counts + notification feed.
 
@@ -91,12 +122,19 @@ def _admin_context(request):
         })
     for ur in (UserReport.objects.filter(status=UserReport.STATUS_OPEN)
                .order_by('-created_at')[:5]):
+        # Trim description for inline display; full text is on the reports page.
+        reason = (ur.description or '').strip()
+        reason_short = reason if len(reason) <= 120 else reason[:117] + '…'
         feed.append({
             'icon': 'flag',
             'actor': ur.filed_by_label,
             'verb':  f'filed a report against {ur.account_label}.',
+            'quoted': reason_short,
             'when':  _relative(ur.created_at),
-            'url':   '#',
+            # Open the Reports page filtered to this row's status so the
+            # admin lands on it directly (the page auto-opens the Review
+            # modal for ?focus=<id>).
+            'url':   f'/admin-panel/reports/?status=open&focus={_hashid(ur.id)}',
             'at':    ur.created_at,
         })
     feed.sort(key=lambda x: x['at'], reverse=True)
@@ -107,6 +145,11 @@ def _admin_context(request):
         'open_reports':          open_reports,
         'admin_notifications':   feed[:10],
         'admin_attention_count': pending_companies + pending_jobseekers + open_reports,
+        # Auto-derived from URL so child templates don't have to thread it
+        # explicitly. Views that need a different highlight (e.g.
+        # company_job_detail's came_from_jobs flip) overwrite this in
+        # their ctx.update(...) after calling _admin_context.
+        'active_nav':            _resolve_active_nav(request.path),
     }
 
 
@@ -217,6 +260,7 @@ def set_verification(request, company_id):
     if new_status not in valid_statuses:
         return redirect('admin_panel:employer_detail', company_id=company_id)
 
+    prior_status = company.verification_status
     company.verification_status = new_status
     company.rejection_note = rejection_note if new_status == Company.DENIED else ''
 
@@ -228,7 +272,54 @@ def set_verification(request, company_id):
         company.verified_by = None
 
     company.save()
+
+    # Drop an inbox notice for the company's reps when the status actually
+    # changes — verified / denied are the meaningful transitions.
+    if new_status != prior_status and new_status in (Company.VERIFIED, Company.DENIED):
+        _notify_company_reps_of_verification(company, new_status, rejection_note)
+
     return redirect('admin_panel:employer_detail', company_id=company_id)
+
+
+def _notify_company_reps_of_verification(company, new_status, rejection_note):
+    """Surface verify/deny outcomes in the employer's EasyHire inbox via an
+    AdminAnnouncement targeted at the rep's user account. We piggy-back on
+    the announcement audience model because the existing inbox view already
+    renders announcements; no new model needed."""
+    from .models import AdminAnnouncement
+    from apps.employers.models import EmployerProfile
+
+    if new_status == Company.VERIFIED:
+        subject = f'Account verified — {company.name}'
+        body = (
+            f"PESO Iloilo City approved your account for {company.name}.\n\n"
+            "You can now post jobs, contact candidates, and invite jobseekers to apply. "
+            "Your verification documents are now locked in your Account Verification page; "
+            "if PESO ever needs an updated set we'll reopen it for you."
+        )
+    else:  # DENIED
+        reason = rejection_note.strip() if rejection_note else 'No reason provided.'
+        subject = f'Account verification denied — {company.name}'
+        body = (
+            f"PESO Iloilo City reviewed your verification for {company.name} and could not approve it.\n\n"
+            f"Reason: {reason}\n\n"
+            "Please re-upload the requested documents in your Account Verification page. "
+            "Saving any new file resubmits your application automatically."
+        )
+
+    # AdminAnnouncement is a broadcast model — use a per-rep notification
+    # instead. The Notification model handles it.
+    from apps.notifications.models import Notification
+    reps = EmployerProfile.objects.filter(company=company).select_related('user')
+    for rep in reps:
+        if rep.user:
+            Notification.objects.create(
+                recipient=rep.user,
+                notif_type=Notification.EMPLOYER_CONTACTED,  # closest existing bucket
+                company=company,
+                liker_preview='an account verification update',
+                admin_message=f'{subject}\n\n{body}',
+            )
 
 
 # ── Phase 2: Jobseekers ─────────────────────────────────────────────
@@ -632,12 +723,77 @@ def company_settings(request, pk):
             )
             saved_section = 'enabled'
 
+        elif form == 'verification':
+            # Inline verification status change so admins can update without
+            # bouncing to the dedicated verify page. Mirrors set_verification.
+            new_status     = (request.POST.get('verification_status') or '').strip()
+            rejection_note = (request.POST.get('rejection_note') or '').strip()
+            valid = {Company.UNVERIFIED, Company.PENDING, Company.DENIED, Company.VERIFIED}
+            if new_status not in valid:
+                error = 'Pick a valid verification status.'
+            else:
+                prior = company.verification_status
+                company.verification_status = new_status
+                company.rejection_note = rejection_note if new_status == Company.DENIED else ''
+                if new_status == Company.VERIFIED:
+                    company.verified_at = timezone.now()
+                    company.verified_by = request.user
+                else:
+                    company.verified_at = None
+                    company.verified_by = None
+                company.save()
+                # Notify reps when the outcome flips to verified or denied —
+                # piggy-backs on the verification-notification helper.
+                if new_status != prior and new_status in (Company.VERIFIED, Company.DENIED):
+                    _notify_company_reps_of_verification(company, new_status, rejection_note)
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_EDIT,
+                    target_model='Company', target_id=company.id,
+                    notes=f'Set verification status to {new_status}.'
+                          + (f' Reason: {rejection_note}' if rejection_note else ''),
+                )
+                saved_section = 'verification'
+
+    # Verification documents context — same shape pending.html uses so the
+    # checklist renders identically here.
+    from apps.employers.models import VerificationDocument
+    required_docs = [
+        VerificationDocument.MAYORS_PERMIT,
+        VerificationDocument.PHILJOBNET_ACCREDITATION,
+        VerificationDocument.PHILJOBNET_DASHBOARD,
+        VerificationDocument.JOB_VACANCIES_LIST,
+    ]
+    if company.type_of_company in ['local', 'overseas']:
+        required_docs += [VerificationDocument.PEA_LICENSE,
+                          VerificationDocument.DO174_CERTIFICATE]
+    if company.type_of_company == 'overseas':
+        required_docs += [VerificationDocument.POEA_LICENSE,
+                          VerificationDocument.JOB_ORDER]
+    uploaded = {
+        doc.doc_type: doc
+        for doc in VerificationDocument.objects.filter(company=company)
+    }
+    doc_labels = dict(VerificationDocument.DOC_TYPE_CHOICES)
+    checklist = [
+        {
+            'type':     doc_type,
+            'label':    doc_labels[doc_type],
+            'uploaded': doc_type in uploaded,
+            'doc':      uploaded.get(doc_type),
+        }
+        for doc_type in required_docs
+    ]
+
     ctx = _admin_context(request)
     ctx.update({
-        'company':       company,
-        'rep':           rep,
-        'saved_section': saved_section,
-        'error':         error,
+        'company':         company,
+        'rep':             rep,
+        'saved_section':   saved_section,
+        'error':           error,
+        'checklist':       checklist,
+        'uploaded_count':  sum(1 for item in checklist if item['uploaded']),
+        # Status-picker options for the verification form.
+        'verification_choices': Company.VERIFICATION_CHOICES,
     })
     return render(request, 'admin_panel/company_settings.html', ctx)
 
@@ -712,21 +868,48 @@ def company_job_detail(request, pk, job_id):
     company = get_object_or_404(Company, pk=pk)
     job = get_object_or_404(JobPosting.objects.select_related('company'), pk=job_id, company=company)
 
-    # All matches across all jobseekers (excluding people who already applied),
+    # Applications for this job — surfaced as a dedicated "Applicants" section
+    # the admin can jump to via #applicants anchor from the count in the header.
+    from apps.matching.engine import compute_match_score
+    apps_qs = (Application.objects.filter(job=job)
+               .select_related('jobseeker', 'jobseeker__user')
+               .order_by('-created_at'))
+    applicants = []
+    for app in apps_qs:
+        try:
+            score = compute_match_score(job, app.jobseeker)['total']
+        except Exception:
+            score = None
+        applicants.append({
+            'app':   app,
+            'score': score,
+        })
+
+    # Matches across all jobseekers (excluding people who already applied),
     # then paginate eight per page.
-    applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
+    applicant_ids = {a['app'].jobseeker_id for a in applicants}
     ranked = [r for r in get_ranked_jobseekers(job) if r['profile'].id not in applicant_ids]
     matches_page = paginate(request, ranked, per_page=8, page_param='matches_page')
 
+    # Did the user land here from the global Jobs page? The link adds
+    # ?from=jobs so we can highlight Jobs in the sidebar instead of
+    # Companies, and flip the back-link target to /admin-panel/jobs/.
+    came_from_jobs = request.GET.get('from') == 'jobs'
+
     ctx = _admin_context(request)
     ctx.update({
-        'active_nav':       'companies',
+        'active_nav':       'jobs' if came_from_jobs else 'companies',
+        'came_from_jobs':   came_from_jobs,
         'company':          company,
         'job':              job,
         'ranked':           list(matches_page.object_list),
         'matches_page':     matches_page,
         'matches_qs_base':  querystring_without(request, 'matches_page'),
-        'applicants_count': len(applicant_ids),
+        'applicants':       applicants,
+        'applicants_count': len(applicants),
+        # Reason choices for the Delete modal (the take-down endpoint
+        # company_delete_job expects one of these codes).
+        'reasons':          JOB_DELETION_REASONS,
     })
     return render(request, 'admin_panel/company_job_detail.html', ctx)
 
@@ -1418,4 +1601,141 @@ def admin_edit_resume(request, pk):
         'year_range':     range(1980, 2031),
         'saved':          saved,
     })
+
+
+# ── Admin: global jobs index + take-down actions ─────────────────────
+
+@staff_required
+def admin_jobs_list(request):
+    """Global jobs index. Search across title + company name, filter by
+    status, sort by newest/oldest/most-applicants."""
+    from apps.jobs.models import JobPosting
+    from django.db.models import Count, Q
+
+    search = (request.GET.get('q') or '').strip()
+    status = (request.GET.get('status') or '').strip()
+    sort   = (request.GET.get('sort') or 'newest').strip()
+
+    qs = (JobPosting.objects
+          .select_related('company')
+          .annotate(applicants_count=Count('applications', distinct=True)))
+
+    if search:
+        qs = qs.filter(Q(title__icontains=search) |
+                       Q(company__name__icontains=search))
+
+    if status in {'open', 'closed', 'draft', 'admin_disabled'}:
+        if status == 'admin_disabled':
+            qs = qs.filter(admin_disabled=True)
+        elif status == 'closed':
+            # Distinguish voluntary close from admin take-down.
+            qs = qs.filter(status='closed', admin_disabled=False)
+        else:
+            qs = qs.filter(status=status)
+
+    if sort == 'oldest':
+        qs = qs.order_by('created_at')
+    elif sort == 'applicants':
+        qs = qs.order_by('-applicants_count', '-created_at')
+    else:  # newest
+        qs = qs.order_by('-created_at')
+
+    # Per-status counts for the filter chips (count over the search-filtered
+    # queryset so totals stay meaningful as you search).
+    base_for_counts = JobPosting.objects.all()
+    if search:
+        base_for_counts = base_for_counts.filter(
+            Q(title__icontains=search) | Q(company__name__icontains=search)
+        )
+    status_counts = {
+        'all':            base_for_counts.count(),
+        'open':           base_for_counts.filter(status='open').count(),
+        'closed':         base_for_counts.filter(status='closed', admin_disabled=False).count(),
+        'draft':          base_for_counts.filter(status='draft').count(),
+        'admin_disabled': base_for_counts.filter(admin_disabled=True).count(),
+    }
+
+    from django.core.paginator import Paginator
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get('page', 1))
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'active_nav':    'jobs',
+        'page':          page,
+        'search':        search,
+        'status':        status,
+        'sort':          sort,
+        'status_counts': status_counts,
+    })
+    return render(request, 'admin_panel/jobs_list.html', ctx)
+
+
+@staff_required
+def admin_job_disable(request, job_id):
+    """Take a job down. Marks ``admin_disabled=True`` + closes it + notifies
+    every company rep with the admin-supplied reason."""
+    from apps.jobs.models import JobPosting
+    from apps.notifications.models import Notification
+    from .models import AuditLog
+    from apps.employers.models import EmployerProfile
+
+    job = get_object_or_404(JobPosting.objects.select_related('company'), id=job_id)
+    if request.method != 'POST':
+        return redirect('admin_panel:company_job_detail', pk=job.company_id, job_id=job_id)
+
+    reason = (request.POST.get('reason') or '').strip()
+    if not reason:
+        return JsonResponse({'ok': False, 'error': 'Reason is required.'}, status=400)
+
+    job.admin_disabled = True
+    job.admin_disabled_reason = reason
+    job.status = 'closed'
+    job.save(update_fields=['admin_disabled', 'admin_disabled_reason', 'status'])
+
+    # Notify every rep of the company with the reason.
+    for rep in EmployerProfile.objects.filter(company=job.company).select_related('user'):
+        if rep.user:
+            Notification.objects.create(
+                recipient=rep.user,
+                notif_type=Notification.JOB_DELETED_BY_ADMIN,
+                company=job.company,
+                job=job,
+                liker_preview=job.title,    # snapshot for the bell text
+                admin_message=reason,
+            )
+
+    AuditLog.objects.create(
+        admin=request.user, action=AuditLog.ACTION_EDIT,
+        target_model='JobPosting', target_id=job.id,
+        notes=f'Disabled job "{job.title}". Reason: {reason}',
+    )
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True})
+    return redirect('admin_panel:company_job_detail', pk=job.company_id, job_id=job_id)
+
+
+@staff_required
+def admin_job_reopen(request, job_id):
+    """Lift an admin take-down — clears the flag + reason + flips status
+    back to open. POST only."""
+    from apps.jobs.models import JobPosting
+    from .models import AuditLog
+
+    job = get_object_or_404(JobPosting, id=job_id)
+    if request.method != 'POST':
+        return redirect('admin_panel:company_job_detail', pk=job.company_id, job_id=job_id)
+
+    job.admin_disabled = False
+    job.admin_disabled_reason = ''
+    job.status = 'open'
+    job.save(update_fields=['admin_disabled', 'admin_disabled_reason', 'status'])
+
+    AuditLog.objects.create(
+        admin=request.user, action=AuditLog.ACTION_EDIT,
+        target_model='JobPosting', target_id=job.id,
+        notes=f'Re-opened admin-disabled job "{job.title}".',
+    )
+    return redirect('admin_panel:company_job_detail', pk=job.company_id, job_id=job_id)
     return render(request, 'admin_panel/admin_edit_resume.html', ctx)

@@ -78,10 +78,13 @@
       </div>
 
       <!-- Inbox -->
-      <a href="/inbox/" title="Inbox" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary/8 transition">
+      <a href="/inbox/" title="Inbox" class="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary/8 transition">
         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
         </svg>
+        {% if inbox_has_new %}
+        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full"></span>
+        {% endif %}
       </a>
 
       <!-- Avatar -->
@@ -185,6 +188,19 @@
 
         <div class="nav-divider border-t border-gray-200 my-2 mx-1"></div>
 
+        <a href="/employers/pending/" title="Verification"
+           class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
+                  {% if active_nav == 'verification' %}font-semibold text-primary bg-primary/10{% else %}text-muted hover:text-primary hover:bg-primary/5{% endif %}">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          <span class="nav-label">Account Verification
+            {% if request.user.is_employer and request.user.employer_profile.company.verification_status == 'verification_denied' %}
+            <span class="ml-1 inline-block w-2 h-2 bg-red-500 rounded-full align-middle"></span>
+            {% endif %}
+          </span>
+        </a>
+
         <a href="/employers/settings/" title="Settings"
            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
                   {% if active_nav == 'settings' %}font-semibold text-primary bg-primary/10{% else %}text-muted hover:text-primary hover:bg-primary/5{% endif %}">
@@ -267,8 +283,20 @@
 // ── Bell + avatar dropdowns ─────────────────────────────────────────
 document.getElementById('notif-btn').addEventListener('click', function(e) {
   e.stopPropagation();
-  document.getElementById('notif-dropdown').classList.toggle('hidden');
+  const dropdown = document.getElementById('notif-dropdown');
+  const wasHidden = dropdown.classList.contains('hidden');
+  dropdown.classList.toggle('hidden');
   document.getElementById('avatar-dropdown').classList.add('hidden');
+  // First open: clear the dot AND mark all visible items as read so the
+  // dot doesn't pop back on the next reload / polling tick.
+  if (wasHidden) {
+    const dot = document.getElementById('notif-dot');
+    if (dot) dot.classList.add('hidden');
+    fetch('/api/notifications/read-all/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+  }
 });
 document.getElementById('more-btn').addEventListener('click', function(e) {
   e.stopPropagation();
@@ -313,7 +341,7 @@ function fetchNotifications() {
       var verb   = escapeNotif(n.verb);
       var quoted = n.quoted ? '<p class="text-sm text-primary italic mt-0.5">&ldquo;'+escapeNotif(n.quoted)+'&rdquo;</p>' : '';
       var meta   = n.meta ? ' <span class="text-muted">|</span> <span class="font-semibold text-muted">'+escapeNotif(n.meta)+'</span>' : '';
-      return '<a href="'+n.url+'" onclick="markRead('+n.id+')"'
+      return '<a href="'+n.url+'" onclick="markRead(\''+n.id+'\')"'
         +' class="flex items-start gap-3 px-5 py-2.5 hover:bg-white/40 transition">'
         +'<span class="w-9 h-9 rounded-full bg-taupe/40 flex items-center justify-center flex-shrink-0 text-primary mt-0.5">'+icon+'</span>'
         +'<div class="flex-1 min-w-0">'

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from apps.employers import views as employer_views
 
 app_name = 'admin_panel'
 
@@ -19,6 +20,12 @@ urlpatterns = [
 
     # Phase 3 — Companies
     path('admin-panel/companies/',                                        views.company_list,                    name='company_list'),
+    # Global jobs index — admins see every job across all companies.
+    path('admin-panel/jobs/',                                             views.admin_jobs_list,                 name='admin_jobs_list'),
+    path('admin-panel/jobs/<hashid:job_id>/disable/',                     views.admin_job_disable,               name='admin_job_disable'),
+    path('admin-panel/jobs/<hashid:job_id>/reopen/',                      views.admin_job_reopen,                name='admin_job_reopen'),
+    # Admin edit reuses the employer job_edit view; the view branches on is_staff.
+    path('admin-panel/jobs/<hashid:job_id>/edit/',                        employer_views.job_edit,               name='admin_job_edit'),
     path('admin-panel/companies/<hashid:pk>/',                               views.company_detail,                  name='company_detail'),
     path('admin-panel/companies/<hashid:pk>/settings/',                      views.company_settings,                name='company_settings'),
     path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/',             views.company_job_detail,              name='company_job_detail'),

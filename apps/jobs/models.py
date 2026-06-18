@@ -60,6 +60,14 @@ class JobPosting(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Set when a PESO admin disables this posting. We piggy-back on the
+    # 'closed' status (so the rest of the app keeps treating it as
+    # not-acceptable) but the flag + reason let employer/admin UIs distinguish
+    # an admin takedown from a voluntary close, and the employer can't
+    # re-open it from their side once disabled.
+    admin_disabled = models.BooleanField(default=False)
+    admin_disabled_reason = models.TextField(blank=True, default='')
+
     class Meta:
         db_table = "job_postings"
         ordering = ["-created_at"]
@@ -195,18 +203,20 @@ class JobExperienceRequirement(models.Model):
 
 
 class Application(models.Model):
-    STATUS_PENDING  = "pending"   # employer hasn't opened the application yet
-    STATUS_VIEWED   = "viewed"    # employer opened it but hasn't decided
-    STATUS_ACCEPTED = "accepted"  # employer accepted; can still be rejected or moved to hired
-    STATUS_REJECTED = "rejected"  # terminal — no undo
-    STATUS_HIRED    = "hired"     # terminal — applicant was tagged hired
+    STATUS_PENDING      = "pending"        # employer hasn't opened the application yet
+    STATUS_VIEWED       = "viewed"         # employer opened it but hasn't decided
+    STATUS_ACCEPTED     = "accepted"       # employer accepted; can still be rejected or moved to hired
+    STATUS_REJECTED     = "rejected"       # terminal — no undo
+    STATUS_HIRE_PENDING = "hire_pending"   # employer offered to hire; awaiting jobseeker accept/decline
+    STATUS_HIRED        = "hired"          # terminal — applicant was tagged hired and confirmed
 
     STATUS_CHOICES = [
-        (STATUS_PENDING,  "Pending"),
-        (STATUS_VIEWED,   "Viewed"),
-        (STATUS_ACCEPTED, "Accepted"),
-        (STATUS_REJECTED, "Rejected"),
-        (STATUS_HIRED,    "Hired"),
+        (STATUS_PENDING,      "Pending"),
+        (STATUS_VIEWED,       "Viewed"),
+        (STATUS_ACCEPTED,     "Accepted"),
+        (STATUS_REJECTED,     "Rejected"),
+        (STATUS_HIRE_PENDING, "Hire Offered"),
+        (STATUS_HIRED,        "Hired"),
     ]
 
     jobseeker = models.ForeignKey(
@@ -217,7 +227,7 @@ class Application(models.Model):
         JobPosting, on_delete=models.CASCADE,
         related_name="applications"
     )
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_PENDING)
     message = models.TextField(blank=True, default='', db_column='application_message')
     created_at = models.DateTimeField(auto_now_add=True)
     # Set when the employer marks the applicant as Hired.

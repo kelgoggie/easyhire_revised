@@ -55,8 +55,34 @@ def employer_verified_required(view_func):
     return wrapper
 
 
+def email_verified_required(view_func):
+    """Block publishing actions (post a job, contact a candidate, etc.) until
+    the user has a verified email address on file. Bounces with a session
+    flag so the dashboard / job-list banner can explain why."""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('/employers/login/')
+        try:
+            from allauth.account.models import EmailAddress
+            ok = EmailAddress.objects.filter(user=request.user, verified=True).exists()
+        except Exception:
+            ok = True  # don't block on allauth import / DB error
+        if not ok:
+            request.session['pending_block_msg'] = (
+                'Verify your email address to unlock this action — '
+                'check the Email Verification link in the avatar menu.'
+            )
+            return redirect('/employers/dashboard/')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 @login_required(login_url='/employers/login/')
 def pending(request):
+    """Account Verification page — always accessible to employers, with the
+    upload UI locked once verified. If PESO sets the company back to
+    'pending' or 'verification_denied' later, the page unlocks for re-upload.
+    """
     if not request.user.is_employer:
         return redirect('/employers/login/')
     try:
@@ -64,9 +90,6 @@ def pending(request):
         company = profile.company
     except Exception:
         return redirect('/employers/register/')
-
-    if company.is_verified:
-        return redirect('/employers/dashboard/')
 
     required_docs = [
         VerificationDocument.MAYORS_PERMIT,
@@ -99,12 +122,17 @@ def pending(request):
         }
         for doc_type in required_docs
     ]
+    uploaded_count = sum(1 for item in checklist if item['uploaded'])
 
     return render(request, 'employers/pending.html', {
         'company': company,
         'profile': profile,
         'checklist': checklist,
-        'all_uploaded': all(item['uploaded'] for item in checklist),
+        'uploaded_count': uploaded_count,
+        'all_uploaded': uploaded_count == len(checklist),
+        # Lock the upload UI once verified — only PESO bumping the status
+        # back to pending/denied re-opens it for the employer.
+        'locked': company.verification_status == Company.VERIFIED,
     })
 
 
@@ -117,11 +145,22 @@ def upload_document(request):
     except Exception:
         return redirect('/employers/register/')
 
+    # PESO already approved this company — uploads are locked from the UI but
+    # also enforced here in case someone POSTs directly.
+    if company.verification_status == Company.VERIFIED:
+        return redirect('/employers/pending/')
+
     doc_type = request.POST.get('doc_type')
     file = request.FILES.get('file')
     if doc_type and file:
         VerificationDocument.objects.filter(company=company, doc_type=doc_type).delete()
         VerificationDocument.objects.create(company=company, doc_type=doc_type, file=file)
+        # Any new upload (especially after a denial) puts the application
+        # back into the review queue and clears the prior denial note.
+        if company.verification_status in (Company.UNVERIFIED, Company.DENIED):
+            company.verification_status = Company.PENDING
+            company.rejection_note = ''
+            company.save(update_fields=['verification_status', 'rejection_note'])
 
     return redirect('/employers/pending/')
 
@@ -200,6 +239,7 @@ def job_list(request):
     })
 
 @employer_verified_required
+@email_verified_required
 def job_create(request):
     profile = request.user.employer_profile
     company = profile.company
@@ -283,11 +323,46 @@ def job_create(request):
 
 
 
-@employer_verified_required
 def job_edit(request, job_id):
-    profile = request.user.employer_profile
-    company = profile.company
-    job = get_object_or_404(JobPosting, id=job_id, company=company)
+    """Edit any job post. Two valid callers:
+      - Employer rep editing their company's own job (verified + email-verified).
+      - PESO admin editing anybody's job (staff bypass — no email check needed).
+    Routed by two URL patterns that both point here; the auth check below
+    figures out which flow we're in.
+    """
+    if not request.user.is_authenticated:
+        return redirect('/employers/login/')
+
+    if request.user.is_staff:
+        # Admin path — accept any job by id.
+        job = get_object_or_404(JobPosting.objects.select_related('company'), id=job_id)
+        company = job.company
+        is_admin_edit = True
+    else:
+        # Employer path — strict ownership + verification gates.
+        if not request.user.is_employer:
+            return redirect('/employers/login/')
+        try:
+            profile = request.user.employer_profile
+        except Exception:
+            return redirect('/employers/register/')
+        company = profile.company
+        if not company.is_verified:
+            request.session['pending_block_msg'] = (
+                'This action is unavailable until your company is verified.'
+            )
+            return redirect('/employers/dashboard/')
+        try:
+            from allauth.account.models import EmailAddress
+            if not EmailAddress.objects.filter(user=request.user, verified=True).exists():
+                request.session['pending_block_msg'] = (
+                    'Verify your email address to unlock this action.'
+                )
+                return redirect('/employers/dashboard/')
+        except Exception:
+            pass
+        job = get_object_or_404(JobPosting, id=job_id, company=company)
+        is_admin_edit = False
 
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
@@ -348,12 +423,18 @@ def job_edit(request, job_id):
                 preferred_position=request.POST.get('exp_preferred_position', ''),
             )
 
+        # Admin edits return to the admin job detail; employer edits go to
+        # the employer's job list (existing behavior).
+        if is_admin_edit:
+            from apps.core.hashids import encode as _hashid
+            return redirect(f'/admin-panel/companies/{_hashid(company.id)}/jobs/{_hashid(job.id)}/')
         return redirect('/employers/jobs/')
 
     return render(request, 'employers/job_form.html', {
         'company': company,
         'action': 'Edit',
         'job': job,
+        'is_admin_edit': is_admin_edit,
         # All edit-mode prefills come from `job.*`; this empty dict just keeps
         # the template's `|default:location_defaults.*` chain from raising.
         'location_defaults': {'bldg_unit': '', 'street': '', 'barangay_code': '', 'barangay_name': ''},
@@ -364,9 +445,19 @@ def job_edit(request, job_id):
 
 @employer_verified_required
 def job_delete(request, job_id):
+    """Employer-side job delete. Refuses to delete an admin-disabled job
+    so PESO's take-down record (with reason) isn't lost."""
+    from django.contrib import messages
     profile = request.user.employer_profile
     job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
     if request.method == 'POST':
+        if job.admin_disabled:
+            messages.error(
+                request,
+                'This job was disabled by PESO Admin and can\'t be deleted from your side. '
+                'Contact PESO to discuss next steps.',
+            )
+            return redirect('/employers/jobs/')
         job.delete()
     return redirect('/employers/jobs/')
 
@@ -374,15 +465,29 @@ def job_delete(request, job_id):
 @employer_verified_required
 def job_close(request, job_id):
     """Toggle a job between OPEN and CLOSED. Closed jobs hide from jobseeker
-    recommendations and stop receiving new applications, but stay on record."""
+    recommendations and stop receiving new applications, but stay on record.
+
+    Refuses to re-open an admin-disabled job — only PESO can lift their
+    own take-down. A flash message tells the employer why their click bounced.
+    """
+    from django.contrib import messages
     profile = request.user.employer_profile
     job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
     if request.method == 'POST':
-        if job.status == JobPosting.STATUS_OPEN:
+        # Block re-open attempts on admin take-downs. Closing is also blocked
+        # (already closed) but the bounce message is what matters.
+        if job.admin_disabled:
+            messages.error(
+                request,
+                'This job was disabled by PESO Admin and can\'t be re-opened from your side. '
+                'Check your inbox for the reason and contact PESO if you have questions.',
+            )
+        elif job.status == JobPosting.STATUS_OPEN:
             job.status = JobPosting.STATUS_CLOSED
+            job.save(update_fields=['status'])
         elif job.status == JobPosting.STATUS_CLOSED:
             job.status = JobPosting.STATUS_OPEN
-        job.save(update_fields=['status'])
+            job.save(update_fields=['status'])
     return redirect(request.POST.get('next') or '/employers/jobs/')
 
     
@@ -418,6 +523,7 @@ def job_detail(request, job_id):
 
 
 @employer_verified_required
+@email_verified_required
 def invite_to_apply(request, job_id, jobseeker_id):
     """Send a jobseeker an email + bell notification inviting them to apply for
     a specific job. Idempotent — won't double-send to the same jobseeker.
@@ -509,6 +615,10 @@ def candidates(request, job_id):
         job=job, interaction_type=JobInteraction.LIKED
     ).count()
 
+    # Default — only populated when tab=='applicants' below.
+    status_filter = ''
+    status_counts = {}
+
     if tab == 'recommended':
         ranked = get_ranked_jobseekers(job)
         # Hide people who already applied so the lists complement each other
@@ -519,6 +629,34 @@ def candidates(request, job_id):
         apps = (Application.objects.filter(job=job)
                 .select_related('jobseeker')
                 .order_by('-created_at'))
+
+        # Status filter — `?status=pending|viewed|accepted|hire_pending|rejected|hired`.
+        # `all` (or anything unrecognized) shows everything.
+        valid_statuses = {Application.STATUS_PENDING, Application.STATUS_VIEWED,
+                          Application.STATUS_ACCEPTED, Application.STATUS_HIRE_PENDING,
+                          Application.STATUS_REJECTED, Application.STATUS_HIRED}
+        status_filter = (request.GET.get('status') or '').lower().strip()
+        if status_filter in valid_statuses:
+            apps = apps.filter(status=status_filter)
+
+        # Count per status across the whole job — drives the chip badges,
+        # independent of the current filter.
+        status_counts_qs = (Application.objects.filter(job=job)
+                            .values_list('status', flat=True))
+        per_status = {s: 0 for s in valid_statuses}
+        for s in status_counts_qs:
+            if s in per_status:
+                per_status[s] += 1
+        # Ordered list of (code, label, count) for the template chips.
+        status_counts = [
+            (Application.STATUS_PENDING,      'Pending',      per_status[Application.STATUS_PENDING]),
+            (Application.STATUS_VIEWED,       'Viewed',       per_status[Application.STATUS_VIEWED]),
+            (Application.STATUS_ACCEPTED,     'Accepted',     per_status[Application.STATUS_ACCEPTED]),
+            (Application.STATUS_HIRE_PENDING, 'Hire Offered', per_status[Application.STATUS_HIRE_PENDING]),
+            (Application.STATUS_REJECTED,    'Rejected',     per_status[Application.STATUS_REJECTED]),
+            (Application.STATUS_HIRED,       'Hired',        per_status[Application.STATUS_HIRED]),
+        ]
+
         ranked = []
         for app in apps:
             score_data = compute_match_score(job, app.jobseeker)
@@ -544,6 +682,8 @@ def candidates(request, job_id):
         'liked_by_count': liked_by_count,
         'applicants_count': applicants_count,
         'tab': tab,
+        'status_filter': status_filter,
+        'status_counts': status_counts,
         'page': page,
         'qs_base': querystring_without(request, 'page'),
         'unread_notifications': False,
@@ -554,13 +694,19 @@ def candidates(request, job_id):
 # Valid transitions enforced server-side. Rejected is terminal.
 # Hired stays as status='hired' even after un-hire (un-hire = "employment ended"),
 # we just stamp employed_until and end the linked work-experience entry.
+#
+# Hire flow is two-step: employer 'hire' moves accepted → hire_pending (an
+# offer to the jobseeker); the jobseeker then accepts (→ hired) or declines
+# (→ back to accepted) via the dedicated `application_confirm_hire` view.
+# 'cancel_hire' lets the employer withdraw a pending offer.
 _ALLOWED_TRANSITIONS = {
     # action -> set of statuses we'll accept this action from
-    'view':   {'pending'},
-    'accept': {'pending', 'viewed'},
-    'reject': {'pending', 'viewed', 'accepted'},  # accepted can be reverted
-    'hire':   {'accepted'},
-    'unhire': {'hired'},  # marks employment as ended; status stays 'hired' for history
+    'view':        {'pending'},
+    'accept':      {'pending', 'viewed'},
+    'reject':      {'pending', 'viewed', 'accepted', 'hire_pending'},
+    'hire':        {'accepted'},                 # offer the hire — jobseeker must confirm
+    'cancel_hire': {'hire_pending'},             # employer withdraws the offer
+    'unhire':      {'hired'},
 }
 
 
@@ -627,56 +773,51 @@ def application_update_status(request, app_id):
             we.year_ended  = end_date.year
             we.save(update_fields=['is_current', 'month_ended', 'year_ended'])
     else:
-        # All other actions update the status field.
+        # All other actions update the status field. Note: 'hire' moves into
+        # the hire_pending offer state — no side effects yet. The slot
+        # decrement and WorkExperience creation happen once the jobseeker
+        # confirms via application_confirm_hire.
         status_for = {
-            'view':   Application.STATUS_VIEWED,
-            'accept': Application.STATUS_ACCEPTED,
-            'reject': Application.STATUS_REJECTED,
-            'hire':   Application.STATUS_HIRED,
+            'view':        Application.STATUS_VIEWED,
+            'accept':      Application.STATUS_ACCEPTED,
+            'reject':      Application.STATUS_REJECTED,
+            'hire':        Application.STATUS_HIRE_PENDING,
+            'cancel_hire': Application.STATUS_ACCEPTED,
         }
         app.status = status_for[action]
         update_fields.append('status')
-        if action == 'hire':
-            if not app.hired_at:
-                app.hired_at = now
-                update_fields.append('hired_at')
-            # Decrement the job's open slots (clamped at 0).
-            if app.job and (app.job.slots or 0) > 0:
-                app.job.slots -= 1
-                app.job.save(update_fields=['slots'])
-            # Auto-create a work-experience entry on the jobseeker's resume
-            # (idempotent — only one per application).
-            if not WorkExperience.objects.filter(from_application=app).exists():
-                WorkExperience.objects.create(
-                    profile=app.jobseeker,
-                    position=app.job.title,
-                    company=app.job.company.name,
-                    description='',
-                    month_started=str(now.month),
-                    year_started=now.year,
-                    is_current=True,
-                    from_application=app,
-                )
 
     app.save(update_fields=update_fields)
 
     # Notify the jobseeker on decision-points (skip 'view' and 'unhire').
     notif_for = {
-        'accept': 'application_accepted',
-        'reject': 'application_rejected',
-        'hire':   'application_hired',
+        'accept':      'application_accepted',
+        'reject':      'application_rejected',
+        'hire':        'hire_offered',
+        'cancel_hire': None,  # silent — employer withdrew before jobseeker saw it
     }
-    if action in notif_for:
+    if action in notif_for and notif_for[action]:
         from apps.notifications.models import Notification
         from apps.notifications.email import email_application_status_change
         Notification.objects.create(
             recipient=app.jobseeker.user,
             notif_type=notif_for[action],
             company=app.job.company,
+            jobseeker=app.jobseeker,
             job=app.job,
         )
         # Best-effort transactional email.
         email_application_status_change(app, action)
+    elif action == 'cancel_hire':
+        # Clear the jobseeker's stale Hire Offered notification so they
+        # don't see Accept/Decline buttons for an offer that's been pulled.
+        from apps.notifications.models import Notification
+        Notification.objects.filter(
+            recipient=app.jobseeker.user,
+            notif_type=Notification.HIRE_OFFERED,
+            jobseeker=app.jobseeker, job=app.job, company=app.job.company,
+            is_read=False,
+        ).delete()
 
     return JsonResponse({
         'ok': True,
@@ -783,6 +924,9 @@ def candidate_detail(request, jobseeker_id):
     # If the employer landed here from /employers/jobs/<id>/candidates/, we get
     # the job context via ?job=<id>. Use that to surface the application message
     # and offer Previous/Next nav across the applicant list for that job.
+    # The ?job= query string carries a hashid (e.g. "qK4w2X"), not a raw
+    # int — URL converters auto-decode path params but NOT query params, so
+    # we decode by hand here. Falls back to raw int parsing for legacy links.
     job_id_raw = request.GET.get('job', '').strip()
     current_job = None
     application = None
@@ -790,12 +934,17 @@ def candidate_detail(request, jobseeker_id):
     next_id = None
     match_score = None
     if job_id_raw:
-        try:
-            current_job = JobPosting.objects.select_related('company').get(
-                id=job_id_raw, company=company,
-            )
-        except (JobPosting.DoesNotExist, ValueError):
-            current_job = None
+        from apps.core.hashids import decode as _decode_hashid
+        decoded = _decode_hashid(job_id_raw)
+        if decoded is None and job_id_raw.isdigit():
+            decoded = int(job_id_raw)  # legacy /?job=<int>
+        if decoded is not None:
+            try:
+                current_job = JobPosting.objects.select_related('company').get(
+                    id=decoded, company=company,
+                )
+            except JobPosting.DoesNotExist:
+                current_job = None
 
     if current_job:
         application = (Application.objects
@@ -890,6 +1039,7 @@ def candidate_like(request, jobseeker_id):
 
 
 @employer_verified_required
+@email_verified_required
 def candidate_contact(request, jobseeker_id):
     """Employer sends an email (job requirements or interview schedule) to a
     jobseeker. Also creates an in-app bell notification."""
@@ -946,8 +1096,12 @@ def candidate_contact(request, jobseeker_id):
         interview_location=interview_location if kind == EmployerContact.KIND_INTERVIEW else '',
     )
 
-    # Send the email (gracefully no-ops on SMTP failure).
-    email_employer_contact(contact)
+    # Delivery channel — `inbox_only` skips the email and only creates the
+    # in-app inbox entry + bell notification. Default (unchecked) sends both.
+    inbox_only = (request.POST.get('inbox_only') or '').strip() == '1'
+    if not inbox_only:
+        # Send the email (gracefully no-ops on SMTP failure).
+        email_employer_contact(contact)
 
     # In-app notification for the jobseeker.
     if jobseeker.user:
@@ -962,7 +1116,10 @@ def candidate_contact(request, jobseeker_id):
             admin_message=subject,
         )
 
-    messages.success(request, f'Your message has been sent to {jobseeker.first_name}.')
+    if inbox_only:
+        messages.success(request, f'Sent to {jobseeker.first_name}\'s EasyHire inbox (no email).')
+    else:
+        messages.success(request, f'Your message has been sent to {jobseeker.first_name}.')
     return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
 
 

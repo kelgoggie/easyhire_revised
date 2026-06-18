@@ -16,6 +16,10 @@ class Notification(models.Model):
     APPLICATION_REJECTED  = 'application_rejected'   # jobseeker-facing
     APPLICATION_HIRED     = 'application_hired'      # jobseeker-facing
     EMPLOYER_CONTACTED    = 'employer_contacted'     # jobseeker-facing: employer sent requirements or interview
+    # Two-step hire flow: employer offers, jobseeker accepts/declines.
+    HIRE_OFFERED          = 'hire_offered'           # jobseeker-facing: employer wants to mark them as Hired
+    HIRE_ACCEPTED         = 'hire_accepted'          # employer-facing: jobseeker confirmed
+    HIRE_DECLINED         = 'hire_declined'          # employer-facing: jobseeker said no
 
     TYPE_CHOICES = [
         (COMPANY_LIKED_YOU,      'Company Liked You'),
@@ -29,6 +33,9 @@ class Notification(models.Model):
         (APPLICATION_REJECTED,   'Application Rejected'),
         (APPLICATION_HIRED,      'Application Hired'),
         (EMPLOYER_CONTACTED,     'Employer Sent Contact'),
+        (HIRE_OFFERED,           'Hire Offered'),
+        (HIRE_ACCEPTED,          'Hire Accepted'),
+        (HIRE_DECLINED,          'Hire Declined'),
     ]
 
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_notifications')

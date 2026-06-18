@@ -26,7 +26,7 @@
   <div class="border-b border-taupe/30 mb-6"></div>
 
   <!-- ── Tab header + counterpart link ─────────────────────────── -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
     <h2 class="text-xl sm:text-2xl font-bold text-primary">
       {% if tab == 'recommended' %}Recommended Candidates{% else %}Applicants{% endif %}
       <span class="text-muted text-base font-normal ml-2">
@@ -42,31 +42,57 @@
     {% endif %}
   </div>
 
+  {% if tab == 'applicants' and applicants_count %}
+  <!-- Status filter chips -->
+  <div class="flex flex-wrap items-center gap-1.5 mb-5">
+    <span class="text-muted text-xs mr-1">Filter:</span>
+    <a href="?tab=applicants"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if not status_filter %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      All <span class="opacity-70">{{ applicants_count }}</span>
+    </a>
+    {% for code, label, count in status_counts %}
+    <a href="?tab=applicants&status={{ code }}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if status_filter == code %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      {{ label }} <span class="opacity-70">{{ count }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {% if ranked %}
   <!-- ── candidate cards: 1 col on phones, scales up ──────────────────────── -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for item in ranked %}
-    <div class="applicant-card bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col cursor-pointer"
+    {% with seeker_active=item.profile.user.is_active %}
+    <div class="applicant-card bg-white border border-gray-200 rounded-2xl p-5 shadow-sm transition flex flex-col
+                {% if seeker_active %}hover:shadow-md hover:border-teal/30 cursor-pointer{% else %}opacity-60{% endif %}"
          data-app-id="{% if item.application_id %}{{ item.application_id|hashid }}{% endif %}"
          data-app-status="{{ item.application_status|default:'' }}"
          data-applicant-name="{{ item.profile.first_name }} {{ item.profile.last_name }}"
          data-applicant-id="{{ item.profile.id|hashid }}"
          data-applied-at="{% if item.applied_at %}{{ item.applied_at|date:'F j, Y' }}{% endif %}"
-         data-href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}"
-         onclick="if (event.target.closest('a, button, form')) return; window.location=this.dataset.href;">
+         {% if seeker_active %}data-href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}"
+         onclick="if (event.target.closest('a, button, form')) return; window.location=this.dataset.href;"{% endif %}>
 
       <!-- Top row: name + match smiley -->
       <div class="flex items-start justify-between gap-2 mb-3">
         <div class="min-w-0">
-          <p class="font-bold text-primary text-base leading-tight">{{ item.profile.first_name }} {{ item.profile.last_name }}</p>
+          <p class="font-bold text-primary text-base leading-tight">
+            {{ item.profile.first_name }} {{ item.profile.last_name }}
+            {% if not seeker_active %}<span class="ml-1 text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full align-middle">User removed</span>{% endif %}
+          </p>
           <p class="status-label text-xs mt-0.5
             {% if item.application_status == 'hired' %}text-teal font-semibold
+            {% elif item.application_status == 'hire_pending' %}text-amber font-semibold
             {% elif item.application_status == 'accepted' %}text-teal
             {% elif item.application_status == 'rejected' %}text-red-500
             {% elif item.application_status == 'viewed' %}text-muted
             {% elif item.application_status == 'pending' %}text-amber
             {% endif %}">
             {% if item.application_status == 'hired' %}Hired
+            {% elif item.application_status == 'hire_pending' %}Hire offered · awaiting reply
             {% elif item.application_status == 'accepted' %}Accepted
             {% elif item.application_status == 'rejected' %}Rejected
             {% elif item.application_status == 'viewed' %}Viewed
@@ -88,7 +114,7 @@
           </a>
           {% endif %}
           {% endwith %}
-          {% if request.user.is_staff %}{% match_badge item.score True %}{% endif %}
+          {% match_badge item.score %}
         </div>
       </div>
 
@@ -123,6 +149,7 @@
       </div>
 
     </div>
+    {% endwith %}
     {% endfor %}
   </div>
 

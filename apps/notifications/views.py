@@ -25,7 +25,9 @@ def notifications_api(request):
     data = []
     for n in notifs:
         item = {
-            'id': n.id,
+            # Encoded so the front-end fetch hits the <hashid:notif_id> URL
+            # pattern correctly. Passing the raw int silently 404s.
+            'id': _hashid(n.id),
             'type': n.notif_type,
             'created_at': _relative_time(n.created_at),
             'actor': '',
@@ -34,6 +36,8 @@ def notifications_api(request):
             'meta': n.job.title if n.job else '',
             'icon': 'heart',
             'url': '#',
+            'hire_app_hashid': '',  # set below for HIRE_OFFERED so the jobseeker
+                                    # can Accept/Decline inline from the bell.
         }
         if n.notif_type == Notification.COMPANY_LIKED_YOU:
             item['actor'] = n.company.name if n.company else 'Employer'
@@ -96,6 +100,39 @@ def notifications_api(request):
             item['verb']  = 'hired you — congratulations!'
             item['icon']  = 'sparkle'
             item['url']   = '/applications/'
+        elif n.notif_type == Notification.HIRE_OFFERED:
+            item['actor'] = n.company.name if n.company else 'An employer'
+            job_title = n.job.title if n.job else 'a position'
+            item['verb']  = f'wants to tag you as Hired for {job_title}.'
+            item['icon']  = 'sparkle'
+            # Find the underlying application so the inline Accept/Decline
+            # buttons can target it. Bell renders these buttons when
+            # `hire_app_hashid` is non-empty.
+            from apps.jobs.models import Application
+            if n.jobseeker and n.job:
+                app = Application.objects.filter(
+                    jobseeker=n.jobseeker, job=n.job,
+                    status=Application.STATUS_HIRE_PENDING,
+                ).first()
+                if app:
+                    item['hire_app_hashid'] = _hashid(app.id)
+            item['url'] = '/applications/'
+        elif n.notif_type == Notification.HIRE_ACCEPTED:
+            who = (f"{n.jobseeker.first_name} {n.jobseeker.last_name}"
+                   if n.jobseeker else 'The jobseeker')
+            item['actor'] = who
+            item['verb']  = 'accepted your hire offer.'
+            item['icon']  = 'sparkle'
+            item['url']   = (f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=applicants&status=hired'
+                             if n.job else '/employers/jobs/')
+        elif n.notif_type == Notification.HIRE_DECLINED:
+            who = (f"{n.jobseeker.first_name} {n.jobseeker.last_name}"
+                   if n.jobseeker else 'The jobseeker')
+            item['actor'] = who
+            item['verb']  = 'declined your hire offer.'
+            item['icon']  = 'briefcase'
+            item['url']   = (f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=applicants'
+                             if n.job else '/employers/jobs/')
         elif n.notif_type == Notification.EMPLOYER_CONTACTED:
             item['actor']  = n.company.name if n.company else 'An employer'
             item['verb']   = f'sent you {n.liker_preview or "a message"}. Check your email.'

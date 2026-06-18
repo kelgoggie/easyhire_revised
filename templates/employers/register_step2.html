@@ -75,7 +75,9 @@
               <div class="grid grid-cols-2 gap-y-2 gap-x-4">
                 {% for sector in sectors %}
                 <label class="inline-flex items-center gap-2 text-sm text-primary cursor-pointer">
-                  <input type="checkbox" name="sectors" value="{{ sector.id }}" class="accent-primary w-4 h-4">
+                  <input type="checkbox" name="sectors" value="{{ sector.id }}"
+                         {% if sector.id|stringformat:"s" in selected_sector_ids %}checked{% endif %}
+                         class="accent-primary w-4 h-4">
                   {{ sector.label }}
                 </label>
                 {% endfor %}
@@ -84,15 +86,20 @@
 
             <div>
               <label class="block text-primary text-xs font-medium mb-1">Main Branch Address*</label>
-              <input type="text" name="main_branch_address" value="{{ form.main_branch_address|default:'' }}"
-                     class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+              <input type="text" name="main_branch_address" id="main_branch_address" value="{{ form.main_branch_address|default:'' }}"
+                     class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition read-only:bg-gray-50 read-only:cursor-not-allowed">
+              <label class="inline-flex items-center gap-1.5 text-xs text-muted mt-1.5 cursor-pointer">
+                <input type="checkbox" id="same_as_iloilo" class="accent-primary w-3.5 h-3.5">
+                Same as Iloilo branch address
+              </label>
             </div>
 
             <div>
               <label class="block text-primary text-xs font-medium mb-1">Company Email*</label>
-              <input type="email" name="company_email" value="{{ form.company_email|default:'' }}"
+              <input type="email" name="company_email" id="company_email" value="{{ form.company_email|default:'' }}"
                      placeholder="companyemail@gmail.com"
                      class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+              <p id="company_email_error" class="text-red-500 text-xs mt-1 hidden">Enter a valid email address.</p>
             </div>
           </div>
 
@@ -153,9 +160,10 @@
 
             <div>
               <label class="block text-primary text-xs font-medium mb-1">Recruitment Email*</label>
-              <input type="email" name="recruitment_email" value="{{ form.recruitment_email|default:'' }}"
+              <input type="email" name="recruitment_email" id="recruitment_email" value="{{ form.recruitment_email|default:'' }}"
                      placeholder="recruitmentemail@gmail.com"
                      class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+              <p id="recruitment_email_error" class="text-red-500 text-xs mt-1 hidden">Enter a valid email address.</p>
             </div>
           </div>
         </div>
@@ -194,19 +202,20 @@
           </div>
           <div>
             <label class="block text-primary text-xs font-medium mb-1">Phone*</label>
-            <input type="tel" name="phone" value="{{ form.phone|default:'' }}"
-                   placeholder="+63909 XXX XXXX" maxlength="13"
-                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13)"
-                   class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition {% if errors.phone %}border-red-400{% endif %}">
-            {% if errors.phone %}
-            <p class="text-red-500 text-xs mt-1">{{ errors.phone }}</p>
-            {% endif %}
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted select-none">+63</span>
+              <input type="tel" name="phone" id="phone" value="{{ form.phone|default:'' }}"
+                     placeholder="9XX XXX XXXX" maxlength="13"
+                     class="w-full bg-white border border-gray-200 rounded-full pl-12 pr-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition {% if errors.phone %}border-red-400{% endif %}">
+            </div>
+            <p id="phone_error" class="text-red-500 text-xs mt-1 {% if not errors.phone %}hidden{% endif %}">{% if errors.phone %}{{ errors.phone }}{% else %}Enter a valid 10-digit PH mobile (e.g. 9171234567).{% endif %}</p>
           </div>
           <div>
             <label class="block text-primary text-xs font-medium mb-1">Email*</label>
-            <input type="email" name="rep_email" value="{{ form.rep_email|default:'' }}"
+            <input type="email" name="rep_email" id="rep_email" value="{{ form.rep_email|default:'' }}"
                    placeholder="representativeemail@gmail.com"
                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+            <p id="rep_email_error" class="text-red-500 text-xs mt-1 hidden">Enter a valid email address.</p>
           </div>
         </div>
 
@@ -256,6 +265,100 @@ document.querySelector('form').addEventListener('submit', function() {
   document.getElementById('iloilo_barangay_name').value =
     sel.options[sel.selectedIndex].text;
 });
+
+// ── "Same as Iloilo branch address" sync ──────────────────────────────
+(function() {
+  const cb     = document.getElementById('same_as_iloilo');
+  const main   = document.getElementById('main_branch_address');
+  const bldg   = document.querySelector('[name="iloilo_bldg_unit"]');
+  const street = document.querySelector('[name="iloilo_street"]');
+  const bgSel  = document.getElementById('iloilo_barangay');
+
+  function buildIloiloAddress() {
+    const parts = [];
+    if (bldg && bldg.value.trim())   parts.push(bldg.value.trim());
+    if (street && street.value.trim()) parts.push(street.value.trim());
+    const bgName = bgSel && bgSel.selectedIndex >= 0
+      ? (bgSel.options[bgSel.selectedIndex].text || '').replace(/^Select.*/, '')
+      : '';
+    if (bgName) parts.push(bgName);
+    parts.push('Iloilo City');
+    return parts.join(', ');
+  }
+
+  function syncIfChecked() {
+    if (!cb.checked) return;
+    main.value = buildIloiloAddress();
+  }
+
+  cb.addEventListener('change', function() {
+    if (cb.checked) {
+      main.dataset.priorValue = main.value;  // remember whatever user typed
+      main.value = buildIloiloAddress();
+      main.readOnly = true;
+    } else {
+      main.readOnly = false;
+      // Restore the prior value only if we replaced it (don't blow away a
+      // legitimate manual entry the user added while unchecked).
+      if (main.dataset.priorValue !== undefined) {
+        main.value = main.dataset.priorValue;
+        delete main.dataset.priorValue;
+      }
+    }
+  });
+  [bldg, street, bgSel].forEach(function(el) {
+    if (el) el.addEventListener('input',  syncIfChecked);
+    if (el) el.addEventListener('change', syncIfChecked);
+  });
+})();
+
+// ── Phone validation (matches /register/info/ pattern) ────────────────
+(function() {
+  const phone = document.getElementById('phone');
+  const err   = document.getElementById('phone_error');
+  if (!phone) return;
+  function check() {
+    let raw = phone.value.replace(/\D/g, '');
+    if (raw.length > 10) raw = raw.slice(0, 10);
+    let fmt = raw;
+    if (raw.length > 6) fmt = raw.slice(0,3)+' '+raw.slice(3,6)+' '+raw.slice(6);
+    else if (raw.length > 3) fmt = raw.slice(0,3)+' '+raw.slice(3);
+    phone.value = fmt;
+    const valid = raw.length === 0 || (raw.length === 10 && /^9\d{9}$/.test(raw));
+    err.classList.toggle('hidden', valid);
+    phone.classList.toggle('border-red-400', !valid);
+  }
+  phone.addEventListener('input', check);
+  // Normalize any prior value (handles re-render from POST error).
+  if (phone.value) check();
+})();
+
+// ── Email validation on 3 fields ──────────────────────────────────────
+(function() {
+  function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
+  const pairs = [
+    ['company_email',     'company_email_error'],
+    ['recruitment_email', 'recruitment_email_error'],
+    ['rep_email',         'rep_email_error'],
+  ];
+  pairs.forEach(function(p) {
+    const input = document.getElementById(p[0]);
+    const errEl = document.getElementById(p[1]);
+    if (!input || !errEl) return;
+    function check() {
+      const ok = !input.value || isValidEmail(input.value);
+      errEl.classList.toggle('hidden', ok);
+      input.classList.toggle('border-red-400', !ok);
+    }
+    input.addEventListener('input', check);
+    input.addEventListener('blur', function() {
+      if (input.value && !isValidEmail(input.value)) {
+        errEl.classList.remove('hidden');
+        input.classList.add('border-red-400');
+      }
+    });
+  });
+})();
 </script>
 {% endblock %}
 

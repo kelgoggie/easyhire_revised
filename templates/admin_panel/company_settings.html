@@ -5,10 +5,9 @@
 {% block admin_content %}
 <div class="py-8 max-w-6xl mx-auto">
 
-  <div class="flex items-end justify-between gap-4 mb-2">
-    <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Account Settings</h1>
-    <a href="/admin-panel/companies/{{ company.id|hashid }}/" class="text-muted text-sm hover:text-primary transition">&lt; Back to profile</a>
-  </div>
+  <a href="/admin-panel/companies/{{ company.id|hashid }}/" class="text-muted text-sm hover:text-primary transition mb-3 inline-block">&lt; Back to {{ company.name }}</a>
+
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">Account Settings</h1>
   <div class="border-b border-taupe/40 mb-6"></div>
 
   <h2 class="text-xl sm:text-2xl font-extrabold text-primary mb-1">{{ company.name }}</h2>
@@ -28,6 +27,8 @@
   <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">Representative account disabled.</div>
   {% elif saved_section == 'enabled' %}
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Representative account re-enabled.</div>
+  {% elif saved_section == 'verification' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Verification status updated. Company reps have been notified.</div>
   {% endif %}
   {% if error %}
   <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">{{ error }}</div>
@@ -125,6 +126,91 @@
   {% else %}
   <p class="text-muted text-sm italic text-center">No representative account is linked to this company yet.</p>
   {% endif %}
+
+  <!-- ── Verification Documents + Status ───────────────────────── -->
+  <div class="border-t border-taupe/40 mt-12 pt-8">
+    <div class="flex items-baseline justify-between gap-3 mb-1">
+      <h3 class="text-lg font-bold text-primary">Verification Documents</h3>
+      <span class="text-muted text-xs">{{ uploaded_count }} of {{ checklist|length }} uploaded</span>
+    </div>
+    <p class="text-muted text-xs mb-4">
+      Required documents the company submitted for PESO verification. Use the status picker below if a license has expired or the company needs to re-submit.
+    </p>
+
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
+      <div class="space-y-2">
+        {% for item in checklist %}
+        <div class="flex items-center justify-between border border-gray-100 rounded-xl px-4 py-3">
+          <div class="flex items-center gap-3 min-w-0">
+            {% if item.uploaded %}
+            <div class="w-6 h-6 rounded-full bg-teal/15 border border-teal/40 flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-teal" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+            </div>
+            {% else %}
+            <div class="w-6 h-6 rounded-full border border-taupe/40 flex-shrink-0"></div>
+            {% endif %}
+            <div class="min-w-0">
+              <p class="text-primary text-sm {% if item.uploaded %}font-medium{% endif %}">{{ item.label }}</p>
+              {% if item.uploaded %}
+              <p class="text-teal text-xs">
+                Uploaded · <a href="{{ item.doc.file.url }}" target="_blank" class="underline hover:text-primary transition">View file</a>
+                {% if item.doc.uploaded_at %}<span class="text-muted">· {{ item.doc.uploaded_at|date:"M j, Y" }}</span>{% endif %}
+              </p>
+              {% else %}
+              <p class="text-muted text-xs italic">Not yet uploaded</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Status change form -->
+    <form method="POST" class="bg-white border border-gray-200 rounded-2xl p-5">
+      {% csrf_token %}
+      <input type="hidden" name="form" value="verification">
+      <p class="text-sm font-bold text-primary mb-1">Set Verification Status</p>
+      <p class="text-muted text-xs mb-4">
+        Setting status back to <strong class="text-primary">Pending</strong> or <strong class="text-primary">Verification Denied</strong> reopens the document-upload page for the company so they can re-submit. The reason (when denying) is sent to every company rep's inbox.
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 items-start">
+        <div>
+          <label class="block text-primary text-xs mb-1">Status</label>
+          <div class="relative">
+            <select name="verification_status"
+                    class="w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+              {% for code, label in verification_choices %}
+              <option value="{{ code }}" {% if company.verification_status == code %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-[11px] text-muted mt-1">
+            Current:
+            {% if company.verification_status == 'verified' %}<span class="text-teal font-semibold">Verified</span>{% if company.verified_at %} · {{ company.verified_at|date:"M j, Y" }}{% endif %}
+            {% elif company.verification_status == 'pending' %}<span class="text-amber font-semibold">Pending</span>
+            {% elif company.verification_status == 'verification_denied' %}<span class="text-red-500 font-semibold">Verification Denied</span>
+            {% else %}<span class="text-muted">Unverified</span>
+            {% endif %}
+          </p>
+        </div>
+        <div>
+          <label class="block text-primary text-xs mb-1">Rejection Note <span class="text-muted">(only shown for "Verification Denied")</span></label>
+          <textarea name="rejection_note" rows="3" placeholder="e.g. Mayor's permit expired on Mar 2025 — please upload a current copy."
+                    class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ company.rejection_note }}</textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit"
+                class="bg-amber text-white text-sm font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition">
+          Save Verification Status
+        </button>
+      </div>
+    </form>
+  </div>
 
 </div>
 {% endblock %}

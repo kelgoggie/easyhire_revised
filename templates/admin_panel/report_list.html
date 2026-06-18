@@ -170,6 +170,22 @@
   }
   document.getElementById('rv-reviewed').addEventListener('click', function(){ decide('reviewed'); });
   document.getElementById('rv-dismiss') .addEventListener('click', function(){ decide('dismissed'); });
+
+  // Auto-open the Review modal when arriving with ?focus=<id> (from the
+  // dashboard rows + admin notification dropdown).
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const focusId = params.get('focus');
+    if (!focusId) return;
+    const row = document.querySelector('.report-row[data-report-id="' + focusId + '"]');
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const btn = row.querySelector('.review-btn');
+    if (btn) {
+      // Defer slightly so the smooth-scroll lands first.
+      setTimeout(function() { btn.click(); }, 250);
+    }
+  })();
 })();
 </script>
 {% endblock %}

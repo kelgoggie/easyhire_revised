@@ -146,9 +146,7 @@
             <p class="font-bold text-primary text-base leading-tight">{{ item.profile.first_name }} {{ item.profile.last_name }}</p>
             <p class="text-muted text-xs italic truncate">{{ item.profile.barangay|default:item.profile.city_municipality }}</p>
           </div>
-          {% if request.user.is_staff %}
-            {% match_badge item.score True %}
-          {% endif %}
+          {% match_badge item.score %}
         </div>
 
         <div class="flex flex-wrap gap-1.5 mb-4 flex-1">
@@ -174,7 +172,7 @@
         <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/invite/{{ item.profile.id|hashid }}/" class="invite-form" data-jobseeker-name="{{ item.profile.first_name }}">
           {% csrf_token %}
           <button type="submit"
-                  class="block w-full text-center bg-amber text-white text-xs font-semibold py-2.5 rounded-full hover:bg-amber/90 transition">
+                  class="block w-full text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
             Invite to Apply
           </button>
         </form>

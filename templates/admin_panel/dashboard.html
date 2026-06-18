@@ -11,22 +11,26 @@
 
   <!-- ── Stat cards ────────────────────────────────────────────── -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-    <div class="bg-white border border-gray-200 rounded-2xl px-6 py-5">
+    <a href="/admin-panel/jobseekers/"
+       class="bg-white border border-gray-200 rounded-2xl px-6 py-5 hover:border-teal/40 hover:shadow-sm transition">
       <p class="text-muted text-sm mb-1">Total Users</p>
       <p class="text-primary text-3xl font-extrabold">{{ total_users }}</p>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-2xl px-6 py-5">
+    </a>
+    <a href="/admin-panel/jobseekers/"
+       class="bg-white border border-gray-200 rounded-2xl px-6 py-5 hover:border-teal/40 hover:shadow-sm transition">
       <p class="text-muted text-sm mb-1">Jobseekers</p>
       <p class="text-primary text-3xl font-extrabold">{{ jobseeker_count }}</p>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-2xl px-6 py-5">
+    </a>
+    <a href="/admin-panel/companies/"
+       class="bg-white border border-gray-200 rounded-2xl px-6 py-5 hover:border-teal/40 hover:shadow-sm transition">
       <p class="text-muted text-sm mb-1">Employers</p>
       <p class="text-primary text-3xl font-extrabold">{{ employer_count }}</p>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-2xl px-6 py-5">
+    </a>
+    <a href="/admin-panel/jobs/"
+       class="bg-white border border-gray-200 rounded-2xl px-6 py-5 hover:border-teal/40 hover:shadow-sm transition">
       <p class="text-muted text-sm mb-1">Jobs</p>
       <p class="text-primary text-3xl font-extrabold">{{ job_count }}</p>
-    </div>
+    </a>
   </div>
 
   <!-- ── Pending Approvals ─────────────────────────────────────── -->
@@ -54,7 +58,8 @@
         </thead>
         <tbody>
           {% for company in pending_approvals %}
-          <tr class="border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition">
+          <tr class="border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition cursor-pointer"
+              onclick="window.location='/admin-panel/employers/{{ company.id|hashid }}/'">
             <td class="px-5 py-3 font-bold text-primary">{{ company.name }}</td>
             <td class="px-4 py-3 text-muted italic">
               {% if company.iloilo_barangay_name %}{{ company.iloilo_barangay_name }}, Iloilo City
@@ -68,7 +73,7 @@
               {% endwith %}
             </td>
             <td class="px-4 py-3 text-right">
-              <a href="/admin-panel/employers/{{ company.id|hashid }}/" class="text-muted italic underline hover:text-primary transition">View</a>
+              <span class="text-muted italic">View →</span>
             </td>
           </tr>
           {% endfor %}
@@ -104,7 +109,8 @@
         </thead>
         <tbody>
           {% for r in recent_reports %}
-          <tr class="border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition">
+          <tr class="border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition cursor-pointer"
+              onclick="window.location='/admin-panel/reports/?status=open&focus={{ r.id|hashid }}'">
             <td class="px-5 py-3 font-bold text-primary">{{ r.account_label }}</td>
             <td class="px-4 py-3 text-muted italic">{{ r.get_account_type_display }}</td>
             <td class="px-4 py-3 text-muted italic">{{ r.description|truncatechars:60 }}</td>

@@ -1,0 +1,21 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load static %}
+
+{% block title %}Analytics — EasyHire Admin{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{% endblock %}
+
+{% with active_nav="analytics" %}
+{% block admin_content %}
+{% comment %}
+  Body is the shared analytics partial — same one jobseekers/employers see.
+  Edit the partial (templates/analytics/_dashboard_body.html), not this file.
+{% endcomment %}
+<div class="py-8 max-w-7xl mx-auto">
+  {% include "analytics/_dashboard_body.html" %}
+</div>
+{% endblock %}
+{% endwith %}

@@ -10,11 +10,11 @@
   <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-primary mb-8">Settings</h1>
 
   <!-- ── Personal Information ──────────────────────────────────── -->
-  <h2 class="text-lg font-bold text-primary mb-4">Personal Information</h2>
+  <h2 class="text-lg font-bold text-primary mb-4">Representative Information</h2>
 
   {% if saved_section == 'personal' %}
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">
-    Your personal information has been updated.
+    Your information has been updated.
   </div>
   {% endif %}
 
@@ -169,6 +169,7 @@
     Saved
   </div>
 </div>
+{% endblock %}
 
 {% block page_scripts %}
 <script>
@@ -240,7 +241,5 @@ function getCookie(n) {
   });
 })();
 </script>
-{% endblock %}
-
 {% endblock %}
 {% endwith %}

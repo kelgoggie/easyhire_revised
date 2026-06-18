@@ -5,7 +5,8 @@
     items — list of dicts with keys: kind, actor, verb, context, timestamp,
             url, report_target_type (str), report_target_id (int|None),
             report_label (str), and optionally detail_body, detail_interview_at,
-            detail_interview_location, detail_company.
+            detail_interview_location, detail_company, detail_cta_label,
+            detail_cta_url.
 {% endcomment %}
 {% if items %}
 <div class="bg-surface border border-taupe/30 rounded-2xl overflow-hidden">
@@ -67,6 +68,15 @@
       </div>
       {% endif %}
       <p class="text-primary text-sm whitespace-pre-line leading-relaxed">{{ item.detail_body }}</p>
+      {% if item.detail_cta_label and item.detail_cta_url %}
+      <div class="mt-3">
+        <a href="{{ item.detail_cta_url }}"
+           class="inline-flex items-center gap-1.5 bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">
+          {{ item.detail_cta_label }}
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
   </div>

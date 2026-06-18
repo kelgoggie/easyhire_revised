@@ -61,11 +61,14 @@ def refresh_jobseeker_liked_job_notification(job):
         ).delete()
         return
 
-    first = likers[0].jobseeker.first_name
+    def _full_name(p):
+        return f"{p.first_name} {p.last_name}".strip() or p.first_name or 'Someone'
+
+    first = _full_name(likers[0].jobseeker)
     if count == 1:
         preview = first
     elif count == 2:
-        preview = f"{first} and {likers[1].jobseeker.first_name}"
+        preview = f"{first} and {_full_name(likers[1].jobseeker)}"
     else:
         others = count - 1
         preview = f"{first} and {others} other{'s' if others != 1 else ''}"

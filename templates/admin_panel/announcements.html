@@ -22,7 +22,7 @@
   {% endif %}
 
   <!-- Compose form -->
-  <form method="POST" class="bg-white border border-gray-200 rounded-2xl p-6 mb-10">
+  <form method="POST" id="ann-form" class="bg-white border border-gray-200 rounded-2xl p-6 mb-10">
     {% csrf_token %}
 
     <p class="text-primary text-xs font-semibold mb-2">Audience</p>
@@ -57,6 +57,29 @@
       </button>
     </div>
   </form>
+
+  <script>
+  (function() {
+    const form = document.getElementById('ann-form');
+    let _confirmed = false;
+    form.addEventListener('submit', function(e) {
+      if (_confirmed) return;
+      e.preventDefault();
+      const aud = (form.querySelector('input[name="audience"]:checked') || {}).value || 'all';
+      const audLabel = aud === 'all' ? 'All Users'
+                     : aud === 'jobseekers' ? 'Jobseekers'
+                     : aud === 'employers' ? 'Employers' : aud;
+      const subject = (form.querySelector('input[name="subject"]') || {}).value || '(no subject)';
+      window.confirmAction({
+        title: 'Send this announcement?',
+        body:  `Sending "${subject}" to ${audLabel}. This appears in every recipient's inbox and can't be unsent.`,
+        ctaLabel: 'Yes, send',
+        ctaClass: 'bg-amber hover:bg-amber/90',
+        onConfirm: function() { _confirmed = true; form.submit(); },
+      });
+    });
+  })();
+  </script>
 
   <!-- Recent announcements -->
   <h2 class="text-lg font-bold text-primary mb-3">Recent Announcements</h2>

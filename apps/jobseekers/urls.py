@@ -8,6 +8,8 @@ urlpatterns = [
     path('resume/', views.resume, name='resume'),
     path('jobs/for-you/', views.recommended_jobs, name='recommended_jobs'),
     path('applications/', views.applications, name='applications'),
+    # Two-step hire flow: jobseeker accepts or declines an employer's hire offer.
+    path('applications/<hashid:app_id>/confirm-hire/', views.confirm_hire, name='confirm_hire'),
     path('profile/', views.profile_view, name='profile'),
     path('settings/', views.settings_view, name='settings'),
     path('settings/password/', views.change_password, name='change_password'),

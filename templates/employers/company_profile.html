@@ -12,7 +12,7 @@
     <div class="absolute inset-0 bg-cover bg-center"
          style="background-image: url('{% static "images/iloilo_city_hall.jpg" %}');"></div>
     <div class="absolute inset-0 bg-primary/55"></div>
-    <a href="#"
+    <a href="/employers/settings/"
        class="absolute bottom-6 right-8 bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition shadow-md">
       Edit Profile
     </a>
@@ -224,6 +224,8 @@
   </div>
 </div>
 
+{% endblock %}
+
 {% block page_scripts %}
 <style>
   .line-clamp-4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
@@ -236,6 +238,4 @@ document.addEventListener('click', function(e) {
   });
 });
 </script>
-{% endblock %}
-
 {% endblock %}

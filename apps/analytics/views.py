@@ -325,6 +325,14 @@ def analytics(request):
     # their respective dashboard layout. Public/unauthenticated visitors
     # get the legacy single-page version.
     if request.user.is_authenticated:
+        # Staff (PESO admins) see the same body wrapped in the admin shell.
+        # Check is_staff first because staff users can also be jobseekers/employers
+        # via legacy accounts, and we want the admin sidebar to win for them.
+        if getattr(request.user, 'is_staff', False):
+            # Pull admin sidebar context (pending counts, notifications feed).
+            from apps.admin_panel.views import _admin_context
+            context.update(_admin_context(request))
+            return render(request, 'admin_panel/analytics.html', context)
         if getattr(request.user, 'is_jobseeker', False):
             return render(request, 'jobseekers/analytics.html', context)
         if getattr(request.user, 'is_employer', False):

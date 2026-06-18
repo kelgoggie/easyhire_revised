@@ -104,19 +104,122 @@ def job_apply(request, job_id):
 
 
 @login_required
+def confirm_hire(request, app_id):
+    """Jobseeker side of the two-step hire flow.
+
+    POST ``action=accept`` flips the application from ``hire_pending`` →
+    ``hired`` and triggers the side effects that used to fire on the
+    employer's "Mark as Hired" click (slot decrement, WorkExperience row).
+
+    POST ``action=decline`` flips it back to ``accepted``. Both paths drop
+    a notification to every company rep so they know what happened.
+    """
+    if request.method != 'POST' or not request.user.is_jobseeker:
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    from apps.jobs.models import Application
+    from apps.notifications.models import Notification
+    from django.utils import timezone
+
+    try:
+        profile = request.user.jobseeker_profile
+    except JobseekerProfile.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Profile missing.'}, status=400)
+
+    app = get_object_or_404(
+        Application.objects.select_related('job', 'job__company'),
+        id=app_id, jobseeker=profile,
+    )
+    if app.status != Application.STATUS_HIRE_PENDING:
+        return JsonResponse({
+            'ok': False,
+            'error': f"This application is no longer awaiting your response (currently '{app.get_status_display()}').",
+        }, status=409)
+
+    action = (request.POST.get('action') or '').strip().lower()
+    if action not in ('accept', 'decline'):
+        return JsonResponse({'ok': False, 'error': 'Unknown action'}, status=400)
+
+    now = timezone.now()
+
+    if action == 'accept':
+        app.status = Application.STATUS_HIRED
+        update_fields = ['status']
+        if not app.hired_at:
+            app.hired_at = now
+            update_fields.append('hired_at')
+        app.save(update_fields=update_fields)
+
+        # Side effects (deferred from the employer click into here):
+        # 1. Decrement the job's open slots.
+        if app.job and (app.job.slots or 0) > 0:
+            app.job.slots -= 1
+            app.job.save(update_fields=['slots'])
+        # 2. Auto-create a work-experience entry on the jobseeker's resume.
+        if not WorkExperience.objects.filter(from_application=app).exists():
+            WorkExperience.objects.create(
+                profile=profile,
+                position=app.job.title,
+                company=app.job.company.name,
+                description='',
+                month_started=str(now.month),
+                year_started=now.year,
+                is_current=True,
+                from_application=app,
+            )
+
+        # Tell every company rep the jobseeker accepted.
+        from apps.employers.models import EmployerProfile
+        for rep in EmployerProfile.objects.filter(company=app.job.company).select_related('user'):
+            if rep.user:
+                Notification.objects.create(
+                    recipient=rep.user,
+                    notif_type=Notification.HIRE_ACCEPTED,
+                    company=app.job.company,
+                    jobseeker=profile,
+                    job=app.job,
+                )
+
+        return JsonResponse({'ok': True, 'status': app.status, 'status_label': app.get_status_display()})
+
+    # decline
+    app.status = Application.STATUS_ACCEPTED
+    app.save(update_fields=['status'])
+
+    from apps.employers.models import EmployerProfile
+    for rep in EmployerProfile.objects.filter(company=app.job.company).select_related('user'):
+        if rep.user:
+            Notification.objects.create(
+                recipient=rep.user,
+                notif_type=Notification.HIRE_DECLINED,
+                company=app.job.company,
+                jobseeker=profile,
+                job=app.job,
+            )
+
+    return JsonResponse({'ok': True, 'status': app.status, 'status_label': app.get_status_display()})
+
+
+@login_required
 def parse_resume_pdf(request):
     """Accept an uploaded PDF, extract structured fields, return JSON for the
     resume form to pre-fill. Skill matching uses the existing Skill catalog."""
     if request.method != 'POST' or not request.user.is_jobseeker:
         return JsonResponse({'ok': False, 'error': 'Bad request'}, status=400)
 
-    pdf = request.FILES.get('resume_pdf')
-    if not pdf:
+    upload = request.FILES.get('resume_pdf')
+    if not upload:
         return JsonResponse({'ok': False, 'error': 'No file provided'}, status=400)
-    if pdf.size > 10 * 1024 * 1024:
+    if upload.size > 10 * 1024 * 1024:
         return JsonResponse({'ok': False, 'error': 'File must be under 10 MB'}, status=400)
-    if not pdf.name.lower().endswith('.pdf'):
-        return JsonResponse({'ok': False, 'error': 'Only PDF files are supported'}, status=400)
+
+    name = upload.name.lower()
+    allowed_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.heic', '.heif')
+    if not name.endswith(allowed_ext):
+        return JsonResponse({
+            'ok': False,
+            'error': 'Upload a PDF or a photo (JPG, PNG, or HEIC) of your resume.',
+        }, status=400)
 
     from apps.jobseekers.resume_parser import parse_resume
     # Build the known-skills list from existing Skill rows so matching reflects
@@ -126,15 +229,20 @@ def parse_resume_pdf(request):
     )
 
     try:
-        result = parse_resume(pdf.read(), known_skills=known_skills)
+        result = parse_resume(upload.read(), known_skills=known_skills)
     except Exception as e:
         # Log the technical details for ops but show users a friendly message.
         print(f'[resume_parser] {type(e).__name__}: {e}')
         return JsonResponse({
             'ok': False,
-            'error': "We couldn't read that PDF. Try a text-based PDF (not a photo or scan), or fill in your resume manually.",
+            'error': "We couldn't read that file. Try a different resume, or fill in the form manually.",
         }, status=400)
 
+    # The parser returns {'ok': False, 'error': ...} for handled failures
+    # (e.g. scanned PDF with no OCR available). Surface them as a 400 so
+    # the client's existing error path renders the friendly message.
+    if not result.get('ok'):
+        return JsonResponse(result, status=400)
     return JsonResponse(result)
 
 
@@ -637,10 +745,28 @@ def resume(request):
         end_month_years   = request.POST.getlist('exp_end_month_year')
         exp_is_currents  = request.POST.getlist('exp_is_current')
 
+        _MONTH_LOOKUP = {
+            m: i + 1 for i, m in enumerate(
+                ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+            )
+        }
+
         def _split_month_year(val):
-            if val and '-' in val:
+            """Return (month_str, year_str) from either 'YYYY-MM' or 'Mon YYYY'."""
+            if not val:
+                return '', None
+            val = val.strip()
+            # Legacy machine format: 2024-01
+            if '-' in val:
                 parts = val.split('-')
-                return parts[1].lstrip('0') or '0', parts[0]
+                if len(parts) == 2 and parts[0].isdigit() and parts[1].lstrip('0').isdigit():
+                    return parts[1].lstrip('0') or '0', parts[0]
+            # Long display format: "Jan 2024" / "January 2024"
+            parts = val.split()
+            if len(parts) == 2 and parts[1].isdigit():
+                mnum = _MONTH_LOOKUP.get(parts[0][:3].lower())
+                if mnum:
+                    return str(mnum), parts[1]
             return '', None
 
         for i, position in enumerate(positions):
@@ -694,7 +820,10 @@ def resume(request):
         'experiences': experiences,
         'manual_sectors': manual_sectors,
         'auto_sectors': auto_sectors,
-        'year_range': range(datetime.now().year, 1949, -1),
+        # Start years / cert years can't be in the future. End years allow
+        # +10 so a student can pick an expected graduation date.
+        'year_range_start': range(datetime.now().year, 1949, -1),
+        'year_range': range(datetime.now().year + 10, 1949, -1),
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -1389,13 +1518,20 @@ STATIC_COMPANIES = [
 ]
 
 
-def _autocomplete_response(query, db_values, static_values, cache_key):
-    """Shared autocomplete logic: merge DB + static vocab, then smart-rank."""
+def _autocomplete_response(query, db_values, static_values, cache_key, *, semantic=False):
+    """Shared autocomplete logic: merge DB + static vocab, then smart-rank.
+
+    Semantic ranking is off by default for autocomplete because the model load
+    (~50MB sentence-transformer) makes the first request take seconds and
+    every request is a model.encode() call. Prefix + substring + fuzzy is
+    plenty for typing UX.
+    """
     if not query:
         return JsonResponse([], safe=False)
     from apps.jobseekers.nlp_service import smart_rank
     candidates = list(dict.fromkeys(list(db_values) + list(static_values)))
-    suggestions = smart_rank(query, candidates, limit=10, cache_key=cache_key)
+    suggestions = smart_rank(query, candidates, limit=10,
+                             cache_key=cache_key, enable_semantic=semantic)
     return JsonResponse(suggestions, safe=False)
 
 
@@ -1403,7 +1539,7 @@ def autocomplete_skills(request):
     query = request.GET.get('q', '').strip()
     from apps.jobseekers.models import Skill as JobseekerSkill
     db_skills = JobseekerSkill.objects.values_list('name', flat=True).distinct()
-    return _autocomplete_response(query, db_skills, STATIC_SKILLS, cache_key='skills')
+    return _autocomplete_response(query, db_skills, STATIC_SKILLS, cache_key='skills', semantic=False)
 
 
 def autocomplete_positions(request):

@@ -30,7 +30,13 @@ class JobseekerLoginView(View):
 
         logout(request)
         login(request, user)
-        return redirect('/dashboard/')
+        # Remember the email so the Forgot Password page can pre-fill it.
+        # 60-day cookie — outlives the session intentionally so a returning
+        # user who forgot their password doesn't have to re-type.
+        response = redirect('/dashboard/')
+        response.set_cookie('eh_last_email', user.email, max_age=60 * 60 * 24 * 60,
+                            samesite='Lax', secure=request.is_secure())
+        return response
 
 
 class RegisterStep1JobseekerView(View):
@@ -186,9 +192,15 @@ class EmployerLoginView(View):
         try:
             _ = user.employer_profile.company  # ensure profile exists
         except Exception:
-            return redirect('/employers/register/')
+            response = redirect('/employers/register/')
+            response.set_cookie('eh_last_email', user.email, max_age=60 * 60 * 24 * 60,
+                                samesite='Lax', secure=request.is_secure())
+            return response
 
-        return redirect('/employers/dashboard/')
+        response = redirect('/employers/dashboard/')
+        response.set_cookie('eh_last_email', user.email, max_age=60 * 60 * 24 * 60,
+                            samesite='Lax', secure=request.is_secure())
+        return response
 
 
 class EmployerRegisterStep1View(View):
@@ -273,17 +285,26 @@ class EmployerRegisterStep2View(View):
             if not request.POST.get(field, '').strip():
                 errors[field] = f'{label} is required.'
 
-        # Phone validation
+        # Phone validation — accept 10-digit (9XXXXXXXXX from the +63 prefixed
+        # input), 11-digit (09XXXXXXXXX), or 12-digit (639XXXXXXXXX) formats.
+        # Normalize to the 11-digit "09..." form for storage.
         phone = request.POST.get('phone', '').strip()
         phone_clean = re.sub(r'[\s\-\+]', '', phone)
-        if phone and not re.match(r'^(09\d{9}|639\d{9})$', phone_clean):
-            errors['phone'] = 'Please enter a valid 11-digit Philippine mobile number (e.g. 09171234567).'
+        if phone:
+            if re.match(r'^9\d{9}$', phone_clean):
+                phone_clean = '0' + phone_clean
+            elif re.match(r'^639\d{9}$', phone_clean):
+                phone_clean = '0' + phone_clean[2:]
+            if not re.match(r'^09\d{9}$', phone_clean):
+                errors['phone'] = 'Please enter a valid 10-digit Philippine mobile number (e.g. 9171234567).'
 
         if errors:
             return render(request, self.template_name, {
                 'errors': errors,
                 'sectors': sectors,
                 'form': request.POST,
+                # Preserve checked sector boxes on form re-render.
+                'selected_sector_ids': set(request.POST.getlist('sectors')),
             })
 
         try:

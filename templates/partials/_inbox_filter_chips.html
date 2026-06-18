@@ -1,0 +1,39 @@
+{% comment %}
+  Filter chips for the unified inbox. Renders nothing when the user has
+  no items at all (no chip would have a non-zero count).
+
+  Required context:
+    kind_filter  — '' for All, or one of: announcements/applications/interviews/requirements
+    kind_counts  — dict { 'announcements': N, 'applications': N, 'interviews': N, 'requirements': N }
+    total_items  — overall total (= sum of all kind buckets)
+{% endcomment %}
+{% if total_items %}
+<div class="flex flex-wrap items-center gap-1.5 mb-5">
+  <span class="text-muted text-xs mr-1">Show:</span>
+  <a href="?"
+     class="px-3 py-1 rounded-full text-xs font-semibold transition
+            {% if not kind_filter %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+    All <span class="opacity-70">{{ total_items }}</span>
+  </a>
+  <a href="?kind=announcements"
+     class="px-3 py-1 rounded-full text-xs font-semibold transition
+            {% if kind_filter == 'announcements' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+    Announcements <span class="opacity-70">{{ kind_counts.announcements }}</span>
+  </a>
+  <a href="?kind=applications"
+     class="px-3 py-1 rounded-full text-xs font-semibold transition
+            {% if kind_filter == 'applications' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+    Applications <span class="opacity-70">{{ kind_counts.applications }}</span>
+  </a>
+  <a href="?kind=interviews"
+     class="px-3 py-1 rounded-full text-xs font-semibold transition
+            {% if kind_filter == 'interviews' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+    Interviews <span class="opacity-70">{{ kind_counts.interviews }}</span>
+  </a>
+  <a href="?kind=requirements"
+     class="px-3 py-1 rounded-full text-xs font-semibold transition
+            {% if kind_filter == 'requirements' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+    Requirements <span class="opacity-70">{{ kind_counts.requirements }}</span>
+  </a>
+</div>
+{% endif %}

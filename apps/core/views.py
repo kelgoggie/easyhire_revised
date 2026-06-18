@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from apps.core.hashids import encode as _hashid
 from .models import Province, CityMunicipality, Barangay
 
 
@@ -35,13 +36,24 @@ def inbox(request):
         for app in (Application.objects
                     .filter(jobseeker=profile)
                     .select_related('job', 'job__company')):
+            # Fall back gracefully if the job was deleted or its company removed.
+            job_title = app.job.title if app.job else '(removed)'
+            company_name = app.job.company.name if (app.job and app.job.company) else '(removed)'
+            job_closed = bool(app.job and app.job.status == 'closed')
+            job_link = (f'/jobs/view/{_hashid(app.job.id)}/'
+                        if app.job and not job_closed else '')
             items.append({
                 'kind': 'application_sent',
                 'actor': 'You',
-                'verb': f'applied to "{app.job.title}" at {app.job.company.name}.',
+                'verb': f'applied to "{job_title}" at {company_name}.{ " (Job removed)" if not app.job else (" (Closed)" if job_closed else "") }',
                 'context': app.status,
                 'timestamp': app.created_at,
                 'url': '/applications/',
+                # Expandable detail panel: show the application message + a
+                # "View job post" CTA. Empty message renders as a friendly note.
+                'detail_body': app.message or '(No application message sent.)',
+                'detail_cta_label': 'View job post' if job_link else '',
+                'detail_cta_url':   job_link,
                 'report_target_type': '',
                 'report_target_id': None,
                 'report_label': '',
@@ -103,18 +115,33 @@ def inbox(request):
         # Applications received on this company's job posts
         for app in (Application.objects
                     .filter(job__company=company)
-                    .select_related('job', 'jobseeker')):
-            jname = f"{app.jobseeker.first_name} {app.jobseeker.last_name}".strip() if app.jobseeker else 'Someone'
+                    .select_related('job', 'jobseeker', 'jobseeker__user')):
+            # Resolve display + status flags up-front so the verb / link / CTA
+            # all consistently signal a removed jobseeker or closed job.
+            seeker_active = bool(app.jobseeker and app.jobseeker.user
+                                 and app.jobseeker.user.is_active)
+            jname = (f"{app.jobseeker.first_name} {app.jobseeker.last_name}".strip()
+                     if app.jobseeker else 'User removed')
+            if app.jobseeker and not seeker_active:
+                jname = f"{jname} (deactivated)"
+            job_title = app.job.title if app.job else '(removed)'
+            job_closed = bool(app.job and app.job.status == 'closed')
+            resume_link = (f'/employers/candidates/{_hashid(app.jobseeker.id)}/?job={_hashid(app.job.id)}'
+                           if app.jobseeker and seeker_active and app.job else '')
             items.append({
                 'kind': 'application_received',
                 'actor': jname,
-                'verb': f'sent a Job Application: "{app.job.title}".',
+                'verb': f'sent a Job Application: "{job_title}".{ " (Closed)" if job_closed else "" }',
                 'context': app.status,
                 'timestamp': app.created_at,
-                'url': f'/employers/jobs/{app.job.id}/candidates/?tab=applicants',
-                'report_target_type': 'jobseeker',
-                'report_target_id': app.jobseeker.id if app.jobseeker else None,
-                'report_label': f'Re: application to {app.job.title}',
+                'url': resume_link or '/inbox/',
+                # Expandable detail: application message + View Resume CTA.
+                'detail_body': app.message or '(No application message sent.)',
+                'detail_cta_label': 'View resume' if resume_link else '',
+                'detail_cta_url':   resume_link,
+                'report_target_type': 'jobseeker' if (app.jobseeker and seeker_active) else '',
+                'report_target_id': app.jobseeker.id if (app.jobseeker and seeker_active) else None,
+                'report_label': f'Re: application to {job_title}',
             })
 
         # Contacts the company has sent
@@ -131,7 +158,7 @@ def inbox(request):
                 'verb': f'You scheduled {kind_label}.' if contact.kind == EmployerContact.KIND_INTERVIEW else f'You sent {kind_label}.',
                 'context': contact.subject,
                 'timestamp': contact.sent_at,
-                'url': f'/employers/candidates/{contact.recipient.id}/' if contact.recipient else '/inbox/',
+                'url': f'/employers/candidates/{_hashid(contact.recipient.id)}/' if contact.recipient else '/inbox/',
                 'detail_body': contact.body,
                 'detail_interview_at': contact.interview_at,
                 'detail_interview_location': contact.interview_location,
@@ -157,6 +184,27 @@ def inbox(request):
                 'report_label': '',
             })
 
+        # Account verification updates (verified / denied) — surfaced here
+        # in addition to the banner on /employers/pending/.
+        from apps.notifications.models import Notification
+        for n in (Notification.objects
+                  .filter(recipient=user, liker_preview='an account verification update')
+                  .order_by('-created_at')):
+            full = (n.admin_message or '').strip()
+            subject, _, body = full.partition('\n\n')
+            items.append({
+                'kind': 'announcement',
+                'actor': 'PESO Iloilo City',
+                'verb': 'reviewed your verification.',
+                'context': subject or 'Verification update',
+                'timestamp': n.created_at,
+                'url': '/employers/pending/',
+                'detail_body': body or subject,
+                'report_target_type': '',
+                'report_target_id': None,
+                'report_label': '',
+            })
+
         template = 'employers/inbox.html'
 
     else:
@@ -165,12 +213,42 @@ def inbox(request):
 
     # Newest first
     items.sort(key=lambda x: x['timestamp'], reverse=True)
+    total_items = len(items)
+
+    # Snapshot BEFORE filtering so the sidebar dot tracks "anything new at all",
+    # not "anything new in the currently selected filter".
+    request.session['inbox_seen_count'] = total_items
+
+    # ── Kind filter chips ───────────────────────────────────────────
+    # Group the inbox's heterogeneous `kind` values into the four buckets
+    # surfaced as chips. Anything outside these (e.g. a future kind) is
+    # still in the All bucket but not reachable via a chip.
+    KIND_GROUPS = {
+        'announcements': {'announcement'},
+        'applications':  {'application_sent', 'application_received'},
+        'interviews':    {'interview'},
+        'requirements':  {'requirements'},
+    }
+    kind_counts = {key: sum(1 for it in items if it['kind'] in members)
+                   for key, members in KIND_GROUPS.items()}
+
+    kind_filter = (request.GET.get('kind') or '').strip().lower()
+    if kind_filter in KIND_GROUPS:
+        items = [it for it in items if it['kind'] in KIND_GROUPS[kind_filter]]
+    else:
+        kind_filter = ''  # normalize unknown values to "All"
+
     page = paginate(request, items, per_page=15)
 
     return render(request, template, {
         'items': list(page.object_list),
         'page': page,
+        # qs_base preserves `kind` across pagination clicks but drops `page`
+        # so each chip click resets to page 1.
         'qs_base': querystring_without(request, 'page'),
+        'kind_filter': kind_filter,
+        'kind_counts': kind_counts,
+        'total_items': total_items,
         'unread_notifications': False,
         'unread_messages': False,
     })

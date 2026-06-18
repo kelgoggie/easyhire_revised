@@ -99,7 +99,7 @@
             <th class="px-4 py-3 text-xs font-medium text-muted">Company</th>
             <th class="px-4 py-3 text-xs font-medium text-muted">Job Location</th>
             <th class="px-4 py-3 text-xs font-medium text-muted">Availability</th>
-            {% if request.user.is_staff %}<th class="px-4 py-3 text-xs font-medium text-muted">Match Score</th>{% endif %}
+            <th class="px-4 py-3 text-xs font-medium text-muted">Match</th>
           </tr>
         </thead>
         <tbody>
@@ -112,7 +112,6 @@
             </td>
             <td class="px-4 py-3 text-muted text-xs">{{ item.job.location_display|truncatechars:25 }}</td>
             <td class="px-4 py-3 text-muted text-xs">{{ item.job.slots }} slot{{ item.job.slots|pluralize }} open</td>
-            {% if request.user.is_staff %}
             <td class="px-4 py-3">
               {% if item.score is not None %}
                 {% match_badge item.score %}
@@ -120,11 +119,10 @@
                 <span class="text-muted text-xs">—</span>
               {% endif %}
             </td>
-            {% endif %}
           </tr>
           {% empty %}
           <tr>
-            <td colspan="{% if request.user.is_staff %}5{% else %}4{% endif %}" class="px-5 py-8 text-center text-muted text-sm">
+            <td colspan="5" class="px-5 py-8 text-center text-muted text-sm">
               Complete your resume to get personalised job recommendations.
             </td>
           </tr>
@@ -243,6 +241,7 @@
   </section>
 
 </div>
+{% endblock %}
 
 {% block page_scripts %}
 <script>
@@ -255,7 +254,5 @@ document.querySelectorAll('tr.row-link').forEach(function(tr) {
   });
 });
 </script>
-{% endblock %}
-
 {% endblock %}
 {% endwith %}

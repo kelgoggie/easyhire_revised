@@ -45,8 +45,17 @@ Optional: data-min-age="15", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-
   function parseValue(v, m) {
     if (!v) return null;
     if (m === 'month') {
-      const mm = v.match(/^(\d{4})-(\d{1,2})$/);
+      // "YYYY-MM" machine format
+      let mm = v.match(/^(\d{4})-(\d{1,2})$/);
       if (mm) return { year:+mm[1], month:+mm[2]-1 };
+      // "Mon YYYY" long format (e.g. "Jan 2024")
+      mm = v.match(/^([A-Za-z]+)\s+(\d{4})$/);
+      if (mm) {
+        const lower = mm[1].toLowerCase();
+        let idx = SHORT.findIndex(function(n){ return n.toLowerCase() === lower; });
+        if (idx < 0) idx = MONTHS.findIndex(function(n){ return n.toLowerCase() === lower; });
+        if (idx >= 0) return { year:+mm[2], month:idx };
+      }
     } else {
       // MM/DD/YYYY
       let mm = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -66,7 +75,12 @@ Optional: data-min-age="15", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-
     }
     return String(m+1).padStart(2,'0') + '/' + String(d).padStart(2,'0') + '/' + y;
   }
-  function fmtMonth(y, m)    { return y + '-' + String(m+1).padStart(2,'0'); }
+  function fmtMonth(y, m) {
+    if (activeInput && activeInput.dataset.displayFormat === 'long') {
+      return SHORT[m] + ' ' + y;
+    }
+    return y + '-' + String(m+1).padStart(2,'0');
+  }
 
   function readBounds(input) {
     minDate = input.dataset.minDate ? new Date(input.dataset.minDate + 'T00:00:00') : null;
@@ -87,18 +101,37 @@ Optional: data-min-age="15", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-
     else { const now = new Date(); viewYear = now.getFullYear(); viewMonth = now.getMonth(); }
     buildYearSelect();
     render();
-    const rect = input.getBoundingClientRect();
-    const POPW = 280;
-    const left = Math.min(rect.left, window.innerWidth - POPW - 8);
-    popup.style.top  = (rect.bottom + 6) + 'px';
-    popup.style.left = Math.max(8, left) + 'px';
+    reposition();
     popup.classList.remove('hidden');
     backdrop.classList.remove('hidden');
+    // Close the picker on any page scroll so it doesn't get stranded at the
+    // bottom of the viewport when the underlying input scrolls away.
+    window.addEventListener('scroll', closeOnScroll, { passive: true, capture: true });
   }
+
+  function reposition() {
+    if (!activeInput) return;
+    const rect = activeInput.getBoundingClientRect();
+    const POPW = 280;
+    // popup height varies (date vs month, weeks rendered), measure live but
+    // fall back to a generous estimate so the first calc is reasonable.
+    const POPH = popup.offsetHeight || 340;
+    const left = Math.min(rect.left, window.innerWidth - POPW - 8);
+    let top = rect.bottom + 6;
+    // Flip above the input if showing below would overflow the viewport.
+    if (top + POPH > window.innerHeight - 8) {
+      top = Math.max(8, rect.top - POPH - 6);
+    }
+    popup.style.top  = top + 'px';
+    popup.style.left = Math.max(8, left) + 'px';
+  }
+
+  function closeOnScroll() { close(); }
   function close() {
     popup.classList.add('hidden');
     backdrop.classList.add('hidden');
     activeInput = null;
+    window.removeEventListener('scroll', closeOnScroll, { capture: true });
   }
   window.EHDatePicker = { close: close, open: open };
 

@@ -91,6 +91,7 @@
 
   </div>
 </div>
+{% endblock %}
 
 {% block page_scripts %}
 {{ jobs_json|json_script:"jobs-json-data" }}
@@ -278,7 +279,5 @@ document.addEventListener('click', function(e) {
     if (w && !w.contains(e.target)) document.getElementById('sort-menu').classList.add('hidden');
 });
 </script>
-{% endblock %}
-
 {% endblock %}
 {% endwith %}

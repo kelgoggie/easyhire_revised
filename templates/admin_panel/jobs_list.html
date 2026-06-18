@@ -1,0 +1,143 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}Jobs — EasyHire Admin{% endblock %}
+
+{% with active_nav="jobs" %}
+{% block admin_content %}
+<div class="py-8 max-w-7xl mx-auto">
+
+  <!-- Title + search -->
+  <div class="flex items-end justify-between gap-6 mb-2">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Jobs</h1>
+    <form method="GET" action="/admin-panel/jobs/" class="flex-1 max-w-md">
+      <input type="hidden" name="sort"   value="{{ sort }}">
+      <input type="hidden" name="status" value="{{ status }}">
+      <div class="relative">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search by job title or company..."
+               class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
+        <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/></svg>
+        </button>
+      </div>
+    </form>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <!-- Status filter chips + sort -->
+  <div class="flex items-center justify-between gap-3 mb-5 flex-wrap">
+    <div class="flex flex-wrap items-center gap-1.5">
+      <a href="?sort={{ sort }}&q={{ search }}"
+         class="px-3 py-1 rounded-full text-xs font-semibold transition
+                {% if not status %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        All <span class="opacity-70">{{ status_counts.all }}</span>
+      </a>
+      <a href="?status=open&sort={{ sort }}&q={{ search }}"
+         class="px-3 py-1 rounded-full text-xs font-semibold transition
+                {% if status == 'open' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Open <span class="opacity-70">{{ status_counts.open }}</span>
+      </a>
+      <a href="?status=closed&sort={{ sort }}&q={{ search }}"
+         class="px-3 py-1 rounded-full text-xs font-semibold transition
+                {% if status == 'closed' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Closed <span class="opacity-70">{{ status_counts.closed }}</span>
+      </a>
+      <a href="?status=draft&sort={{ sort }}&q={{ search }}"
+         class="px-3 py-1 rounded-full text-xs font-semibold transition
+                {% if status == 'draft' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Draft <span class="opacity-70">{{ status_counts.draft }}</span>
+      </a>
+      <a href="?status=admin_disabled&sort={{ sort }}&q={{ search }}"
+         class="px-3 py-1 rounded-full text-xs font-semibold transition
+                {% if status == 'admin_disabled' %}bg-red-500 text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Disabled by Admin <span class="opacity-70">{{ status_counts.admin_disabled }}</span>
+      </a>
+    </div>
+
+    <!-- Sort -->
+    <div class="relative" id="sort-wrapper">
+      <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
+              class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/></svg>
+        Sort ·
+        <span class="text-primary">
+          {% if sort == 'oldest' %}Oldest first
+          {% elif sort == 'applicants' %}Most applicants
+          {% else %}Newest first{% endif %}
+        </span>
+      </button>
+      <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-48 py-1">
+        <a href="?sort=newest&status={{ status }}&q={{ search }}"
+           class="block px-4 py-2 text-sm {% if sort != 'oldest' and sort != 'applicants' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest first</a>
+        <a href="?sort=oldest&status={{ status }}&q={{ search }}"
+           class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
+        <a href="?sort=applicants&status={{ status }}&q={{ search }}"
+           class="block px-4 py-2 text-sm {% if sort == 'applicants' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Most applicants</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Jobs grid -->
+  {% if page.object_list %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for job in page.object_list %}
+    <a href="/admin-panel/companies/{{ job.company.id|hashid }}/jobs/{{ job.id|hashid }}/?from=jobs"
+       class="block bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
+      <!-- Title + status pill -->
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <p class="font-bold text-primary text-base leading-tight">{{ job.title }}</p>
+        {% if job.admin_disabled %}
+          <span class="text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full flex-shrink-0">Disabled</span>
+        {% elif job.status == 'open' %}
+          <span class="text-[10px] font-semibold uppercase tracking-wide bg-teal/15 text-teal px-2 py-0.5 rounded-full flex-shrink-0">Open</span>
+        {% elif job.status == 'closed' %}
+          <span class="text-[10px] font-semibold uppercase tracking-wide bg-gray-100 text-muted px-2 py-0.5 rounded-full flex-shrink-0">Closed</span>
+        {% elif job.status == 'draft' %}
+          <span class="text-[10px] font-semibold uppercase tracking-wide bg-amber/15 text-amber px-2 py-0.5 rounded-full flex-shrink-0">Draft</span>
+        {% endif %}
+      </div>
+
+      <!-- Company + location -->
+      <p class="text-muted text-xs italic mb-1 truncate">{{ job.company.name }}</p>
+      <p class="text-muted text-xs italic mb-3 truncate">{{ job.location_display|default:"—"|truncatechars:48 }}</p>
+
+      <!-- Applicants + posted date -->
+      <div class="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+        <span class="text-primary font-semibold">{{ job.applicants_count }} applicant{{ job.applicants_count|pluralize }}</span>
+        <span class="text-muted italic">{{ job.created_at|date:"M j, Y" }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="border border-taupe/40 rounded-2xl p-12 text-center">
+    <p class="text-muted text-sm">
+      {% if search %}No jobs match &ldquo;{{ search }}&rdquo;.{% else %}No jobs in this view.{% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+  {# Reuse the shared paginator. Keep search/status/sort across page clicks. #}
+  {% with qs_base="" %}{% endwith %}
+  {% if page.paginator.num_pages > 1 %}
+  <div class="flex items-center justify-between mt-6 text-sm">
+    {% if page.has_previous %}
+    <a href="?page={{ page.previous_page_number }}&status={{ status }}&sort={{ sort }}&q={{ search }}"
+       class="text-muted hover:text-primary transition">&lt; Previous</a>
+    {% else %}<span></span>{% endif %}
+    <span class="text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }} · {{ page.paginator.count }} total</span>
+    {% if page.has_next %}
+    <a href="?page={{ page.next_page_number }}&status={{ status }}&sort={{ sort }}&q={{ search }}"
+       class="text-muted hover:text-primary transition">Next &gt;</a>
+    {% else %}<span></span>{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+document.addEventListener('click', function(e) {
+  const w = document.getElementById('sort-wrapper');
+  if (w && !w.contains(e.target)) document.getElementById('sort-menu').classList.add('hidden');
+});
+</script>
+{% endblock %}
+{% endwith %}

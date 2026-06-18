@@ -32,7 +32,7 @@
   {% endif %}
 
   <!-- Upload form -->
-  <form method="POST" enctype="multipart/form-data" class="bg-white border border-gray-200 rounded-2xl p-6 mb-8">
+  <form method="POST" id="bulk-form" enctype="multipart/form-data" class="bg-white border border-gray-200 rounded-2xl p-6 mb-8">
     {% csrf_token %}
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
       <div>
@@ -69,6 +69,37 @@
       </button>
     </div>
   </form>
+
+  <script>
+  (function() {
+    const form = document.getElementById('bulk-form');
+    let _confirmed = false;
+    form.addEventListener('submit', function(e) {
+      if (_confirmed) return;
+      e.preventDefault();
+      const kind = (form.querySelector('[name="import_type"]') || {}).value || '';
+      const file = (form.querySelector('[name="file"]') || {}).files;
+      const fname = (file && file[0]) ? file[0].name : 'the selected file';
+      if (!kind) {
+        window.confirmAction({
+          title: 'Pick an import type first',
+          body:  'Choose Jobseekers or Companies from the dropdown.',
+          ctaLabel: 'OK',
+          ctaClass: 'bg-primary hover:bg-primary/90',
+          onConfirm: function() {},
+        });
+        return;
+      }
+      window.confirmAction({
+        title: `Import ${kind} from ${fname}?`,
+        body:  'Each successful row creates a real user/company in the database. Rows that conflict (duplicate email/company) are skipped and reported.',
+        ctaLabel: 'Yes, process',
+        ctaClass: 'bg-amber hover:bg-amber/90',
+        onConfirm: function() { _confirmed = true; form.submit(); },
+      });
+    });
+  })();
+  </script>
 
   <!-- Recent batches -->
   <h2 class="text-lg font-bold text-primary mb-3">Recent Imports</h2>

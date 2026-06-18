@@ -136,20 +136,20 @@ def smart_rank(
 
     scores: dict[str, float] = {}
 
-    # 1) Prefix — clearest signal
+    # prefix
     for c in candidates:
         cl = c.lower()
         if cl.startswith(q):
             scores[c] = max(scores.get(c, 0), 100.0)
 
-    # 2) Substring — anywhere in the string
+    # 2) substring
     for c in candidates:
         if c in scores:
             continue
         if q in c.lower():
             scores[c] = max(scores.get(c, 0), 75.0)
 
-    # 3) Fuzzy — typo tolerance (2+ chars to avoid noise)
+    # 3) fuzzy
     if len(q) >= 2:
         try:
             from rapidfuzz import fuzz
@@ -162,7 +162,7 @@ def smart_rank(
         except ImportError:
             pass
 
-    # 4) Semantic — concept similarity (3+ chars for meaningful queries)
+    # 4) semantic — concept similarity (3+ chars for meaningful queries)
     if enable_semantic and len(q) >= 3:
         for cand, sim in semantic_rank(q, candidates, cache_key=cache_key,
                                        top_k=8, min_similarity=0.45):

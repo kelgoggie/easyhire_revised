@@ -43,8 +43,10 @@
           <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30">Pending Verification</span>
           {% elif company.verification_status == 'verified' %}
           <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-teal/15 text-teal border border-teal/30">Verified</span>
-          {% elif company.verification_status == 'denied' %}
-          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Denied</span>
+          {% elif company.verification_status == 'verification_denied' %}
+          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Verification Denied</span>
+          {% else %}
+          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-gray-100 text-muted border border-gray-200">Unverified</span>
           {% endif %}
         </div>
       </div>

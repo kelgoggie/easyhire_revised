@@ -67,7 +67,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
           </svg>
           {% if admin_attention_count %}
-          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full"></span>
+          <span id="admin-notif-dot" class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full"></span>
           {% endif %}
         </button>
         <div id="admin-notif-dropdown" class="absolute right-0 top-11 bg-surface rounded-2xl shadow-xl w-[340px] max-h-[480px] z-50 border border-taupe/30 hidden overflow-hidden flex-col">
@@ -92,6 +92,9 @@
                   <p class="text-sm text-primary leading-snug">
                     <span class="font-bold">{{ n.actor }}</span> {{ n.verb }}
                   </p>
+                  {% if n.quoted %}
+                  <p class="text-[11px] text-muted leading-snug mt-0.5 italic">&ldquo;{{ n.quoted }}&rdquo;</p>
+                  {% endif %}
                   <p class="text-[11px] text-muted italic mt-0.5">{{ n.when }}</p>
                 </div>
               </a>
@@ -167,6 +170,11 @@
                 {% if active == 'companies' %}text-primary font-bold{% else %}text-primary/80 hover:text-primary hover:bg-primary/5{% endif %}">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
           <span class="nav-label">Companies {% if pending_companies %}<span class="text-muted font-normal">({{ pending_companies }})</span>{% endif %}</span>
+        </a>
+        <a href="/admin-panel/jobs/" title="Jobs" class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition
+                {% if active == 'jobs' %}text-primary font-bold{% else %}text-primary/80 hover:text-primary hover:bg-primary/5{% endif %}">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span class="nav-label">Jobs</span>
         </a>
         <a href="/admin-panel/reports/" title="Reports" class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition
                 {% if active == 'reports' %}text-primary font-bold{% else %}text-primary/80 hover:text-primary hover:bg-primary/5{% endif %}">
@@ -262,8 +270,17 @@
 // Dropdown toggles
 document.getElementById('admin-notif-btn').addEventListener('click', function(e) {
   e.stopPropagation();
-  document.getElementById('admin-notif-dropdown').classList.toggle('hidden');
+  const dropdown = document.getElementById('admin-notif-dropdown');
+  const wasHidden = dropdown.classList.contains('hidden');
+  dropdown.classList.toggle('hidden');
   document.getElementById('admin-avatar-dropdown').classList.add('hidden');
+  // Clear the amber dot the moment the user opens the dropdown — the items
+  // themselves are server-side queries (no read/unread per item), so the
+  // dot is purely a "you have new attention items" hint.
+  if (wasHidden) {
+    const dot = document.getElementById('admin-notif-dot');
+    if (dot) dot.remove();
+  }
 });
 document.getElementById('admin-more-btn').addEventListener('click', function(e) {
   e.stopPropagation();

@@ -4,33 +4,230 @@
 {% block admin_content %}
 <div class="py-8 max-w-7xl mx-auto">
 
-  <!-- Breadcrumb-ish back -->
-  <a href="/admin-panel/companies/{{ company.id|hashid }}/"
+  <!-- Breadcrumb-ish back — adapts to where the user came from -->
+  <a href="{% if came_from_jobs %}/admin-panel/jobs/{% else %}/admin-panel/companies/{{ company.id|hashid }}/{% endif %}"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
     </svg>
-    Back to {{ company.name }}
+    {% if came_from_jobs %}Back to Jobs{% else %}Back to {{ company.name }}{% endif %}
   </a>
 
   <!-- Heading -->
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
     <h1 class="text-3xl sm:text-4xl font-extrabold text-primary leading-tight">{{ job.title }}</h1>
-    <div class="flex items-center gap-2 flex-shrink-0">
+    <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
       <span class="inline-flex items-center bg-gray-100 text-muted text-xs font-semibold px-3 py-1.5 rounded-full">
         {{ job.slots }} slot{{ job.slots|pluralize }} open
       </span>
+      {% if job.admin_disabled %}
+      <span class="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-red-50 text-red-500 border border-red-200">
+        Disabled by Admin
+      </span>
+      {% else %}
       <span class="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full
         {% if job.status == 'open' %}bg-teal/15 text-teal{% elif job.status == 'closed' %}bg-gray-100 text-muted{% else %}bg-amber/15 text-amber{% endif %}">
         {{ job.get_status_display }}
       </span>
+      {% endif %}
+
+      <!-- 3-dot admin actions menu -->
+      <div class="relative" id="admin-actions-wrapper">
+        <button type="button" id="admin-actions-btn" title="Admin actions"
+                class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-muted hover:text-primary hover:border-taupe/40 transition">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/>
+          </svg>
+        </button>
+        <div id="admin-actions-menu" class="hidden absolute right-0 top-9 bg-white border border-gray-200 rounded-xl shadow-lg z-30 w-48 py-1">
+          <a href="/admin-panel/jobs/{{ job.id|hashid }}/edit/"
+             class="block px-4 py-2 text-sm text-primary hover:bg-surface transition">Edit Job</a>
+          {% if job.admin_disabled %}
+          <button type="button" id="admin-reopen-btn"
+                  class="block w-full text-left px-4 py-2 text-sm text-teal hover:bg-teal/5 transition">Re-open Job</button>
+          {% else %}
+          <button type="button" id="admin-disable-btn"
+                  class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition">Disable Job</button>
+          {% endif %}
+          <hr class="my-1 border-gray-100">
+          <button type="button" id="admin-delete-btn"
+                  class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition">Delete Job</button>
+        </div>
+      </div>
     </div>
   </div>
   <p class="text-muted text-sm mb-2">
-    Posted by <strong class="text-primary">{{ company.name }}</strong> on {{ job.created_at|date:"F j, Y" }} ·
+    Posted by
+    <a href="/admin-panel/companies/{{ company.id|hashid }}/"
+       class="font-bold text-primary hover:text-teal transition">{{ company.name }}</a>
+    on {{ job.created_at|date:"F j, Y" }} ·
+    {% if applicants_count %}
+    <a href="#applicants" class="text-primary font-semibold underline hover:text-teal transition">{{ applicants_count }} applicant{{ applicants_count|pluralize }}</a>
+    {% else %}
     {{ applicants_count }} applicant{{ applicants_count|pluralize }}
+    {% endif %}
   </p>
+
+  {% if job.admin_disabled %}
+  <form method="POST" action="/admin-panel/jobs/{{ job.id|hashid }}/reopen/" id="reopen-form" class="hidden">{% csrf_token %}</form>
+  {% endif %}
+
+  {% if job.admin_disabled and job.admin_disabled_reason %}
+  <div class="mb-6 bg-red-50 border border-red-200 rounded-xl px-5 py-3 text-sm">
+    <p class="text-red-500 font-bold text-xs mb-1">Admin take-down reason</p>
+    <p class="text-primary whitespace-pre-line">{{ job.admin_disabled_reason }}</p>
+  </div>
+  {% endif %}
+
   <div class="border-b border-taupe/40 mb-6"></div>
+
+  <!-- Disable modal (only rendered when the job isn't already disabled) -->
+  {% if not job.admin_disabled %}
+  <div id="disable-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" data-close-disable></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+      <p class="text-red-500 font-bold text-base mb-1">Disable this job post?</p>
+      <p class="text-muted text-xs mb-4">Closes the job and stops accepting applications. The reason below is sent to every rep of <strong class="text-primary">{{ company.name }}</strong>.</p>
+      <form id="disable-form">
+        {% csrf_token %}
+        <label class="block text-primary text-xs font-semibold mb-1">Reason*</label>
+        <textarea name="reason" rows="4" required placeholder="e.g. Misleading title — please rephrase and resubmit."
+                  class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none"></textarea>
+        <p id="disable-error" class="text-xs text-red-500 mt-2 hidden"></p>
+        <div class="flex gap-3 justify-end mt-4">
+          <button type="button" data-close-disable class="bg-gray-100 text-primary font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition text-sm">Cancel</button>
+          <button type="submit" class="bg-red-500 text-white font-semibold px-5 py-2 rounded-full hover:bg-red-600 transition text-sm">Disable &amp; Notify</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Delete modal — uses the existing company_delete_job endpoint with reason picker -->
+  <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" data-close-delete></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+      <p class="text-red-500 font-bold text-base mb-1">Delete this job post?</p>
+      <p class="text-muted text-sm mb-1">You're about to delete <strong class="text-primary">{{ job.title }}</strong>.</p>
+      <p class="text-muted text-xs mb-4">The company will receive a notification with the reason you provide. <span class="text-red-500">This cannot be undone.</span></p>
+      <form id="delete-form">
+        {% csrf_token %}
+        <p class="text-primary text-sm font-semibold mb-2">Reason</p>
+        <div class="space-y-1.5 mb-4 max-h-48 overflow-y-auto pr-1">
+          {% for code, label in reasons %}
+          <label class="flex items-center gap-2 text-sm text-primary cursor-pointer rounded-lg px-2 py-1.5 hover:bg-surface transition">
+            <input type="radio" name="reason" value="{{ code }}" class="accent-primary w-3.5 h-3.5">
+            {{ label }}
+          </label>
+          {% endfor %}
+        </div>
+        <label class="block text-primary text-xs mb-1">Optional admin notes</label>
+        <textarea name="notes" rows="2" placeholder="Add context the company should see (optional)"
+                  class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none"></textarea>
+        <p id="delete-error" class="text-xs text-red-500 mt-2 hidden"></p>
+        <div class="flex gap-3 justify-end mt-4">
+          <button type="button" data-close-delete class="bg-gray-100 text-primary font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition text-sm">Cancel</button>
+          <button type="submit" class="bg-red-500 text-white font-semibold px-5 py-2 rounded-full hover:bg-red-600 transition text-sm">Delete &amp; Notify</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    function getCookie(n) {
+      const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+      if (p.length === 2) return p.pop().split(';').shift();
+    }
+
+    // 3-dot menu toggle
+    const menuBtn  = document.getElementById('admin-actions-btn');
+    const menu     = document.getElementById('admin-actions-menu');
+    menuBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      menu.classList.toggle('hidden');
+    });
+    document.addEventListener('click', function(e) {
+      if (!document.getElementById('admin-actions-wrapper').contains(e.target)) {
+        menu.classList.add('hidden');
+      }
+    });
+
+    {% if not job.admin_disabled %}
+    // ── Disable flow ─────────────────────────────────────────────
+    const disableModal = document.getElementById('disable-modal');
+    const disableForm  = document.getElementById('disable-form');
+    const disableErr   = document.getElementById('disable-error');
+    function showDisable() { disableModal.classList.remove('hidden'); disableModal.classList.add('flex'); }
+    function hideDisable() { disableModal.classList.add('hidden');    disableModal.classList.remove('flex');
+                             disableForm.reset(); disableErr.classList.add('hidden'); }
+    document.getElementById('admin-disable-btn').addEventListener('click', function() {
+      menu.classList.add('hidden'); showDisable();
+    });
+    disableModal.querySelectorAll('[data-close-disable]').forEach(function(el) {
+      el.addEventListener('click', hideDisable);
+    });
+    disableForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetch('/admin-panel/jobs/{{ job.id|hashid }}/disable/', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+        body: new FormData(disableForm),
+      }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
+        .then(function(pair) {
+          const [ok, d] = pair;
+          if (ok && d.ok) window.location.reload();
+          else {
+            disableErr.textContent = (d && d.error) || 'Something went wrong.';
+            disableErr.classList.remove('hidden');
+          }
+        });
+    });
+    {% else %}
+    // ── Re-open flow (uses the confirm modal) ────────────────────
+    document.getElementById('admin-reopen-btn').addEventListener('click', function() {
+      menu.classList.add('hidden');
+      confirmAction({
+        title: 'Re-open this job?',
+        body:  'Clears the admin-disabled flag and flips the status back to Open. The employer will be able to manage the job again.',
+        ctaLabel: 'Yes, re-open',
+        ctaClass: 'bg-teal hover:bg-teal/90',
+        onConfirm: function() { document.getElementById('reopen-form').submit(); },
+      });
+    });
+    {% endif %}
+
+    // ── Delete flow ──────────────────────────────────────────────
+    const deleteModal = document.getElementById('delete-modal');
+    const deleteForm  = document.getElementById('delete-form');
+    const deleteErr   = document.getElementById('delete-error');
+    function showDelete() { deleteModal.classList.remove('hidden'); deleteModal.classList.add('flex'); }
+    function hideDelete() { deleteModal.classList.add('hidden');    deleteModal.classList.remove('flex');
+                            deleteForm.reset(); deleteErr.classList.add('hidden'); }
+    document.getElementById('admin-delete-btn').addEventListener('click', function() {
+      menu.classList.add('hidden'); showDelete();
+    });
+    deleteModal.querySelectorAll('[data-close-delete]').forEach(function(el) {
+      el.addEventListener('click', hideDelete);
+    });
+    deleteForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetch('/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/delete/', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+        body: new FormData(deleteForm),
+      }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
+        .then(function(pair) {
+          const [ok, d] = pair;
+          if (ok && d.ok) { window.location = '/admin-panel/companies/{{ company.id|hashid }}/'; }
+          else {
+            deleteErr.textContent = (d && d.error) || 'Something went wrong.';
+            deleteErr.classList.remove('hidden');
+          }
+        });
+    });
+  })();
+  </script>
 
   <!-- Description + Requirements -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-10">
@@ -108,6 +305,50 @@
       </div>
     </div>
   </div>
+
+  <!-- Applicants -->
+  <section id="applicants" class="scroll-mt-20 mb-10">
+    <div class="flex items-baseline justify-between gap-3 mb-1">
+      <h2 class="text-xl text-primary"><span class="font-extrabold">Applicants</span></h2>
+      <p class="text-muted text-xs italic">People who actually applied to this post.</p>
+    </div>
+    <p class="text-muted text-xs mb-4">Click an applicant to inspect their resume + compatibility breakdown.</p>
+
+    {% if applicants %}
+    <div class="space-y-2">
+      {% for item in applicants %}
+      <a href="/admin-panel/jobseekers/{{ item.app.jobseeker.id|hashid }}/applications/{{ item.app.id|hashid }}/"
+         class="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-teal/30 hover:shadow-sm transition">
+        <div class="min-w-0">
+          <p class="font-bold text-primary text-sm leading-tight">
+            {{ item.app.jobseeker.first_name }} {{ item.app.jobseeker.last_name }}
+            {% if item.app.jobseeker.user and not item.app.jobseeker.user.is_active %}<span class="ml-1 text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full align-middle">Disabled</span>{% endif %}
+          </p>
+          <p class="text-muted text-xs">Applied {{ item.app.created_at|date:"M j, Y g:i A" }}</p>
+        </div>
+        <div class="flex items-center gap-3 flex-shrink-0">
+          {% if item.score is not None %}
+          <span class="text-primary text-sm font-extrabold tabular-nums">{{ item.score }}%</span>
+          {% endif %}
+          <span class="text-xs font-semibold px-3 py-1 rounded-full
+            {% if item.app.status == 'hired' %}bg-teal text-white
+            {% elif item.app.status == 'hire_pending' %}bg-amber/15 text-amber border border-amber/30
+            {% elif item.app.status == 'accepted' %}bg-teal/15 text-teal
+            {% elif item.app.status == 'rejected' %}bg-red-50 text-red-500
+            {% elif item.app.status == 'viewed' %}bg-gray-100 text-muted
+            {% else %}bg-amber/15 text-amber{% endif %}">
+            {{ item.app.get_status_display }}
+          </span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-2xl p-8 text-center">
+      <p class="text-muted text-xs italic">No applications submitted yet.</p>
+    </div>
+    {% endif %}
+  </section>
 
   <!-- Top Matches -->
   <section id="top-matches" class="scroll-mt-20">

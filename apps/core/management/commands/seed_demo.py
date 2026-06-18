@@ -9,8 +9,8 @@ Run with:
     python manage.py seed_demo --wipe     # delete previous demo users first
 
 Email patterns:
-    companyname@gmail.com   (e.g. shell@gmail.com)
-    firstname.lastname@gmail.com   (e.g. maria.santos@gmail.com)
+    companyname@easyhire.test   (e.g. shell@easyhire.test)
+    firstname.lastname@easyhire.test   (e.g. maria.santos@easyhire.test)
 
 Password for every account: easyhire2001
 """
@@ -33,6 +33,19 @@ from apps.admin_panel.models import AdminAnnouncement
 
 
 PASSWORD = 'easyhire2001'
+
+
+def _mark_email_verified(user, email):
+    """Seed an allauth EmailAddress row so demo accounts can post / contact
+    immediately without going through the verification flow."""
+    try:
+        from allauth.account.models import EmailAddress
+    except ImportError:
+        return
+    EmailAddress.objects.update_or_create(
+        user=user, email=email,
+        defaults={'verified': True, 'primary': True},
+    )
 
 
 COMPANIES = [
@@ -182,19 +195,23 @@ class Command(BaseCommand):
         if opts['wipe']:
             wipe_count = 0
             for cd in COMPANIES:
-                u = User.objects.filter(email=f"{cd['slug']}@gmail.com").first()
-                if u: u.delete(); wipe_count += 1
+                # Match both legacy @gmail.com seeds and current @easyhire.test seeds
+                for domain in ('easyhire.test', 'gmail.com'):
+                    u = User.objects.filter(email=f"{cd['slug']}@{domain}").first()
+                    if u: u.delete(); wipe_count += 1
             for jd in JOBSEEKERS:
-                e = f"{jd['first'].lower()}.{jd['last'].lower().replace(' ', '')}@gmail.com"
-                u = User.objects.filter(email=e).first()
-                if u: u.delete(); wipe_count += 1
+                slug = f"{jd['first'].lower()}.{jd['last'].lower().replace(' ', '')}"
+                for domain in ('easyhire.test', 'gmail.com'):
+                    e = f"{slug}@{domain}"
+                    u = User.objects.filter(email=e).first()
+                    if u: u.delete(); wipe_count += 1
             self.stdout.write(self.style.WARNING(f'Wiped {wipe_count} demo users.'))
 
         # ── Companies + reps ──────────────────────────────────────────
         companies = []
         for i, cd in enumerate(COMPANIES):
             rep = REPRESENTATIVES[i]
-            email = f"{cd['slug']}@gmail.com"
+            email = f"{cd['slug']}@easyhire.test"
 
             user, created = User.objects.get_or_create(
                 email=email,
@@ -208,6 +225,7 @@ class Command(BaseCommand):
             user.set_password(PASSWORD)
             user.user_type = User.EMPLOYER
             user.save()
+            _mark_email_verified(user, email)
 
             company, _ = Company.objects.get_or_create(
                 slug=cd['slug'],
@@ -278,7 +296,7 @@ class Command(BaseCommand):
         seekers = []
         today = date.today()
         for i, jd in enumerate(JOBSEEKERS):
-            email = f"{jd['first'].lower()}.{jd['last'].lower().replace(' ', '')}@gmail.com"
+            email = f"{jd['first'].lower()}.{jd['last'].lower().replace(' ', '')}@easyhire.test"
             user, _ = User.objects.get_or_create(
                 email=email,
                 defaults={
@@ -291,6 +309,7 @@ class Command(BaseCommand):
             user.set_password(PASSWORD)
             user.user_type = User.JOBSEEKER
             user.save()
+            _mark_email_verified(user, email)
 
             dob = date(today.year - jd['age'], random.randint(1, 12), random.randint(1, 28))
             profile, p_created = JobseekerProfile.objects.get_or_create(
@@ -419,5 +438,5 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f'\nDone. All accounts use password: {PASSWORD}\n'
-            f'Try logging in as e.g. shell@gmail.com (employer) or maria.garcia@gmail.com (jobseeker).'
+            f'Try logging in as e.g. shell@easyhire.test (employer) or maria.garcia@easyhire.test (jobseeker).'
         ))
