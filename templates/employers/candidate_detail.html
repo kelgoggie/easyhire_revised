@@ -8,6 +8,13 @@
 
   {# ── Job context header (only when we came from /jobs/<id>/candidates/) ── #}
   {% if current_job %}
+  <a href="/employers/jobs/{{ current_job.id|hashid }}/candidates/?tab=applicants"
+     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-3">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back to Applicants
+  </a>
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
     <div class="min-w-0">
       <p class="text-muted text-xs uppercase tracking-wide font-semibold">Applied for</p>

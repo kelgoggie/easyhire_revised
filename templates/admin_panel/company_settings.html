@@ -10,23 +10,46 @@
   <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">Account Settings</h1>
   <div class="border-b border-taupe/40 mb-6"></div>
 
-  <h2 class="text-xl sm:text-2xl font-extrabold text-primary mb-1">{{ company.name }}</h2>
-  <p class="text-muted text-sm mb-1">
-    {% if company.iloilo_barangay_name %}{{ company.iloilo_barangay_name }}, Iloilo City{% else %}{{ company.main_branch_address|default:"—" }}{% endif %}
-  </p>
-  <p class="text-muted text-sm mb-6">
-    {{ company.company_email }}
-    {% if rep %} · Representative: {{ rep.first_name }} {{ rep.last_name }} ({{ rep.user.email }}){% endif %}
-  </p>
+  <div class="flex items-start justify-between gap-4 mb-6">
+    <div class="min-w-0">
+      <h2 class="text-xl sm:text-2xl font-extrabold text-primary mb-1">{{ company.name }}</h2>
+      <p class="text-muted text-sm mb-1">
+        {% if company.iloilo_barangay_name %}{{ company.iloilo_barangay_name }}, Iloilo City{% else %}{{ company.main_branch_address|default:"—" }}{% endif %}
+      </p>
+      <p class="text-muted text-sm">
+        {{ company.company_email }}
+        {% if rep %} · Representative: {{ rep.first_name }} {{ rep.last_name }} ({{ rep.user.email }}){% endif %}
+      </p>
+    </div>
+    {% if rep %}
+    <form method="POST" id="disable-rep-form" class="flex-shrink-0">
+      {% csrf_token %}
+      {% if rep.user.is_active %}
+      <input type="hidden" name="form" value="disable">
+      <button type="button"
+              onclick="confirmAction({title:'Disable this company profile?', body:'The company will no longer be able to log in. Their job posts stay on record. You can re-enable later.', ctaLabel:'Yes, disable', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('disable-rep-form').submit();}})"
+              class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">
+        Disable Company Profile
+      </button>
+      {% else %}
+      <input type="hidden" name="form" value="enable">
+      <button type="submit"
+              class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">
+        Re-enable Company Profile
+      </button>
+      {% endif %}
+    </form>
+    {% endif %}
+  </div>
 
   {% if saved_section == 'company' %}
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Company information updated.</div>
   {% elif saved_section == 'password' %}
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Representative's password reset.</div>
   {% elif saved_section == 'disabled' %}
-  <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">Representative account disabled.</div>
+  <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">Company profile disabled. The company can no longer log in.</div>
   {% elif saved_section == 'enabled' %}
-  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Representative account re-enabled.</div>
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Company profile re-enabled.</div>
   {% elif saved_section == 'verification' %}
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Verification status updated. Company reps have been notified.</div>
   {% endif %}
@@ -71,7 +94,7 @@
 
     <div class="flex justify-end">
       <button type="submit"
-              class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition">
+              class="bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition">
         Save Company Info
       </button>
     </div>
@@ -80,7 +103,7 @@
   {% if rep %}
   <!-- ── Reset Representative Password ─────────────────────────── -->
   <h3 class="text-lg font-bold text-primary mb-3">Reset Representative Password</h3>
-  <form method="POST" class="mb-12">
+  <form method="POST" class="mb-8">
     {% csrf_token %}
     <input type="hidden" name="form" value="password">
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
@@ -97,32 +120,12 @@
       <div></div>
       <div class="flex justify-end">
         <button type="submit"
-                class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition w-full">
+                class="bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition w-full">
           Set Password
         </button>
       </div>
     </div>
   </form>
-
-  <!-- Disable / Enable -->
-  <div class="flex justify-center">
-    <form method="POST" id="disable-rep-form">
-      {% csrf_token %}
-      {% if rep.user.is_active %}
-      <input type="hidden" name="form" value="disable">
-      <button type="button"
-              onclick="confirmAction({title:'Disable this representative?', body:'The company will no longer be able to log in.', ctaLabel:'Yes, disable', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('disable-rep-form').submit();}})"
-              class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-12 py-2.5 rounded-full hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition">
-        Disable Representative Account
-      </button>
-      {% else %}
-      <input type="hidden" name="form" value="enable">
-      <button type="submit" class="bg-teal text-white text-sm font-semibold px-12 py-2.5 rounded-full hover:bg-teal/90 transition">
-        Re-enable Representative Account
-      </button>
-      {% endif %}
-    </form>
-  </div>
   {% else %}
   <p class="text-muted text-sm italic text-center">No representative account is linked to this company yet.</p>
   {% endif %}
@@ -205,7 +208,7 @@
 
       <div class="flex justify-end">
         <button type="submit"
-                class="bg-amber text-white text-sm font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition">
+                class="bg-amber text-white text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-amber/90 transition">
           Save Verification Status
         </button>
       </div>

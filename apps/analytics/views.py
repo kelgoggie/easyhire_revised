@@ -47,17 +47,34 @@ def get_analytics_context(request):
         'master': "Master's Degree",
         'doctorate': 'Doctorate',
     }
-    edu_data = Education.objects.values(
-        'level'
-    ).annotate(count=Count('id')).order_by('-count')
+    # Highest educational attainment per jobseeker — each jobseeker is
+    # bucketed once at the highest level they've recorded. Earlier
+    # implementation counted every Education row (so a jobseeker with
+    # elementary → bachelor showed up in every level's bar). Counts here
+    # now sum to ≤ total_applicants (jobseekers with no education entries
+    # aren't represented in any bucket).
+    LEVEL_ORDER = ['elementary', 'junior_high', 'senior_high', 'vocational',
+                   'associate', 'bachelor', 'master', 'doctorate']
+    highest_per_profile = {}
+    for profile_id, level in Education.objects.values_list('profile_id', 'level'):
+        if level not in LEVEL_ORDER:
+            continue
+        idx = LEVEL_ORDER.index(level)
+        if idx > highest_per_profile.get(profile_id, -1):
+            highest_per_profile[profile_id] = idx
+
+    level_counts = Counter(LEVEL_ORDER[idx] for idx in highest_per_profile.values())
     education_breakdown = [
         {
-            'label': LEVEL_LABELS.get(row['level'], row['level']),
-            'count': row['count'],
-            'pct': round(row['count'] / total_applicants * 100) if total_applicants else 0,
+            'label': LEVEL_LABELS[level],
+            'count': level_counts[level],
+            'pct': round(level_counts[level] / total_applicants * 100) if total_applicants else 0,
         }
-        for row in edu_data
+        for level in LEVEL_ORDER
+        if level_counts.get(level, 0) > 0
     ]
+    # Show the most attained level at the top — same visual order as before.
+    education_breakdown.sort(key=lambda x: -x['count'])
 
     # ── Monthly stats ──────────────────────────────────────────────
     now = timezone.now()
