@@ -155,7 +155,7 @@ def get_analytics_context(request):
         ).select_related('company').order_by('-interaction_count')[:10]
     )
 
-    # ── Applicant insights ─────────────────────────────────────────
+    # Applicant Insights
     sector_data = Sector.objects.annotate(
         count=Count('jobseekers')
     ).order_by('-count')

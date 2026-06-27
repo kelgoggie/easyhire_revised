@@ -7,6 +7,26 @@
 {% block page_content %}
 <div class="py-8">
 
+  {% if pending_block_msg and company.is_verified %}
+  <!-- ── Blocked-action banner (verification gate, email-verified gate, etc.) ── -->
+  <!-- Only renders here when the company IS verified — otherwise the message -->
+  <!-- gets folded into the pending-verification banner below. -->
+  <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
+    <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <div class="flex-1 min-w-0">
+      <p class="text-red-500 font-bold text-sm">Action blocked</p>
+      <p class="text-primary text-xs mt-0.5">{{ pending_block_msg }}</p>
+      <div class="mt-2">
+        <a href="/accounts/email/" class="inline-flex items-center gap-1 bg-amber text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition">
+          Verify your email
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {% if not company.is_verified %}
   <!-- ── Pending verification banner ───────────────────────────── -->
   <div class="bg-amber/10 border border-amber/40 rounded-2xl p-4 mb-6 flex items-start gap-3">

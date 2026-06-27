@@ -3,10 +3,7 @@ from apps.accounts.models import User
 
 
 class AuditLog(models.Model):
-    """
-    Records all significant admin actions for accountability.
-    Important for a government agency context like PESO.
-    """
+
     ACTION_VERIFY = "verify"
     ACTION_REJECT = "reject"
     ACTION_DEACTIVATE = "deactivate"
@@ -99,11 +96,11 @@ class ImportBatch(models.Model):
 
 class SiteSettings(models.Model):
     """
-    Global settings the PESO admin can configure without touching code.
-    Only one record should ever exist — enforced by the save() override.
+    Global settings
+
     """
     compatibility_threshold = models.FloatField(default=80.0,
-        help_text="Minimum compatibility score to trigger a 'New Compatible Job' notification.")
+        help_text="Minimum compatibility score to trigger a 'A New Job for You was Posted' notification.")
     hard_to_fill_days = models.PositiveIntegerField(default=30,
         help_text="Number of days a job must be open before being flagged as hard to fill.")
     hard_to_fill_applicant_threshold = models.PositiveIntegerField(default=3,

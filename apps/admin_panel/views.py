@@ -493,14 +493,17 @@ def jobseeker_settings(request, pk):
                 saved_section = 'password'
 
         elif form == 'disable':
-            jobseeker.user.is_active = False
-            jobseeker.user.save(update_fields=['is_active'])
-            AuditLog.objects.create(
-                admin=request.user, action=AuditLog.ACTION_DEACTIVATE,
-                target_model='User', target_id=jobseeker.user.id,
-                notes='Admin disabled account.',
-            )
-            saved_section = 'disabled'
+            if jobseeker.user_id == request.user.id:
+                error = "You can't disable your own account."
+            else:
+                jobseeker.user.is_active = False
+                jobseeker.user.save(update_fields=['is_active'])
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_DEACTIVATE,
+                    target_model='User', target_id=jobseeker.user.id,
+                    notes='Admin disabled account.',
+                )
+                saved_section = 'disabled'
 
         elif form == 'enable':
             jobseeker.user.is_active = True
@@ -704,14 +707,17 @@ def company_settings(request, pk):
                 saved_section = 'password'
 
         elif form == 'disable' and rep:
-            rep.user.is_active = False
-            rep.user.save(update_fields=['is_active'])
-            AuditLog.objects.create(
-                admin=request.user, action=AuditLog.ACTION_DEACTIVATE,
-                target_model='User', target_id=rep.user.id,
-                notes='Admin disabled company representative account.',
-            )
-            saved_section = 'disabled'
+            if rep.user_id == request.user.id:
+                error = "You can't disable your own account."
+            else:
+                rep.user.is_active = False
+                rep.user.save(update_fields=['is_active'])
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_DEACTIVATE,
+                    target_model='User', target_id=rep.user.id,
+                    notes='Admin disabled company representative account.',
+                )
+                saved_section = 'disabled'
 
         elif form == 'enable' and rep:
             rep.user.is_active = True

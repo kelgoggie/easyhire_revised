@@ -5,9 +5,12 @@ from apps.core.hashids import encode as _hashid
 from .models import Province, CityMunicipality, Barangay
 
 
-@login_required
 def help_view(request):
-    if request.user.is_employer:
+    """Help page. Open to everyone so a logged-out admin clicking the Help
+    link doesn't get bounced to the jobseeker login. Picks template by role
+    so the shell matches the visitor."""
+    user = request.user
+    if user.is_authenticated and getattr(user, 'is_employer', False):
         return render(request, 'employers/help.html')
     return render(request, 'jobseekers/help.html')
 
