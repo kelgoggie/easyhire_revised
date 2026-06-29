@@ -8,10 +8,15 @@ from .models import Province, CityMunicipality, Barangay
 def help_view(request):
     """Help page. Open to everyone so a logged-out admin clicking the Help
     link doesn't get bounced to the jobseeker login. Picks template by role
-    so the shell matches the visitor."""
+    so the shell matches the visitor — critically, staff users get the
+    admin shell, NOT the jobseeker one (which reads jobseeker_profile
+    fields off the admin's user row and could surface stale data)."""
     user = request.user
-    if user.is_authenticated and getattr(user, 'is_employer', False):
-        return render(request, 'employers/help.html')
+    if user.is_authenticated:
+        if getattr(user, 'is_staff', False):
+            return render(request, 'admin_panel/help.html', {'active_nav': 'help'})
+        if getattr(user, 'is_employer', False):
+            return render(request, 'employers/help.html')
     return render(request, 'jobseekers/help.html')
 
 
@@ -257,20 +262,36 @@ def inbox(request):
     })
 
 
+def _dedupe_locations(rows):
+    """Keep one row per (lowercased name). PSGC loads have sometimes inserted
+    duplicate rows (re-runs of load_psgc, mixed PSA snapshots); the unique
+    key is on `code` not `name`, so two rows with different codes but the
+    same name leak through .values() and surface as repeats in the UI."""
+    seen = set()
+    out = []
+    for row in rows:
+        key = (row.get('name') or '').strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out
+
+
 def provinces_api(request):
-    provinces = Province.objects.values('code', 'name')
-    return JsonResponse(list(provinces), safe=False)
+    provinces = Province.objects.values('code', 'name').order_by('name')
+    return JsonResponse(_dedupe_locations(provinces), safe=False)
 
 
 def cities_api(request, province_code):
     cities = CityMunicipality.objects.filter(
         province__code=province_code
-    ).values('code', 'name')
-    return JsonResponse(list(cities), safe=False)
+    ).values('code', 'name').order_by('name')
+    return JsonResponse(_dedupe_locations(cities), safe=False)
 
 
 def barangays_api(request, city_code):
     barangays = Barangay.objects.filter(
         city__code=city_code
-    ).values('code', 'name')
-    return JsonResponse(list(barangays), safe=False)
+    ).values('code', 'name').order_by('name')
+    return JsonResponse(_dedupe_locations(barangays), safe=False)
