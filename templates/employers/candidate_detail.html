@@ -9,7 +9,7 @@
   {# ── Job context header (only when we came from /jobs/<id>/candidates/) ── #}
   {% if current_job %}
   <a href="/employers/jobs/{{ current_job.id|hashid }}/candidates/?tab=applicants"
-     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-3">
+     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
     </svg>
@@ -39,8 +39,6 @@
     </div>
   </div>
   <div class="border-b border-taupe/30 mb-6"></div>
-  {% else %}
-  <a href="javascript:history.back()" class="text-muted text-sm hover:text-primary transition mb-4 inline-block">&larr; Back</a>
   {% endif %}
 
   {# ── Name + Address + primary actions ──────────────────────────────── #}
