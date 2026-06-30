@@ -42,24 +42,73 @@
     {% endif %}
   </div>
 
-  {% if tab == 'applicants' and applicants_count %}
-  <!-- Status filter chips -->
-  <div class="flex flex-wrap items-center gap-1.5 mb-5">
-    <span class="text-muted text-xs mr-1">Filter:</span>
-    <a href="?tab=applicants"
-       class="px-3 py-1 rounded-full text-xs font-semibold transition
-              {% if not status_filter %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
-      All <span class="opacity-70">{{ applicants_count }}</span>
-    </a>
-    {% for code, label, count in status_counts %}
-    <a href="?tab=applicants&status={{ code }}"
-       class="px-3 py-1 rounded-full text-xs font-semibold transition
-              {% if status_filter == code %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
-      {{ label }} <span class="opacity-70">{{ count }}</span>
-    </a>
-    {% endfor %}
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+    {% if tab == 'applicants' and applicants_count %}
+    <!-- Status filter chips -->
+    <div class="flex flex-wrap items-center gap-1.5">
+      <span class="text-muted text-xs mr-1">Filter:</span>
+      <a href="?tab=applicants{% if sort %}&sort={{ sort }}{% endif %}"
+         class="px-3 py-1 rounded-full text-xs font-semibold transition
+                {% if not status_filter %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        All <span class="opacity-70">{{ applicants_count }}</span>
+      </a>
+      {% for code, label, count in status_counts %}
+      <a href="?tab=applicants&status={{ code }}{% if sort %}&sort={{ sort }}{% endif %}"
+         class="px-3 py-1 rounded-full text-xs font-semibold transition
+                {% if status_filter == code %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        {{ label }} <span class="opacity-70">{{ count }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div></div>
+    {% endif %}
+
+    {# Sort dropdown — sits opposite the filter chips. Defaults to Best Match #}
+    {# so the highest-scoring candidates float to the top of the list.        #}
+    {% if ranked or sort != 'match' %}
+    <div class="relative flex-shrink-0" id="sort-wrapper">
+      <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
+              class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/>
+        </svg>
+        Sort <span class="text-primary">·
+          {% if sort == 'lowest_match' %}Lowest Match First
+          {% elif sort == 'recent' %}Most Recent
+          {% elif sort == 'oldest' %}Oldest First
+          {% elif sort == 'name_az' %}Name A-Z
+          {% elif sort == 'name_za' %}Name Z-A
+          {% else %}Best Match{% endif %}
+        </span>
+      </button>
+      <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-48 py-1">
+        {% with base="?tab="|add:tab %}
+        {% with status_q="&status="|add:status_filter %}
+        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=match"         class="block px-4 py-2 text-sm {% if sort == 'match' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Best Match</a>
+        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=lowest_match"  class="block px-4 py-2 text-sm {% if sort == 'lowest_match' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Lowest Match First</a>
+        {% if tab == 'applicants' %}
+        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=recent"        class="block px-4 py-2 text-sm {% if sort == 'recent' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Most Recent</a>
+        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=oldest"        class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest First</a>
+        {% endif %}
+        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=name_az"       class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
+        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=name_za"       class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
+        {% endwith %}
+        {% endwith %}
+      </div>
+    </div>
+    {% endif %}
   </div>
-  {% endif %}
+
+  <script>
+  document.addEventListener('click', function(e) {
+    const w = document.getElementById('sort-wrapper');
+    if (w && !w.contains(e.target)) {
+      const m = document.getElementById('sort-menu');
+      if (m) m.classList.add('hidden');
+    }
+  });
+  </script>
 
   {% if ranked %}
   <!-- ── candidate cards: 1 col on phones, scales up ──────────────────────── -->

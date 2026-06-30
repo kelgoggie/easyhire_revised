@@ -605,6 +605,14 @@ def candidates(request, job_id):
     # 'recommended' = matching engine results
     tab = request.GET.get('tab', 'applicants')
 
+    # Sort. Default 'match' (best match first). 'lowest_match' shows weakest
+    # matches first — useful when the employer wants to manually triage the
+    # bottom of the pile. 'recent' / 'oldest' only apply to the applicants
+    # tab (recommended candidates have no application date).
+    sort = (request.GET.get('sort') or 'match').strip().lower()
+    if sort not in {'match', 'lowest_match', 'recent', 'oldest', 'name_az', 'name_za'}:
+        sort = 'match'
+
     liked_ids = list(CandidateInteraction.objects.filter(
         company=company, job=job
     ).values_list('jobseeker_id', flat=True))
@@ -624,6 +632,7 @@ def candidates(request, job_id):
         # Hide people who already applied so the lists complement each other
         applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
         ranked = [r for r in ranked if r['profile'].id not in applicant_ids]
+        _apply_candidates_sort(ranked, sort)
 
     else:  # 'applicants' (default)
         apps = (Application.objects.filter(job=job)
@@ -669,7 +678,7 @@ def candidates(request, job_id):
                 'application_message': app.message,
                 'applied_at': app.created_at,
             })
-        ranked.sort(key=lambda x: -x['score'])
+        _apply_candidates_sort(ranked, sort)
 
     from apps.core.pagination import paginate, querystring_without
     page = paginate(request, ranked, per_page=12)
@@ -682,6 +691,7 @@ def candidates(request, job_id):
         'liked_by_count': liked_by_count,
         'applicants_count': applicants_count,
         'tab': tab,
+        'sort': sort,
         'status_filter': status_filter,
         'status_counts': status_counts,
         'page': page,
@@ -689,6 +699,29 @@ def candidates(request, job_id):
         'unread_notifications': False,
         'unread_messages': False,
     })
+
+
+def _apply_candidates_sort(items, sort):
+    """In-place sort of the ranked-candidates list by the active sort key.
+    Items are dicts containing at least 'score', 'profile', and (for
+    application items) 'applied_at'."""
+    if sort == 'lowest_match':
+        items.sort(key=lambda x: x.get('score') or 0)
+    elif sort == 'recent':
+        # Applied-at desc; recommended-tab items have no applied_at so they
+        # fall to the bottom in a stable way.
+        items.sort(key=lambda x: x.get('applied_at') or 0, reverse=True)
+    elif sort == 'oldest':
+        items.sort(key=lambda x: x.get('applied_at') or 0)
+    elif sort == 'name_az':
+        items.sort(key=lambda x: ((x['profile'].first_name or '').lower(),
+                                  (x['profile'].last_name or '').lower()))
+    elif sort == 'name_za':
+        items.sort(key=lambda x: ((x['profile'].first_name or '').lower(),
+                                  (x['profile'].last_name or '').lower()),
+                   reverse=True)
+    else:  # 'match' — best first
+        items.sort(key=lambda x: -(x.get('score') or 0))
 
 
 # Valid transitions enforced server-side. Rejected is terminal.
