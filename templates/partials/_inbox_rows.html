@@ -30,19 +30,40 @@
         {% endif %}
       </div>
 
-      <!-- Body: clickable to expand -->
-      <button type="button"
-              {% if item.detail_body %}onclick="toggleInboxDetail({{ forloop.counter0 }})"{% else %}onclick="window.location.href='{{ item.url }}'"{% endif %}
-              class="flex-1 min-w-0 text-left">
+      <!-- Body. The whole row is clickable to expand the detail panel, but   -->
+      <!-- the sender / job links inside need to be reachable on click — so   -->
+      <!-- the actor row sits OUTSIDE the expand button and the button only   -->
+      <!-- wraps the verb + context below it.                                 -->
+      <div class="flex-1 min-w-0">
         <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-          <p class="font-bold text-primary text-sm leading-tight truncate">{{ item.actor }}</p>
+          <p class="font-bold text-primary text-sm leading-tight truncate">
+            {% if item.sender_company_name %}
+              {# Linked "Company | Job Title" header. Job side is plain text  #}
+              {# when the post has been removed.                              #}
+              <a href="{{ item.sender_company_url }}" class="hover:text-teal transition">{{ item.sender_company_name }}</a>
+              {% if item.sender_job_title %}
+                <span class="text-muted/60 font-normal mx-1">|</span>
+                {% if item.sender_job_url %}
+                <a href="{{ item.sender_job_url }}" class="font-semibold text-primary hover:text-teal transition">{{ item.sender_job_title }}</a>
+                {% else %}
+                <span class="font-semibold text-muted italic">{{ item.sender_job_title }} (removed)</span>
+                {% endif %}
+              {% endif %}
+            {% else %}
+              {{ item.actor }}
+            {% endif %}
+          </p>
           <p class="text-muted text-[11px] italic flex-shrink-0">{{ item.timestamp|date:"M j, g:i A" }}</p>
         </div>
-        <p class="text-muted italic text-xs leading-snug mt-0.5">{{ item.verb }}</p>
-        {% if item.context and item.kind == 'announcement' %}
-        <p class="text-primary text-xs font-semibold mt-1 truncate">{{ item.context }}</p>
-        {% endif %}
-      </button>
+        <button type="button"
+                {% if item.detail_body %}onclick="toggleInboxDetail({{ forloop.counter0 }})"{% else %}onclick="window.location.href='{{ item.url }}'"{% endif %}
+                class="block w-full text-left">
+          <p class="text-muted italic text-xs leading-snug mt-0.5">{{ item.verb }}</p>
+          {% if item.context and item.kind == 'announcement' %}
+          <p class="text-primary text-xs font-semibold mt-1 truncate">{{ item.context }}</p>
+          {% endif %}
+        </button>
+      </div>
 
       <!-- Report menu -->
       {% if item.report_target_type %}

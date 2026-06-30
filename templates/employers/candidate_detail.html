@@ -534,6 +534,15 @@ function buildReplyFooter() {
   return `\n\nTo respond, kindly ${parts.join(' or ')}.`;
 }
 
+// Signature line for the message preset. Names the actual sender so the
+// jobseeker sees who they're talking to (e.g. "Carlos Garcia, Jollibee
+// Recruitment Team"). Falls back to just the company recruitment team
+// when the rep's name isn't on file.
+function buildSignature() {
+  const team = `${COMPANY_NAME} Recruitment Team`;
+  return REP_NAME ? `${REP_NAME}, ${team}` : team;
+}
+
 function openContactModal() {
   document.getElementById('contact-modal').classList.remove('hidden');
   document.getElementById('contact-modal').classList.add('flex');
@@ -575,7 +584,7 @@ We're excited about your application. Before we move forward, please send the fo
 You can reply directly to this email with the documents attached. Let us know if you have any questions.${buildReplyFooter()}
 
 Thanks,
-${COMPANY_NAME} Recruitment Team`;
+${buildSignature()}`;
       body.dataset.preset = '1';
     }
   } else {
@@ -597,7 +606,7 @@ Please confirm by replying to this email whether the proposed date and time work
 Looking forward to hearing from you.
 
 Thanks,
-${COMPANY_NAME} Recruitment Team`;
+${buildSignature()}`;
       body.dataset.preset = '1';
     }
   }

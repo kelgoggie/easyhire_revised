@@ -67,20 +67,32 @@ def inbox(request):
                 'report_label': '',
             })
 
-        # Employer contacts received (requirements + interview schedules)
+        # Employer contacts received (requirements + interview schedules).
+        # Sender is rendered as "Company | Job Title" with two separate links
+        # — company → public company profile, job → job post. The job link is
+        # suppressed when the job has been removed (FK is SET_NULL on delete).
         for contact in (EmployerContact.objects
                         .filter(recipient=profile)
                         .select_related('company', 'sender', 'job')):
-            sender_name = ''
-            if contact.sender:
-                prof = getattr(contact.sender, 'employer_profile', None)
-                if prof:
-                    sender_name = f"{prof.first_name} {prof.last_name}".strip()
-            actor = sender_name or contact.company.name
+            sender_company_name = contact.company.name
+            sender_company_url  = f'/companies/{_hashid(contact.company.id)}/'
+            sender_job_title    = ''
+            sender_job_url      = ''
+            if contact.job:
+                sender_job_title = contact.job.title
+                # Closed jobs still have a public detail page; deleted jobs
+                # come through here as None (SET_NULL) and just won't link.
+                sender_job_url = f'/jobs/view/{_hashid(contact.job.id)}/'
             verb = (f'sent you {"interview details" if contact.kind == EmployerContact.KIND_INTERVIEW else "job requirements"}.')
             items.append({
                 'kind': contact.kind,
-                'actor': actor,
+                # Plain-text actor kept as a fallback for the row template /
+                # screen readers; the template prefers the linked pair below.
+                'actor': sender_company_name,
+                'sender_company_name': sender_company_name,
+                'sender_company_url':  sender_company_url,
+                'sender_job_title':    sender_job_title,
+                'sender_job_url':      sender_job_url,
                 'verb': verb,
                 'context': contact.subject,
                 'timestamp': contact.sent_at,
