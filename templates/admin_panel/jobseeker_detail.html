@@ -217,7 +217,7 @@
     {% if jobs_ranked %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {% for item in jobs_ranked %}
-      <a href="/admin-panel/companies/{{ item.job.company.id|hashid }}/jobs/{{ item.job.id|hashid }}/match/{{ jobseeker.id|hashid }}/"
+      <a href="/admin-panel/companies/{{ item.job.company.id|hashid }}/jobs/{{ item.job.id|hashid }}/match/{{ jobseeker.id|hashid }}/?from=jobseeker"
          class="bg-white border border-gray-200 rounded-xl p-4 hover:border-teal/30 hover:shadow-sm transition flex flex-col">
         <div class="flex items-start justify-between gap-2 mb-2">
           <div class="min-w-0 flex-1">

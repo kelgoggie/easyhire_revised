@@ -87,7 +87,7 @@ def notifications_api(request):
                              if n.job else '/employers/jobs/')
         elif n.notif_type == Notification.APPLICATION_ACCEPTED:
             item['actor'] = n.company.name if n.company else 'Employer'
-            item['verb']  = 'accepted your application.'
+            item['verb']  = 'is moving forward with your application.'
             item['icon']  = 'sparkle'
             item['url']   = '/applications/'
         elif n.notif_type == Notification.APPLICATION_REJECTED:

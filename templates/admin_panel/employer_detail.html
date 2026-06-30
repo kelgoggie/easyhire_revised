@@ -5,10 +5,15 @@
 {% block admin_content %}
 <div class="py-8 max-w-6xl mx-auto">
 
-  <div class="flex items-end justify-between gap-4 mb-2">
-    <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Company Verification</h1>
-    <a href="/admin-panel/companies/{{ company.id|hashid }}/" class="text-muted text-sm hover:text-primary transition">&lt; Back to company</a>
-  </div>
+  <a href="/admin-panel/companies/{{ company.id|hashid }}/"
+     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back to {{ company.name }}
+  </a>
+
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">Company Verification</h1>
   <div class="border-b border-taupe/40 mb-6"></div>
 
   <!-- Identity -->

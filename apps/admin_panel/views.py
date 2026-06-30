@@ -327,19 +327,41 @@ def _notify_company_reps_of_verification(company, new_status, rejection_note):
 @staff_required
 def jobseeker_list(request):
     from django.core.paginator import Paginator
-    from django.db.models import Q
-    from apps.jobseekers.models import JobseekerProfile
+    from django.db.models import Q, Prefetch
+    from apps.jobseekers.models import JobseekerProfile, Skill, Education
 
     search = (request.GET.get('q') or '').strip()
     sort   = (request.GET.get('sort') or 'newest').strip()
+    tab    = (request.GET.get('tab')  or 'all').strip()
+    if tab not in {'all', 'deactivated', 'unverified'}:
+        tab = 'all'
 
-    qs = JobseekerProfile.objects.select_related('user').prefetch_related('sectors')
+    qs = (JobseekerProfile.objects
+          .select_related('user')
+          .prefetch_related(
+              'sectors',
+              Prefetch('skills',     queryset=Skill.objects.order_by('id')),
+              Prefetch('educations', queryset=Education.objects.order_by('-year_started')),
+          ))
+
+    # Tab filter. Counts are computed off the search-narrowed qs so badges
+    # reflect what the user is currently looking at.
     if search:
         qs = qs.filter(
             Q(first_name__icontains=search) |
             Q(last_name__icontains=search)  |
             Q(user__email__icontains=search)
         )
+
+    deactivated_count = qs.filter(user__is_active=False).count()
+    unverified_count  = qs.exclude(user__emailaddress__verified=True).count()
+    all_count         = qs.count()
+
+    if tab == 'deactivated':
+        qs = qs.filter(user__is_active=False)
+    elif tab == 'unverified':
+        qs = qs.exclude(user__emailaddress__verified=True)
+
     if sort == 'oldest':       qs = qs.order_by('created_at')
     elif sort == 'name_az':    qs = qs.order_by('first_name', 'last_name')
     elif sort == 'name_za':    qs = qs.order_by('-first_name', '-last_name')
@@ -351,10 +373,14 @@ def jobseeker_list(request):
 
     ctx = _admin_context(request)
     ctx.update({
-        'page':    page,
-        'search':  search,
-        'sort':    sort,
-        'qs_base': querystring_without(request, 'page'),
+        'page':              page,
+        'search':            search,
+        'sort':              sort,
+        'tab':               tab,
+        'all_count':         all_count,
+        'deactivated_count': deactivated_count,
+        'unverified_count':  unverified_count,
+        'qs_base':           querystring_without(request, 'page'),
     })
     return render(request, 'admin_panel/jobseeker_list.html', ctx)
 
@@ -814,7 +840,7 @@ def job_match_detail(request, pk, job_id, jobseeker_id):
         JobseekerProfile, Education, Skill, Certification, WorkExperience,
     )
     from apps.jobs.models import JobPosting, Application
-    from apps.matching.engine import compute_match_score, get_ranked_jobseekers
+    from apps.matching.engine import compute_match_score, get_ranked_jobseekers, get_ranked_jobs
 
     company = get_object_or_404(Company, pk=pk)
     job = get_object_or_404(JobPosting, pk=job_id, company=company)
@@ -829,25 +855,62 @@ def job_match_detail(request, pk, job_id, jobseeker_id):
     certifications = Certification.objects.filter(profile=jobseeker)
     experiences   = WorkExperience.objects.filter(profile=jobseeker).order_by('-year_started', '-id')
 
-    # Prev/Next walks the ranked non-applicant jobseekers for this job.
-    applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
-    ranked_ids = [r['profile'].id for r in get_ranked_jobseekers(job) if r['profile'].id not in applicant_ids]
+    # Navigation context. `from=jobseeker` means the admin arrived from the
+    # jobseeker detail page (Top Compatible Jobs grid), so "Back to..." and
+    # prev/next should orient around the jobseeker, not the job. Default
+    # context is the company job detail page (the company's matched candidates).
+    came_from = (request.GET.get('from') or '').strip()
+    from_jobseeker = came_from == 'jobseeker'
+
     prev_id = next_id = None
-    try:
-        idx = ranked_ids.index(jobseeker.id)
+    prev_url = next_url = None
+    if from_jobseeker:
+        # Walk OTHER jobs ranked for this jobseeker, keeping the jobseeker fixed.
+        applied_ids = set(Application.objects.filter(jobseeker=jobseeker).values_list('job_id', flat=True))
+        ranked_job_ids = [r['job'].id for r in get_ranked_jobs(jobseeker) if r['job'].id not in applied_ids]
+        try:
+            idx = ranked_job_ids.index(job.id)
+        except ValueError:
+            idx = -1
         if idx > 0:
-            prev_id = ranked_ids[idx - 1]
-        if idx < len(ranked_ids) - 1:
-            next_id = ranked_ids[idx + 1]
-    except ValueError:
-        pass
+            prev_job = JobPosting.objects.filter(pk=ranked_job_ids[idx - 1]).select_related('company').first()
+            if prev_job:
+                prev_url = (f'/admin-panel/companies/{_hashid(prev_job.company_id)}'
+                            f'/jobs/{_hashid(prev_job.id)}/match/{_hashid(jobseeker.id)}/?from=jobseeker')
+        if 0 <= idx < len(ranked_job_ids) - 1:
+            next_job = JobPosting.objects.filter(pk=ranked_job_ids[idx + 1]).select_related('company').first()
+            if next_job:
+                next_url = (f'/admin-panel/companies/{_hashid(next_job.company_id)}'
+                            f'/jobs/{_hashid(next_job.id)}/match/{_hashid(jobseeker.id)}/?from=jobseeker')
+        back_url   = f'/admin-panel/jobseekers/{_hashid(jobseeker.id)}/#top-compatible-jobs'
+        back_label = f'Back to {jobseeker.first_name} {jobseeker.last_name}'
+        active_nav = 'jobseekers'
+    else:
+        # Walk the ranked non-applicant jobseekers for this job (default).
+        applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
+        ranked_ids = [r['profile'].id for r in get_ranked_jobseekers(job) if r['profile'].id not in applicant_ids]
+        try:
+            idx = ranked_ids.index(jobseeker.id)
+            if idx > 0:
+                prev_id = ranked_ids[idx - 1]
+                prev_url = (f'/admin-panel/companies/{_hashid(company.id)}'
+                            f'/jobs/{_hashid(job.id)}/match/{_hashid(prev_id)}/')
+            if idx < len(ranked_ids) - 1:
+                next_id = ranked_ids[idx + 1]
+                next_url = (f'/admin-panel/companies/{_hashid(company.id)}'
+                            f'/jobs/{_hashid(job.id)}/match/{_hashid(next_id)}/')
+        except ValueError:
+            pass
+        back_url   = f'/admin-panel/companies/{_hashid(company.id)}/jobs/{_hashid(job.id)}/'
+        back_label = f'Back to {job.title}'
+        active_nav = 'companies'
 
     # Whether they actually applied (for the small status hint at the top).
     application = Application.objects.filter(jobseeker=jobseeker, job=job).first()
 
     ctx = _admin_context(request)
     ctx.update({
-        'active_nav':    'companies',
+        'active_nav':    active_nav,
         'company':       company,
         'job':           job,
         'jobseeker':     jobseeker,
@@ -858,8 +921,11 @@ def job_match_detail(request, pk, job_id, jobseeker_id):
         'skills':        skills,
         'certifications': certifications,
         'experiences':   experiences,
-        'prev_id':       prev_id,
-        'next_id':       next_id,
+        'prev_url':      prev_url,
+        'next_url':      next_url,
+        'back_url':      back_url,
+        'back_label':    back_label,
+        'from_jobseeker': from_jobseeker,
     })
     return render(request, 'admin_panel/job_match_detail.html', ctx)
 

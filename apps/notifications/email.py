@@ -42,11 +42,12 @@ def email_application_status_change(application, action):
     job_title  = application.job.title if application.job else 'the position'
 
     if action == 'accept':
-        subject = f'{company} accepted your application for {job_title}'
+        subject = f'{company} is moving forward with your application for {job_title}'
         body = (
             f"Hi {first_name},\n\n"
-            f"Good news — {company} has accepted your application for {job_title}!\n"
-            f"They may be in touch with next steps soon.\n\n"
+            f"Good news — {company} has decided to proceed with your application for {job_title}.\n"
+            f"Your application status is now In Progress. They may be in touch about "
+            f"requirements, an interview, or a hire offer.\n\n"
             f"View this on EasyHire: https://easyhire.ph/applications/\n\n"
             f"— EasyHire"
         )

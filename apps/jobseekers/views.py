@@ -846,6 +846,10 @@ def recommended_jobs(request):
     sort = request.GET.get('sort', 'match')
     search = request.GET.get('q', '').strip()
 
+    # Filter chips. CSV-encoded multi-select. Empty = no filter (show all).
+    sector_codes = [c for c in request.GET.get('sectors', '').split(',') if c]
+    location_codes = [c for c in request.GET.get('locations', '').split(',') if c]
+
     liked_ids = set(JobInteraction.objects.filter(
         jobseeker=profile, interaction_type=JobInteraction.LIKED
     ).values_list('job_id', flat=True))
@@ -910,6 +914,16 @@ def recommended_jobs(request):
         else:
             ranked_jobs = []
 
+    # Filter chips. Applied AFTER tab + search so they compose with both.
+    if sector_codes:
+        from apps.employers.models import Company
+        matching_company_ids = set(Company.objects.filter(
+            sector_badges__code__in=sector_codes
+        ).values_list('id', flat=True))
+        ranked_jobs = [r for r in ranked_jobs if r['job'].company_id in matching_company_ids]
+    if location_codes:
+        ranked_jobs = [r for r in ranked_jobs if r['job'].location_type in location_codes]
+
     # Match score is internal — never filter cards out based on it. Sorting still
     # puts strongest matches first via the engine's ranking.
     from apps.core.pagination import paginate, querystring_without
@@ -952,6 +966,15 @@ def recommended_jobs(request):
         })
         posted_map[str(job.id)] = job.created_at.strftime('%Y-%m-%dT%H:%M:%SZ')
 
+    # Choices for the filter chip bar. Sectors come from the Sector model
+    # (PWD / OSY / Senior / etc.); locations are JobPosting.location_type.
+    sector_choices = list(Sector.objects.values('code', 'label').order_by('label'))
+    location_choices = [
+        {'code': JobPosting.ILOILO,   'label': 'Iloilo City'},
+        {'code': JobPosting.REMOTE,   'label': 'Remote'},
+        {'code': JobPosting.OVERSEAS, 'label': 'Overseas'},
+    ]
+
     context = {
         'profile': profile,
         'ranked_jobs': page_items,
@@ -960,6 +983,10 @@ def recommended_jobs(request):
         'tab': tab,
         'sort': sort,
         'search': search,
+        'sector_codes': sector_codes,
+        'location_codes': location_codes,
+        'sector_choices': sector_choices,
+        'location_choices': location_choices,
         'jobs_json': jobs_json,
         'posted_map': posted_map,
         'page': page,

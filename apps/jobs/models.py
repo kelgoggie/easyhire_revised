@@ -205,15 +205,19 @@ class JobExperienceRequirement(models.Model):
 class Application(models.Model):
     STATUS_PENDING      = "pending"        # employer hasn't opened the application yet
     STATUS_VIEWED       = "viewed"         # employer opened it but hasn't decided
-    STATUS_ACCEPTED     = "accepted"       # employer accepted; can still be rejected or moved to hired
+    STATUS_ACCEPTED     = "accepted"       # employer has decided to proceed; messaging is now enabled
     STATUS_REJECTED     = "rejected"       # terminal — no undo
     STATUS_HIRE_PENDING = "hire_pending"   # employer offered to hire; awaiting jobseeker accept/decline
     STATUS_HIRED        = "hired"          # terminal — applicant was tagged hired and confirmed
 
+    # Labels are what `get_status_display()` returns. The "accepted" DB value
+    # is rendered as "In Progress" so the UI matches the Proceed-then-message
+    # flow on the employer side (employer is in progress with the candidate;
+    # next step is interview / requirements / hire offer).
     STATUS_CHOICES = [
         (STATUS_PENDING,      "Pending"),
         (STATUS_VIEWED,       "Viewed"),
-        (STATUS_ACCEPTED,     "Accepted"),
+        (STATUS_ACCEPTED,     "In Progress"),
         (STATUS_REJECTED,     "Rejected"),
         (STATUS_HIRE_PENDING, "Hire Offered"),
         (STATUS_HIRED,        "Hired"),

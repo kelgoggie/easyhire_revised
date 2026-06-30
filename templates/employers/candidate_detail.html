@@ -97,6 +97,11 @@
         </button>
       </form>
 
+      {# Message + Gmail buttons. Only surfaced once the employer has clicked  #}
+      {# Proceed (status `accepted` or beyond) so the contact channel matches #}
+      {# the application lifecycle. Before Proceed there's nothing to message #}
+      {# the candidate about yet — the modal copy on Proceed sets that up.   #}
+      {% if application.status == 'accepted' or application.status == 'hire_pending' or application.status == 'hired' %}
       {% with to_email=jobseeker.contact_email|default:jobseeker.user.email %}
       {% if to_email %}
       <!-- Quick Gmail -->
@@ -117,6 +122,7 @@
               class="bg-amber text-white text-sm font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition">
         Message
       </button>
+      {% endif %}
     </div>
   </div>
 
@@ -142,7 +148,7 @@
           {% if application.status == 'pending' or application.status == 'viewed' %}
           <button type="button" data-action="accept"
                   class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">
-            Accept
+            Proceed
           </button>
           <button type="button" data-action="reject"
                   class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">
@@ -694,14 +700,24 @@ ${COMPANY_NAME} Recruitment Team`;
     });
   }
 
+  // Modal copy. The Proceed modal needs the candidate's name + job title
+  // pulled in dynamically so the message reads naturally.
+  const CANDIDATE_NAME = "{{ jobseeker.full_name|escapejs }}";
+  const JOB_TITLE_FOR_PROCEED = "{{ current_job.title|default:application.job.title|escapejs }}";
+
   wrap.querySelectorAll('button[data-action]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       const action = btn.dataset.action;
+      const proceedBody =
+        "You have decided to proceed with " + CANDIDATE_NAME + "'s application" +
+        (JOB_TITLE_FOR_PROCEED ? " for " + JOB_TITLE_FOR_PROCEED : "") + ". " +
+        "Doing so will update their application status to 'In Progress.' " +
+        "You may send them requirements, arrange interviews, or send an invitation to be hired.";
       const confirmTexts = {
-        accept:      { title: 'Accept this application?', body: "You'll be able to send them a hire offer later.", cta: 'Yes, accept', cls: 'bg-teal hover:bg-teal/90' },
+        accept:      { title: 'Proceed with this application?', body: proceedBody, cta: 'Yes, proceed', cls: 'bg-teal hover:bg-teal/90' },
         reject:      { title: 'Reject this application?', body: 'This is terminal — the applicant cannot be revived.', cta: 'Yes, reject', cls: 'bg-red-500 hover:bg-red-600' },
         hire:        { title: 'Send a hire offer?',       body: "The jobseeker will get a notification with Accept / Decline buttons. The slot decrement + work-experience entry only happen once they accept.", cta: 'Yes, send offer', cls: 'bg-teal hover:bg-teal/90' },
-        cancel_hire: { title: 'Cancel the hire offer?',   body: 'The offer disappears from the jobseeker’s notifications and the application goes back to Accepted.', cta: 'Yes, cancel offer', cls: 'bg-amber hover:bg-amber/90' },
+        cancel_hire: { title: 'Cancel the hire offer?',   body: 'The offer disappears from the jobseeker’s notifications and the application goes back to In Progress.', cta: 'Yes, cancel offer', cls: 'bg-amber hover:bg-amber/90' },
       };
       const t = confirmTexts[action];
       if (window.confirmAction) {

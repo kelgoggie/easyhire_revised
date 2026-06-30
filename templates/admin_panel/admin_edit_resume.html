@@ -5,13 +5,16 @@
 {% block admin_content %}
 <div class="py-8 max-w-6xl mx-auto">
 
-  <div class="flex items-end justify-between gap-4 mb-2">
-    <div>
-      <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Edit Resume</h1>
-      <p class="text-muted text-sm">{{ jobseeker.first_name }} {{ jobseeker.last_name }} · {{ jobseeker.user.email }}</p>
-    </div>
-    <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/" class="text-muted text-sm hover:text-primary transition">&lt; Back to profile</a>
-  </div>
+  <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/"
+     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back to {{ jobseeker.first_name }} {{ jobseeker.last_name }}
+  </a>
+
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Edit Resume</h1>
+  <p class="text-muted text-sm mb-2">{{ jobseeker.first_name }} {{ jobseeker.last_name }} · {{ jobseeker.user.email }}</p>
   <div class="border-b border-taupe/40 mb-6"></div>
 
   {% if saved %}

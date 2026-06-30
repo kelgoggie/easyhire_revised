@@ -4,13 +4,16 @@
 {% block admin_content %}
 <div class="py-8 max-w-7xl mx-auto">
 
-  <!-- Back to job -->
-  <a href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/"
+  {# Back link. Context-aware: when the admin arrived via ?from=jobseeker     #}
+  {# (clicked a Top Compatible Job from the jobseeker detail page), back     #}
+  {# returns to the jobseeker. Otherwise it returns to the job's candidate   #}
+  {# list under its company.                                                 #}
+  <a href="{{ back_url }}"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
     </svg>
-    Back to {{ job.title }}
+    {{ back_label }}
   </a>
 
   <!-- Heading -->
@@ -31,15 +34,15 @@
       {% endif %}
     </div>
     <div class="flex items-center gap-2 flex-shrink-0">
-      {% if prev_id %}
-      <a href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/match/{{ prev_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+      {% if prev_url %}
+      <a href="{{ prev_url }}" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous {% if from_jobseeker %}Job{% endif %}</a>
       {% else %}
-      <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">&lt; Previous</span>
+      <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">&lt; Previous {% if from_jobseeker %}Job{% endif %}</span>
       {% endif %}
-      {% if next_id %}
-      <a href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/match/{{ next_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+      {% if next_url %}
+      <a href="{{ next_url }}" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next {% if from_jobseeker %}Job {% endif %}&gt;</a>
       {% else %}
-      <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">Next &gt;</span>
+      <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">Next {% if from_jobseeker %}Job {% endif %}&gt;</span>
       {% endif %}
     </div>
   </div>
