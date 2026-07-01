@@ -188,13 +188,12 @@
 
       </div><!-- /card 1 -->
 
-      {# Collapsible sections. Each header toggles the body via              #}
-      {# toggleSection(); Education / Certifications / Experience each      #}
-      {# render one card at a time with a < > carousel (see renderCarousel  #}
-      {# in the JS block). New entries are prepended so the most recent     #}
-      {# addition is the active slide. Skills is a list of rows with an     #}
-      {# optional description per skill.                                    #}
-      <div class="grid grid-cols-1 gap-4">
+      {# Collapsible sections. Education / Certifications / Skills sit in   #}
+      {# a 3-col row (matches the original layout); Experience sits         #}
+      {# full-width below. All four start COLLAPSED on first visit so the   #}
+      {# resume feels light — user expands what they want. Expand state     #}
+      {# persists per-section via localStorage.                             #}
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
         <!-- Education (collapsible + carousel) -->
         <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden" data-section="education">
@@ -435,7 +434,7 @@
           </div>
         </div>
 
-      </div><!-- /stacked sections -->
+      </div><!-- /3-col: Education | Certifications | Skills -->
 
       <!-- ── Experience (collapsible + carousel) ─────────────────── -->
       <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden" data-section="experience">
@@ -674,12 +673,15 @@ function toggleSection(name) {
     try { localStorage.setItem('resume-section-' + name, collapsed ? 'collapsed' : 'expanded'); } catch (e) {}
 }
 function initSections() {
+    // Default state: COLLAPSED. Only explicitly-expanded sections open on
+    // load — keeps the resume page compact and forces the user to lean
+    // into what they want to see, rather than dumping every card open.
     ['education', 'certification', 'skills', 'experience'].forEach(function(name) {
         const section = document.querySelector(`[data-section="${name}"]`);
         if (!section) return;
-        let collapsed = false;
-        try { collapsed = localStorage.getItem('resume-section-' + name) === 'collapsed'; } catch (e) {}
-        if (collapsed) {
+        let expanded = false;
+        try { expanded = localStorage.getItem('resume-section-' + name) === 'expanded'; } catch (e) {}
+        if (!expanded) {
             section.querySelector('[data-section-body]').classList.add('hidden');
             section.querySelector('[data-chevron]').classList.add('rotate-180');
         }
