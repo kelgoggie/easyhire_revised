@@ -1,39 +1,77 @@
 {% comment %}
-  Filter chips for the unified inbox. Renders nothing when the user has
-  no items at all (no chip would have a non-zero count).
+  Filter chips + sort dropdown for the unified inbox. Renders nothing when
+  the user has no items at all.
 
   Required context:
     kind_filter  — '' for All, or one of: announcements/applications/interviews/requirements
     kind_counts  — dict { 'announcements': N, 'applications': N, 'interviews': N, 'requirements': N }
-    total_items  — overall total (= sum of all kind buckets)
+    total_items  — overall total
+    sort         — 'latest' (default) or 'oldest'; drives the sort dropdown
 {% endcomment %}
 {% if total_items %}
-<div class="flex flex-wrap items-center gap-1.5 mb-5">
-  <span class="text-muted text-xs mr-1">Show:</span>
-  <a href="?"
-     class="px-3 py-1 rounded-full text-xs font-semibold transition
-            {% if not kind_filter %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
-    All <span class="opacity-70">{{ total_items }}</span>
-  </a>
-  <a href="?kind=announcements"
-     class="px-3 py-1 rounded-full text-xs font-semibold transition
-            {% if kind_filter == 'announcements' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
-    Announcements <span class="opacity-70">{{ kind_counts.announcements }}</span>
-  </a>
-  <a href="?kind=applications"
-     class="px-3 py-1 rounded-full text-xs font-semibold transition
-            {% if kind_filter == 'applications' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
-    Applications <span class="opacity-70">{{ kind_counts.applications }}</span>
-  </a>
-  <a href="?kind=interviews"
-     class="px-3 py-1 rounded-full text-xs font-semibold transition
-            {% if kind_filter == 'interviews' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
-    Interviews <span class="opacity-70">{{ kind_counts.interviews }}</span>
-  </a>
-  <a href="?kind=requirements"
-     class="px-3 py-1 rounded-full text-xs font-semibold transition
-            {% if kind_filter == 'requirements' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
-    Requirements <span class="opacity-70">{{ kind_counts.requirements }}</span>
-  </a>
+{# Chip URLs preserve the sort choice; sort-dropdown URLs preserve the    #}
+{# active kind filter. That way changing one axis doesn't reset the other.#}
+{% with sort_q="&sort="|add:sort %}
+<div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+  <div class="flex flex-wrap items-center gap-1.5">
+    <span class="text-muted text-xs mr-1">Show:</span>
+    <a href="?{% if sort != 'latest' %}{{ sort_q|slice:'1:' }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if not kind_filter %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      All <span class="opacity-70">{{ total_items }}</span>
+    </a>
+    <a href="?kind=announcements{{ sort_q }}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if kind_filter == 'announcements' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      Announcements <span class="opacity-70">{{ kind_counts.announcements }}</span>
+    </a>
+    <a href="?kind=applications{{ sort_q }}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if kind_filter == 'applications' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      Applications <span class="opacity-70">{{ kind_counts.applications }}</span>
+    </a>
+    <a href="?kind=interviews{{ sort_q }}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if kind_filter == 'interviews' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      Interviews <span class="opacity-70">{{ kind_counts.interviews }}</span>
+    </a>
+    <a href="?kind=requirements{{ sort_q }}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if kind_filter == 'requirements' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      Requirements <span class="opacity-70">{{ kind_counts.requirements }}</span>
+    </a>
+  </div>
+
+  {% with kind_q="&kind="|add:kind_filter %}
+  <div class="relative flex-shrink-0" id="inbox-sort-wrapper">
+    <button type="button"
+            onclick="document.getElementById('inbox-sort-menu').classList.toggle('hidden')"
+            class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/>
+      </svg>
+      Sort <span class="text-primary">·
+        {% if sort == 'oldest' %}Oldest first{% else %}Latest first{% endif %}
+      </span>
+    </button>
+    <div id="inbox-sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
+      <a href="?sort=latest{% if kind_filter %}{{ kind_q }}{% endif %}"
+         class="block px-4 py-2 text-sm {% if sort == 'latest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Latest first</a>
+      <a href="?sort=oldest{% if kind_filter %}{{ kind_q }}{% endif %}"
+         class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
+    </div>
+  </div>
+  {% endwith %}
 </div>
+
+<script>
+document.addEventListener('click', function(e) {
+  const w = document.getElementById('inbox-sort-wrapper');
+  if (w && !w.contains(e.target)) {
+    const m = document.getElementById('inbox-sort-menu');
+    if (m) m.classList.add('hidden');
+  }
+});
+</script>
+{% endwith %}
 {% endif %}

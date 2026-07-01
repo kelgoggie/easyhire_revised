@@ -236,8 +236,12 @@ def inbox(request):
         # Staff users — kick them to the admin panel where they compose announcements.
         return redirect('/admin-panel/announcements/')
 
-    # Newest first
-    items.sort(key=lambda x: x['timestamp'], reverse=True)
+    # Sort: user-selectable via ?sort=latest|oldest. Default is latest
+    # first, which matches the pre-sort-control behavior.
+    sort = (request.GET.get('sort') or 'latest').strip().lower()
+    if sort not in {'latest', 'oldest'}:
+        sort = 'latest'
+    items.sort(key=lambda x: x['timestamp'], reverse=(sort == 'latest'))
     total_items = len(items)
 
     # Snapshot BEFORE filtering so the sidebar dot tracks "anything new at all",
@@ -274,6 +278,7 @@ def inbox(request):
         'kind_filter': kind_filter,
         'kind_counts': kind_counts,
         'total_items': total_items,
+        'sort': sort,
         'unread_notifications': False,
         'unread_messages': False,
     })
