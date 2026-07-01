@@ -756,6 +756,26 @@ def company_settings(request, pk):
             )
             saved_section = 'enabled'
 
+        elif form == 'verify_email' and rep:
+            # Demo helper: mark every rep of this company as email-verified so
+            # they don't hit the email-verified-required gate on job posting.
+            # Idempotent — safe to click even if already verified.
+            from allauth.account.models import EmailAddress
+            count = 0
+            for r in company.representatives.select_related('user').all():
+                if r.user and r.user.email:
+                    EmailAddress.objects.update_or_create(
+                        user=r.user, email=r.user.email,
+                        defaults={'verified': True, 'primary': True},
+                    )
+                    count += 1
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_EDIT,
+                target_model='User', target_id=rep.user.id if rep and rep.user else 0,
+                notes=f'Admin bypassed email verification for {count} rep(s) of "{company.name}".',
+            )
+            saved_section = 'email_verified'
+
         elif form == 'verification':
             # Inline verification status change so admins can update without
             # bouncing to the dedicated verify page. Mirrors set_verification.
@@ -817,6 +837,18 @@ def company_settings(request, pk):
         for doc_type in required_docs
     ]
 
+    # True when every rep of this company has at least one verified
+    # EmailAddress. Drives the "Verify email (demo)" button state so admins
+    # can see at a glance whether the bypass is still needed.
+    from allauth.account.models import EmailAddress
+    rep_user_ids = list(company.representatives.values_list('user_id', flat=True))
+    verified_ids = set(EmailAddress.objects.filter(
+        user_id__in=rep_user_ids, verified=True
+    ).values_list('user_id', flat=True))
+    all_reps_email_verified = bool(rep_user_ids) and all(
+        uid in verified_ids for uid in rep_user_ids
+    )
+
     ctx = _admin_context(request)
     ctx.update({
         'company':         company,
@@ -825,6 +857,7 @@ def company_settings(request, pk):
         'error':           error,
         'checklist':       checklist,
         'uploaded_count':  sum(1 for item in checklist if item['uploaded']),
+        'all_reps_email_verified': all_reps_email_verified,
         # Status-picker options for the verification form.
         'verification_choices': Company.VERIFICATION_CHOICES,
     })
