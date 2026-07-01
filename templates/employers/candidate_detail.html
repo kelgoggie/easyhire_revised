@@ -257,13 +257,20 @@
         {% endif %}
       </div>
 
-      <!-- Skills -->
+      {# Skills — list-style so per-skill descriptions have somewhere to  #}
+      {# live. When a skill has no description the row is just the pill,  #}
+      {# preserving the compact look for legacy entries without one.       #}
       <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
         <p class="font-bold text-primary text-sm mb-3">Skills</p>
         {% if skills %}
-        <div class="flex flex-wrap gap-1.5">
+        <div class="space-y-2.5">
           {% for skill in skills %}
-          <span class="inline-flex items-center bg-taupe/20 text-primary text-xs px-3 py-1 rounded-full">{{ skill.name }}</span>
+          <div>
+            <span class="inline-flex items-center bg-green-50 text-green-600 text-xs px-2.5 py-0.5 rounded-full border border-green-200">{{ skill.name }}</span>
+            {% if skill.description %}
+            <p class="text-muted text-xs mt-1 leading-snug whitespace-pre-line">{{ skill.description }}</p>
+            {% endif %}
+          </div>
           {% endfor %}
         </div>
         {% else %}

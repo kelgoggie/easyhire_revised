@@ -1633,11 +1633,20 @@ def admin_edit_resume(request, pk):
                     year_ended=int(yend) if (yend or '').isdigit() else None,
                 )
 
+        # Mirrors the jobseeker-side resume POST: parallel skill_name and
+        # skill_description lists so admins editing on behalf of a jobseeker
+        # can also fill in per-skill descriptions.
         Skill.objects.filter(profile=jobseeker).delete()
-        for name in request.POST.getlist('skill_name'):
+        skill_names = request.POST.getlist('skill_name')
+        skill_descs = request.POST.getlist('skill_description')
+        for i, name in enumerate(skill_names):
             n = (name or '').strip()
-            if n:
-                Skill.objects.create(profile=jobseeker, name=n)
+            if not n:
+                continue
+            Skill.objects.create(
+                profile=jobseeker, name=n,
+                description=(skill_descs[i].strip() if i < len(skill_descs) else ''),
+            )
 
         Certification.objects.filter(profile=jobseeker).delete()
         for cname, corg in zip(

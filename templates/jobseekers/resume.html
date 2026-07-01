@@ -188,22 +188,48 @@
 
       </div><!-- /card 1 -->
 
-      <!-- ── 3-col: Education | Certifications | Skills ──────────── -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {# Collapsible sections. Each header toggles the body via              #}
+      {# toggleSection(); Education / Certifications / Experience each      #}
+      {# render one card at a time with a < > carousel (see renderCarousel  #}
+      {# in the JS block). New entries are prepended so the most recent     #}
+      {# addition is the active slide. Skills is a list of rows with an     #}
+      {# optional description per skill.                                    #}
+      <div class="grid grid-cols-1 gap-4">
 
-        <!-- Education -->
-        <div class="bg-white border border-gray-200 rounded-2xl p-5">
-          <div class="flex items-center justify-between mb-4">
-            <p class="text-sm font-bold text-primary">Education</p>
-            <button type="button" onclick="addRow('education')"
-                    class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Add Entry
-            </button>
-          </div>
-          <div id="education-container" class="space-y-4">
+        <!-- Education (collapsible + carousel) -->
+        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden" data-section="education">
+          <button type="button" onclick="toggleSection('education')"
+                  class="section-toggle w-full flex items-center justify-between px-5 py-4 hover:bg-surface/40 transition">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-bold text-primary">Education</p>
+              <span class="text-xs text-muted" data-section-count>—</span>
+            </div>
+            <svg class="w-4 h-4 text-muted transition-transform" data-chevron fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <div class="section-body px-5 pb-5" data-section-body>
+            <div class="flex items-center justify-between mb-3 gap-3">
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="carouselStep('education-container', -1)"
+                        class="carousel-prev add-remove-btn w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <span class="text-xs text-muted font-semibold min-w-[3rem] text-center" data-carousel-counter>0 / 0</span>
+                <button type="button" onclick="carouselStep('education-container', 1)"
+                        class="carousel-next add-remove-btn w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+              <button type="button" onclick="addRow('education')"
+                      class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Entry
+              </button>
+            </div>
+            <div id="education-container" class="carousel-track">
             {% for edu in education %}
-            <div class="education-row relative border border-gray-100 rounded-xl p-3 space-y-2">
+            <div class="education-row carousel-slide relative border border-gray-100 rounded-xl p-3 space-y-2">
               <button type="button" onclick="removeCard(this)" title="Remove this entry"
                       class="remove-x add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -257,7 +283,7 @@
               </div>
             </div>
             {% empty %}
-            <div class="education-row relative border border-gray-100 rounded-xl p-3 space-y-2">
+            <div class="education-row carousel-slide relative border border-gray-100 rounded-xl p-3 space-y-2">
               <button type="button" onclick="removeCard(this)" title="Remove this entry"
                       class="remove-x add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -288,22 +314,44 @@
               </div>
             </div>
             {% endfor %}
+            </div>
           </div>
         </div>
 
-        <!-- Certifications -->
-        <div class="bg-white border border-gray-200 rounded-2xl p-5">
-          <div class="flex items-center justify-between mb-4">
-            <p class="text-sm font-bold text-primary">Certifications</p>
-            <button type="button" onclick="addRow('certification')"
-                    class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Add Entry
-            </button>
-          </div>
-          <div id="certification-container" class="space-y-4">
+        <!-- Certifications (collapsible + carousel) -->
+        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden" data-section="certification">
+          <button type="button" onclick="toggleSection('certification')"
+                  class="section-toggle w-full flex items-center justify-between px-5 py-4 hover:bg-surface/40 transition">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-bold text-primary">Certifications</p>
+              <span class="text-xs text-muted" data-section-count>—</span>
+            </div>
+            <svg class="w-4 h-4 text-muted transition-transform" data-chevron fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <div class="section-body px-5 pb-5" data-section-body>
+            <div class="flex items-center justify-between mb-3 gap-3">
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="carouselStep('certification-container', -1)"
+                        class="carousel-prev add-remove-btn w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <span class="text-xs text-muted font-semibold min-w-[3rem] text-center" data-carousel-counter>0 / 0</span>
+                <button type="button" onclick="carouselStep('certification-container', 1)"
+                        class="carousel-next add-remove-btn w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+              <button type="button" onclick="addRow('certification')"
+                      class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Entry
+              </button>
+            </div>
+            <div id="certification-container" class="carousel-track">
             {% for cert in certifications %}
-            <div class="cert-row relative border border-gray-100 rounded-xl p-3 space-y-2">
+            <div class="cert-row carousel-slide relative border border-gray-100 rounded-xl p-3 space-y-2">
               <button type="button" onclick="removeCard(this)" title="Remove this entry"
                       class="remove-x add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -324,7 +372,7 @@
               </div>
             </div>
             {% empty %}
-            <div class="cert-row relative border border-gray-100 rounded-xl p-3 space-y-2">
+            <div class="cert-row carousel-slide relative border border-gray-100 rounded-xl p-3 space-y-2">
               <button type="button" onclick="removeCard(this)" title="Remove this entry"
                       class="remove-x add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -344,45 +392,85 @@
               </div>
             </div>
             {% endfor %}
+            </div>
           </div>
         </div>
 
-        <!-- Skills (tag input) -->
-        <div class="bg-white border border-gray-200 rounded-2xl p-5">
-          <p class="text-sm font-bold text-primary mb-1">Skills</p>
-          <p class="text-xs text-muted mb-3">Separate entries with a comma (,)<br>or by pressing Enter.</p>
-          <input type="text" id="skill-input" placeholder="e.g. Google Suite, Plumbing"
-                 class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition mb-3">
-          <!-- Tag chips -->
-          <div id="skill-tags" class="flex flex-wrap gap-1.5">
-            {% for skill in skills %}
-            <span class="skill-chip relative inline-flex items-center gap-1 bg-teal/15 text-primary text-xs pl-3 pr-5 py-1 rounded-full border border-teal/20">
-              {{ skill.name }}
-              <button type="button" onclick="removeSkillChip(this)" title="Remove"
-                      class="add-remove-btn absolute -top-1 -right-1 w-4 h-4 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
-                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
-              <input type="hidden" name="skill_name" value="{{ skill.name }}">
-            </span>
-            {% endfor %}
-          </div>
-        </div>
-
-      </div><!-- /3-col -->
-
-      <!-- ── Experience ────────────────────────────────────────── -->
-      <div class="bg-white border border-gray-200 rounded-2xl p-5">
-        <div class="flex items-center justify-between mb-4">
-          <p class="text-sm font-bold text-primary">Experience</p>
-          <button type="button" onclick="addRow('experience')"
-                  class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Add Entry
+        <!-- Skills (list-style with optional description per skill) -->
+        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden" data-section="skills">
+          <button type="button" onclick="toggleSection('skills')"
+                  class="section-toggle w-full flex items-center justify-between px-5 py-4 hover:bg-surface/40 transition">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-bold text-primary">Skills</p>
+              <span class="text-xs text-muted" data-section-count>—</span>
+            </div>
+            <svg class="w-4 h-4 text-muted transition-transform" data-chevron fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
           </button>
+          <div class="section-body px-5 pb-5" data-section-body>
+            {# Bulk-add input at the top preserves the fast batch-add       #}
+            {# workflow of the old chip UI. Each Enter creates an empty     #}
+            {# row that the user can fill in with a description.            #}
+            <label class="block text-primary text-xs font-medium mb-1">Add a skill</label>
+            <input type="text" id="skill-input"
+                   placeholder="Type a skill and press Enter to add"
+                   class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition mb-3">
+
+            <div id="skill-list" class="space-y-2">
+              {% for skill in skills %}
+              <div class="skill-row relative border border-gray-100 rounded-xl p-3 pr-8">
+                <button type="button" onclick="removeSkillRow(this)" title="Remove"
+                        class="add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                <input type="text" name="skill_name" value="{{ skill.name }}" placeholder="Skill name"
+                       class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition mb-2">
+                <textarea name="skill_description" rows="2"
+                          placeholder="Optional: years of experience, tools, notable projects…"
+                          class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ skill.description|default:'' }}</textarea>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
         </div>
-        <div id="experience-container" class="space-y-4">
+
+      </div><!-- /stacked sections -->
+
+      <!-- ── Experience (collapsible + carousel) ─────────────────── -->
+      <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden" data-section="experience">
+        <button type="button" onclick="toggleSection('experience')"
+                class="section-toggle w-full flex items-center justify-between px-5 py-4 hover:bg-surface/40 transition">
+          <div class="flex items-center gap-2">
+            <p class="text-sm font-bold text-primary">Experience</p>
+            <span class="text-xs text-muted" data-section-count>—</span>
+          </div>
+          <svg class="w-4 h-4 text-muted transition-transform" data-chevron fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        <div class="section-body px-5 pb-5" data-section-body>
+          <div class="flex items-center justify-between mb-3 gap-3">
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="carouselStep('experience-container', -1)"
+                      class="carousel-prev add-remove-btn w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+              </button>
+              <span class="text-xs text-muted font-semibold min-w-[3rem] text-center" data-carousel-counter>0 / 0</span>
+              <button type="button" onclick="carouselStep('experience-container', 1)"
+                      class="carousel-next add-remove-btn w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+            <button type="button" onclick="addRow('experience')"
+                    class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Add Entry
+            </button>
+          </div>
+          <div id="experience-container" class="carousel-track">
           {% for exp in experiences %}
-          <div class="exp-row relative border border-gray-100 rounded-xl p-4">
+          <div class="exp-row carousel-slide relative border border-gray-100 rounded-xl p-4">
             <button type="button" onclick="removeCard(this)" title="Remove this entry"
                     class="remove-x add-remove-btn absolute top-3 right-3 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -423,7 +511,7 @@
             </div>
           </div>
           {% empty %}
-          <div class="exp-row relative border border-gray-100 rounded-xl p-4">
+          <div class="exp-row carousel-slide relative border border-gray-100 rounded-xl p-4">
             <button type="button" onclick="removeCard(this)" title="Remove this entry"
                     class="remove-x add-remove-btn absolute top-3 right-3 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -451,6 +539,7 @@
               <textarea name="exp_description" rows="2" placeholder="Describe your role and responsibilities..." class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none"></textarea></div>
           </div>
           {% endfor %}
+          </div>
         </div>
       </div>
 
@@ -571,58 +660,184 @@ saveBtn.addEventListener('click', function() {
     });
 });
 
-// ── Skills tag input ─────────────────────────────────────────────
-const skillInput = document.getElementById('skill-input');
-const skillTags  = document.getElementById('skill-tags');
+// ── Section toggle (collapsible) ─────────────────────────────────
+// Each Education / Certification / Skills / Experience card starts
+// expanded on first load; collapse state persists per-section in
+// localStorage so a returning user gets what they left behind.
+function toggleSection(name) {
+    const section = document.querySelector(`[data-section="${name}"]`);
+    if (!section) return;
+    const body = section.querySelector('[data-section-body]');
+    const chev = section.querySelector('[data-chevron]');
+    const collapsed = body.classList.toggle('hidden');
+    chev.classList.toggle('rotate-180', collapsed);
+    try { localStorage.setItem('resume-section-' + name, collapsed ? 'collapsed' : 'expanded'); } catch (e) {}
+}
+function initSections() {
+    ['education', 'certification', 'skills', 'experience'].forEach(function(name) {
+        const section = document.querySelector(`[data-section="${name}"]`);
+        if (!section) return;
+        let collapsed = false;
+        try { collapsed = localStorage.getItem('resume-section-' + name) === 'collapsed'; } catch (e) {}
+        if (collapsed) {
+            section.querySelector('[data-section-body]').classList.add('hidden');
+            section.querySelector('[data-chevron]').classList.add('rotate-180');
+        }
+    });
+}
 
-function addSkillChip(name) {
-    name = name.trim();
-    if (!name) return;
-    const existing = Array.from(skillTags.querySelectorAll('input[name="skill_name"]')).map(i => i.value.toLowerCase());
-    if (existing.includes(name.toLowerCase())) return;
-    const span = document.createElement('span');
-    span.className = 'skill-chip relative inline-flex items-center gap-1 bg-teal/15 text-primary text-xs pl-3 pr-5 py-1 rounded-full border border-teal/20';
-    span.innerHTML = `${name} <button type="button" onclick="removeSkillChip(this)" title="Remove" class="add-remove-btn absolute -top-1 -right-1 w-4 h-4 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg></button><input type="hidden" name="skill_name" value="${name}">`;
-    skillTags.appendChild(span);
-}
-function removeSkillChip(btn) {
-    btn.closest('.skill-chip').remove();
-}
-skillInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault();
-        addSkillChip(this.value.replace(/,$/, ''));
-        this.value = '';
+// ── Carousel (Education / Certification / Experience) ───────────
+// Only one .carousel-slide inside a container is visible at a time.
+// carouselStep(±1) moves the active slide; renderCarousel() reflects
+// the current state into the counter chip and prev/next disabled flags.
+function renderCarousel(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const section = container.closest('[data-section]');
+    const slides = Array.from(container.querySelectorAll('.carousel-slide'));
+    const counter = section.querySelector('[data-carousel-counter]');
+    const countLbl = section.querySelector('[data-section-count]');
+    const prev = section.querySelector('.carousel-prev');
+    const next = section.querySelector('.carousel-next');
+
+    if (!slides.length) {
+        if (counter) counter.textContent = '0 / 0';
+        if (countLbl) countLbl.textContent = 'no entries yet';
+        if (prev) prev.disabled = true;
+        if (next) next.disabled = true;
+        return;
     }
-});
-skillInput.addEventListener('blur', function() {
-    if (this.value.trim()) { addSkillChip(this.value); this.value = ''; }
-});
+    let activeIdx = slides.findIndex(s => s.dataset.active === 'true');
+    if (activeIdx < 0) activeIdx = 0;
+    slides.forEach((s, i) => {
+        const on = (i === activeIdx);
+        s.classList.toggle('hidden', !on);
+        s.dataset.active = on ? 'true' : 'false';
+    });
+    if (counter) counter.textContent = (activeIdx + 1) + ' / ' + slides.length;
+    if (countLbl) countLbl.textContent = slides.length === 1 ? '1 entry' : slides.length + ' entries';
+    if (prev) prev.disabled = (activeIdx === 0);
+    if (next) next.disabled = (activeIdx === slides.length - 1);
+}
+function carouselStep(containerId, delta) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const slides = Array.from(container.querySelectorAll('.carousel-slide'));
+    if (!slides.length) return;
+    let activeIdx = slides.findIndex(s => s.dataset.active === 'true');
+    if (activeIdx < 0) activeIdx = 0;
+    const newIdx = Math.max(0, Math.min(slides.length - 1, activeIdx + delta));
+    slides.forEach((s, i) => s.dataset.active = (i === newIdx) ? 'true' : 'false');
+    renderCarousel(containerId);
+}
 
-// ── Remove card (Education/Certification) ────────────────────────
+// ── Skills list (name + optional description) ───────────────────
+const skillInput = document.getElementById('skill-input');
+const skillList  = document.getElementById('skill-list');
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+}
+function refreshSkillsCount() {
+    if (!skillList) return;
+    const n = skillList.querySelectorAll('.skill-row').length;
+    const label = document.querySelector('[data-section="skills"] [data-section-count]');
+    if (label) label.textContent = n === 0 ? 'no skills yet' : (n === 1 ? '1 skill' : n + ' skills');
+}
+function addSkillRow(name, description) {
+    if (!skillList) return;
+    name = (name || '').trim();
+    if (!name) return;
+    const existing = Array.from(skillList.querySelectorAll('input[name="skill_name"]'))
+        .map(i => i.value.trim().toLowerCase());
+    if (existing.includes(name.toLowerCase())) return;
+    const row = document.createElement('div');
+    row.className = 'skill-row relative border border-gray-100 rounded-xl p-3 pr-8';
+    row.innerHTML =
+        '<button type="button" onclick="removeSkillRow(this)" title="Remove" ' +
+          'class="add-remove-btn absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">' +
+          '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>' +
+        '</button>' +
+        '<input type="text" name="skill_name" value="' + escapeHtml(name) + '" placeholder="Skill name" ' +
+          'class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition mb-2">' +
+        '<textarea name="skill_description" rows="2" ' +
+          'placeholder="Optional: years of experience, tools, notable projects…" ' +
+          'class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">' +
+          escapeHtml(description || '') +
+        '</textarea>';
+    // Prepend so the newest skill appears first.
+    skillList.insertBefore(row, skillList.firstChild);
+    refreshSkillsCount();
+}
+function removeSkillRow(btn) {
+    const row = btn.closest('.skill-row');
+    if (row) row.remove();
+    refreshSkillsCount();
+}
+if (skillInput) {
+    skillInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addSkillRow(this.value.replace(/,$/, ''), '');
+            this.value = '';
+        }
+    });
+    skillInput.addEventListener('blur', function() {
+        if (this.value.trim()) { addSkillRow(this.value, ''); this.value = ''; }
+    });
+}
+
+// ── Remove card (Education / Certification / Experience) ────────
+// If more than one slide exists, drop this card and activate the
+// previous slide (or the first if we removed index 0). Last remaining
+// slide is blanked in place rather than deleted so the section keeps
+// its template to clone from.
 function removeCard(btn) {
     const card = btn.closest('.education-row, .cert-row, .exp-row');
     if (!card) return;
     const container = card.parentElement;
-    if (container.children.length > 1) {
+    const containerId = container.id;
+    const slides = Array.from(container.querySelectorAll('.carousel-slide'));
+    const removedIdx = slides.indexOf(card);
+    if (slides.length > 1) {
         card.remove();
+        const remaining = Array.from(container.querySelectorAll('.carousel-slide'));
+        const newIdx = Math.max(0, removedIdx - 1);
+        remaining.forEach((s, i) => s.dataset.active = (i === newIdx) ? 'true' : 'false');
     } else {
-        card.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => { el.value = ''; });
+        card.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => { el.value = ''; if (el.type === 'checkbox') el.checked = false; });
         refreshEntryVisibility(card);
     }
+    renderCarousel(containerId);
 }
 
-// ── Add row (Education / Certification / Experience) ─────────────
+// ── Add row (Education / Certification / Experience) ────────────
+// New entries are PREPENDED so the freshly-added card becomes the
+// active carousel slide — matches the "slide in from the front" UX
+// the user asked for.
 function addRow(type) {
-    const containers = { education: 'education-container', certification: 'certification-container', experience: 'experience-container' };
-    const container = document.getElementById(containers[type]);
-    const first = container.querySelector('.' + (type === 'education' ? 'education-row' : type === 'certification' ? 'cert-row' : 'exp-row'));
-    if (!first) return;
-    const clone = first.cloneNode(true);
+    const cfg = {
+        education:     { containerId: 'education-container',     slideClass: 'education-row' },
+        certification: { containerId: 'certification-container', slideClass: 'cert-row' },
+        experience:    { containerId: 'experience-container',    slideClass: 'exp-row' },
+    }[type];
+    if (!cfg) return;
+    const container = document.getElementById(cfg.containerId);
+    const template = container.querySelector('.' + cfg.slideClass);
+    if (!template) return;
+    const clone = template.cloneNode(true);
     delete clone.dataset.watched;
+    clone.classList.remove('hidden');
     clone.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => { el.value = ''; if (el.type === 'checkbox') el.checked = false; });
-    container.appendChild(clone);
+    container.insertBefore(clone, container.firstElementChild);
+    // Active flag: only the new (front) slide is active.
+    Array.from(container.querySelectorAll('.carousel-slide')).forEach((s, i) => {
+        s.dataset.active = (i === 0) ? 'true' : 'false';
+    });
     watchEntry(clone);
+    renderCarousel(cfg.containerId);
     setTimeout(initAutocompletes, 50);
 }
 
@@ -747,11 +962,15 @@ watchAllEntries();
   }
 
   function applySkills(skills) {
-    if (!skills || !skills.length) return;
-    const existing = new Set(Array.from(skillTags.querySelectorAll('input[name="skill_name"]'))
+    if (!skills || !skills.length || !skillList) return;
+    const existing = new Set(Array.from(skillList.querySelectorAll('input[name="skill_name"]'))
                                   .map(i => i.value.toLowerCase()));
+    // Skills from the PDF parser arrive as bare strings; description is
+    // left blank so the jobseeker can flesh it out afterward.
     skills.forEach(function(s) {
-      if (!existing.has(s.toLowerCase())) addSkillChip(s);
+      if (typeof s === 'string' && !existing.has(s.toLowerCase())) {
+        addSkillRow(s, '');
+      }
     });
   }
 
@@ -845,6 +1064,13 @@ watchAllEntries();
     .catch(function() { setError('Upload failed. Please try again.'); });
   });
 })();
+
+// ── First-load initialization ────────────────────────────────────
+// Restore collapsed sections from localStorage, seed the carousel
+// display (only one slide visible), and set the header counters.
+initSections();
+['education-container', 'certification-container', 'experience-container'].forEach(renderCarousel);
+refreshSkillsCount();
 </script>
 {% endblock %}
 {% endwith %}

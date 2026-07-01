@@ -730,11 +730,21 @@ def resume(request):
                 year_received=cert_years[i] if i < len(cert_years) and cert_years[i] else None,
             )
 
-        # Skills
+        # Skills — the resume form emits parallel `skill_name` and
+        # `skill_description` lists, one entry per row. Descriptions are
+        # optional so we default to an empty string; index-aligning by
+        # position keeps the pairing intact even when descriptions are blank.
         Skill.objects.filter(profile=profile).delete()
-        for name in request.POST.getlist('skill_name'):
-            if name:
-                Skill.objects.create(profile=profile, name=name)
+        skill_names        = request.POST.getlist('skill_name')
+        skill_descriptions = request.POST.getlist('skill_description')
+        for i, name in enumerate(skill_names):
+            if not name.strip():
+                continue
+            Skill.objects.create(
+                profile=profile,
+                name=name.strip(),
+                description=(skill_descriptions[i].strip() if i < len(skill_descriptions) else ''),
+            )
 
         # Work Experience — duration comes as YYYY-MM from type="month" inputs
         WorkExperience.objects.filter(profile=profile).delete()

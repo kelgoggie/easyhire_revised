@@ -130,6 +130,8 @@ class Certification(models.Model):
 class Skill(models.Model):
     profile = models.ForeignKey(JobseekerProfile, on_delete=models.CASCADE, related_name="skills")
     name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default='',
+        help_text="Optional context about this skill (years of experience, tools, notable projects).")
 
     class Meta:
         db_table = "jobseeker_skills"
