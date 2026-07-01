@@ -1,0 +1,91 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}{% if faq %}Edit FAQ{% else %}New FAQ{% endif %} — EasyHire Admin{% endblock %}
+
+{% with active_nav="faqs" %}
+{% block admin_content %}
+<div class="py-8 max-w-3xl mx-auto">
+
+  <a href="/admin-panel/faqs/"
+     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back to FAQs
+  </a>
+
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">
+    {% if faq %}Edit FAQ{% else %}New FAQ{% endif %}
+  </h1>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  {% if error %}
+  <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">{{ error }}</div>
+  {% endif %}
+
+  <form method="POST" class="space-y-5 bg-white border border-gray-200 rounded-2xl p-6">
+    {% csrf_token %}
+
+    <div>
+      <label class="block text-primary text-xs font-medium mb-1">Audience *</label>
+      <div class="grid grid-cols-3 gap-2">
+        {% for code, label in audience_choices %}
+        <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
+          <input type="radio" name="audience" value="{{ code }}"
+                 {% if faq and faq.audience == code %}checked{% elif not faq and code == 'jobseeker' %}checked{% endif %}
+                 class="accent-teal">
+          {{ label }}
+        </label>
+        {% endfor %}
+      </div>
+      <p class="text-muted text-[11px] mt-1">"Both" surfaces the FAQ on both the jobseeker and employer help pages.</p>
+    </div>
+
+    <div>
+      <label class="block text-primary text-xs font-medium mb-1">Question *</label>
+      <input type="text" name="question" required maxlength="300"
+             value="{{ faq.question|default:'' }}"
+             placeholder="e.g. How do I edit my resume?"
+             class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+    </div>
+
+    <div>
+      <label class="block text-primary text-xs font-medium mb-1">Answer *</label>
+      <textarea name="answer" required rows="8"
+                placeholder="Basic HTML allowed: use &lt;strong&gt;…&lt;/strong&gt; for bold and &lt;a href=…&gt; for links."
+                class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition resize-y font-mono">{{ faq.answer|default:'' }}</textarea>
+      <p class="text-muted text-[11px] mt-1">Rendered with <code class="bg-gray-100 px-1 rounded">|safe</code> on the public page — only staff can edit, so raw HTML is allowed.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-primary text-xs font-medium mb-1">Order</label>
+        <input type="number" name="order" min="0" step="1"
+               value="{{ faq.order|default:0 }}"
+               class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <p class="text-muted text-[11px] mt-1">Lower numbers appear first within the audience.</p>
+      </div>
+      <div>
+        <label class="block text-primary text-xs font-medium mb-1">Visibility</label>
+        <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
+          <input type="checkbox" name="is_published" value="1"
+                 {% if not faq or faq.is_published %}checked{% endif %}
+                 class="accent-teal">
+          Published — visible on the public Help page
+        </label>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-3 border-t border-gray-100">
+      <a href="/admin-panel/faqs/"
+         class="bg-gray-100 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition">
+        Cancel
+      </a>
+      <button type="submit"
+              class="bg-primary text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-teal transition">
+        {% if faq %}Save changes{% else %}Create FAQ{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% endwith %}

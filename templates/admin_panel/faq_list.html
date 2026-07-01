@@ -1,0 +1,101 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}Manage FAQs — EasyHire Admin{% endblock %}
+
+{% with active_nav="faqs" %}
+{% block admin_content %}
+<div class="py-8 max-w-6xl mx-auto">
+
+  <div class="flex items-end justify-between gap-4 mb-2">
+    <div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Manage FAQs</h1>
+      <p class="text-muted text-sm mt-1">
+        Questions listed here render on the public <a href="/help/" class="underline hover:text-primary">Help page</a>,
+        filtered by audience. Answers accept basic HTML (<code class="text-xs bg-gray-100 px-1 rounded">&lt;strong&gt;</code>,
+        links).
+      </p>
+    </div>
+    <a href="/admin-panel/faqs/new/"
+       class="bg-primary text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-teal transition flex-shrink-0">
+      + New FAQ
+    </a>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  {% csrf_token %}
+
+  {% if faqs %}
+  <div class="space-y-2">
+    {% for faq in faqs %}
+    <div class="bg-white border border-gray-200 rounded-2xl px-5 py-4 hover:border-teal/30 transition">
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            {# Audience chip — same palette as the "In Progress" chip on the #}
+            {# candidates page so admins can eyeball which side each FAQ    #}
+            {# targets at a glance.                                          #}
+            {% if faq.audience == 'jobseeker' %}
+            <span class="text-[10px] font-semibold uppercase tracking-wide bg-teal/10 text-teal border border-teal/20 px-2 py-0.5 rounded-full">Jobseeker</span>
+            {% elif faq.audience == 'employer' %}
+            <span class="text-[10px] font-semibold uppercase tracking-wide bg-amber/10 text-amber border border-amber/20 px-2 py-0.5 rounded-full">Employer</span>
+            {% else %}
+            <span class="text-[10px] font-semibold uppercase tracking-wide bg-taupe/20 text-primary border border-taupe/30 px-2 py-0.5 rounded-full">Both</span>
+            {% endif %}
+            {% if not faq.is_published %}
+            <span class="text-[10px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full">Hidden</span>
+            {% endif %}
+            <span class="text-muted text-[10px]">Order: {{ faq.order }}</span>
+          </div>
+          <p class="font-bold text-primary text-sm leading-tight mb-1">{{ faq.question }}</p>
+          <p class="text-muted text-xs leading-snug line-clamp-2">{{ faq.answer|striptags|truncatechars:180 }}</p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <a href="/admin-panel/faqs/{{ faq.id }}/edit/"
+             class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">
+            Edit
+          </a>
+          <button type="button"
+                  onclick="confirmDeleteFaq({{ faq.id }}, '{{ faq.question|escapejs }}')"
+                  class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="border border-gray-200 rounded-2xl p-12 text-center text-muted text-sm">
+    No FAQs yet. <a href="/admin-panel/faqs/new/" class="text-teal hover:underline">Create the first one.</a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function confirmDeleteFaq(id, question) {
+  const doDelete = function() {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = '/admin-panel/faqs/' + id + '/delete/';
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+    f.appendChild(csrf);
+    document.body.appendChild(f);
+    f.submit();
+  };
+  if (typeof confirmAction === 'function') {
+    confirmAction({
+      title: 'Delete this FAQ?',
+      body: '"' + question + '" — this can\'t be undone. Consider hiding it instead if you might want it back.',
+      ctaLabel: 'Delete',
+      ctaClass: 'bg-red-500 hover:bg-red-600',
+      onConfirm: doDelete,
+    });
+  } else if (confirm('Delete "' + question + '"?')) {
+    doDelete();
+  }
+}
+</script>
+{% endblock %}
+{% endwith %}

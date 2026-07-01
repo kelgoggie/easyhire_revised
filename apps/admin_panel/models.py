@@ -224,6 +224,44 @@ class UserReport(models.Model):
         return self.filed_by.email
 
 
+class FAQ(models.Model):
+    """A single Frequently-Asked-Question rendered on the /help/ page.
+
+    Content is admin-editable — the initial ~16 questions were seeded from
+    the previously-hardcoded blocks in templates/help/_help_body.html so
+    the public page keeps working. Answer accepts basic HTML (`<strong>`,
+    `<a>`, etc.); it's rendered with |safe on the public page and only
+    staff can edit, so it's not an XSS risk. The `audience` field forks
+    which public help page the FAQ appears on — 'both' shows on both.
+    """
+    AUDIENCE_JOBSEEKER = "jobseeker"
+    AUDIENCE_EMPLOYER  = "employer"
+    AUDIENCE_BOTH      = "both"
+    AUDIENCE_CHOICES = [
+        (AUDIENCE_JOBSEEKER, "Jobseeker"),
+        (AUDIENCE_EMPLOYER,  "Employer"),
+        (AUDIENCE_BOTH,      "Both"),
+    ]
+
+    question = models.CharField(max_length=300)
+    answer   = models.TextField(help_text="Basic HTML allowed (rendered with |safe).")
+    audience = models.CharField(max_length=20, choices=AUDIENCE_CHOICES, default=AUDIENCE_JOBSEEKER)
+    order    = models.PositiveIntegerField(default=0,
+        help_text="Lower numbers appear first within an audience.")
+    is_published = models.BooleanField(default=True,
+        help_text="Uncheck to hide a FAQ without deleting it.")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "faqs"
+        ordering = ["audience", "order", "id"]
+
+    def __str__(self):
+        return f"[{self.get_audience_display()}] {self.question}"
+
+
 class AdminAnnouncement(models.Model):
     """A broadcast message from a PESO admin to jobseekers, employers, or both.
     Appears in the recipients' inboxes alongside applications and interview schedules.

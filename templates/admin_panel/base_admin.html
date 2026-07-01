@@ -143,9 +143,6 @@
 
       <!-- Desktop collapse toggle + wordmark -->
       <div class="flex items-center justify-between mb-4 px-1">
-        <a id="sidebar-wordmark" href="/admin-panel/" class="font-extrabold text-2xl">
-          <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
-        </a>
         <button id="sidebar-toggle" type="button" title="Toggle sidebar"
                 class="hidden md:flex w-8 h-8 items-center justify-center rounded-lg text-muted hover:text-primary hover:bg-primary/5 transition flex-shrink-0">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -210,10 +207,13 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           <span class="nav-label">Settings</span>
         </a>
-        <a href="/help/" title="Help" class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition
-                {% if active == 'help' %}text-primary font-bold{% else %}text-primary/80 hover:text-primary hover:bg-primary/5{% endif %}">
+        {# Admins manage FAQ content that renders on the public /help/ page. #}
+        {# Staff don't get their own Help page — they don't need one, and    #}
+        {# the manager acts as both editor and preview.                      #}
+        <a href="/admin-panel/faqs/" title="Manage FAQs" class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition
+                {% if active == 'faqs' %}text-primary font-bold{% else %}text-primary/80 hover:text-primary hover:bg-primary/5{% endif %}">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <span class="nav-label">Help</span>
+          <span class="nav-label">Manage FAQs</span>
         </a>
 
         <div class="nav-divider border-t border-taupe/40 my-4"></div>

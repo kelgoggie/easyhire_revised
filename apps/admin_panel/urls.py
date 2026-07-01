@@ -45,4 +45,9 @@ urlpatterns = [
 
 
     path('admin-panel/announcements/',                                    views.announcements,                   name='announcements'),
+
+    path('admin-panel/faqs/',                                             views.faq_list,                        name='faq_list'),
+    path('admin-panel/faqs/new/',                                         views.faq_edit,                        name='faq_create'),
+    path('admin-panel/faqs/<int:pk>/edit/',                               views.faq_edit,                        name='faq_edit'),
+    path('admin-panel/faqs/<int:pk>/delete/',                             views.faq_delete,                      name='faq_delete'),
 ]

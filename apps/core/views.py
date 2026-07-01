@@ -6,18 +6,23 @@ from .models import Province, CityMunicipality, Barangay
 
 
 def help_view(request):
-    """Help page. Open to everyone so a logged-out admin clicking the Help
-    link doesn't get bounced to the jobseeker login. Picks template by role
-    so the shell matches the visitor — critically, staff users get the
-    admin shell, NOT the jobseeker one (which reads jobseeker_profile
-    fields off the admin's user row and could surface stale data)."""
+    """Help page. FAQ content is DB-backed (apps.admin_panel.models.FAQ)
+    so PESO staff can edit it via /admin-panel/faqs/ without a code change.
+    Staff themselves don't get a help page — they land on the FAQ manager
+    where they can preview + edit both audience's questions in one place."""
+    from apps.admin_panel.models import FAQ
+
     user = request.user
-    if user.is_authenticated:
-        if getattr(user, 'is_staff', False):
-            return render(request, 'admin_panel/help.html', {'active_nav': 'help'})
-        if getattr(user, 'is_employer', False):
-            return render(request, 'employers/help.html')
-    return render(request, 'jobseekers/help.html')
+    if user.is_authenticated and getattr(user, 'is_staff', False):
+        return redirect('/admin-panel/faqs/')
+
+    is_employer = user.is_authenticated and getattr(user, 'is_employer', False)
+    audience_filter = [FAQ.AUDIENCE_EMPLOYER, FAQ.AUDIENCE_BOTH] if is_employer \
+        else [FAQ.AUDIENCE_JOBSEEKER, FAQ.AUDIENCE_BOTH]
+    faqs = FAQ.objects.filter(is_published=True, audience__in=audience_filter)
+
+    template = 'employers/help.html' if is_employer else 'jobseekers/help.html'
+    return render(request, template, {'faqs': faqs})
 
 
 @login_required

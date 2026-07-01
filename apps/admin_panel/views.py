@@ -68,6 +68,7 @@ def _resolve_active_nav(path):
         ('/admin-panel/employers/',     'companies'),  # legacy verify path
         ('/admin-panel/reports/',       'reports'),
         ('/admin-panel/announcements/', 'announcements'),
+        ('/admin-panel/faqs/',          'faqs'),
         ('/admin-panel/activity/',      'activity'),
         ('/admin-panel/import/',        'import'),
         ('/admin-panel/settings/',      'settings'),
@@ -1810,4 +1811,104 @@ def admin_job_reopen(request, job_id):
         notes=f'Re-opened admin-disabled job "{job.title}".',
     )
     return redirect('admin_panel:company_job_detail', pk=job.company_id, job_id=job_id)
-    return render(request, 'admin_panel/admin_edit_resume.html', ctx)
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  FAQ management (admin-facing CRUD backing the public /help/ page)
+# ──────────────────────────────────────────────────────────────────────
+@staff_required
+def faq_list(request):
+    """List all FAQs across audiences with per-row Edit / Delete controls.
+    The public /help/ pages read from the same table filtered by audience."""
+    from .models import FAQ
+    faqs = FAQ.objects.all()  # Meta ordering handles audience + order
+    ctx = _admin_context(request)
+    ctx.update({
+        'active_nav': 'faqs',
+        'faqs': faqs,
+    })
+    return render(request, 'admin_panel/faq_list.html', ctx)
+
+
+@staff_required
+def faq_edit(request, pk=None):
+    """Add or edit a single FAQ. When pk is None we're creating a new row;
+    otherwise we're editing the row with that pk. Same template + endpoint
+    for both flows keeps the surface area small."""
+    from .models import FAQ
+    from .models import AuditLog
+    faq = get_object_or_404(FAQ, pk=pk) if pk else None
+    error = None
+
+    if request.method == 'POST':
+        question = (request.POST.get('question') or '').strip()
+        answer   = (request.POST.get('answer') or '').strip()
+        audience = (request.POST.get('audience') or '').strip()
+        order    = (request.POST.get('order') or '').strip()
+        is_published = bool(request.POST.get('is_published'))
+
+        valid_audiences = {FAQ.AUDIENCE_JOBSEEKER, FAQ.AUDIENCE_EMPLOYER, FAQ.AUDIENCE_BOTH}
+        if audience not in valid_audiences:
+            error = 'Pick a valid audience.'
+        elif not question:
+            error = 'Question is required.'
+        elif not answer:
+            error = 'Answer is required.'
+        else:
+            try:
+                order_int = int(order) if order else 0
+            except ValueError:
+                order_int = 0
+            if faq is None:
+                faq = FAQ.objects.create(
+                    question=question, answer=answer, audience=audience,
+                    order=order_int, is_published=is_published,
+                )
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_EDIT,
+                    target_model='FAQ', target_id=faq.id,
+                    notes=f'Created FAQ [{faq.get_audience_display()}]: {question[:80]}',
+                )
+            else:
+                faq.question = question
+                faq.answer = answer
+                faq.audience = audience
+                faq.order = order_int
+                faq.is_published = is_published
+                faq.save()
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_EDIT,
+                    target_model='FAQ', target_id=faq.id,
+                    notes=f'Edited FAQ [{faq.get_audience_display()}]: {question[:80]}',
+                )
+            return redirect('admin_panel:faq_list')
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'active_nav': 'faqs',
+        'faq': faq,
+        'audience_choices': FAQ.AUDIENCE_CHOICES,
+        'error': error,
+    })
+    return render(request, 'admin_panel/faq_edit.html', ctx)
+
+
+@staff_required
+def faq_delete(request, pk):
+    """POST-only. Hard-deletes the row; the audit log preserves what was
+    removed. Admins wanting to hide without deleting can toggle is_published
+    in the edit form."""
+    from .models import FAQ
+    from .models import AuditLog
+    faq = get_object_or_404(FAQ, pk=pk)
+    if request.method != 'POST':
+        return redirect('admin_panel:faq_list')
+    label = f'[{faq.get_audience_display()}] {faq.question[:80]}'
+    faq_id = faq.id
+    faq.delete()
+    AuditLog.objects.create(
+        admin=request.user, action=AuditLog.ACTION_DELETE,
+        target_model='FAQ', target_id=faq_id,
+        notes=f'Deleted FAQ {label}',
+    )
+    return redirect('admin_panel:faq_list')
