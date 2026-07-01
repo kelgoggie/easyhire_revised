@@ -261,12 +261,26 @@ def get_analytics_context(request):
     total_applications = Application.objects.count()
     jobs_filled = Application.objects.filter(status='accepted').count()
 
+    # Jobs by Industry — group OPEN jobs by their company's nature_of_company,
+    # then roll up using the same NLP nature→industry clustering computed for
+    # `company_natures` above ("Hospital", "Medical Clinic", etc. → Healthcare).
+    # Prior version queried a non-existent `sector` field on JobPosting and
+    # fell through to iterating the Sector model — showing PWD / OSY / etc.
+    # (marginalized-group labels) with zero counts.
+    job_nature_pairs = (JobPosting.objects
+        .filter(status='open')
+        .exclude(company__nature_of_company='')
+        .values_list('company__nature_of_company', flat=True))
+    industry_job_counter = Counter()
+    for nature in job_nature_pairs:
+        if nature_to_industry:
+            bucket = nature_to_industry.get(nature, nature) or 'Unspecified'
+        else:
+            bucket = nature or 'Unspecified'
+        industry_job_counter[bucket] += 1
     jobs_by_industry = [
-        {'label': row['sector__label'] or 'Unspecified', 'count': row['count']}
-        for row in JobPosting.objects.filter(status='open').values('sector__label').annotate(count=Count('id')).order_by('-count')[:10]
-    ] if hasattr(JobPosting, 'sector') else [
-        {'label': s.label, 'count': s.job_postings.filter(status='open').count() if hasattr(s, 'job_postings') else 0}
-        for s in Sector.objects.all()
+        {'label': label, 'count': count}
+        for label, count in industry_job_counter.most_common(12)
     ]
 
     jobs_by_location = [
