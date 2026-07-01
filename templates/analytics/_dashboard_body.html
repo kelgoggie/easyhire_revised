@@ -193,44 +193,24 @@
         <div class="chart-box flex-1"><canvas id="chart-lab-searched"></canvas></div>
       </div>
 
-      <!-- ── Labor: In Demand Jobs ────────────────────────────── -->
+      <!-- ── Labor: In Demand Jobs (pie) ──────────────────────── -->
       <div data-panel="lab-demand" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">In Demand Jobs</h2>
-        <p class="text-muted text-xs italic mb-4"></p>
-        {% if in_demand %}
-        <div class="space-y-2 flex-1 overflow-y-auto">
-          {% for job in in_demand %}
-          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-primary truncate">{{ job.title }}</p>
-              <p class="text-xs text-muted truncate">{{ job.company.name }}</p>
-            </div>
-            <span class="text-sm font-bold text-teal flex-shrink-0 ml-4">{{ job.interaction_count }}</span>
-          </div>
-          {% endfor %}
-        </div>
+        <p class="text-muted text-xs italic mb-4">Open jobs by jobseeker interaction (likes + views). Slice = share of total interactions.</p>
+        {% if in_demand_chart %}
+        <div class="chart-box flex-1"><canvas id="chart-lab-demand"></canvas></div>
         {% else %}
-        <p class="text-muted text-sm italic">No data yet.</p>
+        <p class="text-muted text-sm italic">No interaction data yet.</p>
         {% endif %}
       </div>
 
-      <!-- ── Labor: Hard to Fill Jobs ─────────────────────────── -->
+      <!-- ── Labor: Hard to Fill Jobs (pie) ───────────────────── -->
       <div data-panel="lab-hard" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Hard to Fill Jobs</h2>
-        <p class="text-muted text-xs italic mb-1">Open 30+ days with fewer than 3 applicants.</p>
+        <p class="text-muted text-xs italic mb-1">Open 30+ days with fewer than 3 applicants. Slice size = days the post has been open.</p>
         <p class="text-6xl font-extrabold text-amber mb-4">{{ hard_to_fill_count }}</p>
-        {% if hard_to_fill %}
-        <div class="space-y-2 flex-1 overflow-y-auto">
-          {% for job in hard_to_fill %}
-          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-primary truncate">{{ job.title }}</p>
-              <p class="text-xs text-muted truncate">{{ job.company.name }}</p>
-            </div>
-            <span class="text-xs text-muted flex-shrink-0 ml-4">{{ job.created_at|timesince }} ago</span>
-          </div>
-          {% endfor %}
-        </div>
+        {% if hard_to_fill_chart %}
+        <div class="chart-box flex-1"><canvas id="chart-lab-hard"></canvas></div>
         {% else %}
         <p class="text-muted text-sm italic">No hard-to-fill jobs right now.</p>
         {% endif %}
@@ -307,6 +287,12 @@ const D = {
                data:   [{% for x in jobs_by_location %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
   searched:  { labels: [{% for x in jobs_of_interest %}'{{ x.query|capfirst|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                data:   [{% for x in jobs_of_interest %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
+  demand:    { labels: [{% for x in in_demand_chart %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in in_demand_chart %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+               unit:   'interaction' },
+  hard:      { labels: [{% for x in hard_to_fill_chart %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+               data:   [{% for x in hard_to_fill_chart %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+               unit:   'day' },
 };
 
 // ── Chart.js defaults — KEY to preventing infinite scroll ────────────
@@ -372,15 +358,30 @@ function barV(canvasId, labels, data, color) {
   });
 }
 
-function pie(canvasId, labels, data, colors) {
+function pie(canvasId, labels, data, colors, unit) {
   const ctx = document.getElementById(canvasId); if (!ctx) return;
   colors = colors || labels.map((_, i) => PALETTE[i % PALETTE.length]);
+  // Tooltip renders "value (percentage)" — e.g. "12 interactions (34.3%)".
+  // When `unit` is passed, the raw value is suffixed and pluralized so the
+  // number reads naturally; without a unit, we just show the bare count.
+  const total = data.reduce((a, b) => a + (b || 0), 0);
   return new Chart(ctx, {
     type: 'pie',
     data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: '#fff', borderWidth: 2 }] },
     options: {
       plugins: {
         legend: { position: 'right', labels: { boxWidth: 12, padding: 10 } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const value = ctx.parsed || 0;
+              const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+              let valueText = String(value);
+              if (unit) valueText += ' ' + unit + (value === 1 ? '' : 's');
+              return ctx.label + ': ' + valueText + ' (' + pct + '%)';
+            },
+          },
+        },
       },
     },
   });
@@ -411,6 +412,8 @@ function init(key) {
     case 'lab-industry':   charts[key] = barH('chart-lab-industry', D.industry.labels, D.industry.data, '#E8A838'); break;
     case 'lab-location':   charts[key] = barH('chart-lab-location', D.jobLoc.labels, D.jobLoc.data, '#5BA3A0'); break;
     case 'lab-searched':   charts[key] = barH('chart-lab-searched', D.searched.labels, D.searched.data, '#E8A838'); break;
+    case 'lab-demand':     charts[key] = pie('chart-lab-demand',   D.demand.labels, D.demand.data, null, D.demand.unit); break;
+    case 'lab-hard':       charts[key] = pie('chart-lab-hard',     D.hard.labels,   D.hard.data,   null, D.hard.unit);   break;
   }
 }
 

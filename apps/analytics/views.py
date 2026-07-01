@@ -155,6 +155,22 @@ def get_analytics_context(request):
         ).select_related('company').order_by('-interaction_count')[:10]
     )
 
+    # Chart-shaped payloads for the two pie panels. In Demand uses each
+    # job's interaction_count as its slice weight; Hard to Fill uses days
+    # open (bigger slice = more stuck) since "hard to fill" doesn't have
+    # a natural per-job quantity otherwise. Only include jobs with a
+    # positive value so we don't render zero-area slices.
+    from django.utils import timezone as _tz
+    in_demand_chart = [
+        {'label': f'{j.title} — {j.company.name}', 'count': j.interaction_count}
+        for j in in_demand if (j.interaction_count or 0) > 0
+    ]
+    hard_to_fill_chart = [
+        {'label': f'{j.title} — {j.company.name}',
+         'count': max((_tz.now() - j.created_at).days, 1)}
+        for j in hard_to_fill
+    ]
+
     # Applicant Insights
     sector_data = Sector.objects.annotate(
         count=Count('jobseekers')
@@ -314,6 +330,8 @@ def get_analytics_context(request):
         'hard_to_fill_count': hard_to_fill_count,
         'hard_to_fill': hard_to_fill[:5],
         'in_demand': in_demand,
+        'in_demand_chart': in_demand_chart,
+        'hard_to_fill_chart': hard_to_fill_chart,
         'sector_data': sector_data,
         'jobs_of_interest': jobs_of_interest,
         'common_skills': common_skills,
