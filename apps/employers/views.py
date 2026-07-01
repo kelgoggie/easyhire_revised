@@ -660,7 +660,7 @@ def candidates(request, job_id):
         status_counts = [
             (Application.STATUS_PENDING,      'Pending',      per_status[Application.STATUS_PENDING]),
             (Application.STATUS_VIEWED,       'Viewed',       per_status[Application.STATUS_VIEWED]),
-            (Application.STATUS_ACCEPTED,     'Accepted',     per_status[Application.STATUS_ACCEPTED]),
+            (Application.STATUS_ACCEPTED,     'In Progress',  per_status[Application.STATUS_ACCEPTED]),
             (Application.STATUS_HIRE_PENDING, 'Hire Offered', per_status[Application.STATUS_HIRE_PENDING]),
             (Application.STATUS_REJECTED,    'Rejected',     per_status[Application.STATUS_REJECTED]),
             (Application.STATUS_HIRED,       'Hired',        per_status[Application.STATUS_HIRED]),

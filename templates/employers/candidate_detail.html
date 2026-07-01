@@ -614,7 +614,7 @@ ${buildSignature()}`;
   body.addEventListener('input', () => { delete body.dataset.preset; }, { once: true });
 }
 
-// If the page loaded with ?open_interview=1 (set by the Accept flow above),
+// If the page loaded with ?open_interview=1 (set by the Proceed flow above),
 // pop open the Contact modal in Schedule Interview mode automatically.
 (function() {
   const params = new URLSearchParams(window.location.search);
@@ -673,7 +673,7 @@ ${buildSignature()}`;
 </script>
 
 <script>
-// Application lifecycle actions (Accept / Reject / Mark as Hired).
+// Application lifecycle actions (Proceed / Reject / Mark as Hired / hire offer flow).
 (function() {
   const wrap = document.getElementById('app-actions');
   if (!wrap) return;
