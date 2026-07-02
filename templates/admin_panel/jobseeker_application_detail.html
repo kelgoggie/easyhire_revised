@@ -197,9 +197,9 @@
         <div class="flex flex-wrap gap-1.5">
           {% for skill in skills %}
           <div class="w-full">
-            <span class="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200">{{ skill.name }}</span>
+            <p class="text-sm font-semibold text-primary leading-tight">{{ skill.name }}</p>
             {% if skill.description %}
-            <p class="text-muted text-xs mt-1 leading-snug whitespace-pre-line">{{ skill.description }}</p>
+            <p class="text-[11px] text-muted leading-snug mt-1 whitespace-pre-line">{{ skill.description }}</p>
             {% endif %}
           </div>
           {% empty %}

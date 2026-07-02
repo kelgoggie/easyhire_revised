@@ -269,18 +269,19 @@
         {% endif %}
       </div>
 
-      {# Skills — list-style so per-skill descriptions have somewhere to  #}
-      {# live. When a skill has no description the row is just the pill,  #}
-      {# preserving the compact look for legacy entries without one.       #}
+      {# Skills — list-style matching the Experience / Certifications      #}
+      {# columns above. Skill name reads as the primary line, optional     #}
+      {# description sits below as fine-print so employers can scan a      #}
+      {# resume the same way top-to-bottom regardless of the section.     #}
       <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
         <p class="font-bold text-primary text-sm mb-3">Skills</p>
         {% if skills %}
-        <div class="space-y-2.5">
+        <div class="space-y-3">
           {% for skill in skills %}
           <div>
-            <span class="inline-flex items-center bg-green-50 text-green-600 text-xs px-2.5 py-0.5 rounded-full border border-green-200">{{ skill.name }}</span>
+            <p class="text-sm font-semibold text-primary leading-tight">{{ skill.name }}</p>
             {% if skill.description %}
-            <p class="text-muted text-xs mt-1 leading-snug whitespace-pre-line">{{ skill.description }}</p>
+            <p class="text-[11px] text-muted leading-snug mt-1 whitespace-pre-line">{{ skill.description }}</p>
             {% endif %}
           </div>
           {% endfor %}
