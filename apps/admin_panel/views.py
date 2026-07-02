@@ -624,10 +624,24 @@ def company_list(request):
     from django.db.models import Q
     search = (request.GET.get('q') or '').strip()
     sort   = (request.GET.get('sort') or 'newest').strip()
+    tab    = (request.GET.get('tab')  or 'all').strip()
+    if tab not in {'all', 'deactivated', 'unverified'}:
+        tab = 'all'
 
     qs = Company.objects.all()
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(company_email__icontains=search))
+
+    # Counts before the tab filter so pills reflect real bucket totals.
+    all_count         = qs.count()
+    deactivated_count = qs.filter(representatives__user__is_active=False).distinct().count()
+    unverified_count  = qs.exclude(verification_status=Company.VERIFIED).count()
+
+    if tab == 'deactivated':
+        qs = qs.filter(representatives__user__is_active=False).distinct()
+    elif tab == 'unverified':
+        qs = qs.exclude(verification_status=Company.VERIFIED)
+
     if sort == 'oldest':     qs = qs.order_by('created_at')
     elif sort == 'name_az':  qs = qs.order_by('name')
     elif sort == 'name_za':  qs = qs.order_by('-name')
@@ -638,8 +652,16 @@ def company_list(request):
     page = paginator.get_page(request.GET.get('page') or 1)
 
     ctx = _admin_context(request)
-    ctx.update({'page': page, 'search': search, 'sort': sort,
-                'qs_base': querystring_without(request, 'page')})
+    ctx.update({
+        'page':              page,
+        'search':            search,
+        'sort':              sort,
+        'tab':               tab,
+        'all_count':         all_count,
+        'deactivated_count': deactivated_count,
+        'unverified_count':  unverified_count,
+        'qs_base':           querystring_without(request, 'page'),
+    })
     return render(request, 'admin_panel/company_list.html', ctx)
 
 

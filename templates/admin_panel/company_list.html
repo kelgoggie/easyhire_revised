@@ -9,6 +9,7 @@
     <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Companies</h1>
     <form method="GET" action="/admin-panel/companies/" class="flex-1 max-w-md">
       <input type="hidden" name="sort" value="{{ sort }}">
+      <input type="hidden" name="tab"  value="{{ tab }}">
       <div class="relative">
         <input type="text" name="q" value="{{ search }}" placeholder="Search Companies..."
                class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
@@ -20,7 +21,26 @@
   </div>
   <div class="border-b border-taupe/40 mb-6"></div>
 
-  <div class="flex items-center gap-2 mb-6">
+  {# Tabs + Sort — same layout as the Jobseekers list. Unverified here    #}
+  {# means any company whose verification_status isn't 'verified' yet     #}
+  {# (unverified, pending, or denied); Deactivated means the company's    #}
+  {# representative user has been disabled.                                #}
+  <div class="flex items-center justify-between gap-4 mb-6 flex-wrap">
+    <div class="flex items-center gap-1.5">
+      <a href="?tab=all{% if search %}&q={{ search }}{% endif %}&sort={{ sort }}"
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'all' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        All <span class="opacity-70">({{ all_count }})</span>
+      </a>
+      <a href="?tab=deactivated{% if search %}&q={{ search }}{% endif %}&sort={{ sort }}"
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'deactivated' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Deactivated <span class="opacity-70">({{ deactivated_count }})</span>
+      </a>
+      <a href="?tab=unverified{% if search %}&q={{ search }}{% endif %}&sort={{ sort }}"
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'unverified' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Unverified <span class="opacity-70">({{ unverified_count }})</span>
+      </a>
+    </div>
+
     <div class="relative" id="sort-wrapper">
       <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
               class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
@@ -33,11 +53,11 @@
           {% else %}Newest first{% endif %}
         </span>
       </button>
-      <div id="sort-menu" class="hidden absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
-        <a href="?sort=newest&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort != 'oldest' and sort != 'name_az' and sort != 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest first</a>
-        <a href="?sort=oldest&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
-        <a href="?sort=name_az&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
-        <a href="?sort=name_za&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
+      <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
+        <a href="?sort=newest&tab={{ tab }}&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort != 'oldest' and sort != 'name_az' and sort != 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest first</a>
+        <a href="?sort=oldest&tab={{ tab }}&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
+        <a href="?sort=name_az&tab={{ tab }}&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
+        <a href="?sort=name_za&tab={{ tab }}&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
       </div>
     </div>
   </div>
@@ -133,7 +153,10 @@
   {% include "partials/_pagination.html" %}
   {% else %}
   <div class="border border-gray-200 rounded-2xl p-12 text-center text-muted text-sm">
-    {% if search %}No companies match &ldquo;{{ search }}&rdquo;.{% else %}No companies yet.{% endif %}
+    {% if search %}No companies match &ldquo;{{ search }}&rdquo;.
+    {% elif tab == 'deactivated' %}No deactivated companies.
+    {% elif tab == 'unverified' %}No unverified companies — every registered company has been approved.
+    {% else %}No companies yet.{% endif %}
   </div>
   {% endif %}
 </div>
