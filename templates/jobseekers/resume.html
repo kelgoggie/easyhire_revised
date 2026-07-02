@@ -168,6 +168,9 @@
           </div>
           {% endif %}
 
+          {# Breathing room + label so the visibility radios don't crowd    #}
+          {# the sector chips above and reads as its own control group.     #}
+          <p class="text-xs text-muted font-medium mt-6 mb-2">Who can see these sector badges?</p>
           <div class="flex flex-wrap gap-4">
             <label class="inline-flex items-center gap-1.5 text-xs text-primary cursor-pointer">
               <input type="radio" name="sector_badge_visibility" value="public"

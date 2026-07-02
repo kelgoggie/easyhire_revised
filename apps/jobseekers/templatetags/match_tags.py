@@ -5,13 +5,17 @@ register = template.Library()
 
 # (min_score, label, pill_classes, icon_color_class, emoji_type)
 # emoji_type maps to an SVG smiley/frown variant rendered by the {% match_badge %} tag
+# Palette note: Partial + Poor share the same amber palette as Decent so
+# the lower tiers still read as "not the strongest fit" without dressing
+# up as red-alarm negatives. Jobseekers get less discouraged; employers
+# still see a distinct label + smiley for triage.
 TIERS = [
-    (98, 'Perfect Match',  'bg-green-500 text-white',           'text-white',         'beam'),
-    (90, 'Great Match',    'bg-teal text-white',                'text-white',         'smile'),
-    (80, 'Good Match',     'bg-teal/15 text-teal border border-teal/30',         'text-teal',          'smile'),
-    (70, 'Decent Match',   'bg-amber/15 text-amber border border-amber/30',      'text-amber',         'mild'),
-    (60, 'Partial Match',  'bg-orange-100 text-orange-500 border border-orange-200', 'text-orange-500', 'meh'),
-    (0,  'Poor Match',     'bg-red-50 text-red-400 border border-red-200',      'text-red-400',       'sad'),
+    (98, 'Perfect Match',  'bg-green-500 text-white',                           'text-white',   'beam'),
+    (90, 'Great Match',    'bg-teal text-white',                                'text-white',   'smile'),
+    (80, 'Good Match',     'bg-teal/15 text-teal border border-teal/30',        'text-teal',    'smile'),
+    (70, 'Decent Match',   'bg-amber/15 text-amber border border-amber/30',     'text-amber',   'mild'),
+    (60, 'Partial Match',  'bg-amber/15 text-amber border border-amber/30',     'text-amber',   'meh'),
+    (0,  'Poor Match',     'bg-amber/15 text-amber border border-amber/30',     'text-amber',   'sad'),
 ]
 
 
