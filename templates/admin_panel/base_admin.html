@@ -165,7 +165,10 @@
         </a>
         <a href="/admin-panel/companies/" title="Companies" class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition
                 {% if active == 'companies' %}text-primary font-bold{% else %}text-primary/80 hover:text-primary hover:bg-primary/5{% endif %}">
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          {# Building icon (Heroicons office-building) — reads as         #}
+          {# "company / organization" more clearly than the briefcase     #}
+          {# which was shared with the Jobs sidebar item.                 #}
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M4 21V7a1 1 0 011-1h4a1 1 0 011 1v14m4 0V4a1 1 0 011-1h4a1 1 0 011 1v17M8 9h.01M8 12h.01M8 15h.01M16 7h.01M16 10h.01M16 13h.01M16 16h.01"/></svg>
           <span class="nav-label">Companies</span>
         </a>
         <a href="/admin-panel/jobs/" title="Jobs" class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition
