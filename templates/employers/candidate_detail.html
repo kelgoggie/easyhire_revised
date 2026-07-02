@@ -8,12 +8,14 @@
 
   {# ── Job context header (only when we came from /jobs/<id>/candidates/) ── #}
   {% if current_job %}
-  <a href="/employers/jobs/{{ current_job.id|hashid }}/candidates/?tab=applicants"
+  {# Back-link mirrors whichever tab the employer arrived from. from_tab is #}
+  {# set from the ?from= query param on the referring card link.           #}
+  <a href="/employers/jobs/{{ current_job.id|hashid }}/candidates/?tab={% if from_tab == 'recommended' %}recommended{% else %}applicants{% endif %}"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
     </svg>
-    Back to Applicants
+    {% if from_tab == 'recommended' %}Back to Recommended Jobseekers{% else %}Back to Applicants{% endif %}
   </a>
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
     <div class="min-w-0">
@@ -665,18 +667,19 @@ ${buildSignature()}`;
   body.addEventListener('input', () => { delete body.dataset.preset; }, { once: true });
 }
 
-// If the page loaded with ?open_interview=1 (set by the Proceed flow above),
-// pop open the Contact modal in Schedule Interview mode automatically.
+// Auto-open the Contact modal based on URL flags:
+//   ?open_interview=1 — Proceed flow → Schedule Interview tab
+//   ?invite=1         — Invite icon on Recommended tab card → Invite to Apply tab
 (function() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('open_interview') === '1') {
-    setTimeout(function() {
-      try {
-        openContactModal();
-        switchKind('interview');
-      } catch (e) { /* modal may not exist on this view */ }
-    }, 80);
-  }
+  const wantInterview = params.get('open_interview') === '1';
+  const wantInvite    = params.get('invite') === '1';
+  if (!wantInterview && !wantInvite) return;
+  setTimeout(function() {
+    try {
+      openContactModal(wantInvite ? 'invite' : 'interview');
+    } catch (e) { /* modal may not exist on this view */ }
+  }, 80);
 })();
 
 // ── Interview format radio + dynamic location field ─────────────────

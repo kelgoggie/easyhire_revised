@@ -1064,6 +1064,10 @@ def candidate_detail(request, jobseeker_id):
         'match_score': match_score,
         'prev_id': prev_id,
         'next_id': next_id,
+        # `from` param propagated from the referring candidate card so the
+        # back-link on this page (and the "counterpart tab" copy) matches
+        # whichever list the employer arrived from.
+        'from_tab': (request.GET.get('from') or '').strip().lower(),
         'unread_notifications': False,
         'unread_messages': False,
     })

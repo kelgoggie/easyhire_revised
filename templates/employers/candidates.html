@@ -125,7 +125,7 @@
          data-applicant-name="{{ item.profile.first_name }} {{ item.profile.last_name }}"
          data-applicant-id="{{ item.profile.id|hashid }}"
          data-applied-at="{% if item.applied_at %}{{ item.applied_at|date:'F j, Y' }}{% endif %}"
-         {% if seeker_active %}data-href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}"
+         {% if seeker_active %}data-href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}{% if tab == 'recommended' %}&from=recommended{% endif %}"
          onclick="if (event.target.closest('a, button, form')) return; window.location=this.dataset.href;"{% endif %}>
 
       <!-- Top row: name + match smiley -->
@@ -153,6 +153,19 @@
           </p>
         </div>
         <div class="flex items-center gap-1.5 flex-shrink-0">
+          {% if tab == 'recommended' and seeker_active and not item.application_id %}
+          {# Invite to Apply — lands on the candidate profile and auto-opens #}
+          {# the Contact modal in "invite" mode so the employer can edit +   #}
+          {# send without extra clicks.                                      #}
+          <a href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}&from=recommended&invite=1"
+             onclick="event.stopPropagation();"
+             title="Invite {{ item.profile.first_name }} to apply"
+             class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-amber/15 text-muted hover:text-amber transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </a>
+          {% endif %}
           {% with to_email=item.profile.contact_email|default:item.profile.user.email %}
           {% if to_email %}
           <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire application — '|add:company.name|urlencode }}"
