@@ -1085,12 +1085,16 @@ def candidate_like(request, jobseeker_id):
         company=company, jobseeker=jobseeker
     )
     if interaction.exists():
+        # Unlike: drop the row and be done.
         interaction.delete()
     else:
-        # CandidateInteraction requires a job — use the most recent open job
+        # Like: CandidateInteraction requires a job FK, so pin it to the
+        # most recent open post for this company. If the company has no
+        # open posts we no-op (the button just doesn't do anything) —
+        # nothing to link the like to yet.
         from apps.jobs.models import JobPosting
         job = JobPosting.objects.filter(
-            company=company, status='open'
+            company=company, status='open', deleted_at__isnull=True,
         ).first()
         if job:
             CandidateInteraction.objects.create(
@@ -1109,9 +1113,13 @@ def candidate_like(request, jobseeker_id):
             ).exists()
             if jobseeker_liked:
                 notify_match(company, jobseeker, job)
-                
-            next_url = request.POST.get('next', '/employers/candidates/')
-            return redirect(next_url)
+
+    # Always redirect — no matter which branch above we took (unlike,
+    # like-with-job, or like-without-job). Previously the redirect was
+    # nested inside the innermost "if job" so unlikes fell out returning
+    # None → Django raised "view didn't return an HttpResponse".
+    next_url = request.POST.get('next') or '/employers/candidates/'
+    return redirect(next_url)
 
 
 @employer_verified_required
