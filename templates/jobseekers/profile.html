@@ -20,12 +20,15 @@
     <div class="absolute inset-0 bg-primary/55"></div>
     <a href="/resume/"
        class="absolute bottom-4 right-4 sm:bottom-6 sm:right-8 bg-amber text-white text-xs sm:text-sm font-semibold px-5 sm:px-6 py-2 sm:py-2.5 rounded-full hover:bg-amber/90 transition shadow-md">
-      Edit Profile
+      Edit Resume
     </a>
   </div>
 
   <!-- ── Profile body ────────────────────────────────────────────── -->
-  <div class="px-4 sm:px-6 md:px-8 pb-8 -mt-20">
+  {# Extra top padding on the body so the name doesn't hug the banner   #}
+  {# edge — combined with the reduced negative margin below, there's a  #}
+  {# comfortable gap between the cover photo and Kelly's name.          #}
+  <div class="px-4 sm:px-6 md:px-8 pb-8 pt-6 -mt-20">
 
     <div class="flex flex-col md:flex-row md:items-start gap-6 md:gap-8">
 
@@ -130,13 +133,9 @@
           {% endfor %}
         </div>
 
-        <!-- Work Experience -->
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl text-primary">Work <strong>Experience</strong></h2>
-          <a href="/resume/" class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">
-            Edit Resume
-          </a>
-        </div>
+        {# Section header only — the Edit Resume CTA lives on the banner  #}
+        {# now, so a duplicate button here would be redundant.             #}
+        <h2 class="text-2xl text-primary mb-4">Work <strong>Experience</strong></h2>
 
         {% if experiences %}
         <div class="relative">
