@@ -32,15 +32,15 @@ def resend_verification_email(request):
 
     try:
         from allauth.account.models import EmailAddress
-        from allauth.account.utils import send_email_confirmation
-        # If the user somehow doesn't have an EmailAddress row (older
-        # signups that bypassed allauth), create an unverified one so the
-        # send has something to attach to.
-        EmailAddress.objects.get_or_create(
+        # Use the model's send_confirmation method — the free-function
+        # send_email_confirmation was moved between allauth versions
+        # (allauth.account.utils in <0.55, allauth.account.email in newer,
+        # and neither location is stable). Model method is the durable API.
+        email_address, _ = EmailAddress.objects.get_or_create(
             user=request.user, email=request.user.email,
             defaults={'verified': False, 'primary': True},
         )
-        send_email_confirmation(request, request.user, signup=False)
+        email_address.send_confirmation(request, signup=False)
     except Exception:
         import logging
         logging.getLogger(__name__).exception(
@@ -127,10 +127,14 @@ class RegisterStep1JobseekerView(View):
         # allauth's own view, so without this call nothing ever hits SMTP.
         # Wrapped in try/except so a transient email delivery failure
         # doesn't roll the user's whole signup back — they can still
-        # request a resend from /accounts/email/.
+        # request a resend from the "Verify your email" banner.
         try:
-            from allauth.account.utils import send_email_confirmation
-            send_email_confirmation(request, user, signup=True)
+            from allauth.account.models import EmailAddress
+            email_address, _ = EmailAddress.objects.get_or_create(
+                user=user, email=user.email,
+                defaults={'verified': False, 'primary': True},
+            )
+            email_address.send_confirmation(request, signup=True)
         except Exception:
             import logging
             logging.getLogger(__name__).exception('Signup confirmation email send failed for %s', email)
@@ -389,8 +393,12 @@ class EmployerRegisterStep2View(View):
             # is sent. Failure here logs but doesn't roll back the whole
             # employer signup, which is otherwise expensive to re-do.
             try:
-                from allauth.account.utils import send_email_confirmation
-                send_email_confirmation(request, user, signup=True)
+                from allauth.account.models import EmailAddress
+                email_address, _ = EmailAddress.objects.get_or_create(
+                    user=user, email=user.email,
+                    defaults={'verified': False, 'primary': True},
+                )
+                email_address.send_confirmation(request, signup=True)
             except Exception:
                 import logging
                 logging.getLogger(__name__).exception('Employer signup confirmation email send failed for %s', email)
