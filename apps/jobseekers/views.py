@@ -810,7 +810,9 @@ def resume(request):
         profile.profile_complete = True
         profile.save()
 
-        return redirect('/dashboard/')
+        # Bounce back to the resume page (locked / read-only view) so the
+        # jobseeker sees their saved changes rendered as an employer would.
+        return redirect('/resume/')
 
     education    = Education.objects.filter(profile=profile)
     skills       = Skill.objects.filter(profile=profile)
