@@ -759,10 +759,11 @@ ${buildSignature()}`;
   }
 
   // Modal copy. The Proceed modal needs the jobseeker's name + job title
-  // pulled in dynamically so the message reads naturally. Guarded with
-  // {% if %} because chaining |default:application.job.title crashes when
-  // `application` is None (Django template raises VariableDoesNotExist
-  // on the inner attribute access before the default kicks in).
+  // pulled in dynamically so the message reads naturally. Guarded with a
+  // template-side conditional below because chaining
+  // |default:application.job.title crashes when `application` is None
+  // (Django raises VariableDoesNotExist on the inner attribute access
+  // before the default kicks in).
   const CANDIDATE_NAME = "{{ jobseeker.full_name|escapejs }}";
   {% if current_job %}
   const JOB_TITLE_FOR_PROCEED = "{{ current_job.title|escapejs }}";
