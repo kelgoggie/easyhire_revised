@@ -251,16 +251,20 @@
     <!-- ── Page content + footer (footer sits after content, below fold on short pages) -->
     <main id="main-content" class="flex-1 bg-white">
       {% if not user_email_verified %}
-      <!-- Email verification banner (in-flow so the sidebar can't cover it) -->
-      <div class="bg-amber/15 border-b border-amber/30 px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-        <p class="text-primary">
+      {# Email verification banner. The Resend button fires an AJAX POST to  #}
+      {# /accounts/resend-verification/ then locks itself into a 30-second   #}
+      {# cooldown so nobody double-clicks the send / spams SMTP.             #}
+      <div id="verify-email-banner" class="bg-amber/15 border-b border-amber/30 px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+        <p class="text-primary" id="verify-email-msg">
           <strong>Verify your email.</strong>
           <span class="text-muted">Check {{ request.user.email }} for a confirmation link.</span>
         </p>
-        <a href="/accounts/email/" class="bg-amber text-white font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition flex-shrink-0">
+        <button type="button" id="resend-verify-btn"
+                class="bg-amber text-white font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition flex-shrink-0 disabled:opacity-60 disabled:cursor-not-allowed">
           Resend
-        </a>
+        </button>
       </div>
+      {% include "base/_resend_verify_script.html" %}
       {% endif %}
       <div class="px-4 sm:px-6 lg:px-8 pb-16 min-h-[calc(100vh_-_3.5rem)]">
         {% block page_content %}{% endblock %}

@@ -1,0 +1,158 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Email Addresses — EasyHire{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+{# Allauth's default template ships as raw unstyled HTML — this override    #}
+{# wraps the same forms in the site's usual navbar + centered card layout   #}
+{# so a jobseeker or employer hitting /accounts/email/ from the             #}
+{# verification banner stays inside the EasyHire visual language.           #}
+<div class="flex flex-col min-h-screen bg-surface/40">
+
+  <!-- Navbar -->
+  <nav class="bg-surface px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
+    <a href="/" class="flex items-center gap-2">
+      <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-8 h-8 sm:w-9 sm:h-9">
+      <span class="font-bold text-lg sm:text-xl">
+        <span class="text-primary">Easy</span><span class="text-teal">Hire</span>
+      </span>
+    </a>
+    <a href="{% if request.user.is_employer %}/employers/dashboard/{% elif request.user.is_staff %}/admin-panel/{% else %}/dashboard/{% endif %}"
+       class="text-primary text-sm font-semibold hover:text-teal transition">
+      &larr; Back to Dashboard
+    </a>
+  </nav>
+
+  <div class="flex-1 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto">
+
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">Email Addresses</h1>
+      <p class="text-muted text-sm mb-6">Manage the email addresses linked to your EasyHire account.</p>
+
+      {# ── Success / error messages from allauth ────────────────── #}
+      {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for message in messages %}
+        <div class="bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# ── Current emails on file ───────────────────────────────── #}
+      <div class="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
+        <p class="text-primary font-bold text-sm mb-4">Your email addresses</p>
+
+        {% if user.emailaddress_set.all %}
+        <form action="{% url 'account_email' %}" method="post">
+          {% csrf_token %}
+          <div class="space-y-2 mb-5">
+            {% for emailaddress in user.emailaddress_set.all %}
+            <label class="flex items-start gap-3 bg-surface/40 border border-gray-100 rounded-xl px-4 py-3 cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
+              <input id="email_radio_{{ forloop.counter }}" type="radio" name="email"
+                     {% if emailaddress.primary or user.emailaddress_set.count == 1 %}checked="checked"{% endif %}
+                     value="{{ emailaddress.email }}" class="accent-teal mt-0.5">
+              <div class="min-w-0 flex-1">
+                <p class="text-primary text-sm font-semibold break-all">{{ emailaddress.email }}</p>
+                <div class="flex flex-wrap gap-1.5 mt-1">
+                  {% if emailaddress.verified %}
+                  <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border border-teal/20">
+                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    Verified
+                  </span>
+                  {% else %}
+                  <span class="inline-flex items-center bg-amber/10 text-amber text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border border-amber/20">
+                    Unverified
+                  </span>
+                  {% endif %}
+                  {% if emailaddress.primary %}
+                  <span class="inline-flex items-center bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border border-primary/20">
+                    Primary
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+
+          <div class="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
+            <button type="submit" name="action_primary"
+                    class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">
+              Make Primary
+            </button>
+            <button type="submit" name="action_send"
+                    class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">
+              Re-send Verification
+            </button>
+            <button type="submit" name="action_remove"
+                    class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition"
+                    onclick="return confirm('Are you sure you want to remove the selected email address?');">
+              Remove
+            </button>
+          </div>
+        </form>
+        {% else %}
+        <p class="text-muted text-sm italic">You currently do not have any email address set up.</p>
+        {% endif %}
+      </div>
+
+      {# ── Add a new email address ──────────────────────────────── #}
+      <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+        <p class="text-primary font-bold text-sm mb-1">Add another email address</p>
+        <p class="text-muted text-xs mb-4">You'll be asked to verify it before it can become your primary.</p>
+
+        <form method="post" action="{% url 'account_email' %}" class="flex flex-col sm:flex-row gap-2">
+          {% csrf_token %}
+          {# Allauth's `form` is a plain Django form — render the email    #}
+          {# input by hand so it inherits the site's field styling.        #}
+          <input type="email" name="email" required
+                 placeholder="you@example.com"
+                 value="{{ form.email.value|default:'' }}"
+                 class="flex-1 bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+          <button type="submit" name="action_add"
+                  class="bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition flex-shrink-0">
+            Add Email
+          </button>
+        </form>
+        {% if form.email.errors %}
+        <p class="text-red-500 text-xs mt-2">{{ form.email.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  {% include "base/footer.html" %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+// Reproduce allauth's built-in confirm-on-primary-change behaviour so the
+// user isn't silently changing their primary email without noticing.
+(function() {
+  const form = document.querySelector('form[action="{% url 'account_email' %}"]');
+  if (!form) return;
+  form.addEventListener('submit', function(e) {
+    if (e.submitter && e.submitter.name === 'action_primary') {
+      // Only warn if the currently checked radio isn't already primary.
+      const checked = form.querySelector('input[type=radio][name=email]:checked');
+      if (!checked) {
+        e.preventDefault();
+        alert('Please select an email address to set as primary.');
+      }
+    }
+    if (e.submitter && e.submitter.name === 'action_send') {
+      const checked = form.querySelector('input[type=radio][name=email]:checked');
+      if (!checked) {
+        e.preventDefault();
+        alert('Please select an email address to re-send verification to.');
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

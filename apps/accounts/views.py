@@ -1,9 +1,62 @@
 import re
+import time
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views import View
 from django.utils import timezone
 from .models import User
+
+
+@login_required
+def resend_verification_email(request):
+    """One-click resend of the allauth confirmation email — hit from the
+    "Verify your email" banner. Rate-limited to one send per 30 seconds
+    per user (session cookie) so refresh-spam doesn't hammer SMTP or trip
+    Gmail's flood detection. Returns JSON so the banner button can update
+    its own state without a full page navigation."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only.'}, status=405)
+
+    RATE_LIMIT_SECONDS = 30
+    now_ts = int(time.time())
+    last_ts = int(request.session.get('resend_verification_last', 0))
+    remaining = RATE_LIMIT_SECONDS - (now_ts - last_ts)
+    if remaining > 0:
+        return JsonResponse({
+            'ok': False,
+            'error': f'Please wait {remaining}s before trying again.',
+            'wait': remaining,
+        }, status=429)
+
+    try:
+        from allauth.account.models import EmailAddress
+        from allauth.account.utils import send_email_confirmation
+        # If the user somehow doesn't have an EmailAddress row (older
+        # signups that bypassed allauth), create an unverified one so the
+        # send has something to attach to.
+        EmailAddress.objects.get_or_create(
+            user=request.user, email=request.user.email,
+            defaults={'verified': False, 'primary': True},
+        )
+        send_email_confirmation(request, request.user, signup=False)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception(
+            'Resend verification email failed for %s', request.user.email
+        )
+        return JsonResponse({
+            'ok': False,
+            'error': 'Could not send email right now. Please try again shortly.',
+        }, status=500)
+
+    request.session['resend_verification_last'] = now_ts
+    return JsonResponse({
+        'ok': True,
+        'sent_to': request.user.email,
+        'wait': RATE_LIMIT_SECONDS,
+    })
 
 
 # JOBSEEKER

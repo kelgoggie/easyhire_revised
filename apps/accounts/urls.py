@@ -10,6 +10,11 @@ urlpatterns = [
     path('register/', views.RegisterStep1JobseekerView.as_view(), name='register_step1'),
     path('register/info/', views.RegisterStep2JobseekerView.as_view(), name='register_step2'),
 
+    # One-click resend for the "Verify your email" banner. JSON endpoint,
+    # session-rate-limited to one send per 30 seconds.
+    path('accounts/resend-verification/', views.resend_verification_email,
+         name='resend_verification'),
+
     # Employer auth
     path('employers/login/', views.EmployerLoginView.as_view(), name='employer_login'),
     path('employers/register/', views.EmployerRegisterStep1View.as_view(), name='employer_register_step1'),
