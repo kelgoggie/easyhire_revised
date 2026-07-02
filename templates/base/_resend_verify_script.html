@@ -33,19 +33,44 @@
     }, 1000);
   }
 
+  function showError(text) {
+    btn.disabled = false;
+    btn.textContent = 'Resend';
+    if (msgEl) {
+      msgEl.innerHTML =
+        '<strong class="text-red-500">Send failed.</strong> ' +
+        '<span class="text-muted">' + text + '</span>';
+    }
+  }
+
   btn.addEventListener('click', function() {
     if (btn.disabled) return;
     btn.disabled = true;
-    const original = btn.textContent;
     btn.textContent = 'Sending…';
     fetch('/accounts/resend-verification/', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: {
-        'X-CSRFToken': getCookie('csrftoken'),
+        'X-CSRFToken': getCookie('csrftoken') || '',
         'X-Requested-With': 'XMLHttpRequest',
       },
     })
-    .then(function(r) { return r.json().then(function(d) { return [r.ok, d]; }); })
+    .then(function(r) {
+      // If the response isn't JSON (session expired → 302 to /login/, CSRF
+      // failure → 403 HTML, or 5xx debug traceback), surface a specific
+      // error instead of falling through to the silent catch.
+      const ct = r.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        if (r.status === 403) {
+          throw new Error('Session expired. Refresh the page and try again.');
+        }
+        if (r.status === 302 || r.status === 401) {
+          throw new Error('You need to log in again.');
+        }
+        throw new Error('Server returned an unexpected response (' + r.status + '). Check server logs.');
+      }
+      return r.json().then(function(d) { return [r.ok, d]; });
+    })
     .then(function(pair) {
       const ok = pair[0], data = pair[1];
       if (ok && data.ok) {
@@ -54,18 +79,11 @@
         // Server rejected due to still being in cooldown — sync UI to it.
         startCooldown(data.wait, null);
       } else {
-        btn.disabled = false;
-        btn.textContent = original;
-        if (msgEl) {
-          msgEl.innerHTML =
-            '<strong class="text-red-500">Send failed.</strong> ' +
-            '<span class="text-muted">' + ((data && data.error) || 'Please try again shortly.') + '</span>';
-        }
+        showError((data && data.error) || 'Please try again shortly.');
       }
     })
-    .catch(function() {
-      btn.disabled = false;
-      btn.textContent = original;
+    .catch(function(err) {
+      showError((err && err.message) || 'Network error — check your connection.');
     });
   });
 })();
