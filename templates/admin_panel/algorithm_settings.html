@@ -62,16 +62,16 @@
         <div>
           <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Weight distribution</p>
           <div id="dist-bar" class="flex h-3 w-full rounded-full overflow-hidden bg-gray-100 ring-1 ring-gray-200">
-            <div data-seg="skills"         class="bg-green-400  transition-[width] duration-150" style="width: {{ weight_skills_pct }}%"></div>
-            <div data-seg="education"      class="bg-teal       transition-[width] duration-150" style="width: {{ weight_education_pct }}%"></div>
-            <div data-seg="experience"     class="bg-purple-400 transition-[width] duration-150" style="width: {{ weight_experience_pct }}%"></div>
-            <div data-seg="certifications" class="bg-red-400    transition-[width] duration-150" style="width: {{ weight_certifications_pct }}%"></div>
+            <div data-seg="skills"         class="bg-green-300  transition-[width] duration-150" style="width: {{ weight_skills_pct }}%"></div>
+            <div data-seg="education"      class="bg-teal/40 transition-[width] duration-150" style="width: {{ weight_education_pct }}%"></div>
+            <div data-seg="experience"     class="bg-purple-300 transition-[width] duration-150" style="width: {{ weight_experience_pct }}%"></div>
+            <div data-seg="certifications" class="bg-gray-400    transition-[width] duration-150" style="width: {{ weight_certifications_pct }}%"></div>
           </div>
           <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-muted">
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-400"></span>Skills</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-teal"></span>Education</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-purple-400"></span>Experience</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span>Certifications</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-300"></span>Skills</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-teal/40"></span>Education</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-purple-300"></span>Experience</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-gray-400"></span>Certifications</span>
           </div>
         </div>
 
@@ -81,7 +81,7 @@
           <div class="grid grid-cols-[1fr_auto] sm:grid-cols-[200px_1fr_auto] gap-3 sm:gap-5 items-center py-4">
             <div class="col-span-2 sm:col-span-1">
               <p class="text-primary text-sm font-semibold flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-green-400"></span>Skills
+                <span class="w-2 h-2 rounded-full bg-green-300"></span>Skills
               </p>
               <p class="text-muted text-[11px] mt-0.5">Resume skills vs. job's required skills.</p>
             </div>
@@ -101,7 +101,7 @@
           <div class="grid grid-cols-[1fr_auto] sm:grid-cols-[200px_1fr_auto] gap-3 sm:gap-5 items-center py-4">
             <div class="col-span-2 sm:col-span-1">
               <p class="text-primary text-sm font-semibold flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-teal"></span>Education
+                <span class="w-2 h-2 rounded-full bg-teal/40"></span>Education
               </p>
               <p class="text-muted text-[11px] mt-0.5">Degree level and course-degree alignment.</p>
             </div>
@@ -121,7 +121,7 @@
           <div class="grid grid-cols-[1fr_auto] sm:grid-cols-[200px_1fr_auto] gap-3 sm:gap-5 items-center py-4">
             <div class="col-span-2 sm:col-span-1">
               <p class="text-primary text-sm font-semibold flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-purple-400"></span>Experience
+                <span class="w-2 h-2 rounded-full bg-purple-300"></span>Experience
               </p>
               <p class="text-muted text-[11px] mt-0.5">Years of relevant work experience.</p>
             </div>
@@ -141,7 +141,7 @@
           <div class="grid grid-cols-[1fr_auto] sm:grid-cols-[200px_1fr_auto] gap-3 sm:gap-5 items-center py-4">
             <div class="col-span-2 sm:col-span-1">
               <p class="text-primary text-sm font-semibold flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-red-400"></span>Certifications
+                <span class="w-2 h-2 rounded-full bg-gray-400"></span>Certifications
               </p>
               <p class="text-muted text-[11px] mt-0.5">Required vs. earned certifications.</p>
             </div>
