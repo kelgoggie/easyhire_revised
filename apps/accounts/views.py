@@ -69,6 +69,18 @@ class RegisterStep1JobseekerView(View):
             consented_to_terms=True,
             consented_at=timezone.now(),
         )
+        # Ask allauth to create the EmailAddress row (verified=False) and
+        # send the confirmation link. This custom signup flow bypasses
+        # allauth's own view, so without this call nothing ever hits SMTP.
+        # Wrapped in try/except so a transient email delivery failure
+        # doesn't roll the user's whole signup back — they can still
+        # request a resend from /accounts/email/.
+        try:
+            from allauth.account.utils import send_email_confirmation
+            send_email_confirmation(request, user, signup=True)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception('Signup confirmation email send failed for %s', email)
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         return redirect('/register/info/')
 
@@ -318,6 +330,17 @@ class EmployerRegisterStep2View(View):
                 consented_to_terms=True,
                 consented_at=timezone.now(),
             )
+            # Kick off allauth's email confirmation — this signup path
+            # doesn't go through allauth's view, so without this call the
+            # EmailAddress row never gets created and no confirmation mail
+            # is sent. Failure here logs but doesn't roll back the whole
+            # employer signup, which is otherwise expensive to re-do.
+            try:
+                from allauth.account.utils import send_email_confirmation
+                send_email_confirmation(request, user, signup=True)
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception('Employer signup confirmation email send failed for %s', email)
 
             # Add slug ... for better looking urls
             
