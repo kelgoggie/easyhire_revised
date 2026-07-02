@@ -33,7 +33,7 @@ def dashboard(request):
     if profile.profile_complete:
         ranked_jobs = get_ranked_jobs(profile)[:5]
     else:
-        ranked_jobs = JobPosting.objects.filter(status='open').order_by('-created_at').select_related('company')[:5]
+        ranked_jobs = JobPosting.objects.filter(status='open', deleted_at__isnull=True).order_by('-created_at').select_related('company')[:5]
         ranked_jobs = [{'job': j, 'score': None} for j in ranked_jobs]
 
     applications = (
@@ -877,7 +877,9 @@ def recommended_jobs(request):
             )
         return qs
 
-    base_qs = JobPosting.objects.select_related(
+    # Soft-deleted jobs stay in the DB (in the employer's Trash tab) but
+    # must not surface in Liked / Hidden / recommendations lists.
+    base_qs = JobPosting.objects.filter(deleted_at__isnull=True).select_related(
         'company', 'experience_requirement'
     ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
 
@@ -1583,7 +1585,7 @@ def autocomplete_skills(request):
 
 def autocomplete_positions(request):
     query = request.GET.get('q', '').strip()
-    db_positions = JobPosting.objects.filter(status='open').values_list(
+    db_positions = JobPosting.objects.filter(status='open', deleted_at__isnull=True).values_list(
         'title', flat=True).distinct()
     return _autocomplete_response(query, db_positions, STATIC_POSITIONS, cache_key='positions')
 

@@ -24,10 +24,21 @@
             role="tab">
       Site Settings
     </button>
+    <button type="button" data-tab="maintenance"
+            class="tab-btn pb-3 px-1 text-sm font-semibold border-b-2 transition
+                   {% if active_tab == 'maintenance' %}text-primary border-teal{% else %}text-muted border-transparent hover:text-primary{% endif %}"
+            role="tab">
+      Maintenance
+    </button>
   </div>
 
   {% if error %}
   <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">{{ error }}</div>
+  {% endif %}
+  {% if just_purged is not None %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">
+    Purged {{ just_purged }} expired job post{{ just_purged|pluralize }}. Historical applications for those jobs are preserved.
+  </div>
   {% endif %}
 
   <!-- ─── Algorithm tab ──────────────────────────────────────────── -->
@@ -257,6 +268,42 @@
         </button>
       </div>
     </form>
+  </section>
+
+  {# ── Maintenance tab ───────────────────────────────────────────── #}
+  <section data-panel="maintenance" {% if active_tab != 'maintenance' %}class="hidden"{% endif %}>
+    <div class="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8">
+      <h2 class="text-lg font-bold text-primary">Trashed Job Posts</h2>
+      <p class="text-muted text-xs mt-0.5 mb-5">
+        Employers can move a job post to Trash and restore it within 30 days.
+        This action permanently deletes posts that have been in Trash for more
+        than 30 days. Applications, hires, and interview history attached to
+        those jobs are preserved so analytics stay intact.
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="bg-gray-50 border border-gray-100 rounded-xl px-5 py-4">
+          <p class="text-muted text-xs font-semibold uppercase tracking-wide">Currently in Trash</p>
+          <p class="text-3xl font-extrabold text-primary mt-1">{{ trash_total }}</p>
+          <p class="text-muted text-[11px] mt-0.5">Includes rows still within their 30-day window.</p>
+        </div>
+        <div class="bg-red-50 border border-red-200 rounded-xl px-5 py-4">
+          <p class="text-red-500 text-xs font-semibold uppercase tracking-wide">Ready to Purge</p>
+          <p class="text-3xl font-extrabold text-red-500 mt-1">{{ trash_expired }}</p>
+          <p class="text-muted text-[11px] mt-0.5">Older than 30 days — the button below will remove these.</p>
+        </div>
+      </div>
+
+      <form method="POST" action="/admin-panel/settings/purge-jobs/" id="purge-form">
+        {% csrf_token %}
+        <button type="button"
+                {% if not trash_expired %}disabled{% endif %}
+                onclick="confirmAction({title:'Purge {{ trash_expired }} expired job post{{ trash_expired|pluralize }}?', body:'This permanently deletes JobPosting rows whose deleted_at is older than 30 days. Applications tied to those jobs stay in the database (Application.job becomes NULL) so historical analytics are not affected.', ctaLabel:'Yes, purge', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('purge-form').submit();}})"
+                class="bg-red-500 text-white font-semibold px-6 py-2.5 rounded-full hover:bg-red-600 transition text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          Purge {% if trash_expired %}{{ trash_expired }} expired post{{ trash_expired|pluralize }}{% else %}Expired Posts{% endif %}
+        </button>
+      </form>
+    </div>
   </section>
 
 </div>

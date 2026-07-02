@@ -140,7 +140,7 @@ def get_analytics_context(request):
     avg_interactions = round(total_interactions / total_applicants, 1) if total_applicants else 0
 
     # ── Job stats ──────────────────────────────────────────────────
-    all_jobs = JobPosting.objects.filter(status='open')
+    all_jobs = JobPosting.objects.filter(status='open', deleted_at__isnull=True)
     total_jobs = all_jobs.count()
     local_jobs = all_jobs.filter(location_type='iloilo').count()
     overseas_jobs = all_jobs.filter(location_type='overseas').count()
@@ -150,7 +150,7 @@ def get_analytics_context(request):
     hard_to_fill_count = len(hard_to_fill)
 
     in_demand = list(
-        JobPosting.objects.filter(status='open').annotate(
+        JobPosting.objects.filter(status='open', deleted_at__isnull=True).annotate(
             interaction_count=Count('jobseeker_interactions')
         ).select_related('company').order_by('-interaction_count')[:10]
     )
@@ -301,7 +301,7 @@ def get_analytics_context(request):
 
     jobs_by_location = [
         {'label': row['barangay_name'] or row['city'] or 'Unspecified', 'count': row['count']}
-        for row in JobPosting.objects.filter(status='open').values('barangay_name', 'city').annotate(count=Count('id')).order_by('-count')[:15]
+        for row in JobPosting.objects.filter(status='open', deleted_at__isnull=True).values('barangay_name', 'city').annotate(count=Count('id')).order_by('-count')[:15]
     ]
 
     def format_months(qs):

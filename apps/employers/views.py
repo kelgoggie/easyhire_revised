@@ -220,18 +220,22 @@ def job_list(request):
     if query:
         base = base.filter(title__icontains=query)
 
-    # Counts snapshot BEFORE the status filter so the tab pills reflect
-    # total buckets, not what the user is currently looking at.
-    all_count    = base.count()
-    open_count   = base.filter(status=JobPosting.STATUS_OPEN).count()
-    closed_count = base.filter(status=JobPosting.STATUS_CLOSED).count()
+    # Non-deleted queryset drives the All/Open/Closed pills. Deleted rows
+    # get their own tab + count and never mix into the other buckets.
+    live = base.filter(deleted_at__isnull=True)
+    all_count     = live.count()
+    open_count    = live.filter(status=JobPosting.STATUS_OPEN).count()
+    closed_count  = live.filter(status=JobPosting.STATUS_CLOSED).count()
+    deleted_count = base.filter(deleted_at__isnull=False).count()
 
     if status_filter == 'open':
-        jobs = base.filter(status=JobPosting.STATUS_OPEN)
+        jobs = live.filter(status=JobPosting.STATUS_OPEN)
     elif status_filter == 'closed':
-        jobs = base.filter(status=JobPosting.STATUS_CLOSED)
+        jobs = live.filter(status=JobPosting.STATUS_CLOSED)
+    elif status_filter == 'deleted':
+        jobs = base.filter(deleted_at__isnull=False)
     else:
-        jobs = base
+        jobs = live
         status_filter = ''  # normalize any junk value back to "All"
 
     if sort == 'oldest':
@@ -247,9 +251,10 @@ def job_list(request):
         'query': query,
         'status_filter': status_filter,
         'sort': sort,
-        'all_count':    all_count,
-        'open_count':   open_count,
-        'closed_count': closed_count,
+        'all_count':     all_count,
+        'open_count':    open_count,
+        'closed_count':  closed_count,
+        'deleted_count': deleted_count,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -461,9 +466,13 @@ def job_edit(request, job_id):
 
 @employer_verified_required
 def job_delete(request, job_id):
-    """Employer-side job delete. Refuses to delete an admin-disabled job
-    so PESO's take-down record (with reason) isn't lost."""
+    """Employer-side job delete — soft. Sets deleted_at instead of
+    hard-deleting so the job can be restored from the Deleted tab within
+    30 days. Admin purge then wipes rows whose deleted_at has aged out.
+    Refuses to touch admin-disabled jobs so PESO's take-down record
+    (with reason) isn't lost."""
     from django.contrib import messages
+    from django.utils import timezone
     profile = request.user.employer_profile
     job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
     if request.method == 'POST':
@@ -474,8 +483,22 @@ def job_delete(request, job_id):
                 'Contact PESO to discuss next steps.',
             )
             return redirect('/employers/jobs/')
-        job.delete()
-    return redirect('/employers/jobs/')
+        if not job.deleted_at:
+            job.deleted_at = timezone.now()
+            job.save(update_fields=['deleted_at'])
+    return redirect('/employers/jobs/?status=deleted')
+
+
+@employer_verified_required
+def job_restore(request, job_id):
+    """Undo a soft-delete. Available while the job is still in the 30-day
+    trash window."""
+    profile = request.user.employer_profile
+    job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
+    if request.method == 'POST' and job.deleted_at:
+        job.deleted_at = None
+        job.save(update_fields=['deleted_at'])
+    return redirect('/employers/jobs/?status=deleted')
 
 
 @employer_verified_required

@@ -32,6 +32,7 @@ urlpatterns = [
 
     path('api/report/',                                                   views.report_submit,                   name='report_submit'),
     path('admin-panel/settings/',                                         views.algorithm_settings,              name='algorithm_settings'),
+    path('admin-panel/settings/purge-jobs/',                              views.purge_deleted_jobs,              name='purge_deleted_jobs'),
     path('admin-panel/reports/',                                          views.report_list,                     name='report_list'),
     path('admin-panel/reports/<hashid:report_id>/review/',                   views.report_review,                   name='report_review'),
 

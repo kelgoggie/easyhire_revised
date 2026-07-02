@@ -68,6 +68,14 @@ class JobPosting(models.Model):
     admin_disabled = models.BooleanField(default=False)
     admin_disabled_reason = models.TextField(blank=True, default='')
 
+    # Soft-delete. When set, the job is in the employer's "Trash" tab and
+    # excluded from every public / matching surface. A follow-up admin
+    # purge action hard-deletes rows where deleted_at is older than 30
+    # days. We keep Application rows through the purge by SET_NULL'ing
+    # their .job so historical analytics (monthly applications, hires) stay
+    # intact even after the JobPosting itself is gone.
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         db_table = "job_postings"
         ordering = ["-created_at"]
@@ -83,6 +91,17 @@ class JobPosting(models.Model):
             return self.overseas_address
         parts = [self.bldg_unit, self.street, self.barangay_name, self.city]
         return ", ".join(p for p in parts if p)
+
+    @property
+    def days_until_purge(self):
+        """Days remaining before the admin's "Purge Trash" button can hard-
+        delete this row. Returns None when the job isn't soft-deleted."""
+        if not self.deleted_at:
+            return None
+        from django.utils import timezone
+        from datetime import timedelta
+        remaining = (self.deleted_at + timedelta(days=30)) - timezone.now()
+        return max(0, remaining.days)
 
     @property
     def is_hard_to_fill(self):
@@ -227,8 +246,12 @@ class Application(models.Model):
         "jobseekers.JobseekerProfile", on_delete=models.CASCADE,
         related_name="applications"
     )
+    # SET_NULL (not CASCADE) so applications survive if the underlying
+    # JobPosting is eventually purged after soft-delete. Analytics that
+    # count applications / hires by month run off timestamps on this row
+    # and don't need the JobPosting to exist anymore.
     job = models.ForeignKey(
-        JobPosting, on_delete=models.CASCADE,
+        JobPosting, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="applications"
     )
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_PENDING)

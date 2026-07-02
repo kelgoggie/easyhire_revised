@@ -51,6 +51,10 @@
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status_filter == 'closed' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         Closed <span class="opacity-70">({{ closed_count }})</span>
       </a>
+      <a href="?status=deleted{{ qtail }}"
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status_filter == 'deleted' %}bg-red-500 text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Deleted <span class="opacity-70">({{ deleted_count }})</span>
+      </a>
     </div>
 
     <div class="relative" id="sort-dropdown-wrapper">
@@ -81,9 +85,18 @@
   {% if jobs %}
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
     {% for job in jobs %}
-    <div class="job-card bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col cursor-pointer"
-         data-href="/employers/jobs/{{ job.id|hashid }}/"
-         onclick="if (event.target.closest('a, button, form')) return; window.location=this.dataset.href;">
+    <div class="job-card {% if job.deleted_at %}bg-red-50/40 border-red-200/60 opacity-90{% else %}bg-white border-gray-200 hover:shadow-md hover:border-teal/30 cursor-pointer{% endif %} border rounded-2xl p-5 shadow-sm transition flex flex-col"
+         {% if not job.deleted_at %}data-href="/employers/jobs/{{ job.id|hashid }}/"
+         onclick="if (event.target.closest('a, button, form')) return; window.location=this.dataset.href;"{% endif %}>
+
+      {% if job.deleted_at %}
+      <div class="mb-3 flex items-center gap-2 text-red-500 text-[11px] font-semibold">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V4a1 1 0 011-1h6a1 1 0 011 1v3"/>
+        </svg>
+        <span>Auto-deletes in {{ job.days_until_purge }} day{{ job.days_until_purge|pluralize }}</span>
+      </div>
+      {% endif %}
 
       <!-- Top row: title block + settings menu -->
       <div class="flex items-start justify-between mb-3">
@@ -109,23 +122,30 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M10 18h4"/>
             </svg>
           </button>
-          <div class="hidden absolute right-0 top-7 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-40 py-1">
-            <a href="/employers/jobs/{{ job.id|hashid }}/edit/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">Edit Job</a>
-            <a href="/employers/jobs/{{ job.id|hashid }}/candidates/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">View Applicants</a>
-            <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/close/">
-              {% csrf_token %}
-              <input type="hidden" name="next" value="/employers/jobs/">
-              <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">
-                {% if job.status == 'closed' %}Reopen Job{% else %}Close Job{% endif %}
-              </button>
-            </form>
-            <hr class="my-1 border-gray-100">
-            <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/delete/" id="delete-job-form-jl-{{ job.id|hashid }}">
-              {% csrf_token %}
-              <button type="button"
-                      onclick="confirmAction({title:'Delete this job post?', body:'This permanently removes the job and all of its applications. This cannot be undone.', ctaLabel:'Yes, delete', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('delete-job-form-jl-{{ job.id|hashid }}').submit();}})"
-                      class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Delete</button>
-            </form>
+          <div class="hidden absolute right-0 top-7 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
+            {% if job.deleted_at %}
+              <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/restore/">
+                {% csrf_token %}
+                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-teal hover:bg-teal/5">Restore</button>
+              </form>
+            {% else %}
+              <a href="/employers/jobs/{{ job.id|hashid }}/edit/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">Edit Job</a>
+              <a href="/employers/jobs/{{ job.id|hashid }}/candidates/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">View Applicants</a>
+              <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/close/">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="/employers/jobs/">
+                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">
+                  {% if job.status == 'closed' %}Reopen Job{% else %}Close Job{% endif %}
+                </button>
+              </form>
+              <hr class="my-1 border-gray-100">
+              <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/delete/" id="delete-job-form-jl-{{ job.id|hashid }}">
+                {% csrf_token %}
+                <button type="button"
+                        onclick="confirmAction({title:'Move to Trash?', body:'Applicants still see the job disappear from their feed, and you can restore it any time in the next 30 days. After 30 days PESO purges it permanently.', ctaLabel:'Move to Trash', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('delete-job-form-jl-{{ job.id|hashid }}').submit();}})"
+                        class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Move to Trash</button>
+              </form>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -178,14 +198,16 @@
       {% if query %}No jobs found for "{{ query }}".
       {% elif status_filter == 'open' %}No open jobs.
       {% elif status_filter == 'closed' %}No closed jobs yet.
+      {% elif status_filter == 'deleted' %}Trash is empty.
       {% else %}You haven't posted any jobs yet.{% endif %}
     </p>
     <p class="text-muted text-xs mb-4">
       {% if query %}Try a different search term.
-      {% elif status_filter == 'closed' %}Jobs you close appear here — deleted jobs are removed permanently.
+      {% elif status_filter == 'closed' %}Jobs you close appear here — they stop receiving applicants but stay on record.
+      {% elif status_filter == 'deleted' %}Jobs you move to Trash appear here for 30 days. Restore them any time before they're auto-purged.
       {% else %}Create your first job post to start receiving applicants.{% endif %}
     </p>
-    {% if not query and status_filter != 'closed' %}
+    {% if not query and status_filter != 'closed' and status_filter != 'deleted' %}
     <a href="/employers/jobs/create/" class="inline-block bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
       + Create New Job
     </a>

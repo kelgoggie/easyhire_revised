@@ -1226,6 +1226,18 @@ def algorithm_settings(request):
                     )
                     saved_form = 'site'
 
+    # Purge-trash counts driving the Maintenance panel button.
+    from apps.jobs.models import JobPosting
+    from django.utils import timezone
+    from datetime import timedelta
+    trashed_qs = JobPosting.objects.filter(deleted_at__isnull=False)
+    trash_total   = trashed_qs.count()
+    trash_expired = trashed_qs.filter(
+        deleted_at__lt=timezone.now() - timedelta(days=30)
+    ).count()
+    purged_raw = request.GET.get('purged', '')
+    just_purged = int(purged_raw) if purged_raw.isdigit() else None
+
     ctx = _admin_context(request)
     ctx.update({
         'settings': settings,
@@ -1236,8 +1248,35 @@ def algorithm_settings(request):
         'active_tab':  active_tab,
         'saved_form':  saved_form,
         'error':       error,
+        'trash_total':   trash_total,
+        'trash_expired': trash_expired,
+        'just_purged':   just_purged,
     })
     return render(request, 'admin_panel/algorithm_settings.html', ctx)
+
+
+@staff_required
+def purge_deleted_jobs(request):
+    """Hard-delete every JobPosting whose deleted_at is > 30 days old.
+    Applications tied to those jobs survive because Application.job is
+    on_delete=SET_NULL — the historical monthly charts stay intact.
+    POST-only."""
+    from apps.jobs.models import JobPosting
+    from .models import AuditLog
+    from django.utils import timezone
+    from datetime import timedelta
+    if request.method != 'POST':
+        return redirect('/admin-panel/settings/?tab=maintenance')
+    cutoff = timezone.now() - timedelta(days=30)
+    expired = JobPosting.objects.filter(deleted_at__isnull=False, deleted_at__lt=cutoff)
+    count = expired.count()
+    expired.delete()
+    AuditLog.objects.create(
+        admin=request.user, action=AuditLog.ACTION_DELETE,
+        target_model='JobPosting', target_id=0,
+        notes=f'Purged {count} soft-deleted job post(s) older than 30 days.',
+    )
+    return redirect(f'/admin-panel/settings/?tab=maintenance&purged={count}')
 
 
 # ── Phase 4: Reports admin ──────────────────────────────────────────

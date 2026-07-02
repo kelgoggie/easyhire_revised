@@ -14,7 +14,7 @@ class PublicJobListView(View):
     template_name = 'public/jobs.html'
 
     def get(self, request):
-        jobs = JobPosting.objects.filter(status=JobPosting.STATUS_OPEN).select_related(
+        jobs = JobPosting.objects.filter(status=JobPosting.STATUS_OPEN, deleted_at__isnull=True).select_related(
             'company',
             'experience_requirement',
         ).prefetch_related(
