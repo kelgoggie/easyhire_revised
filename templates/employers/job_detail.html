@@ -14,6 +14,13 @@
       <span class="inline-flex items-center bg-gray-100 text-muted text-xs font-semibold px-3 py-1.5 rounded-full">
         {{ job.slots }} slot{{ job.slots|pluralize }} open
       </span>
+      {# View Applicants moves up here so the whole action row lives in the  #}
+      {# top-right. Recommended Jobseekers already shows as its own section  #}
+      {# further down the page, so a separate link would be redundant.      #}
+      <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=applicants"
+         class="inline-flex items-center gap-1.5 bg-teal/10 border border-teal/30 text-teal text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/15 transition">
+        View Applicants ({{ applicants_count|default:0 }})
+      </a>
       <a href="/employers/jobs/{{ job.id|hashid }}/edit/"
          class="inline-flex items-center gap-1.5 bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -24,20 +31,6 @@
     </div>
   </div>
   <div class="border-b border-taupe/30 mb-6"></div>
-
-  {# Simple text-link CTAs — the old card-with-icon variants were too heavy #}
-  {# for a step that's now already reachable from Recommended Jobseekers    #}
-  {# below and from every job row on the list page.                         #}
-  <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mb-8 text-sm">
-    <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=applicants"
-       class="text-teal font-semibold hover:underline">
-      View Applicants ({{ applicants_count|default:0 }}) &rsaquo;
-    </a>
-    <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=recommended"
-       class="text-teal font-semibold hover:underline">
-      View Recommended Jobseekers &rsaquo;
-    </a>
-  </div>
 
   <!-- ── Two-column: Description + Requirements ─────────────────── -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
