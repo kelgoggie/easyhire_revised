@@ -86,7 +86,7 @@
       <form method="POST" action="/employers/candidates/{{ jobseeker.id|hashid }}/like/">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}{% if current_job %}?job={{ current_job.id|hashid }}{% endif %}">
-        <button type="submit" title="{% if is_liked %}Liked{% else %}Like this candidate{% endif %}"
+        <button type="submit" title="{% if is_liked %}Liked{% else %}Like this jobseeker{% endif %}"
                 class="w-9 h-9 flex items-center justify-center rounded-full border transition
                        {% if is_liked %}bg-teal text-white border-teal{% else %}bg-white text-muted border-taupe/30 hover:border-teal hover:text-teal{% endif %}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -119,6 +119,16 @@
       <button type="button" onclick="openContactModal()"
               class="bg-amber text-white text-sm font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition">
         Message
+      </button>
+      {% endif %}
+
+      {# Invite to Apply — only when the jobseeker has NOT already applied #}
+      {# to any of this company's jobs and the employer has open posts to  #}
+      {# invite them to. Opens the Contact modal in "invite" mode.         #}
+      {% if not application and open_jobs %}
+      <button type="button" onclick="openContactModal('invite')"
+              class="bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition">
+        Invite to Apply
       </button>
       {% endif %}
     </div>
@@ -376,13 +386,20 @@
         <p class="text-muted text-xs mt-0.5 break-all">Email will be sent to: {{ jobseeker.contact_email|default:jobseeker.user.email }}</p>
       </div>
 
-      <div class="px-6 pt-4 flex gap-2">
+      {# Three modes: Invite to Apply (pre-application), Send Requirements #}
+      {# and Schedule Interview (post-Proceed). switchKind() paints the    #}
+      {# active tab amber and preloads the subject / body presets.         #}
+      <div class="px-6 pt-4 flex gap-2 flex-wrap">
+        <button type="button" id="tab-invite" onclick="switchKind('invite')"
+                class="flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary">
+          Invite to Apply
+        </button>
         <button type="button" id="tab-requirements" onclick="switchKind('requirements')"
-                class="flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-amber text-white">
-          Send Job Requirements
+                class="flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-amber text-white">
+          Send Requirements
         </button>
         <button type="button" id="tab-interview" onclick="switchKind('interview')"
-                class="flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary">
+                class="flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary">
           Schedule Interview
         </button>
       </div>
@@ -550,11 +567,11 @@ function buildSignature() {
   return REP_NAME ? `${REP_NAME}, ${team}` : team;
 }
 
-function openContactModal() {
+function openContactModal(initialKind) {
   document.getElementById('contact-modal').classList.remove('hidden');
   document.getElementById('contact-modal').classList.add('flex');
   document.body.style.overflow = 'hidden';
-  switchKind('requirements');
+  switchKind(initialKind || 'requirements');
 }
 function closeContactModal() {
   document.getElementById('contact-modal').classList.add('hidden');
@@ -564,15 +581,41 @@ function closeContactModal() {
 
 function switchKind(kind) {
   document.getElementById('contact-kind').value = kind;
+  const tabV = document.getElementById('tab-invite');
   const tabR = document.getElementById('tab-requirements');
   const tabI = document.getElementById('tab-interview');
   const intF = document.getElementById('interview-fields');
   const subj = document.getElementById('contact-subject');
   const body = document.getElementById('contact-body');
 
-  if (kind === 'requirements') {
-    tabR.className = 'flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-amber text-white';
-    tabI.className = 'flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary';
+  const activeCls   = 'flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-amber text-white';
+  const inactiveCls = 'flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary';
+
+  if (kind === 'invite') {
+    tabV.className = activeCls;
+    tabR.className = inactiveCls;
+    tabI.className = inactiveCls;
+    intF.classList.add('hidden');
+    if (!subj.value || subj.dataset.preset) {
+      subj.value = `You'd be a great fit — invitation to apply at ${COMPANY_NAME}`;
+      subj.dataset.preset = '1';
+    }
+    if (!body.value || body.dataset.preset) {
+      body.value =
+`Hi ${FIRST_NAME},
+
+We came across your profile on EasyHire and think you'd be a strong fit for one of our open roles at ${COMPANY_NAME}.
+
+If you're open to it, we'd love to see your application. You can browse our current openings and apply directly through the "Re: which job?" link below, or reply to this email if you'd like more information first.${buildReplyFooter()}
+
+Thanks,
+${buildSignature()}`;
+      body.dataset.preset = '1';
+    }
+  } else if (kind === 'requirements') {
+    tabV.className = inactiveCls;
+    tabR.className = activeCls;
+    tabI.className = inactiveCls;
     intF.classList.add('hidden');
     if (!subj.value || subj.dataset.preset) {
       subj.value = `Requirements for the role at ${COMPANY_NAME}`;
@@ -595,8 +638,9 @@ ${buildSignature()}`;
       body.dataset.preset = '1';
     }
   } else {
-    tabI.className = 'flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-amber text-white';
-    tabR.className = 'flex-1 px-4 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary';
+    tabV.className = inactiveCls;
+    tabR.className = inactiveCls;
+    tabI.className = activeCls;
     intF.classList.remove('hidden');
     if (!subj.value || subj.dataset.preset) {
       subj.value = `Interview invitation — ${COMPANY_NAME}`;
@@ -714,10 +758,19 @@ ${buildSignature()}`;
     });
   }
 
-  // Modal copy. The Proceed modal needs the candidate's name + job title
-  // pulled in dynamically so the message reads naturally.
+  // Modal copy. The Proceed modal needs the jobseeker's name + job title
+  // pulled in dynamically so the message reads naturally. Guarded with
+  // {% if %} because chaining |default:application.job.title crashes when
+  // `application` is None (Django template raises VariableDoesNotExist
+  // on the inner attribute access before the default kicks in).
   const CANDIDATE_NAME = "{{ jobseeker.full_name|escapejs }}";
-  const JOB_TITLE_FOR_PROCEED = "{{ current_job.title|default:application.job.title|escapejs }}";
+  {% if current_job %}
+  const JOB_TITLE_FOR_PROCEED = "{{ current_job.title|escapejs }}";
+  {% elif application and application.job %}
+  const JOB_TITLE_FOR_PROCEED = "{{ application.job.title|escapejs }}";
+  {% else %}
+  const JOB_TITLE_FOR_PROCEED = "";
+  {% endif %}
 
   wrap.querySelectorAll('button[data-action]').forEach(function(btn) {
     btn.addEventListener('click', function() {

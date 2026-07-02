@@ -1098,6 +1098,11 @@ def candidate_contact(request, jobseeker_id):
     interview_at_raw = (request.POST.get('interview_at') or '').strip()
     interview_location = (request.POST.get('interview_location') or '').strip()
 
+    # "invite" is a UI-only shorthand for a REQUIREMENTS-shaped message —
+    # different preset copy on the frontend, but stored as a plain contact.
+    # Avoids a schema migration for what's effectively different boilerplate.
+    if kind == 'invite':
+        kind = EmployerContact.KIND_REQUIREMENTS
     if kind not in (EmployerContact.KIND_REQUIREMENTS, EmployerContact.KIND_INTERVIEW):
         messages.error(request, 'Please pick a message type.')
         return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')

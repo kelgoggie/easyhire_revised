@@ -1,7 +1,7 @@
 {% extends "base/base_dashboard_employer.html" %}
 {% load static match_tags %}
 
-{% block title %}{% if tab == 'recommended' %}Recommended Candidates{% else %}Applicants{% endif %} — {{ job.title }}{% endblock %}
+{% block title %}{% if tab == 'recommended' %}Recommended Jobseekers{% else %}Applicants{% endif %} — {{ job.title }}{% endblock %}
 
 {% with active_nav="jobs" %}
 {% block page_content %}
@@ -30,7 +30,7 @@
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
     {% if tab == 'recommended' %}
     <h2 class="text-xl sm:text-2xl font-bold text-primary">
-      Recommended Candidates
+      Recommended Jobseekers
       <span class="text-muted text-base font-normal ml-2">({{ ranked|length }})</span>
     </h2>
     <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=applicants"
@@ -215,7 +215,7 @@
     <p class="text-muted text-xs mb-4">When jobseekers apply to this post, their applications will appear here ranked by match score.</p>
     <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=recommended"
        class="inline-block bg-primary text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-teal transition">
-      View Recommended Candidates
+      View Recommended Jobseekers
     </a>
     {% endif %}
   </div>

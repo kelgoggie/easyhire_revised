@@ -136,18 +136,9 @@
         <p class="text-muted text-xs leading-relaxed line-clamp-4">{{ job.description|truncatechars:280 }}</p>
       </div>
 
-      <!-- Bottom actions -->
-      <div class="flex items-center justify-between gap-3">
-        <a href="/employers/jobs/{{ job.id|hashid }}/candidates/"
-           class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
-          View Applicants ({{ job.applicants_count|default:0 }})
-        </a>
-        <a href="/employers/jobs/{{ job.id|hashid }}/edit/"
-           class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
-          Edit Job
-        </a>
-      </div>
-
+      {# Bottom action buttons removed — the top-right dot menu (Edit Job, #}
+      {# View Applicants, Close/Reopen Job, Delete) covers the same       #}
+      {# actions without doubling up.                                     #}
     </div>
     {% endfor %}
   </div>
