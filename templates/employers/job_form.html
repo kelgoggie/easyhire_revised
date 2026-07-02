@@ -90,19 +90,32 @@
     <!-- 3-col row: Education | Skills | Certifications -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
 
-      <!-- Education -->
-      <div class="bg-white border border-gray-200 rounded-2xl p-5">
-        <div class="flex items-center justify-between mb-3">
-          <p class="text-sm font-bold text-primary">Education</p>
+      {# Education (carousel — one entry visible at a time; matches the    #}
+      {# jobseeker resume pattern). New entries prepend so the card the    #}
+      {# employer just added is what they see.                             #}
+      <div class="bg-white border border-gray-200 rounded-2xl p-5" data-section="edu">
+        <p class="text-sm font-bold text-primary mb-2">Education</p>
+        <div class="flex items-center justify-between mb-3 gap-2">
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="carouselStep('edu-container', -1)"
+                    class="carousel-prev w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <span class="text-[11px] text-muted font-semibold min-w-[2.5rem] text-center" data-carousel-counter>0 / 0</span>
+            <button type="button" onclick="carouselStep('edu-container', 1)"
+                    class="carousel-next w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
           <button type="button" onclick="addEdu()"
                   class="inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Add Entry
+            Add
           </button>
         </div>
-        <div id="edu-container" class="space-y-3">
+        <div id="edu-container" class="carousel-track">
           {% for edu in job.education_requirements.all %}
-          <div class="edu-row relative border border-gray-100 rounded-xl p-3 space-y-2">
+          <div class="edu-row carousel-slide relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2">
             <button type="button" onclick="removeEdu(this)" title="Remove"
                     class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -134,7 +147,7 @@
           </div>
           {% empty %}
           {# Always show at least one blank row so the fields are visible #}
-          <div class="edu-row relative border border-gray-100 rounded-xl p-3 space-y-2">
+          <div class="edu-row carousel-slide relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2">
             <button type="button" onclick="removeEdu(this)" title="Remove"
                     class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -187,19 +200,32 @@
         </div>
       </div>
 
-      <!-- Certifications -->
-      <div class="bg-white border border-gray-200 rounded-2xl p-5">
-        <div class="flex items-center justify-between mb-3">
-          <p class="text-sm font-bold text-primary">Certifications</p>
+      {# Certifications (carousel — matches Education above). Row has     #}
+      {# pt-6 so the X button doesn't overlap the Certification name      #}
+      {# input; previously it floated over the field on hover.            #}
+      <div class="bg-white border border-gray-200 rounded-2xl p-5" data-section="cert">
+        <p class="text-sm font-bold text-primary mb-2">Certifications</p>
+        <div class="flex items-center justify-between mb-3 gap-2">
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="carouselStep('cert-container', -1)"
+                    class="carousel-prev w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <span class="text-[11px] text-muted font-semibold min-w-[2.5rem] text-center" data-carousel-counter>0 / 0</span>
+            <button type="button" onclick="carouselStep('cert-container', 1)"
+                    class="carousel-next w-7 h-7 rounded-full border border-taupe/40 text-muted hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
           <button type="button" onclick="addCert()"
                   class="inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Add
           </button>
         </div>
-        <div id="cert-container" class="space-y-3">
+        <div id="cert-container" class="carousel-track">
           {% for cert in job.certification_requirements.all %}
-          <div class="cert-row relative border border-gray-100 rounded-xl p-3 space-y-2">
+          <div class="cert-row carousel-slide relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2">
             <button type="button" onclick="removeCert(this)" title="Remove"
                     class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -211,7 +237,7 @@
           </div>
           {% empty %}
           {# At least one blank cert row is always visible so the fields don't disappear #}
-          <div class="cert-row relative border border-gray-100 rounded-xl p-3 space-y-2">
+          <div class="cert-row carousel-slide relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2">
             <button type="button" onclick="removeCert(this)" title="Remove"
                     class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -232,7 +258,7 @@
       <!-- Experience (single entry — model is OneToOne) -->
       <div class="bg-white border border-gray-200 rounded-2xl p-5">
         <p class="text-sm font-bold text-primary mb-3">Experience</p>
-        <div id="exp-entry" class="relative border border-gray-100 rounded-xl p-3">
+        <div id="exp-entry" class="relative border border-gray-100 rounded-xl p-3 pt-6">
           <button type="button" onclick="clearExp()" title="Clear this entry"
                   class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition z-10">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -315,30 +341,81 @@ function watchAllEntries() {
   document.querySelectorAll('#edu-container .edu-row, #exp-entry, #cert-container .cert-row').forEach(watchEntry);
 }
 
-// ── Education (multi-entry UI; only the first entry is persisted) ──
+// ── Carousel: only one .carousel-slide inside a container is visible ──
+// at a time. renderCarousel() reads the .dataset.active flag and hides
+// the rest; carouselStep(±1) moves the active slide.
+function renderCarousel(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const section = container.closest('[data-section]');
+  const slides = Array.from(container.querySelectorAll('.carousel-slide'));
+  const counter = section && section.querySelector('[data-carousel-counter]');
+  const prev    = section && section.querySelector('.carousel-prev');
+  const next    = section && section.querySelector('.carousel-next');
+  if (!slides.length) {
+    if (counter) counter.textContent = '0 / 0';
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
+    return;
+  }
+  let activeIdx = slides.findIndex(s => s.dataset.active === 'true');
+  if (activeIdx < 0) activeIdx = 0;
+  slides.forEach((s, i) => {
+    const on = (i === activeIdx);
+    s.classList.toggle('hidden', !on);
+    s.dataset.active = on ? 'true' : 'false';
+  });
+  if (counter) counter.textContent = (activeIdx + 1) + ' / ' + slides.length;
+  if (prev) prev.disabled = (activeIdx === 0);
+  if (next) next.disabled = (activeIdx === slides.length - 1);
+}
+function carouselStep(containerId, delta) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const slides = Array.from(container.querySelectorAll('.carousel-slide'));
+  if (!slides.length) return;
+  let idx = slides.findIndex(s => s.dataset.active === 'true');
+  if (idx < 0) idx = 0;
+  const newIdx = Math.max(0, Math.min(slides.length - 1, idx + delta));
+  slides.forEach((s, i) => s.dataset.active = (i === newIdx) ? 'true' : 'false');
+  renderCarousel(containerId);
+}
+
+// ── Education (carousel, one entry visible at a time) ────────────────
 function removeEdu(btn) {
   const container = document.getElementById('edu-container');
-  const rows = container.querySelectorAll('.edu-row');
+  const slides = Array.from(container.querySelectorAll('.edu-row'));
   const row = btn.closest('.edu-row');
-  if (rows.length > 1) {
+  const removedIdx = slides.indexOf(row);
+  if (slides.length > 1) {
     row.remove();
+    const remaining = Array.from(container.querySelectorAll('.edu-row'));
+    const newIdx = Math.max(0, removedIdx - 1);
+    remaining.forEach((s, i) => s.dataset.active = (i === newIdx) ? 'true' : 'false');
   } else {
     row.querySelectorAll('input, select').forEach(el => el.value = '');
     refreshEntryVisibility(row);
   }
+  renderCarousel('edu-container');
 }
 function addEdu() {
   const container = document.getElementById('edu-container');
-  const first = container.querySelector('.edu-row');
-  if (!first) return;
-  const clone = first.cloneNode(true);
+  const template = container.querySelector('.edu-row');
+  if (!template) return;
+  const clone = template.cloneNode(true);
   delete clone.dataset.watched;
+  clone.classList.remove('hidden');
   clone.querySelectorAll('input:not([type=hidden]), select').forEach(el => {
     el.value = '';
     delete el.dataset.autocomplete;
   });
-  container.appendChild(clone);
+  // Prepend so the fresh entry becomes the active carousel slide.
+  container.insertBefore(clone, container.firstElementChild);
+  Array.from(container.querySelectorAll('.edu-row')).forEach((s, i) => {
+    s.dataset.active = (i === 0) ? 'true' : 'false';
+  });
   watchEntry(clone);
+  renderCarousel('edu-container');
   initAutocompletes();
 }
 
@@ -371,18 +448,22 @@ function syncExperienceMutex() {
 if (anyExpCb) anyExpCb.addEventListener('change', syncExperienceMutex);
 syncExperienceMutex();
 
-// ── Certifications (multi-entry) ────────────────────────────────
-// X removes the entry if there are 2+; clears the only entry if it's the last
+// ── Certifications (carousel, one entry visible at a time) ──────
 function removeCert(btn) {
   const container = document.getElementById('cert-container');
-  const rows = container.querySelectorAll('.cert-row');
+  const slides = Array.from(container.querySelectorAll('.cert-row'));
   const row = btn.closest('.cert-row');
-  if (rows.length > 1) {
+  const removedIdx = slides.indexOf(row);
+  if (slides.length > 1) {
     row.remove();
+    const remaining = Array.from(container.querySelectorAll('.cert-row'));
+    const newIdx = Math.max(0, removedIdx - 1);
+    remaining.forEach((s, i) => s.dataset.active = (i === newIdx) ? 'true' : 'false');
   } else {
     row.querySelectorAll('input').forEach(el => el.value = '');
     refreshEntryVisibility(row);
   }
+  renderCarousel('cert-container');
 }
 
 // ── Skills tag input ────────────────────────────────────────────
@@ -414,7 +495,7 @@ skillInput.addEventListener('blur', function() {
 function addCert() {
   const container = document.getElementById('cert-container');
   const div = document.createElement('div');
-  div.className = 'cert-row relative border border-gray-100 rounded-xl p-3 space-y-2';
+  div.className = 'cert-row carousel-slide relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2';
   div.innerHTML = `
     <button type="button" onclick="removeCert(this)" title="Remove"
             class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
@@ -423,13 +504,22 @@ function addCert() {
     <input type="text" name="cert_name" placeholder="Certification name" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
     <input type="text" name="cert_org" placeholder="Issuing organization" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
   `;
-  container.appendChild(div);
+  // Prepend so the fresh entry lands as the active carousel slide.
+  container.insertBefore(div, container.firstElementChild);
+  Array.from(container.querySelectorAll('.cert-row')).forEach((s, i) => {
+    s.dataset.active = (i === 0) ? 'true' : 'false';
+  });
   watchEntry(div);
+  renderCarousel('cert-container');
   initAutocompletes();
 }
 
 // Initialise X-visibility for every existing entry on first paint
 watchAllEntries();
+
+// Seed carousel state on load — first slide active, hide the rest.
+renderCarousel('edu-container');
+renderCarousel('cert-container');
 
 // ── Autocomplete (powered by partials/_autocomplete.html) ──────────────
 function initAutocompletes() {
