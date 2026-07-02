@@ -42,38 +42,91 @@
     </div>
   </div>
 
+  {% csrf_token %}
+
   {% if page.object_list %}
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for c in page.object_list %}
-    <a href="/admin-panel/companies/{{ c.id|hashid }}/"
-       class="block bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition relative">
-      <div class="flex items-start gap-3">
-        <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-          {% if c.logo %}
-            <img src="{{ c.logo.url }}" alt="" class="w-full h-full object-cover">
-          {% else %}
-            <span class="text-primary font-bold text-sm">{{ c.name|first|upper }}</span>
-          {% endif %}
+    {# Mirrors the jobseeker_list card pattern: anchor is the click target #}
+    {# for the whole card, but a positioned 3-dot menu on top-right lets  #}
+    {# admins reach Settings / Deactivate without opening the profile.    #}
+    <div class="relative">
+      <a href="/admin-panel/companies/{{ c.id|hashid }}/"
+         class="block bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition h-full">
+        <div class="flex items-start gap-3 pr-8">
+          <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {% if c.logo %}
+              <img src="{{ c.logo.url }}" alt="" class="w-full h-full object-cover">
+            {% else %}
+              <span class="text-primary font-bold text-sm">{{ c.name|first|upper }}</span>
+            {% endif %}
+          </div>
+          <div class="min-w-0">
+            <p class="font-bold text-primary text-base leading-tight truncate">{{ c.name }}</p>
+            <p class="text-muted text-xs italic">Joined {{ c.created_at|date:"M j Y" }}</p>
+          </div>
         </div>
-        <div class="min-w-0">
-          <p class="font-bold text-primary text-base leading-tight truncate">{{ c.name }}</p>
-          <p class="text-muted text-xs italic">Joined {{ c.created_at|date:"M j Y" }}</p>
-        </div>
-      </div>
 
-      <div class="flex flex-wrap gap-1.5 mt-3">
-        <span class="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-taupe/20 text-primary border border-taupe/30">
-          {{ c.get_type_of_company_display|default:"—" }}
-        </span>
-        {% if c.verification_status == 'pending' %}
-        <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30">Pending</span>
-        {% elif c.verification_status == 'verified' %}
-        <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-teal/15 text-teal border border-teal/30">Verified</span>
-        {% elif c.verification_status == 'denied' %}
-        <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Denied</span>
-        {% endif %}
+        <div class="flex flex-wrap gap-1.5 mt-3">
+          <span class="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-taupe/20 text-primary border border-taupe/30">
+            {{ c.get_type_of_company_display|default:"—" }}
+          </span>
+          {% if c.verification_status == 'pending' %}
+          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30">Pending</span>
+          {% elif c.verification_status == 'verified' %}
+          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-teal/15 text-teal border border-teal/30">Verified</span>
+          {% elif c.verification_status == 'denied' %}
+          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Denied</span>
+          {% endif %}
+          {% with rep=c.representatives.first %}
+          {% if rep and not rep.user.is_active %}
+          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Disabled</span>
+          {% endif %}
+          {% endwith %}
+        </div>
+      </a>
+
+      {# Three-dot menu — stops propagation so it doesn't trigger the link. #}
+      <div class="absolute top-3 right-3">
+        <button type="button"
+                onclick="event.preventDefault(); event.stopPropagation(); toggleCompanyMenu({{ c.id }})"
+                class="w-7 h-7 flex items-center justify-center text-muted hover:text-primary hover:bg-surface rounded-full transition"
+                title="More actions">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+          </svg>
+        </button>
+        <div id="company-menu-{{ c.id }}" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-52 py-1">
+          <a href="/admin-panel/companies/{{ c.id|hashid }}/settings/"
+             class="block px-4 py-2 text-sm text-primary hover:bg-surface">
+            Open settings
+          </a>
+          {% with rep=c.representatives.first %}
+          {% if rep %}
+            {% if rep.user.is_active %}
+              {% if rep.user_id != request.user.id %}
+              <button type="button"
+                      onclick="event.preventDefault(); event.stopPropagation(); confirmDisableCompany('{{ c.id|hashid }}', '{{ c.name|escapejs }}')"
+                      class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">
+                Deactivate company
+              </button>
+              {% else %}
+              <span class="block px-4 py-2 text-sm text-muted italic">Can't disable yourself</span>
+              {% endif %}
+            {% else %}
+              <button type="button"
+                      onclick="event.preventDefault(); event.stopPropagation(); confirmEnableCompany('{{ c.id|hashid }}', '{{ c.name|escapejs }}')"
+                      class="block w-full text-left px-4 py-2 text-sm text-teal hover:bg-teal/10">
+                Reactivate company
+              </button>
+            {% endif %}
+          {% else %}
+          <span class="block px-4 py-2 text-sm text-muted italic">No representative on file</span>
+          {% endif %}
+          {% endwith %}
+        </div>
       </div>
-    </a>
+    </div>
     {% endfor %}
   </div>
 
@@ -86,9 +139,69 @@
 </div>
 
 <script>
+function toggleCompanyMenu(id) {
+  document.querySelectorAll('[id^="company-menu-"]').forEach(function(m) {
+    if (m.id !== 'company-menu-' + id) m.classList.add('hidden');
+  });
+  const el = document.getElementById('company-menu-' + id);
+  if (el) el.classList.toggle('hidden');
+}
+
+function _companyCsrf() {
+  const t = document.querySelector('input[name=csrfmiddlewaretoken]');
+  return t ? t.value : '';
+}
+
+function _companyPostForm(url, payload) {
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = url;
+  const csrf = document.createElement('input');
+  csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = _companyCsrf();
+  f.appendChild(csrf);
+  Object.keys(payload).forEach(function(k) {
+    const i = document.createElement('input');
+    i.type = 'hidden'; i.name = k; i.value = payload[k];
+    f.appendChild(i);
+  });
+  document.body.appendChild(f);
+  f.submit();
+}
+
+function confirmDisableCompany(hashId, name) {
+  if (typeof confirmAction === 'function') {
+    confirmAction({
+      title: 'Deactivate ' + name + '?',
+      body: "The company representative won't be able to log in until you reactivate. Job posts stay on record.",
+      ctaLabel: 'Deactivate',
+      ctaClass: 'bg-red-500 hover:bg-red-600',
+      onConfirm: function() { _companyPostForm('/admin-panel/companies/' + hashId + '/settings/', { form: 'disable' }); }
+    });
+  } else if (confirm('Deactivate ' + name + '?')) {
+    _companyPostForm('/admin-panel/companies/' + hashId + '/settings/', { form: 'disable' });
+  }
+}
+
+function confirmEnableCompany(hashId, name) {
+  if (typeof confirmAction === 'function') {
+    confirmAction({
+      title: 'Reactivate ' + name + '?',
+      body: 'The representative will be able to log in again.',
+      ctaLabel: 'Reactivate',
+      ctaClass: 'bg-teal hover:bg-teal/90',
+      onConfirm: function() { _companyPostForm('/admin-panel/companies/' + hashId + '/settings/', { form: 'enable' }); }
+    });
+  } else if (confirm('Reactivate ' + name + '?')) {
+    _companyPostForm('/admin-panel/companies/' + hashId + '/settings/', { form: 'enable' });
+  }
+}
+
 document.addEventListener('click', function(e) {
   const w = document.getElementById('sort-wrapper');
   if (w && !w.contains(e.target)) document.getElementById('sort-menu').classList.add('hidden');
+  if (!e.target.closest('[id^="company-menu-"]') && !e.target.closest('button[onclick^="event.preventDefault(); event.stopPropagation(); toggleCompanyMenu"]')) {
+    document.querySelectorAll('[id^="company-menu-"]').forEach(function(m) { m.classList.add('hidden'); });
+  }
 });
 </script>
 {% endblock %}
