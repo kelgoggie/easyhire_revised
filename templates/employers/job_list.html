@@ -20,7 +20,8 @@
   
   <!-- Search bar -->
   <form method="GET" action="" class="mb-6">
-    <input type="hidden" name="sort" value="{{ sort }}">
+    <input type="hidden" name="sort"   value="{{ sort }}">
+    <input type="hidden" name="status" value="{{ status_filter }}">
     <div class="relative max-w-2xl mx-auto">
       <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Search Job Posts..."
              class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-3 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
@@ -32,22 +33,50 @@
     </div>
   </form>
 
-  <div class="flex items-center gap-2 mb-6">
+  {# Tabs + Sort — mirrors the jobseeker Recommended-Jobs layout. Each   #}
+  {# tab preserves the current sort + search query in its href, and the  #}
+  {# sort dropdown preserves the active tab so the two axes compose.     #}
+  {% with qtail=""|add:"&sort="|add:sort|add:"&q="|add:query %}
+  <div class="flex items-center justify-between gap-4 mb-6 flex-wrap">
+    <div class="flex items-center gap-1.5">
+      <a href="?status={{ qtail }}"
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if not status_filter %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        All <span class="opacity-70">({{ all_count }})</span>
+      </a>
+      <a href="?status=open{{ qtail }}"
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status_filter == 'open' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Open <span class="opacity-70">({{ open_count }})</span>
+      </a>
+      <a href="?status=closed{{ qtail }}"
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status_filter == 'closed' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Closed <span class="opacity-70">({{ closed_count }})</span>
+      </a>
+    </div>
+
     <div class="relative" id="sort-dropdown-wrapper">
       <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
               class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/>
         </svg>
-        Sort by...
+        <span class="text-primary">·
+          {% if sort == 'oldest' %}Oldest
+          {% elif sort == 'most_liked' %}Most Liked
+          {% else %}Newest{% endif %}
+        </span>
       </button>
-      <div id="sort-menu" class="hidden absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
-        <a href="?sort=newest&q={{ query }}"     class="block px-4 py-2 text-sm {% if sort == 'newest' or not sort %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest</a>
-        <a href="?sort=oldest&q={{ query }}"     class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest</a>
-        <a href="?sort=most_liked&q={{ query }}" class="block px-4 py-2 text-sm {% if sort == 'most_liked' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Most Liked</a>
+      {% with status_q="&status="|add:status_filter %}
+      {% with q_q="&q="|add:query %}
+      <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
+        <a href="?sort=newest{{ status_q }}{{ q_q }}"     class="block px-4 py-2 text-sm {% if sort == 'newest' or not sort %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest</a>
+        <a href="?sort=oldest{{ status_q }}{{ q_q }}"     class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest</a>
+        <a href="?sort=most_liked{{ status_q }}{{ q_q }}" class="block px-4 py-2 text-sm {% if sort == 'most_liked' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Most Liked</a>
       </div>
+      {% endwith %}
+      {% endwith %}
     </div>
   </div>
+  {% endwith %}
 
   {% if jobs %}
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
@@ -147,13 +176,16 @@
   <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
     <p class="text-primary font-semibold text-sm mb-1">
       {% if query %}No jobs found for "{{ query }}".
+      {% elif status_filter == 'open' %}No open jobs.
+      {% elif status_filter == 'closed' %}No closed jobs yet.
       {% else %}You haven't posted any jobs yet.{% endif %}
     </p>
     <p class="text-muted text-xs mb-4">
       {% if query %}Try a different search term.
+      {% elif status_filter == 'closed' %}Jobs you close appear here — deleted jobs are removed permanently.
       {% else %}Create your first job post to start receiving applicants.{% endif %}
     </p>
-    {% if not query %}
+    {% if not query and status_filter != 'closed' %}
     <a href="/employers/jobs/create/" class="inline-block bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
       + Create New Job
     </a>

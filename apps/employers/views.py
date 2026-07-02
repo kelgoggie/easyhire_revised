@@ -208,7 +208,7 @@ def job_list(request):
     status_filter = request.GET.get('status', '')
     sort = request.GET.get('sort', 'newest')
 
-    jobs = JobPosting.objects.filter(company=company).annotate(
+    base = JobPosting.objects.filter(company=company).annotate(
         liked_by_count=Count(
             'jobseeker_interactions',
             filter=Q(jobseeker_interactions__interaction_type='liked')
@@ -218,9 +218,22 @@ def job_list(request):
     ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
 
     if query:
-        jobs = jobs.filter(title__icontains=query)
-    if status_filter:
-        jobs = jobs.filter(status=status_filter)
+        base = base.filter(title__icontains=query)
+
+    # Counts snapshot BEFORE the status filter so the tab pills reflect
+    # total buckets, not what the user is currently looking at.
+    all_count    = base.count()
+    open_count   = base.filter(status=JobPosting.STATUS_OPEN).count()
+    closed_count = base.filter(status=JobPosting.STATUS_CLOSED).count()
+
+    if status_filter == 'open':
+        jobs = base.filter(status=JobPosting.STATUS_OPEN)
+    elif status_filter == 'closed':
+        jobs = base.filter(status=JobPosting.STATUS_CLOSED)
+    else:
+        jobs = base
+        status_filter = ''  # normalize any junk value back to "All"
+
     if sort == 'oldest':
         jobs = jobs.order_by('created_at')
     elif sort == 'most_liked':
@@ -234,6 +247,9 @@ def job_list(request):
         'query': query,
         'status_filter': status_filter,
         'sort': sort,
+        'all_count':    all_count,
+        'open_count':   open_count,
+        'closed_count': closed_count,
         'unread_notifications': False,
         'unread_messages': False,
     })
