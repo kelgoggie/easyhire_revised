@@ -9,30 +9,32 @@
 
   <div class="py-8">
 
-    <!-- Search bar -->
-    <form id="search-form" method="GET" action="/jobs/for-you/" class="mb-6">
-      <input type="hidden" name="tab"      id="search-tab"      value="{{ tab }}">
-      <input type="hidden" name="sort"     id="search-sort"     value="{{ sort }}">
-      <input type="hidden" name="sectors"  id="search-sectors"  value="{{ sector_codes|join:',' }}">
-      <input type="hidden" name="locations" id="search-locations" value="{{ location_codes|join:',' }}">
-      <div class="relative max-w-xl mx-auto">
-        <input type="text" name="q" id="search-q" value="{{ search|default:'' }}" placeholder="Search Jobs..."
-               class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-3 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
-        <button type="submit"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
-          </svg>
-        </button>
-      </div>
-    </form>
-
-    <!-- Heading -->
-    <h1 id="page-heading" class="text-3xl sm:text-4xl font-extrabold text-primary mb-4">
-      {% if tab == 'liked' %}Liked <span>Jobs</span>
-      {% elif tab == 'hidden' %}Hidden <span>Jobs</span>
-      {% else %}Jobs <span>For You</span>{% endif %}
-    </h1>
+    {# Header row: title on the left, search on the right — matches the  #}
+    {# Jobseekers / Companies admin pages instead of a centered search    #}
+    {# hanging above a left-aligned title.                                #}
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+      <h1 id="page-heading" class="text-3xl sm:text-4xl font-extrabold text-primary">
+        {% if tab == 'liked' %}Liked <span>Jobs</span>
+        {% elif tab == 'hidden' %}Hidden <span>Jobs</span>
+        {% else %}Jobs <span>For You</span>{% endif %}
+      </h1>
+      <form id="search-form" method="GET" action="/jobs/for-you/" class="w-full sm:w-auto sm:max-w-md sm:flex-1">
+        <input type="hidden" name="tab"      id="search-tab"      value="{{ tab }}">
+        <input type="hidden" name="sort"     id="search-sort"     value="{{ sort }}">
+        <input type="hidden" name="sectors"  id="search-sectors"  value="{{ sector_codes|join:',' }}">
+        <input type="hidden" name="locations" id="search-locations" value="{{ location_codes|join:',' }}">
+        <div class="relative">
+          <input type="text" name="q" id="search-q" value="{{ search|default:'' }}" placeholder="Search Jobs..."
+                 class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
+          <button type="submit"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
 
     <!-- Tabs + Sort -->
     <div class="flex items-center justify-between gap-4 mb-6 flex-wrap">
