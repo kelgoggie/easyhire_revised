@@ -51,15 +51,38 @@
       <!-- ── Card 1: Bio + Address + Contact + Sectors ──────────── -->
       <div class="bg-white border border-gray-200 rounded-2xl p-6">
 
-        <!-- Bio | Address (2 col) -->
+        {# 2-col: left column stacks Bio + Contact Info; right column is    #}
+        {# the multi-field Address. Balances the two columns' heights and   #}
+        {# keeps everything the employer scans first (bio + how to reach    #}
+        {# them + where they are) inside one card.                          #}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-6">
 
-          <!-- Personal Bio -->
-          <div>
-            <p class="text-sm font-bold text-primary mb-2">Personal Bio</p>
-            <textarea name="bio" id="field-bio" rows="5"
-                      placeholder="A short introduction for employers."
-                      class="resume-field w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ profile.bio }}</textarea>
+          <!-- Personal Bio + Contact Information stacked -->
+          <div class="space-y-5">
+            <div>
+              <p class="text-sm font-bold text-primary mb-2">Personal Bio</p>
+              <textarea name="bio" id="field-bio" rows="3"
+                        placeholder="A short introduction for employers."
+                        class="resume-field w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ profile.bio }}</textarea>
+            </div>
+
+            <div>
+              <p class="text-sm font-bold text-primary mb-2">Contact Information</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs text-muted mb-1">Contact Number</label>
+                  <input type="tel" name="phone" id="field-phone"
+                         value="{{ profile.phone|default:'' }}" placeholder="e.g. +63 909 XXXX XXX"
+                         class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                </div>
+                <div>
+                  <label class="block text-xs text-muted mb-1">Email Address</label>
+                  <input type="email" name="contact_email" id="field-email"
+                         value="{{ profile.contact_email|default:request.user.email }}" placeholder="yourname@gmail.com"
+                         class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Address -->
@@ -109,25 +132,6 @@
               </div>
               <input type="hidden" name="province" value="Iloilo">
               <input type="hidden" name="province_code" value="063000000">
-            </div>
-          </div>
-        </div>
-
-        <!-- Contact Information -->
-        <div class="border-t border-gray-100 pt-5 mb-5">
-          <p class="text-sm font-bold text-primary mb-3">Contact Information</p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-muted mb-1">Contact Number</label>
-              <input type="tel" name="phone" id="field-phone"
-                     value="{{ profile.phone|default:'' }}" placeholder="e.g. +63 909 XXXX XXX"
-                     class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1">Email Address</label>
-              <input type="email" name="contact_email" id="field-email"
-                     value="{{ profile.contact_email|default:request.user.email }}" placeholder="yourname@gmail.com"
-                     class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
             </div>
           </div>
         </div>
