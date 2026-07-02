@@ -141,21 +141,26 @@
           <p class="text-sm font-bold text-primary mb-1">Sectors</p>
           <p class="text-xs text-muted mb-3">Select which sector/s you belong to so the algorithm can recommend more inclusive employers for you.</p>
 
-          <!-- Manual sectors (user-chosen) -->
+          {# Both the sector selection AND the visibility radios use the    #}
+          {# same "toggle chip" pattern below: pill-shaped label, checked   #}
+          {# state flips to teal via has-[:checked]. The actual checkbox /  #}
+          {# radio is visually hidden (sr-only) so lockForm's disabled +    #}
+          {# opacity-70 styles don't wash out the whole pill.               #}
+          <p class="text-xs text-muted font-medium mb-2">Which sectors do you belong to?</p>
           <div class="flex flex-wrap gap-2 mb-3">
             {% for sector in manual_sectors %}
-            <label class="resume-field inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer hover:border-teal transition bg-white">
+            <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
               <input type="checkbox" name="sectors" value="{{ sector.id }}"
                      {% if sector in profile.sectors.all %}checked{% endif %}
-                     class="accent-teal">
+                     class="resume-field sr-only">
               {{ sector.label }}
             </label>
             {% endfor %}
           </div>
 
-          <!-- Auto-applied sectors (read-only) -->
+          {# Auto-applied sectors — read-only, no toggle. #}
           {% if auto_sectors %}
-          <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
+          <div class="flex flex-wrap items-center gap-2 pt-3 mt-1 border-t border-gray-100">
             <span class="text-xs text-muted">Auto-applied:</span>
             {% for sector in auto_sectors %}
             <span class="inline-flex items-center gap-1.5 bg-teal/8 border border-teal/25 text-teal text-xs px-3 py-1 rounded-full">
@@ -168,26 +173,27 @@
           </div>
           {% endif %}
 
-          {# Breathing room + label so the visibility radios don't crowd    #}
-          {# the sector chips above and reads as its own control group.     #}
+          {# Visibility radios use the exact same chip pattern so the two   #}
+          {# control groups read as siblings. Selected radio matches the    #}
+          {# selected sector visually.                                      #}
           <p class="text-xs text-muted font-medium mt-6 mb-2">Who can see these sector badges?</p>
-          <div class="flex flex-wrap gap-4">
-            <label class="inline-flex items-center gap-1.5 text-xs text-primary cursor-pointer">
+          <div class="flex flex-wrap gap-2">
+            <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
               <input type="radio" name="sector_badge_visibility" value="public"
                      {% if profile.sector_badge_visibility == 'public' or not profile.sector_badge_visibility %}checked{% endif %}
-                     class="resume-field accent-teal">
+                     class="resume-field sr-only">
               Show All Employers
             </label>
-            <label class="inline-flex items-center gap-1.5 text-xs text-primary cursor-pointer">
+            <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
               <input type="radio" name="sector_badge_visibility" value="similar"
                      {% if profile.sector_badge_visibility == 'similar' %}checked{% endif %}
-                     class="resume-field accent-teal">
+                     class="resume-field sr-only">
               Only Show Employers with Similar Badges
             </label>
-            <label class="inline-flex items-center gap-1.5 text-xs text-primary cursor-pointer">
+            <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
               <input type="radio" name="sector_badge_visibility" value="private"
                      {% if profile.sector_badge_visibility == 'private' %}checked{% endif %}
-                     class="resume-field accent-teal">
+                     class="resume-field sr-only">
               Do Not Show
             </label>
           </div>
