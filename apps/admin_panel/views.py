@@ -542,11 +542,38 @@ def jobseeker_settings(request, pk):
             )
             saved_section = 'enabled'
 
+        elif form == 'verify_email':
+            # Demo helper: bypass the allauth email verification gate for
+            # this jobseeker when SMTP is broken / the confirmation email
+            # can't reach them. Idempotent — safe to click repeatedly.
+            from allauth.account.models import EmailAddress
+            if jobseeker.user and jobseeker.user.email:
+                EmailAddress.objects.update_or_create(
+                    user=jobseeker.user, email=jobseeker.user.email,
+                    defaults={'verified': True, 'primary': True},
+                )
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_EDIT,
+                    target_model='User', target_id=jobseeker.user.id,
+                    notes=f'Admin bypassed email verification for {jobseeker.user.email}.',
+                )
+                saved_section = 'email_verified'
+
+    # True when the jobseeker's email already has a verified EmailAddress row.
+    from allauth.account.models import EmailAddress
+    email_verified = (
+        bool(jobseeker.user and jobseeker.user.email)
+        and EmailAddress.objects.filter(
+            user=jobseeker.user, email=jobseeker.user.email, verified=True
+        ).exists()
+    )
+
     ctx = _admin_context(request)
     ctx.update({
         'jobseeker':     jobseeker,
         'saved_section': saved_section,
         'error':         error,
+        'email_verified': email_verified,
     })
     return render(request, 'admin_panel/jobseeker_settings.html', ctx)
 
