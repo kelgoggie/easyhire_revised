@@ -88,7 +88,8 @@
 {% else %}
 <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
   <p class="text-muted text-sm">
-    {% if search %}No jobs found for &ldquo;{{ search }}&rdquo;.
+    {% if min_match %}No jobs match this threshold. Lower the minimum match filter to see more.
+    {% elif search %}No jobs found for &ldquo;{{ search }}&rdquo;.
     {% elif tab == 'liked' %}You haven't liked any jobs yet.
     {% elif tab == 'hidden' %}You haven't hidden any jobs yet.
     {% else %}No open jobs available right now. Check back soon!{% endif %}

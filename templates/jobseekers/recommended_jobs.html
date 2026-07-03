@@ -23,6 +23,7 @@
         <input type="hidden" name="sort"     id="search-sort"     value="{{ sort }}">
         <input type="hidden" name="sectors"  id="search-sectors"  value="{{ sector_codes|join:',' }}">
         <input type="hidden" name="locations" id="search-locations" value="{{ location_codes|join:',' }}">
+        <input type="hidden" name="min_match" id="search-min-match" value="{{ min_match }}">
         <div class="relative">
           <input type="text" name="q" id="search-q" value="{{ search|default:'' }}" placeholder="Search Jobs..."
                  class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
@@ -86,13 +87,26 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
             </svg>
             <span>Filters</span>
-            {% with selected_count=sector_codes|length|add:location_codes|length %}
-            {% if selected_count %}
-            <span class="bg-teal/10 text-teal text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ selected_count }}</span>
+            {% if sector_codes or location_codes or min_match %}
+            <span class="bg-teal/10 text-teal text-[10px] font-semibold w-2 h-2 rounded-full">&nbsp;</span>
             {% endif %}
-            {% endwith %}
           </button>
           <div id="filters-panel" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-80 sm:w-96 p-4">
+            {# Match-score threshold — single-select. Tier boundaries match  #}
+            {# the score badges rendered on each card.                       #}
+            <div class="mb-3">
+              <p class="text-muted text-xs font-medium mb-1.5">Minimum match</p>
+              <div class="flex flex-wrap gap-1.5" id="min-match-chips">
+                {% for m in min_match_choices %}
+                <button type="button" data-filter="min_match" data-value="{{ m.value }}"
+                        class="min-match-chip px-3 py-1 rounded-full text-xs font-semibold transition border
+                               {% if m.value == min_match %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                  {{ m.label }}
+                </button>
+                {% endfor %}
+              </div>
+            </div>
+
             <!-- Sector chips -->
             <div class="mb-3">
               <p class="text-muted text-xs font-medium mb-1.5">Welcoming sectors</p>
@@ -123,7 +137,7 @@
 
             <div class="mt-3 pt-3 border-t border-gray-100 flex justify-end">
               <button type="button" id="filters-clear"
-                      class="text-muted text-xs font-semibold hover:text-primary transition {% if not sector_codes and not location_codes %}opacity-40 pointer-events-none{% endif %}">
+                      class="text-muted text-xs font-semibold hover:text-primary transition {% if not sector_codes and not location_codes and not min_match %}opacity-40 pointer-events-none{% endif %}">
                 Clear all filters
               </button>
             </div>
@@ -163,6 +177,7 @@ let currentSort      = '{{ sort }}';
 let currentQ         = '{{ search|escapejs }}';
 let currentSectors   = '{{ sector_codes|join:","|escapejs }}'.split(',').filter(Boolean);
 let currentLocations = '{{ location_codes|join:","|escapejs }}'.split(',').filter(Boolean);
+let currentMinMatch  = parseInt('{{ min_match|default:0 }}', 10) || 0;
 let jobData     = {};
 let postedMap   = JSON.parse(document.getElementById('posted-map-data').textContent);
 
@@ -257,6 +272,7 @@ function buildUrl(extra) {
     if (currentQ) url.searchParams.set('q', currentQ);
     if (currentSectors.length)   url.searchParams.set('sectors',   currentSectors.join(','));
     if (currentLocations.length) url.searchParams.set('locations', currentLocations.join(','));
+    if (currentMinMatch)         url.searchParams.set('min_match', currentMinMatch);
     return url;
 }
 
@@ -333,11 +349,13 @@ window.addEventListener('popstate', function(e){
     currentQ         = url.searchParams.get('q')         || '';
     currentSectors   = (url.searchParams.get('sectors')   || '').split(',').filter(Boolean);
     currentLocations = (url.searchParams.get('locations') || '').split(',').filter(Boolean);
+    currentMinMatch  = parseInt(url.searchParams.get('min_match') || '0', 10) || 0;
     document.getElementById('search-q').value         = currentQ;
     document.getElementById('search-tab').value       = currentTab;
     document.getElementById('search-sort').value      = currentSort;
     document.getElementById('search-sectors').value   = currentSectors.join(',');
     document.getElementById('search-locations').value = currentLocations.join(',');
+    document.getElementById('search-min-match').value = currentMinMatch || 0;
     updateTabUI();
     updateChipUI();
     reloadGrid(false);
@@ -359,6 +377,20 @@ function updateChipUI() {
     });
     document.getElementById('search-sectors').value   = currentSectors.join(',');
     document.getElementById('search-locations').value = currentLocations.join(',');
+
+    // Min-match chips are single-select: only one is active at a time.
+    document.querySelectorAll('.min-match-chip').forEach(function(b){
+        const isActive = parseInt(b.dataset.value || '0', 10) === currentMinMatch;
+        b.classList.toggle('bg-primary',     isActive);
+        b.classList.toggle('text-white',     isActive);
+        b.classList.toggle('border-primary', isActive);
+        b.classList.toggle('bg-white',           !isActive);
+        b.classList.toggle('text-muted',         !isActive);
+        b.classList.toggle('border-gray-200',    !isActive);
+        b.classList.toggle('hover:text-primary', !isActive);
+        b.classList.toggle('hover:border-primary/30', !isActive);
+    });
+    document.getElementById('search-min-match').value = currentMinMatch || 0;
 }
 
 document.querySelectorAll('.filter-chip').forEach(function(b){
@@ -373,11 +405,22 @@ document.querySelectorAll('.filter-chip').forEach(function(b){
     });
 });
 
+// Min-match chip clicks: single-select. Clicking the active chip clears it.
+document.querySelectorAll('.min-match-chip').forEach(function(b){
+    b.addEventListener('click', function(){
+        const val = parseInt(b.dataset.value || '0', 10);
+        currentMinMatch = (currentMinMatch === val) ? 0 : val;
+        updateChipUI();
+        reloadGrid(true);
+    });
+});
+
 const clearBtn = document.getElementById('filters-clear');
 if (clearBtn) {
     clearBtn.addEventListener('click', function(){
         currentSectors   = [];
         currentLocations = [];
+        currentMinMatch  = 0;
         updateChipUI();
         reloadGrid(true);
     });

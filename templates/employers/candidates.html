@@ -33,14 +33,14 @@
       Recommended Jobseekers
       <span class="text-muted text-base font-normal ml-2">({{ ranked|length }})</span>
     </h2>
-    <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=applicants"
+    <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=applicants{% if min_match %}&min_match={{ min_match }}{% endif %}"
        class="text-teal text-sm font-semibold hover:underline">View Applicants &rsaquo;</a>
     {% else %}
     <h2 class="text-xl sm:text-2xl font-bold text-primary">
       Applicants
       <span class="text-muted text-base font-normal ml-2">({{ applicants_count }})</span>
     </h2>
-    <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=recommended"
+    <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=recommended{% if min_match %}&min_match={{ min_match }}{% endif %}"
        class="text-teal text-sm font-semibold hover:underline">View Recommended Jobseekers &rsaquo;</a>
     {% endif %}
   </div>
@@ -50,13 +50,13 @@
     <!-- Status filter chips -->
     <div class="flex flex-wrap items-center gap-1.5">
       <span class="text-muted text-xs mr-1">Filter:</span>
-      <a href="?tab=applicants{% if sort %}&sort={{ sort }}{% endif %}"
+      <a href="?tab=applicants{% if sort %}&sort={{ sort }}{% endif %}{% if min_match %}&min_match={{ min_match }}{% endif %}"
          class="px-3 py-1 rounded-full text-xs font-semibold transition
                 {% if not status_filter %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         All <span class="opacity-70">{{ applicants_count }}</span>
       </a>
       {% for code, label, count in status_counts %}
-      <a href="?tab=applicants&status={{ code }}{% if sort %}&sort={{ sort }}{% endif %}"
+      <a href="?tab=applicants&status={{ code }}{% if sort %}&sort={{ sort }}{% endif %}{% if min_match %}&min_match={{ min_match }}{% endif %}"
          class="px-3 py-1 rounded-full text-xs font-semibold transition
                 {% if status_filter == code %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         {{ label }} <span class="opacity-70">{{ count }}</span>
@@ -67,47 +67,94 @@
     <div></div>
     {% endif %}
 
-    {# Sort dropdown — sits opposite the filter chips. Defaults to Best Match #}
-    {# so the highest-scoring candidates float to the top of the list.        #}
-    {% if ranked or sort != 'match' %}
-    <div class="relative flex-shrink-0" id="sort-wrapper">
-      <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
-              class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/>
-        </svg>
-        Sort <span class="text-primary">·
-          {% if sort == 'lowest_match' %}Lowest Match First
-          {% elif sort == 'recent' %}Most Recent
-          {% elif sort == 'oldest' %}Oldest First
-          {% elif sort == 'name_az' %}Name A-Z
-          {% elif sort == 'name_za' %}Name Z-A
-          {% else %}Best Match{% endif %}
-        </span>
-      </button>
-      <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-48 py-1">
-        {% with base="?tab="|add:tab %}
-        {% with status_q="&status="|add:status_filter %}
-        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=match"         class="block px-4 py-2 text-sm {% if sort == 'match' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Best Match</a>
-        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=lowest_match"  class="block px-4 py-2 text-sm {% if sort == 'lowest_match' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Lowest Match First</a>
-        {% if tab == 'applicants' %}
-        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=recent"        class="block px-4 py-2 text-sm {% if sort == 'recent' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Most Recent</a>
-        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=oldest"        class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest First</a>
-        {% endif %}
-        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=name_az"       class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
-        <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=name_za"       class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
-        {% endwith %}
-        {% endwith %}
+    {# Sort + Filter dropdowns — sit opposite the status chips. Sort is on   #}
+    {# the left (matches typical toolbars); Filter mirrors the jobseeker     #}
+    {# side's chip-style panel so the two surfaces feel like one product.   #}
+    {% if ranked or sort != 'match' or min_match %}
+    <div class="flex items-center gap-5 flex-shrink-0">
+      {% with base="?tab="|add:tab %}
+      {% with status_q="&status="|add:status_filter %}
+      {% with sort_q="&sort="|add:sort %}
+      <div class="relative" id="sort-wrapper">
+        <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
+                class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/>
+          </svg>
+          Sort <span class="text-primary">·
+            {% if sort == 'lowest_match' %}Lowest Match First
+            {% elif sort == 'recent' %}Most Recent
+            {% elif sort == 'oldest' %}Oldest First
+            {% elif sort == 'name_az' %}Name A-Z
+            {% elif sort == 'name_za' %}Name Z-A
+            {% else %}Best Match{% endif %}
+          </span>
+        </button>
+        <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-48 py-1">
+          {% with min_q="&min_match="|add:min_match %}
+          <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=match{% if min_match %}{{ min_q }}{% endif %}"         class="block px-4 py-2 text-sm {% if sort == 'match' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Best Match</a>
+          <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=lowest_match{% if min_match %}{{ min_q }}{% endif %}"  class="block px-4 py-2 text-sm {% if sort == 'lowest_match' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Lowest Match First</a>
+          {% if tab == 'applicants' %}
+          <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=recent{% if min_match %}{{ min_q }}{% endif %}"        class="block px-4 py-2 text-sm {% if sort == 'recent' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Most Recent</a>
+          <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=oldest{% if min_match %}{{ min_q }}{% endif %}"        class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest First</a>
+          {% endif %}
+          <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=name_az{% if min_match %}{{ min_q }}{% endif %}"       class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
+          <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}&sort=name_za{% if min_match %}{{ min_q }}{% endif %}"       class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
+          {% endwith %}
+        </div>
       </div>
+
+      {# Filter panel — chip-style to mirror the jobseeker Filters dropdown  #}
+      {# on the Jobs For You page. Chips are anchors, so no JS state.        #}
+      <div class="relative" id="min-match-wrapper">
+        <button type="button" onclick="document.getElementById('min-match-menu').classList.toggle('hidden')"
+                class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+          </svg>
+          <span>Filters</span>
+          {% if min_match %}
+          <span class="bg-teal/10 text-teal text-[10px] font-semibold w-2 h-2 rounded-full">&nbsp;</span>
+          {% endif %}
+        </button>
+        <div id="min-match-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-72 sm:w-80 p-4">
+          <div class="mb-3">
+            <p class="text-muted text-xs font-medium mb-1.5">Minimum match</p>
+            <div class="flex flex-wrap gap-1.5">
+              {% for m in min_match_choices %}
+              <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}{% if sort != 'match' %}{{ sort_q }}{% endif %}{% if m.value %}&min_match={{ m.value }}{% endif %}"
+                 class="px-3 py-1 rounded-full text-xs font-semibold transition border
+                        {% if m.value == min_match %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                {{ m.label }}
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="pt-3 border-t border-gray-100 flex justify-end">
+            <a href="{{ base }}{% if status_filter %}{{ status_q }}{% endif %}{% if sort != 'match' %}{{ sort_q }}{% endif %}"
+               class="text-muted text-xs font-semibold hover:text-primary transition {% if not min_match %}opacity-40 pointer-events-none{% endif %}">
+              Clear all filters
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endwith %}
+      {% endwith %}
+      {% endwith %}
     </div>
     {% endif %}
   </div>
 
   <script>
   document.addEventListener('click', function(e) {
-    const w = document.getElementById('sort-wrapper');
-    if (w && !w.contains(e.target)) {
+    const sw = document.getElementById('sort-wrapper');
+    if (sw && !sw.contains(e.target)) {
       const m = document.getElementById('sort-menu');
+      if (m) m.classList.add('hidden');
+    }
+    const fw = document.getElementById('min-match-wrapper');
+    if (fw && !fw.contains(e.target)) {
+      const m = document.getElementById('min-match-menu');
       if (m) m.classList.add('hidden');
     }
   });
@@ -220,7 +267,14 @@
 
   {% else %}
   <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
-    {% if tab == 'recommended' %}
+    {% if min_match %}
+    <p class="text-primary font-semibold text-sm mb-1">No candidates meet this match threshold.</p>
+    <p class="text-muted text-xs mb-4">Lower the minimum match filter to widen the pool.</p>
+    <a href="?tab={{ tab }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if sort != 'match' %}&sort={{ sort }}{% endif %}"
+       class="inline-block bg-primary text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-teal transition">
+      Clear match filter
+    </a>
+    {% elif tab == 'recommended' %}
     <p class="text-primary font-semibold text-sm mb-1">No recommended candidates yet.</p>
     <p class="text-muted text-xs mb-4">As jobseekers update their resumes, the matching engine will surface candidates whose skills, education, experience and certifications align with this job's requirements.</p>
     {% else %}

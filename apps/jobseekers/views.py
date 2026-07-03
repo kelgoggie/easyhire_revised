@@ -862,6 +862,16 @@ def recommended_jobs(request):
     sector_codes = [c for c in request.GET.get('sectors', '').split(',') if c]
     location_codes = [c for c in request.GET.get('locations', '').split(',') if c]
 
+    # Minimum match score — single value, 0 means "no min filter". Keys the
+    # threshold to the same tier boundaries the badge pills use so the label
+    # reads consistently ("Decent+" chip → Decent Match badge tier).
+    try:
+        min_match = int(request.GET.get('min_match') or 0)
+    except (TypeError, ValueError):
+        min_match = 0
+    if min_match not in {0, 70, 80, 90, 98}:
+        min_match = 0
+
     liked_ids = set(JobInteraction.objects.filter(
         jobseeker=profile, interaction_type=JobInteraction.LIKED
     ).values_list('job_id', flat=True))
@@ -937,9 +947,11 @@ def recommended_jobs(request):
         ranked_jobs = [r for r in ranked_jobs if r['job'].company_id in matching_company_ids]
     if location_codes:
         ranked_jobs = [r for r in ranked_jobs if r['job'].location_type in location_codes]
-
-    # Match score is internal — never filter cards out based on it. Sorting still
-    # puts strongest matches first via the engine's ranking.
+    if min_match:
+        # Jobs with score=None (jobseeker's resume incomplete → no score
+        # computed) are excluded when a threshold is active; those never
+        # meaningfully belong in a "matches at least X%" bucket.
+        ranked_jobs = [r for r in ranked_jobs if (r.get('score') or 0) >= min_match]
     from apps.core.pagination import paginate, querystring_without
     page = paginate(request, ranked_jobs, per_page=12)
     page_items = list(page.object_list)
@@ -988,6 +1000,16 @@ def recommended_jobs(request):
         {'code': JobPosting.REMOTE,   'label': 'Remote'},
         {'code': JobPosting.OVERSEAS, 'label': 'Overseas'},
     ]
+    # Match-score threshold chips. Values line up with the tier boundaries
+    # defined in apps.jobseekers.templatetags.match_tags.TIERS so the label
+    # copy tracks the badges on each card.
+    min_match_choices = [
+        {'value': 0,  'label': 'Any match'},
+        {'value': 98, 'label': 'Perfect'},
+        {'value': 90, 'label': 'Great+'},
+        {'value': 80, 'label': 'Good+'},
+        {'value': 70, 'label': 'Decent+'},
+    ]
 
     context = {
         'profile': profile,
@@ -1001,6 +1023,8 @@ def recommended_jobs(request):
         'location_codes': location_codes,
         'sector_choices': sector_choices,
         'location_choices': location_choices,
+        'min_match': min_match,
+        'min_match_choices': min_match_choices,
         'jobs_json': jobs_json,
         'posted_map': posted_map,
         'page': page,

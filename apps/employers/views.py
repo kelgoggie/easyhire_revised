@@ -652,6 +652,14 @@ def candidates(request, job_id):
     if sort not in {'match', 'lowest_match', 'recent', 'oldest', 'name_az', 'name_za'}:
         sort = 'match'
 
+    # Minimum match threshold — chip values line up with the tier badges.
+    try:
+        min_match = int(request.GET.get('min_match') or 0)
+    except (TypeError, ValueError):
+        min_match = 0
+    if min_match not in {0, 70, 80, 90, 98}:
+        min_match = 0
+
     liked_ids = list(CandidateInteraction.objects.filter(
         company=company, job=job
     ).values_list('jobseeker_id', flat=True))
@@ -719,8 +727,20 @@ def candidates(request, job_id):
             })
         _apply_candidates_sort(ranked, sort)
 
+    # Apply the match-score threshold across both tabs.
+    if min_match:
+        ranked = [r for r in ranked if (r.get('score') or 0) >= min_match]
+
     from apps.core.pagination import paginate, querystring_without
     page = paginate(request, ranked, per_page=12)
+
+    min_match_choices = [
+        {'value': 0,  'label': 'Any match'},
+        {'value': 98, 'label': 'Perfect'},
+        {'value': 90, 'label': 'Great+'},
+        {'value': 80, 'label': 'Good+'},
+        {'value': 70, 'label': 'Decent+'},
+    ]
 
     return render(request, 'employers/candidates.html', {
         'company': company,
@@ -733,6 +753,8 @@ def candidates(request, job_id):
         'sort': sort,
         'status_filter': status_filter,
         'status_counts': status_counts,
+        'min_match': min_match,
+        'min_match_choices': min_match_choices,
         'page': page,
         'qs_base': querystring_without(request, 'page'),
         'unread_notifications': False,
