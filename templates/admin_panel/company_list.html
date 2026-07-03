@@ -43,7 +43,9 @@
       </a>
     </div>
 
-    <div class="flex items-center gap-5">
+    <div class="flex flex-row-reverse items-center gap-5">
+      {# Sort sits on the left, Filters on the right — flex-row-reverse      #}
+      {# handles the swap without reordering the source.                     #}
       {# Filters — chip panel. Type is single-select (Local/Overseas/BPO);   #}
       {# Nature is multi-select from distinct DB values.                     #}
       <div class="relative" id="filters-wrapper">

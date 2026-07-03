@@ -44,7 +44,10 @@
       </a>
     </div>
 
-    <div class="flex items-center gap-5">
+    <div class="flex flex-row-reverse items-center gap-5">
+      {# Sort sits on the left, Filters on the right — flex-row-reverse      #}
+      {# handles the swap without reordering the source. Both dropdowns are  #}
+      {# right-0 anchored so their panels open the same way as before.       #}
       {# Filters — chip panel. Multi-select on Sectors/Education/City,       #}
       {# single-select on Sex. Chips are anchor links so no JS state is      #}
       {# needed; each click builds a URL that toggles the selected value.    #}
