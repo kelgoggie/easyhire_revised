@@ -7,7 +7,25 @@
 {% block page_content %}
 <div class="py-8">
 
-  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">Inbox</h1>
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-2">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Inbox</h1>
+    {# GET-form to /inbox/, preserving the current kind + sort so a search   #}
+    {# doesn't silently reset the chip and dropdown state.                   #}
+    <form method="GET" action="/inbox/" class="w-full sm:w-auto sm:max-w-md sm:flex-1">
+      {% if kind_filter %}<input type="hidden" name="kind" value="{{ kind_filter }}">{% endif %}
+      {% if sort and sort != 'latest' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+      <div class="relative">
+        <input type="text" name="q" value="{{ search|default:'' }}" placeholder="Search inbox..."
+               class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
+        <button type="submit"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+          </svg>
+        </button>
+      </div>
+    </form>
+  </div>
   <div class="border-b border-taupe/30 mb-2"></div>
   <p class="text-muted italic text-xs mb-4">
     This is where admin announcements, applications, and interview schedules live.

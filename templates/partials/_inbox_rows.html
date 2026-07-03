@@ -108,8 +108,13 @@
   <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
   </svg>
+  {% if search %}
+  <p class="text-primary font-semibold text-sm mb-1">No inbox items match &ldquo;{{ search }}&rdquo;.</p>
+  <p class="text-muted text-xs">Try a shorter search, or clear it to see everything.</p>
+  {% else %}
   <p class="text-primary font-semibold text-sm mb-1">Your inbox is empty.</p>
   <p class="text-muted text-xs">When you have applications, interview schedules, or PESO announcements, they'll show up here.</p>
+  {% endif %}
 </div>
 {% endif %}
 

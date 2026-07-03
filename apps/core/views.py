@@ -248,6 +248,24 @@ def inbox(request):
     # not "anything new in the currently selected filter".
     request.session['inbox_seen_count'] = total_items
 
+    # ── Text search ────────────────────────────────────────────────
+    # Substring match (case-insensitive) across the text a user is likely
+    # to remember from an inbox row: actor / verb / context / detail body
+    # and, for jobseeker rows, the linked company + job title.
+    search = (request.GET.get('q') or '').strip()
+    if search:
+        needle = search.lower()
+
+        def _matches(it):
+            haystack = ' '.join(str(it.get(k) or '') for k in (
+                'actor', 'verb', 'context', 'detail_body',
+                'sender_company_name', 'sender_job_title',
+                'detail_company', 'detail_interview_location',
+            ))
+            return needle in haystack.lower()
+
+        items = [it for it in items if _matches(it)]
+
     # ── Kind filter chips ───────────────────────────────────────────
     # Group the inbox's heterogeneous `kind` values into the four buckets
     # surfaced as chips. Anything outside these (e.g. a future kind) is
@@ -258,6 +276,8 @@ def inbox(request):
         'interviews':    {'interview'},
         'requirements':  {'requirements'},
     }
+    # Kind counts reflect the search-filtered view so the chip badges show
+    # "how many of each kind match my search", not the pre-search totals.
     kind_counts = {key: sum(1 for it in items if it['kind'] in members)
                    for key, members in KIND_GROUPS.items()}
 
@@ -267,18 +287,23 @@ def inbox(request):
     else:
         kind_filter = ''  # normalize unknown values to "All"
 
+    # `filtered_total` is the total after search but before the kind chip —
+    # drives the "All (N)" badge.
+    filtered_total = sum(kind_counts.values()) if search else total_items
+
     page = paginate(request, items, per_page=15)
 
     return render(request, template, {
         'items': list(page.object_list),
         'page': page,
-        # qs_base preserves `kind` across pagination clicks but drops `page`
-        # so each chip click resets to page 1.
+        # qs_base preserves `kind` + `q` + `sort` across pagination clicks
+        # but drops `page` so each chip click resets to page 1.
         'qs_base': querystring_without(request, 'page'),
         'kind_filter': kind_filter,
         'kind_counts': kind_counts,
-        'total_items': total_items,
+        'total_items': filtered_total,
         'sort': sort,
+        'search': search,
         'unread_notifications': False,
         'unread_messages': False,
     })
