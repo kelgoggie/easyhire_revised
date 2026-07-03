@@ -41,14 +41,22 @@ def resend_verification_email(request):
             defaults={'verified': False, 'primary': True},
         )
         email_address.send_confirmation(request, signup=False)
-    except Exception:
+    except Exception as exc:
         import logging
         logging.getLogger(__name__).exception(
             'Resend verification email failed for %s', request.user.email
         )
+        # Surface the exception class + first line of the message in the
+        # response body so a debugging session can inspect the real cause
+        # from the browser Network tab even when the Render log window
+        # has rolled past the traceback. Full stack trace is still logged
+        # server-side via .exception() above.
+        first_line = str(exc).splitlines()[0][:300] if str(exc) else ''
         return JsonResponse({
             'ok': False,
             'error': 'Could not send email right now. Please try again shortly.',
+            'exception_class': type(exc).__name__,
+            'exception_message': first_line,
         }, status=500)
 
     request.session['resend_verification_last'] = now_ts

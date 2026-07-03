@@ -79,7 +79,13 @@
         // Server rejected due to still being in cooldown — sync UI to it.
         startCooldown(data.wait, null);
       } else {
-        showError((data && data.error) || 'Please try again shortly.');
+        // If the server returned a diagnostic class name (SMTPAuthenticationError,
+        // etc.), surface it inline so the operator doesn't need to hunt logs.
+        let msg = (data && data.error) || 'Please try again shortly.';
+        if (data && data.exception_class) {
+          msg += ' [' + data.exception_class + (data.exception_message ? ': ' + data.exception_message : '') + ']';
+        }
+        showError(msg);
       }
     })
     .catch(function(err) {
