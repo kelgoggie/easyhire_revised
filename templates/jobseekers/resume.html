@@ -429,7 +429,9 @@
                    placeholder="Type a skill and press Enter to add"
                    class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition mb-3">
 
-            <div id="skill-list" class="space-y-2">
+            {# Cap the list to ~two rows so the Skills card doesn't stretch    #}
+            {# taller than Education/Certifications beside it — scroll after.  #}
+            <div id="skill-list" class="space-y-2 max-h-60 overflow-y-auto pr-1">
               {% for skill in skills %}
               <div class="skill-row relative border border-gray-100 rounded-xl p-3 pr-8">
                 <button type="button" onclick="removeSkillRow(this)" title="Remove"
