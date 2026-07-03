@@ -366,7 +366,12 @@ function pie(canvasId, labels, data, colors, unit) {
   const total = data.reduce((a, b) => a + (b || 0), 0);
   return new Chart(ctx, {
     type: 'pie',
-    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: '#fff', borderWidth: 2 }] },
+    // hover* mirror the base so pointing at a slice doesn't lighten it —
+    // the tooltip already answers "which slice is this?" without a recolor.
+    data: { labels, datasets: [{
+      data, backgroundColor: colors, borderColor: '#fff', borderWidth: 2,
+      hoverBackgroundColor: colors, hoverBorderColor: '#fff',
+    }] },
     options: {
       plugins: {
         legend: { position: 'right', labels: { boxWidth: 12, padding: 10 } },
@@ -396,7 +401,7 @@ function init(key) {
   }
   switch (key) {
     case 'js-accounts':    charts[key] = monthlyBar('chart-js-accounts', D.newJobseekers); break;
-    case 'js-sex':         charts[key] = pie('chart-js-sex', D.sex.labels, D.sex.data, ['#2D4A3E', '#E8A8A8']); break;
+    case 'js-sex':         charts[key] = pie('chart-js-sex', D.sex.labels, D.sex.data, ['#3B82F6', '#E8A8A8']); break;
     case 'js-age':         charts[key] = barV('chart-js-age', D.age.labels, D.age.data, '#5BA3A0'); break;
     case 'js-civil':       charts[key] = pie('chart-js-civil', D.civil.labels, D.civil.data); break;
     case 'js-edu':         charts[key] = barH('chart-js-edu', D.edu.labels, D.edu.data, '#2D4A3E'); break;
