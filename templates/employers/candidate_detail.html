@@ -97,11 +97,10 @@
         </button>
       </form>
 
-      {# Message + Gmail buttons. Only surfaced once the employer has clicked  #}
-      {# Proceed (status `accepted` or beyond) so the contact channel matches #}
-      {# the application lifecycle. Before Proceed there's nothing to message #}
-      {# the candidate about yet — the modal copy on Proceed sets that up.   #}
-      {% if application.status == 'accepted' or application.status == 'hire_pending' or application.status == 'hired' %}
+      {# Quick Gmail — always available whenever we have a contact email,     #}
+      {# matching the card row behavior on the Applicants/Recommended list.  #}
+      {# The in-platform Message modal below is still gated to `accepted+`   #}
+      {# since that flow presumes the applicant has been advanced.           #}
       {% with to_email=jobseeker.contact_email|default:jobseeker.user.email %}
       {% if to_email %}
       <!-- Quick Gmail -->
@@ -117,6 +116,9 @@
       {% endif %}
       {% endwith %}
 
+      {# In-platform Message modal — gated to accepted+ because the modal    #}
+      {# copy assumes the applicant has been advanced past the initial pool. #}
+      {% if application.status == 'accepted' or application.status == 'hire_pending' or application.status == 'hired' %}
       <!-- Message (Contact via EasyHire modal) -->
       <button type="button" onclick="openContactModal()"
               class="bg-amber text-white text-sm font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition">
@@ -791,7 +793,7 @@ ${buildSignature()}`;
         "You may send them requirements, arrange interviews, or send an invitation to be hired.";
       const confirmTexts = {
         accept:      { title: 'Proceed with this application?', body: proceedBody, cta: 'Yes, proceed', cls: 'bg-teal hover:bg-teal/90' },
-        reject:      { title: 'Reject this application?', body: 'This is terminal — the applicant cannot be revived.', cta: 'Yes, reject', cls: 'bg-red-500 hover:bg-red-600' },
+        reject:      { title: 'Reject this application?', body: 'This is terminal — the application cannot be revived.', cta: 'Yes, reject', cls: 'bg-red-500 hover:bg-red-600' },
         hire:        { title: 'Send a hire offer?',       body: "The jobseeker will get a notification with Accept / Decline buttons. The slot decrement + work-experience entry only happen once they accept.", cta: 'Yes, send offer', cls: 'bg-teal hover:bg-teal/90' },
         cancel_hire: { title: 'Cancel the hire offer?',   body: 'The offer disappears from the jobseeker’s notifications and the application goes back to In Progress.', cta: 'Yes, cancel offer', cls: 'bg-amber hover:bg-amber/90' },
       };
