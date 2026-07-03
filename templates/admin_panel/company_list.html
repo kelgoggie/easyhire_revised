@@ -10,6 +10,8 @@
     <form method="GET" action="/admin-panel/companies/" class="flex-1 max-w-md">
       <input type="hidden" name="sort" value="{{ sort }}">
       <input type="hidden" name="tab"  value="{{ tab }}">
+      {% if type_filter %}<input type="hidden" name="type" value="{{ type_filter }}">{% endif %}
+      {% if natures_selected %}<input type="hidden" name="nature" value="{{ natures_selected|join:',' }}">{% endif %}
       <div class="relative">
         <input type="text" name="q" value="{{ search }}" placeholder="Search Companies..."
                class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
@@ -27,19 +29,75 @@
   {# representative user has been disabled.                                #}
   <div class="flex items-center justify-between gap-4 mb-6 flex-wrap">
     <div class="flex items-center gap-1.5">
-      <a href="?tab=all{% if search %}&q={{ search }}{% endif %}&sort={{ sort }}"
+      <a href="?tab=all{% if search %}&q={{ search|urlencode }}{% endif %}&sort={{ sort }}{{ filter_qs }}"
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'all' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         All <span class="opacity-70">({{ all_count }})</span>
       </a>
-      <a href="?tab=deactivated{% if search %}&q={{ search }}{% endif %}&sort={{ sort }}"
+      <a href="?tab=deactivated{% if search %}&q={{ search|urlencode }}{% endif %}&sort={{ sort }}{{ filter_qs }}"
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'deactivated' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         Deactivated <span class="opacity-70">({{ deactivated_count }})</span>
       </a>
-      <a href="?tab=unverified{% if search %}&q={{ search }}{% endif %}&sort={{ sort }}"
+      <a href="?tab=unverified{% if search %}&q={{ search|urlencode }}{% endif %}&sort={{ sort }}{{ filter_qs }}"
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'unverified' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         Unverified <span class="opacity-70">({{ unverified_count }})</span>
       </a>
     </div>
+
+    <div class="flex items-center gap-5">
+      {# Filters — chip panel. Type is single-select (Local/Overseas/BPO);   #}
+      {# Nature is multi-select from distinct DB values.                     #}
+      <div class="relative" id="filters-wrapper">
+        <button type="button" onclick="document.getElementById('filters-panel').classList.toggle('hidden')"
+                class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+          </svg>
+          <span>Filters</span>
+          {% if has_filters %}
+          <span class="bg-teal/10 text-teal text-[10px] font-semibold w-2 h-2 rounded-full">&nbsp;</span>
+          {% endif %}
+        </button>
+        <div id="filters-panel" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-80 sm:w-[26rem] p-4 max-h-[80vh] overflow-y-auto"
+             data-base="?tab={{ tab }}&sort={{ sort }}{% if search %}&q={{ search|urlencode }}{% endif %}"
+             data-type="{{ type_filter }}"
+             data-nature="{{ natures_selected|join:',' }}">
+
+          <div class="mb-3">
+            <p class="text-muted text-xs font-medium mb-1.5">Type of company</p>
+            <div class="flex flex-wrap gap-1.5">
+              {% for t in type_choices %}
+              <button type="button" data-filter="type" data-value="{{ t.code }}"
+                      class="filter-chip px-3 py-1 rounded-full text-xs font-semibold transition border
+                             {% if t.code == type_filter %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                {{ t.label }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+
+          {% if nature_choices %}
+          <div class="mb-3">
+            <p class="text-muted text-xs font-medium mb-1.5">Nature of company</p>
+            <div class="flex flex-wrap gap-1.5">
+              {% for n in nature_choices %}
+              <button type="button" data-filter="nature" data-value="{{ n.code }}"
+                      class="filter-chip px-3 py-1 rounded-full text-xs font-semibold transition border
+                             {% if n.code in natures_selected %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                {{ n.label }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="pt-3 border-t border-gray-100 flex justify-end">
+            <a href="?tab={{ tab }}&sort={{ sort }}{% if search %}&q={{ search|urlencode }}{% endif %}"
+               class="text-muted text-xs font-semibold hover:text-primary transition {% if not has_filters %}opacity-40 pointer-events-none{% endif %}">
+              Clear all filters
+            </a>
+          </div>
+        </div>
+      </div>
 
     <div class="relative" id="sort-wrapper">
       <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
@@ -54,12 +112,13 @@
         </span>
       </button>
       <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
-        <a href="?sort=newest&tab={{ tab }}&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort != 'oldest' and sort != 'name_az' and sort != 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest first</a>
-        <a href="?sort=oldest&tab={{ tab }}&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
-        <a href="?sort=name_az&tab={{ tab }}&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
-        <a href="?sort=name_za&tab={{ tab }}&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
+        <a href="?sort=newest&tab={{ tab }}&q={{ search|urlencode }}{{ filter_qs }}"  class="block px-4 py-2 text-sm {% if sort != 'oldest' and sort != 'name_az' and sort != 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest first</a>
+        <a href="?sort=oldest&tab={{ tab }}&q={{ search|urlencode }}{{ filter_qs }}"  class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
+        <a href="?sort=name_az&tab={{ tab }}&q={{ search|urlencode }}{{ filter_qs }}" class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
+        <a href="?sort=name_za&tab={{ tab }}&q={{ search|urlencode }}{{ filter_qs }}" class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
       </div>
     </div>
+    </div>{# /flex items-center gap-5 (Filters + Sort) #}
   </div>
 
   {% csrf_token %}
@@ -153,7 +212,8 @@
   {% include "partials/_pagination.html" %}
   {% else %}
   <div class="border border-gray-200 rounded-2xl p-12 text-center text-muted text-sm">
-    {% if search %}No companies match &ldquo;{{ search }}&rdquo;.
+    {% if search %}No companies match &ldquo;{{ search }}&rdquo;{% if has_filters %} with the current filters{% endif %}.
+    {% elif has_filters %}No companies match the current filters.
     {% elif tab == 'deactivated' %}No deactivated companies.
     {% elif tab == 'unverified' %}No unverified companies — every registered company has been approved.
     {% else %}No companies yet.{% endif %}
@@ -222,10 +282,44 @@ function confirmEnableCompany(hashId, name) {
 document.addEventListener('click', function(e) {
   const w = document.getElementById('sort-wrapper');
   if (w && !w.contains(e.target)) document.getElementById('sort-menu').classList.add('hidden');
+  const fw = document.getElementById('filters-wrapper');
+  if (fw && !fw.contains(e.target)) document.getElementById('filters-panel').classList.add('hidden');
   if (!e.target.closest('[id^="company-menu-"]') && !e.target.closest('button[onclick^="event.preventDefault(); event.stopPropagation(); toggleCompanyMenu"]')) {
     document.querySelectorAll('[id^="company-menu-"]').forEach(function(m) { m.classList.add('hidden'); });
   }
 });
+
+// ── Filter chip click → build URL and navigate ─────────────────────
+(function() {
+  const panel = document.getElementById('filters-panel');
+  if (!panel) return;
+  const base = panel.dataset.base || '?';
+  const state = {
+    type:   panel.dataset.type   || '',
+    nature: (panel.dataset.nature || '').split(',').filter(Boolean),
+  };
+
+  function buildUrl() {
+    let url = base;
+    if (state.type)          url += '&type=' + encodeURIComponent(state.type);
+    if (state.nature.length) url += '&nature=' + state.nature.map(encodeURIComponent).join(',');
+    return url;
+  }
+
+  panel.querySelectorAll('.filter-chip').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const kind  = btn.dataset.filter;
+      const value = btn.dataset.value;
+      if (kind === 'type') {
+        state.type = (state.type === value) ? '' : value;
+      } else if (kind === 'nature') {
+        const i = state.nature.indexOf(value);
+        if (i === -1) state.nature.push(value); else state.nature.splice(i, 1);
+      }
+      window.location.href = buildUrl();
+    });
+  });
+})();
 </script>
 {% endblock %}
 {% endwith %}

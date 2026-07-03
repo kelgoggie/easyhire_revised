@@ -329,13 +329,34 @@ def _notify_company_reps_of_verification(company, new_status, rejection_note):
 def jobseeker_list(request):
     from django.core.paginator import Paginator
     from django.db.models import Q, Prefetch
-    from apps.jobseekers.models import JobseekerProfile, Skill, Education
+    from apps.jobseekers.models import JobseekerProfile, Skill, Education, Sector
 
     search = (request.GET.get('q') or '').strip()
     sort   = (request.GET.get('sort') or 'newest').strip()
     tab    = (request.GET.get('tab')  or 'all').strip()
     if tab not in {'all', 'deactivated', 'unverified'}:
         tab = 'all'
+
+    # ── Filter params ─────────────────────────────────────────────
+    # Sex is single-select; the rest are multi-select CSV so the URL stays
+    # short and mirrors the chip-panel pattern from recommended_jobs.
+    sex_filter = (request.GET.get('sex') or '').strip().upper()
+    if sex_filter not in {'M', 'F'}:
+        sex_filter = ''
+
+    def _csv(name):
+        raw = (request.GET.get(name) or '').strip()
+        return [x for x in (v.strip() for v in raw.split(',')) if x]
+
+    sector_codes    = _csv('sectors')
+    edu_levels      = _csv('edu')
+    cities_selected = _csv('city')
+
+    valid_sector_codes = {c for c, _ in Sector.SECTOR_CHOICES}
+    sector_codes = [s for s in sector_codes if s in valid_sector_codes]
+
+    valid_edu_levels = {c for c, _ in Education.LEVELS}
+    edu_levels = [e for e in edu_levels if e in valid_edu_levels]
 
     qs = (JobseekerProfile.objects
           .select_related('user')
@@ -353,6 +374,18 @@ def jobseeker_list(request):
             Q(last_name__icontains=search)  |
             Q(user__email__icontains=search)
         )
+
+    # Apply chip filters BEFORE the tab counts so badge totals reflect the
+    # currently active filter set — admins expect "All (12)" to mean "12
+    # matching my search + filters".
+    if sex_filter:
+        qs = qs.filter(sex=sex_filter)
+    if sector_codes:
+        qs = qs.filter(sectors__code__in=sector_codes).distinct()
+    if edu_levels:
+        qs = qs.filter(educations__level__in=edu_levels).distinct()
+    if cities_selected:
+        qs = qs.filter(city_municipality__in=cities_selected)
 
     deactivated_count = qs.filter(user__is_active=False).count()
     unverified_count  = qs.exclude(user__emailaddress__verified=True).count()
@@ -372,6 +405,31 @@ def jobseeker_list(request):
     paginator = Paginator(qs, 24)
     page = paginator.get_page(request.GET.get('page') or 1)
 
+    # Chip-choice sources for the template. City list is dynamic — pulled
+    # from actual DB rows so we don't offer "Iloilo City" when nobody's
+    # from there yet.
+    sector_choices = [{'code': c, 'label': l} for c, l in Sector.SECTOR_CHOICES]
+    edu_choices    = [{'code': c, 'label': l} for c, l in Education.LEVELS]
+    cities_present = list(
+        JobseekerProfile.objects
+        .exclude(city_municipality='')
+        .values_list('city_municipality', flat=True)
+        .distinct()
+        .order_by('city_municipality')
+    )
+    city_choices = [{'code': c, 'label': c} for c in cities_present]
+
+    # `filter_qs` is a URL fragment ("&sex=M&sectors=pwd,...") the template
+    # appends to tab/sort links so switching one axis doesn't reset the
+    # filter panel. Empty when no filter is active.
+    from urllib.parse import urlencode
+    _fp = {}
+    if sex_filter:      _fp['sex']     = sex_filter
+    if sector_codes:    _fp['sectors'] = ','.join(sector_codes)
+    if edu_levels:      _fp['edu']     = ','.join(edu_levels)
+    if cities_selected: _fp['city']    = ','.join(cities_selected)
+    filter_qs = ('&' + urlencode(_fp)) if _fp else ''
+
     ctx = _admin_context(request)
     ctx.update({
         'page':              page,
@@ -382,6 +440,15 @@ def jobseeker_list(request):
         'deactivated_count': deactivated_count,
         'unverified_count':  unverified_count,
         'qs_base':           querystring_without(request, 'page'),
+        'sex_filter':        sex_filter,
+        'sector_codes':      sector_codes,
+        'edu_levels':        edu_levels,
+        'cities_selected':   cities_selected,
+        'sector_choices':    sector_choices,
+        'edu_choices':       edu_choices,
+        'city_choices':      city_choices,
+        'has_filters':       bool(_fp),
+        'filter_qs':         filter_qs,
     })
     return render(request, 'admin_panel/jobseeker_list.html', ctx)
 
@@ -655,11 +722,29 @@ def company_list(request):
     if tab not in {'all', 'deactivated', 'unverified'}:
         tab = 'all'
 
+    # ── Filter params ─────────────────────────────────────────────
+    type_filter = (request.GET.get('type') or '').strip().lower()
+    valid_types = {c for c, _ in Company.COMPANY_TYPE_CHOICES}
+    if type_filter not in valid_types:
+        type_filter = ''
+
+    def _csv(name):
+        raw = (request.GET.get(name) or '').strip()
+        return [x for x in (v.strip() for v in raw.split(',')) if x]
+
+    natures_selected = _csv('nature')
+
     qs = Company.objects.all()
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(company_email__icontains=search))
 
-    # Counts before the tab filter so pills reflect real bucket totals.
+    if type_filter:
+        qs = qs.filter(type_of_company=type_filter)
+    if natures_selected:
+        qs = qs.filter(nature_of_company__in=natures_selected)
+
+    # Counts before the tab filter so pills reflect real bucket totals
+    # under the current search + filter set.
     all_count         = qs.count()
     deactivated_count = qs.filter(representatives__user__is_active=False).distinct().count()
     unverified_count  = qs.exclude(verification_status=Company.VERIFIED).count()
@@ -678,6 +763,22 @@ def company_list(request):
     paginator = Paginator(qs, 24)
     page = paginator.get_page(request.GET.get('page') or 1)
 
+    type_choices   = [{'code': c, 'label': l} for c, l in Company.COMPANY_TYPE_CHOICES]
+    natures_present = list(
+        Company.objects
+        .exclude(nature_of_company='')
+        .values_list('nature_of_company', flat=True)
+        .distinct()
+        .order_by('nature_of_company')
+    )
+    nature_choices = [{'code': n, 'label': n} for n in natures_present]
+
+    from urllib.parse import urlencode
+    _fp = {}
+    if type_filter:      _fp['type']   = type_filter
+    if natures_selected: _fp['nature'] = ','.join(natures_selected)
+    filter_qs = ('&' + urlencode(_fp)) if _fp else ''
+
     ctx = _admin_context(request)
     ctx.update({
         'page':              page,
@@ -688,6 +789,12 @@ def company_list(request):
         'deactivated_count': deactivated_count,
         'unverified_count':  unverified_count,
         'qs_base':           querystring_without(request, 'page'),
+        'type_filter':       type_filter,
+        'natures_selected':  natures_selected,
+        'type_choices':      type_choices,
+        'nature_choices':    nature_choices,
+        'has_filters':       bool(_fp),
+        'filter_qs':         filter_qs,
     })
     return render(request, 'admin_panel/company_list.html', ctx)
 

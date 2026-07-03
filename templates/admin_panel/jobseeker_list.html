@@ -11,6 +11,11 @@
     <form method="GET" action="/admin-panel/jobseekers/" class="flex-1 max-w-md">
       <input type="hidden" name="sort" value="{{ sort }}">
       <input type="hidden" name="tab"  value="{{ tab }}">
+      {# Keep filter state alive when submitting a new search. #}
+      {% if sex_filter %}<input type="hidden" name="sex" value="{{ sex_filter }}">{% endif %}
+      {% if sector_codes %}<input type="hidden" name="sectors" value="{{ sector_codes|join:',' }}">{% endif %}
+      {% if edu_levels %}<input type="hidden" name="edu" value="{{ edu_levels|join:',' }}">{% endif %}
+      {% if cities_selected %}<input type="hidden" name="city" value="{{ cities_selected|join:',' }}">{% endif %}
       <div class="relative">
         <input type="text" name="q" value="{{ search }}" placeholder="Search Jobseekers..."
                class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
@@ -25,19 +30,108 @@
   <!-- Tabs + Sort -->
   <div class="flex items-center justify-between gap-4 mb-6 flex-wrap">
     <div class="flex items-center gap-1.5">
-      <a href="?tab=all{% if search %}&q={{ search }}{% endif %}&sort={{ sort }}"
+      <a href="?tab=all{% if search %}&q={{ search|urlencode }}{% endif %}&sort={{ sort }}{{ filter_qs }}"
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'all' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         All <span class="opacity-70">({{ all_count }})</span>
       </a>
-      <a href="?tab=deactivated{% if search %}&q={{ search }}{% endif %}&sort={{ sort }}"
+      <a href="?tab=deactivated{% if search %}&q={{ search|urlencode }}{% endif %}&sort={{ sort }}{{ filter_qs }}"
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'deactivated' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         Deactivated <span class="opacity-70">({{ deactivated_count }})</span>
       </a>
-      <a href="?tab=unverified{% if search %}&q={{ search }}{% endif %}&sort={{ sort }}"
+      <a href="?tab=unverified{% if search %}&q={{ search|urlencode }}{% endif %}&sort={{ sort }}{{ filter_qs }}"
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'unverified' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         Unverified <span class="opacity-70">({{ unverified_count }})</span>
       </a>
     </div>
+
+    <div class="flex items-center gap-5">
+      {# Filters — chip panel. Multi-select on Sectors/Education/City,       #}
+      {# single-select on Sex. Chips are anchor links so no JS state is      #}
+      {# needed; each click builds a URL that toggles the selected value.    #}
+      <div class="relative" id="filters-wrapper">
+        <button type="button" onclick="document.getElementById('filters-panel').classList.toggle('hidden')"
+                class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+          </svg>
+          <span>Filters</span>
+          {% if has_filters %}
+          <span class="bg-teal/10 text-teal text-[10px] font-semibold w-2 h-2 rounded-full">&nbsp;</span>
+          {% endif %}
+        </button>
+        <div id="filters-panel" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-80 sm:w-[26rem] p-4 max-h-[80vh] overflow-y-auto"
+             data-base="?tab={{ tab }}&sort={{ sort }}{% if search %}&q={{ search|urlencode }}{% endif %}"
+             data-sex="{{ sex_filter }}"
+             data-sectors="{{ sector_codes|join:',' }}"
+             data-edu="{{ edu_levels|join:',' }}"
+             data-city="{{ cities_selected|join:',' }}">
+
+          {# Sex — single-select. Clicking the active chip clears it. #}
+          <div class="mb-3">
+            <p class="text-muted text-xs font-medium mb-1.5">Sex</p>
+            <div class="flex flex-wrap gap-1.5" id="sex-chips">
+              <button type="button" data-filter="sex" data-value="M"
+                      class="filter-chip px-3 py-1 rounded-full text-xs font-semibold transition border
+                             {% if sex_filter == 'M' %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                Male
+              </button>
+              <button type="button" data-filter="sex" data-value="F"
+                      class="filter-chip px-3 py-1 rounded-full text-xs font-semibold transition border
+                             {% if sex_filter == 'F' %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                Female
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <p class="text-muted text-xs font-medium mb-1.5">Sectors</p>
+            <div class="flex flex-wrap gap-1.5">
+              {% for s in sector_choices %}
+              <button type="button" data-filter="sectors" data-value="{{ s.code }}"
+                      class="filter-chip px-3 py-1 rounded-full text-xs font-semibold transition border
+                             {% if s.code in sector_codes %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                {{ s.label }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <p class="text-muted text-xs font-medium mb-1.5">Education level</p>
+            <div class="flex flex-wrap gap-1.5">
+              {% for e in edu_choices %}
+              <button type="button" data-filter="edu" data-value="{{ e.code }}"
+                      class="filter-chip px-3 py-1 rounded-full text-xs font-semibold transition border
+                             {% if e.code in edu_levels %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                {{ e.label }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+
+          {% if city_choices %}
+          <div class="mb-3">
+            <p class="text-muted text-xs font-medium mb-1.5">City</p>
+            <div class="flex flex-wrap gap-1.5">
+              {% for c in city_choices %}
+              <button type="button" data-filter="city" data-value="{{ c.code }}"
+                      class="filter-chip px-3 py-1 rounded-full text-xs font-semibold transition border
+                             {% if c.code in cities_selected %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                {{ c.label }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="pt-3 border-t border-gray-100 flex justify-end">
+            <a href="?tab={{ tab }}&sort={{ sort }}{% if search %}&q={{ search|urlencode }}{% endif %}"
+               class="text-muted text-xs font-semibold hover:text-primary transition {% if not has_filters %}opacity-40 pointer-events-none{% endif %}">
+              Clear all filters
+            </a>
+          </div>
+        </div>
+      </div>
 
     <div class="relative" id="sort-wrapper">
       <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
@@ -52,12 +146,13 @@
         </span>
       </button>
       <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
-        <a href="?sort=newest&tab={{ tab }}&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort != 'oldest' and sort != 'name_az' and sort != 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest first</a>
-        <a href="?sort=oldest&tab={{ tab }}&q={{ search }}"  class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
-        <a href="?sort=name_az&tab={{ tab }}&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
-        <a href="?sort=name_za&tab={{ tab }}&q={{ search }}" class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
+        <a href="?sort=newest&tab={{ tab }}&q={{ search|urlencode }}{{ filter_qs }}"  class="block px-4 py-2 text-sm {% if sort != 'oldest' and sort != 'name_az' and sort != 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest first</a>
+        <a href="?sort=oldest&tab={{ tab }}&q={{ search|urlencode }}{{ filter_qs }}"  class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest first</a>
+        <a href="?sort=name_az&tab={{ tab }}&q={{ search|urlencode }}{{ filter_qs }}" class="block px-4 py-2 text-sm {% if sort == 'name_az' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name A-Z</a>
+        <a href="?sort=name_za&tab={{ tab }}&q={{ search|urlencode }}{{ filter_qs }}" class="block px-4 py-2 text-sm {% if sort == 'name_za' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Name Z-A</a>
       </div>
     </div>
+    </div>{# /flex items-center gap-5 (Filters + Sort) #}
   </div>
 
   {% csrf_token %}
@@ -168,7 +263,8 @@
   {% include "partials/_pagination.html" %}
   {% else %}
   <div class="border border-gray-200 rounded-2xl p-12 text-center text-muted text-sm">
-    {% if search %}No jobseekers match &ldquo;{{ search }}&rdquo;.
+    {% if search %}No jobseekers match &ldquo;{{ search }}&rdquo;{% if has_filters %} with the current filters{% endif %}.
+    {% elif has_filters %}No jobseekers match the current filters.
     {% elif tab == 'deactivated' %}No deactivated jobseekers.
     {% elif tab == 'unverified' %}No unverified jobseekers — everyone's verified their email.
     {% else %}No jobseekers yet.{% endif %}
@@ -238,11 +334,54 @@ function confirmEnable(hashId, name) {
 document.addEventListener('click', function(e) {
   const w = document.getElementById('sort-wrapper');
   if (w && !w.contains(e.target)) document.getElementById('sort-menu').classList.add('hidden');
+  const fw = document.getElementById('filters-wrapper');
+  if (fw && !fw.contains(e.target)) document.getElementById('filters-panel').classList.add('hidden');
   // Close card menus when clicking outside.
   if (!e.target.closest('[id^="card-menu-"]') && !e.target.closest('button[onclick^="toggleCardMenu"]')) {
     document.querySelectorAll('[id^="card-menu-"]').forEach(function(m) { m.classList.add('hidden'); });
   }
 });
+
+// ── Filter chip click → build URL and navigate ─────────────────────
+(function() {
+  const panel = document.getElementById('filters-panel');
+  if (!panel) return;
+  const base    = panel.dataset.base || '?';
+  const state = {
+    sex:     panel.dataset.sex     || '',
+    sectors: (panel.dataset.sectors || '').split(',').filter(Boolean),
+    edu:     (panel.dataset.edu     || '').split(',').filter(Boolean),
+    city:    (panel.dataset.city    || '').split(',').filter(Boolean),
+  };
+
+  function toggleMulti(list, value) {
+    const i = list.indexOf(value);
+    if (i === -1) list.push(value); else list.splice(i, 1);
+  }
+
+  function buildUrl() {
+    let url = base;
+    if (state.sex) url += '&sex=' + encodeURIComponent(state.sex);
+    if (state.sectors.length) url += '&sectors=' + state.sectors.map(encodeURIComponent).join(',');
+    if (state.edu.length)     url += '&edu=' + state.edu.map(encodeURIComponent).join(',');
+    if (state.city.length)    url += '&city=' + state.city.map(encodeURIComponent).join(',');
+    return url;
+  }
+
+  panel.querySelectorAll('.filter-chip').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const kind  = btn.dataset.filter;
+      const value = btn.dataset.value;
+      if (kind === 'sex') {
+        // Single-select: clicking the active chip clears it.
+        state.sex = (state.sex === value) ? '' : value;
+      } else if (state[kind]) {
+        toggleMulti(state[kind], value);
+      }
+      window.location.href = buildUrl();
+    });
+  });
+})();
 </script>
 {% endblock %}
 {% endwith %}
