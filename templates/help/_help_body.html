@@ -1,4 +1,4 @@
-{% load static %}
+{% load static match_tags %}
 {# Shared help body used by both the jobseeker and employer /help/ pages.  #}
 {# Content is DB-backed (apps.admin_panel.models.FAQ, edited via           #}
 {# /admin-panel/faqs/) so PESO staff can update it without a code change.  #}
@@ -9,6 +9,48 @@
   <p class="text-muted text-sm mb-8">
     Common questions about using EasyHire. If you can't find what you're looking for, reach out to PESO Iloilo City below.
   </p>
+
+  {# Match-tier legend. The numeric cut-offs live in match_tags.TIERS and  #}
+  {# aren't shown here on purpose — jobseekers/employers get the gist by   #}
+  {# comparing badges rather than memorising thresholds.                   #}
+  <details class="group bg-white border border-gray-200 rounded-2xl px-5 py-3 mb-6 open:bg-surface transition">
+    <summary class="flex items-center justify-between cursor-pointer list-none gap-3">
+      <span class="text-primary font-semibold text-sm">What do the match labels mean?</span>
+      <svg class="w-4 h-4 text-muted transition-transform group-open:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </summary>
+    <div class="text-muted text-sm leading-relaxed mt-3 space-y-3">
+      <p>Every job–jobseeker pairing is scored against four things: education, skills, experience, and certifications. The label is a plain-English summary of how close that pairing lands to a full fit.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
+          <div class="flex-shrink-0 mt-0.5">{% match_badge 100 %}</div>
+          <p class="text-xs">Every requirement lines up. The strongest possible fit — nothing missing.</p>
+        </div>
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
+          <div class="flex-shrink-0 mt-0.5">{% match_badge 92 %}</div>
+          <p class="text-xs">Nearly all requirements are met, often with extra qualifications to spare.</p>
+        </div>
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
+          <div class="flex-shrink-0 mt-0.5">{% match_badge 82 %}</div>
+          <p class="text-xs">Solidly qualified across the board, with only minor gaps.</p>
+        </div>
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
+          <div class="flex-shrink-0 mt-0.5">{% match_badge 72 %}</div>
+          <p class="text-xs">Meets the essentials, but a few requirements are missing or on the thin side.</p>
+        </div>
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
+          <div class="flex-shrink-0 mt-0.5">{% match_badge 62 %}</div>
+          <p class="text-xs">Some requirements overlap — could work with training or upskilling.</p>
+        </div>
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
+          <div class="flex-shrink-0 mt-0.5">{% match_badge 30 %}</div>
+          <p class="text-xs">Only a few requirements overlap — likely not the right fit right now.</p>
+        </div>
+      </div>
+      <p class="text-xs italic">The exact thresholds behind each label are tuned by PESO Iloilo City to keep results useful.</p>
+    </div>
+  </details>
 
   <div class="space-y-2 mb-12">
     {% for faq in faqs %}

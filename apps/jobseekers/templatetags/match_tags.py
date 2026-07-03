@@ -10,7 +10,7 @@ register = template.Library()
 # up as red-alarm negatives. Jobseekers get less discouraged; employers
 # still see a distinct label + smiley for triage.
 TIERS = [
-    (98, 'Perfect Match',  'bg-green-500 text-white',                           'text-white',   'beam'),
+    (98, 'Perfect Match',  'bg-emerald-500 text-white',                         'text-white',   'beam'),
     (90, 'Great Match',    'bg-teal text-white',                                'text-white',   'smile'),
     (80, 'Good Match',     'bg-teal/15 text-teal border border-teal/30',        'text-teal',    'smile'),
     (70, 'Decent Match',   'bg-amber/15 text-amber border border-amber/30',     'text-amber',   'mild'),
