@@ -75,7 +75,16 @@ class JobseekerLoginView(View):
     def get(self, request):
         if request.user.is_authenticated:
             return redirect('/dashboard/')
-        return render(request, self.template_name)
+        # `?error=inactive` is set by the allauth override at
+        # templates/account/account_inactive.html when a disabled user
+        # tries to sign in via Google OAuth — surfaces the same red
+        # banner shown on failed email/password attempts instead of
+        # dumping them on allauth's generic "Account Inactive" page.
+        ctx = {}
+        err = (request.GET.get('error') or '').strip().lower()
+        if err in ('inactive', 'invalid_credentials', 'employer_mismatch'):
+            ctx['error'] = err
+        return render(request, self.template_name, ctx)
 
     def post(self, request):
         email = request.POST.get('email', '').strip()

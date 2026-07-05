@@ -191,6 +191,12 @@ def inbox(request):
                 'detail_body': contact.body,
                 'detail_interview_at': contact.interview_at,
                 'detail_interview_location': contact.interview_location,
+                # Delivery status — populated by notifications.email._send()
+                # only when the SMTP handoff succeeds. Rendered as a small
+                # "Sent · delivered to X" / "Delivery pending" line on the
+                # inbox row so the employer can see at a glance whether
+                # their message actually went out.
+                'delivered_to_email': contact.delivered_to_email or '',
                 'report_target_type': '',
                 'report_target_id': None,
                 'report_label': '',

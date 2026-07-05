@@ -1,5 +1,6 @@
 from django.db import models
 from apps.accounts.models import User
+from apps.core.storage import raw_media_storage
 
 
 class Company(models.Model):
@@ -145,7 +146,7 @@ class VerificationDocument(models.Model):
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="verification_docs")
     doc_type = models.CharField(max_length=50, choices=DOC_TYPE_CHOICES)
-    file = models.FileField(upload_to="employer_docs/")
+    file = models.FileField(upload_to="employer_docs/", storage=raw_media_storage)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
 

@@ -62,6 +62,24 @@
           {% if item.context and item.kind == 'announcement' %}
           <p class="text-primary text-xs font-semibold mt-1 truncate">{{ item.context }}</p>
           {% endif %}
+          {# Delivery indicator — only present on employer-side outgoing #}
+          {# EmployerContact rows. `delivered_to_email` is populated by  #}
+          {# notifications.email._send() *only* when Gmail SMTP accepts  #}
+          {# the message; blank means the send raised (check runserver   #}
+          {# terminal) or delivery is queued elsewhere.                  #}
+          {% if item.kind == 'interview' or item.kind == 'requirements' %}
+            {% if item.delivered_to_email %}
+            <p class="text-teal text-[11px] italic mt-1">
+              <svg class="inline w-3 h-3 mr-0.5 -mt-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              Delivered to {{ item.delivered_to_email }}
+            </p>
+            {% else %}
+            <p class="text-amber text-[11px] italic mt-1">
+              <svg class="inline w-3 h-3 mr-0.5 -mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Delivery pending — check the recipient's inbox or your server log.
+            </p>
+            {% endif %}
+          {% endif %}
         </button>
       </div>
 

@@ -1,5 +1,6 @@
 from django.db import models
 from apps.accounts.models import User
+from apps.core.storage import raw_media_storage
 
 
 class AuditLog(models.Model):
@@ -73,7 +74,7 @@ class ImportBatch(models.Model):
         User, on_delete=models.SET_NULL, null=True, related_name="import_batches"
     )
     import_type = models.CharField(max_length=20, choices=IMPORT_TYPE_CHOICES)
-    file = models.FileField(upload_to="imports/")
+    file = models.FileField(upload_to="imports/", storage=raw_media_storage)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
 
     # Results

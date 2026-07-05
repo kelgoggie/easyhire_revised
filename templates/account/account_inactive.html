@@ -1,0 +1,26 @@
+{% comment %}
+Overrides allauth's default account_inactive.html — reached when a user
+whose is_active=False attempts to sign in via Google OAuth. Redirects
+straight to the login page with ?error=inactive so the same red
+"Your account has been disabled" banner shown on failed email/password
+attempts is surfaced. No visible flash: the JS redirect fires before
+first paint; the meta refresh + noscript fallback exist for JS-disabled
+browsers.
+{% endcomment %}<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="0;url=/login/?error=inactive">
+  <title>Redirecting…</title>
+  <script>window.location.replace('/login/?error=inactive');</script>
+</head>
+<body>
+  <noscript>
+    <p>Your account has been disabled.
+      <a href="/login/?error=inactive">Return to sign in</a>
+      for more information, or contact
+      <a href="mailto:easyhire.admin@gmail.com">easyhire.admin@gmail.com</a>.
+    </p>
+  </noscript>
+</body>
+</html>

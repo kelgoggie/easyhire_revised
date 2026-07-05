@@ -1,5 +1,6 @@
 from django.db import models
 from apps.accounts.models import User
+from apps.core.storage import raw_media_storage
 
 
 class Sector(models.Model):
@@ -80,6 +81,7 @@ class JobseekerProfile(models.Model):
 
     # ── Optional PESO ID verification ──────────────────────────────
     id_document = models.FileField(upload_to='jobseeker_ids/', null=True, blank=True,
+        storage=raw_media_storage,
         help_text="Uploaded photo/scan of a valid Philippine government ID.")
     id_verification_status = models.CharField(
         max_length=20, choices=ID_VERIFICATION_CHOICES, default=ID_UNVERIFIED,
@@ -213,6 +215,7 @@ class PersonalInfoChangeRequest(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     sex           = models.CharField(max_length=10,  blank=True, default="")
     id_document   = models.FileField(upload_to='personal_info_ids/', null=True, blank=True,
+        storage=raw_media_storage,
         help_text="Uploaded photo/scan of a valid Philippine ID for PESO verification.")
     id_type       = models.CharField(max_length=50, blank=True, default='',
         help_text="Optional — admin notes which ID type was provided. The jobseeker no longer picks this; they just upload.")
