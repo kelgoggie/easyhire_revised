@@ -14,6 +14,7 @@ urlpatterns = [
     path('settings/', views.settings_view, name='settings'),
     path('settings/password/', views.change_password, name='change_password'),
     path('settings/deactivate/', views.deactivate_account, name='deactivate_account'),
+    path('settings/verify-id/', views.verify_id, name='verify_id'),
     path('companies/',                 views.companies_list,  name='companies_list'),
     path('companies/<hashid:pk>/',        views.company_public,  name='company_public'),
     path('companies/<hashid:pk>/follow/', views.follow_company,  name='follow_company'),

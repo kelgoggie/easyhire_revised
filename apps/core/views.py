@@ -106,8 +106,12 @@ def inbox(request):
                 'detail_interview_at': contact.interview_at,
                 'detail_interview_location': contact.interview_location,
                 'detail_company': contact.company.name,
-                'report_target_type': 'employer',
-                'report_target_id': contact.company.id,
+                # Reports on inbox messages target the specific EmployerContact
+                # (the message itself) so an admin lands on the message body
+                # in question — the sending company can still be disabled from
+                # the message viewer's quick-actions.
+                'report_target_type': 'contact',
+                'report_target_id': contact.id,
                 'report_label': f'Re: {contact.subject}',
             })
 

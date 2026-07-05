@@ -1,0 +1,108 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load static %}
+{% block title %}Message — EasyHire Admin{% endblock %}
+
+{% with active_nav="reports" %}
+{% block admin_content %}
+<div class="py-8 max-w-7xl mx-auto">
+
+  {% include "admin_panel/_report_banner.html" %}
+
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">Reported Message</h1>
+  <p class="text-muted text-sm mb-6">
+    {{ contact.get_kind_display }} sent {{ contact.sent_at|date:"F j, Y g:i A" }}.
+  </p>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <!-- Envelope -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+    <!-- Sender -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-5">
+      <div class="flex items-baseline justify-between gap-3 mb-3">
+        <h3 class="text-sm font-bold text-primary">Sender</h3>
+        <a href="/admin-panel/companies/{{ contact.company.id|hashid }}/settings/"
+           class="text-primary text-xs font-semibold hover:text-teal transition inline-flex items-center gap-1">
+          Manage company
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between gap-3">
+          <span class="text-muted">Company</span>
+          <a href="/admin-panel/companies/{{ contact.company.id|hashid }}/"
+             class="text-primary font-semibold hover:text-teal transition text-right">{{ contact.company.name }}</a>
+        </div>
+        {% if contact.sender %}
+        <div class="flex justify-between gap-3">
+          <span class="text-muted">Rep</span>
+          <span class="text-primary text-right">{{ contact.sender.email }}</span>
+        </div>
+        {% endif %}
+        {% if contact.job %}
+        <div class="flex justify-between gap-3">
+          <span class="text-muted">Regarding job</span>
+          <a href="/admin-panel/companies/{{ contact.company.id|hashid }}/jobs/{{ contact.job.id|hashid }}/"
+             class="text-primary hover:text-teal transition text-right">{{ contact.job.title }}</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recipient -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-5">
+      <div class="flex items-baseline justify-between gap-3 mb-3">
+        <h3 class="text-sm font-bold text-primary">Recipient</h3>
+        <a href="/admin-panel/jobseekers/{{ contact.recipient.id|hashid }}/settings/"
+           class="text-primary text-xs font-semibold hover:text-teal transition inline-flex items-center gap-1">
+          Manage jobseeker
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between gap-3">
+          <span class="text-muted">Name</span>
+          <a href="/admin-panel/jobseekers/{{ contact.recipient.id|hashid }}/"
+             class="text-primary font-semibold hover:text-teal transition text-right">
+            {{ contact.recipient.first_name }} {{ contact.recipient.last_name }}
+          </a>
+        </div>
+        <div class="flex justify-between gap-3">
+          <span class="text-muted">Login email</span>
+          <span class="text-primary text-right break-all">{{ contact.recipient.user.email }}</span>
+        </div>
+        {% if contact.delivered_to_email %}
+        <div class="flex justify-between gap-3">
+          <span class="text-muted">Delivered to</span>
+          <span class="text-primary text-right break-all">{{ contact.delivered_to_email }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Message body -->
+  <div class="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 mb-6">
+    <h3 class="text-sm font-bold text-primary mb-2">Subject</h3>
+    <p class="text-primary text-base mb-5">{{ contact.subject|default:"(no subject)" }}</p>
+
+    {% if contact.kind == 'interview' and contact.interview_at %}
+    <div class="bg-teal/5 border border-teal/20 rounded-xl px-4 py-3 mb-5 text-sm">
+      <p class="text-teal font-bold mb-1">Interview details</p>
+      <p class="text-primary"><strong>When:</strong> {{ contact.interview_at|date:"l, F j, Y · g:i A" }}</p>
+      {% if contact.interview_location %}
+      <p class="text-primary"><strong>Where:</strong> {{ contact.interview_location }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <h3 class="text-sm font-bold text-primary mb-2">Body</h3>
+    <p class="text-primary text-sm whitespace-pre-line leading-relaxed">{{ contact.body }}</p>
+  </div>
+
+</div>
+{% endblock %}
+{% endwith %}

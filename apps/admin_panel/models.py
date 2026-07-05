@@ -161,17 +161,26 @@ class UserReport(models.Model):
     """
     ACCOUNT_JOBSEEKER = "jobseeker"
     ACCOUNT_EMPLOYER  = "employer"
+    ACCOUNT_JOB       = "job"
+    ACCOUNT_CONTACT   = "contact"
     ACCOUNT_TYPE_CHOICES = [
         (ACCOUNT_JOBSEEKER, "Jobseeker"),
         (ACCOUNT_EMPLOYER,  "Employer"),
+        (ACCOUNT_JOB,       "Job Post"),
+        (ACCOUNT_CONTACT,   "Message"),
     ]
 
-    STATUS_OPEN     = "open"
-    STATUS_REVIEWED = "reviewed"
+    # DB values kept ("open"/"reviewed"/"dismissed") so existing rows stay
+    # valid without a data migration. Display labels renamed:
+    #   open      → "Pending"
+    #   reviewed  → "Resolved" (action was taken)
+    #   dismissed → "Dismissed" (no action needed)
+    STATUS_OPEN      = "open"       # display: "Pending"
+    STATUS_REVIEWED  = "reviewed"   # display: "Resolved"
     STATUS_DISMISSED = "dismissed"
     STATUS_CHOICES = [
-        (STATUS_OPEN,      "Open"),
-        (STATUS_REVIEWED,  "Reviewed"),
+        (STATUS_OPEN,      "Pending"),
+        (STATUS_REVIEWED,  "Resolved"),
         (STATUS_DISMISSED, "Dismissed"),
     ]
 
@@ -184,6 +193,14 @@ class UserReport(models.Model):
         'employers.Company', on_delete=models.CASCADE,
         null=True, blank=True, related_name='reports_received',
     )
+    reported_job = models.ForeignKey(
+        'jobs.JobPosting', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='reports_received',
+    )
+    reported_contact = models.ForeignKey(
+        'employers.EmployerContact', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='reports_received',
+    )
     account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES)
     description  = models.TextField(help_text="Short description of the report (e.g. 'Profanity in application message').")
     filed_by     = models.ForeignKey(
@@ -193,6 +210,8 @@ class UserReport(models.Model):
     status       = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
     created_at   = models.DateTimeField(auto_now_add=True)
     reviewed_at  = models.DateTimeField(null=True, blank=True)
+    resolution_note = models.CharField(max_length=200, blank=True, default='',
+        help_text='Short summary of the action taken — surfaced in the Notes column of the reports list.')
 
     class Meta:
         db_table = "user_reports"
@@ -207,6 +226,12 @@ class UserReport(models.Model):
             return f"{self.reported_jobseeker.first_name} {self.reported_jobseeker.last_name}"
         if self.reported_company:
             return self.reported_company.name
+        if self.reported_job:
+            # e.g. "Barista — Tsuchi Pottery Studio"
+            return f"{self.reported_job.title} — {self.reported_job.company.name}"
+        if self.reported_contact:
+            # e.g. 'Interview Schedule from Tsuchi Pottery Studio'
+            return f"{self.reported_contact.get_kind_display()} from {self.reported_contact.company.name}"
         return "Unknown"
 
     @property

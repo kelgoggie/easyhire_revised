@@ -32,6 +32,21 @@ class Sector(models.Model):
 
 
 class JobseekerProfile(models.Model):
+    # Optional PESO ID-verification flow. Jobseekers can submit a valid PH
+    # government ID to earn a "PESO Verified" badge visible to employers.
+    # Not required to use the site — parallels the Company verification
+    # workflow so employers get a consistent trust signal on either side.
+    ID_UNVERIFIED = "unverified"
+    ID_PENDING    = "pending"
+    ID_VERIFIED   = "verified"
+    ID_DENIED     = "denied"
+    ID_VERIFICATION_CHOICES = [
+        (ID_UNVERIFIED, "Unverified"),
+        (ID_PENDING,    "Pending Review"),
+        (ID_VERIFIED,   "Verified"),
+        (ID_DENIED,     "Denied"),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="jobseeker_profile")
     first_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True)
@@ -63,6 +78,22 @@ class JobseekerProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     bio = models.TextField(blank=True)
 
+    # ── Optional PESO ID verification ──────────────────────────────
+    id_document = models.FileField(upload_to='jobseeker_ids/', null=True, blank=True,
+        help_text="Uploaded photo/scan of a valid Philippine government ID.")
+    id_verification_status = models.CharField(
+        max_length=20, choices=ID_VERIFICATION_CHOICES, default=ID_UNVERIFIED,
+    )
+    id_submitted_at = models.DateTimeField(null=True, blank=True,
+        help_text="When the jobseeker submitted their ID for review.")
+    id_verified_at = models.DateTimeField(null=True, blank=True)
+    id_verified_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="verified_jobseekers",
+    )
+    id_verification_note = models.TextField(blank=True, default='',
+        help_text="Admin note attached to a Denied verification — surfaced to the jobseeker.")
+
     class Meta:
         db_table = "jobseeker_profiles"
 
@@ -73,6 +104,10 @@ class JobseekerProfile(models.Model):
     def full_name(self):
         parts = [self.first_name, self.middle_name, self.last_name, self.suffix]
         return " ".join(p for p in parts if p)
+
+    @property
+    def is_id_verified(self):
+        return self.id_verification_status == self.ID_VERIFIED
 
     def can_show_badges_to(self, company):
         """Whether this jobseeker's sector badges should be shown to a given employer.

@@ -35,6 +35,8 @@ urlpatterns = [
     path('admin-panel/settings/purge-jobs/',                              views.purge_deleted_jobs,              name='purge_deleted_jobs'),
     path('admin-panel/reports/',                                          views.report_list,                     name='report_list'),
     path('admin-panel/reports/<hashid:report_id>/review/',                   views.report_review,                   name='report_review'),
+    path('admin-panel/reports/<hashid:report_id>/action/',                   views.report_take_action,              name='report_take_action'),
+    path('admin-panel/messages/<hashid:contact_id>/',                        views.contact_detail,                  name='contact_detail'),
 
     path('admin-panel/change-requests/<hashid:request_id>/review/',          views.change_request_review,           name='change_request_review'),
 

@@ -164,6 +164,26 @@
       </button>
     </li>
     <li>
+      <a href="/settings/verify-id/"
+         class="text-primary hover:text-teal transition inline-flex items-center gap-2">
+        Verify Identity <span class="text-muted text-xs italic">(optional)</span>
+        {% if profile.id_verification_status == 'verified' %}
+        <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-teal border border-teal/30 bg-teal/10 px-2 py-0.5 rounded-full">
+          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          Verified
+        </span>
+        {% elif profile.id_verification_status == 'pending' %}
+        <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber border border-amber/30 bg-amber/10 px-2 py-0.5 rounded-full">
+          Pending
+        </span>
+        {% elif profile.id_verification_status == 'denied' %}
+        <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-red-500 border border-red-200 bg-red-50 px-2 py-0.5 rounded-full">
+          Action needed
+        </span>
+        {% endif %}
+      </a>
+    </li>
+    <li>
       <button type="button" id="open-deactivate-modal"
               class="text-primary hover:text-teal transition text-left">
         Deactivate Account

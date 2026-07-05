@@ -7,12 +7,40 @@
 {% block page_content %}
 <div class="py-8">
 
-  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-1">Verification</h1>
-  <p class="text-muted text-sm mb-6">
+  {# Header pattern matches dashboard.html / settings.html: h1 + subtitle,   #}
+  {# no border-b divider (which was an outlier vs the rest of the site).    #}
+  <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-primary mb-3">Verification</h1>
+  <p class="text-muted text-sm mb-8">
     Submit your business documents so PESO Iloilo City can verify
     <strong class="text-primary">{{ company.name }}</strong> as an employer on EasyHire.
   </p>
-  <div class="border-b border-taupe/40 mb-6"></div>
+
+  {# One-shot confirmation right after the "Submit for Verification" click. #}
+  {% if verification_submitted_msg %}
+  <div class="mb-6 bg-teal/10 border border-teal/30 rounded-2xl px-5 py-4 flex items-start gap-3">
+    <svg class="w-5 h-5 text-teal flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+    </svg>
+    <div class="flex-1">
+      <p class="text-teal font-bold text-sm">Documents submitted for review</p>
+      <p class="text-muted text-xs mt-0.5">{{ verification_submitted_msg }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Server-side upload rejection (e.g. file too big). Flash-message from #}
+  {# `upload_document` → drained by the pending view.                     #}
+  {% if upload_error_msg %}
+  <div class="mb-6 bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+    <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z"/>
+    </svg>
+    <div class="flex-1">
+      <p class="text-red-500 font-bold text-sm">Upload rejected</p>
+      <p class="text-muted text-xs mt-0.5">{{ upload_error_msg }}</p>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- ── Status banner ──────────────────────────────────────────── -->
   {% if company.verification_status == 'verified' %}
@@ -38,7 +66,7 @@
       {% if company.rejection_note %}
       <p class="text-muted text-xs mt-1"><strong class="text-primary">Reason:</strong> {{ company.rejection_note }}</p>
       {% endif %}
-      <p class="text-muted text-xs mt-1">Please re-upload the required documents below — saving any new file resubmits your application automatically.</p>
+      <p class="text-muted text-xs mt-1">Please re-upload the required documents below, then click <strong class="text-primary">Submit for Verification</strong> at the bottom to send your updated set back to PESO.</p>
     </div>
   </div>
   {% elif company.verification_status == 'pending' %}
@@ -120,9 +148,30 @@
     {% endif %}
   </div>
 
-  {% if all_uploaded and company.verification_status == 'pending' %}
+  {# Submit control. Only appears while the employer has NOT yet pushed  #}
+  {# their docs to PESO (status = unverified / denied). Disabled until   #}
+  {# every required doc is uploaded — the server rechecks either way.    #}
+  {% if company.verification_status == 'unverified' or company.verification_status == 'verification_denied' %}
+  <form method="POST" action="/employers/submit-verification/" id="submit-verification-form" class="text-center">
+    {% csrf_token %}
+    <p class="text-muted text-xs mb-3">
+      {% if all_uploaded %}
+      All required documents are uploaded. Review them above, then submit when you're ready — PESO will start their review once you do.
+      {% else %}
+      Upload every required document above. Once all are in, this button unlocks and you can submit for PESO's review.
+      {% endif %}
+    </p>
+    <button type="button"
+            {% if all_uploaded %}
+            onclick="confirmAction({title:'Submit documents for verification?', body:'PESO Iloilo City will begin reviewing your application. You won\'t be able to replace documents once submitted (until PESO responds).', ctaLabel:'Yes, submit', ctaClass:'bg-teal hover:bg-teal/90', onConfirm:function(){document.getElementById('submit-verification-form').submit();}})"
+            {% else %}disabled{% endif %}
+            class="bg-teal text-white text-sm font-semibold px-10 py-3 rounded-full hover:bg-teal/90 transition disabled:opacity-40 disabled:cursor-not-allowed">
+      Submit for Verification
+    </button>
+  </form>
+  {% elif company.verification_status == 'pending' %}
   <p class="text-center text-muted text-xs italic">
-    Every required document is in. Sit tight — PESO will email you and post a notice in your inbox once they finish reviewing.
+    Submitted — PESO will email you and post a notice in your inbox once they finish reviewing (1–3 business days).
   </p>
   {% endif %}
 

@@ -1,0 +1,212 @@
+{% load hashid_tags %}
+{% comment %}
+Rendered on any admin detail page when the admin arrived via a User
+Reports row (URL carries ?report=<hashid>). Expects `active_report`
+in context — a UserReport instance or None.
+
+Two parts:
+  1. Amber urgency header row: "Back to User Reports" · reason · filer
+     info · Dismiss / Take Action buttons.
+  2. A Take Action modal whose buttons are contextual to the report's
+     scope. Each destructive button routes through confirmAction() so
+     the admin sees an explicit "are you sure" confirmation before the
+     form actually POSTs.
+
+Actions per scope:
+  - Account (jobseeker) → Disable Account
+  - Account (company)   → Disable Company
+  - Job                 → Disable Job Post · Disable Company (escalation)
+  - Message             → Disable Sender  · Disable Company (escalation)
+
+Every non-dismiss action also stores a short resolution_note on the
+report (surfaced in the reports-list Notes column) and audit-logs
+the change.
+{% endcomment %}
+{% if active_report %}
+{# Amber urgency banner — matches the "Verification Pending" and       #}
+{# upload-rejection banners used elsewhere in the site.               #}
+<div class="mb-6 bg-amber/10 border border-amber/40 rounded-2xl px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+  <a href="/admin-panel/reports/?status={{ active_report.status }}"
+     class="inline-flex items-center gap-1 text-primary text-sm font-semibold hover:text-teal transition flex-shrink-0">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back to User Reports
+  </a>
+  <div class="hidden sm:block h-4 w-px bg-amber/40"></div>
+  <div class="min-w-0 flex-1 text-xs">
+    <p class="text-primary">
+      <span class="font-semibold">Reason:</span>
+      <span class="italic">{{ active_report.description }}</span>
+    </p>
+    <p class="text-muted mt-0.5">
+      Filed by <strong class="text-primary not-italic">{{ active_report.filed_by_label }}</strong>
+      on {{ active_report.created_at|date:"M j, Y g:i A" }}
+    </p>
+  </div>
+  {% if active_report.status == 'open' %}
+  <div class="flex items-center gap-2 flex-shrink-0">
+    <form method="POST" action="/admin-panel/reports/{{ active_report.id|hashid }}/action/" id="report-dismiss-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="dismiss">
+      <button type="button"
+              onclick="confirmAction({title:'Dismiss this report?', body:'The report will be closed without any changes to the reported target.', ctaLabel:'Yes, dismiss', ctaClass:'bg-primary hover:bg-teal', onConfirm:function(){document.getElementById('report-dismiss-form').submit();}})"
+              class="bg-white border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/20 transition">
+        Dismiss
+      </button>
+    </form>
+    <button type="button" id="open-report-action-modal"
+            class="bg-amber text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition">
+      Take Action
+    </button>
+  </div>
+  {% else %}
+  <span class="flex-shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full
+        {% if active_report.status == 'reviewed' %}bg-teal/15 text-teal border border-teal/30
+        {% else %}bg-gray-100 text-muted border border-gray-200{% endif %}">
+    {{ active_report.get_status_display }}
+  </span>
+  {% endif %}
+</div>
+
+{% if active_report.status == 'open' %}
+<!-- ── Take Action modal ─────────────────────────────────────────── -->
+<div id="report-action-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" data-close-report-action></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 z-10">
+    <p class="text-primary font-bold text-base mb-1">Take action on this report</p>
+    <p class="text-muted text-sm mb-1">
+      About:
+      <strong class="text-primary">{{ active_report.account_label }}</strong>
+    </p>
+    <p class="text-muted text-sm mb-4">
+      The report says:
+      <em class="text-primary not-italic">"{{ active_report.description }}"</em>
+    </p>
+
+    <p class="text-primary text-sm font-semibold mb-3">What would you like to do?</p>
+
+    <div class="space-y-2 mb-5">
+      {# Every action button below sits inside its own form so we can use  #}
+      {# confirmAction() → form.submit(). Buttons are type="button" so the #}
+      {# confirmation dialog fires *before* the POST goes out.             #}
+
+      {# ── Account (jobseeker) ─────────────────────────── #}
+      {% if active_report.reported_jobseeker %}
+      <form method="POST" action="/admin-panel/reports/{{ active_report.id|hashid }}/action/" id="rpt-act-disable-js">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="disable_jobseeker">
+        <button type="button"
+                onclick="confirmAction({title:'Disable jobseeker account?', body:'{{ active_report.reported_jobseeker.first_name|escapejs }} {{ active_report.reported_jobseeker.last_name|escapejs }} will lose access. Reversible from their admin settings. The report will be marked Resolved.', ctaLabel:'Yes, disable account', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('rpt-act-disable-js').submit();}})"
+                class="w-full text-left bg-white border border-red-200 text-red-500 rounded-xl px-4 py-3 hover:bg-red-50 transition">
+          <p class="font-bold text-sm">Disable jobseeker account</p>
+          <p class="text-xs text-muted mt-0.5">
+            <strong class="text-primary">{{ active_report.reported_jobseeker.first_name }} {{ active_report.reported_jobseeker.last_name }}</strong>
+            won't be able to log in. Their profile is hidden from employers.
+          </p>
+        </button>
+      </form>
+
+      {# ── Account (company) ───────────────────────────── #}
+      {% elif active_report.reported_company %}
+      <form method="POST" action="/admin-panel/reports/{{ active_report.id|hashid }}/action/" id="rpt-act-disable-co">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="disable_company">
+        <button type="button"
+                onclick="confirmAction({title:'Disable {{ active_report.reported_company.name|escapejs }}?', body:'Every representative of the company loses login. All their job posts stop taking applications. Reversible from the company\'s admin settings. The report will be marked Resolved.', ctaLabel:'Yes, disable company', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('rpt-act-disable-co').submit();}})"
+                class="w-full text-left bg-white border border-red-200 text-red-500 rounded-xl px-4 py-3 hover:bg-red-50 transition">
+          <p class="font-bold text-sm">Disable company</p>
+          <p class="text-xs text-muted mt-0.5">
+            Every rep of <strong class="text-primary">{{ active_report.reported_company.name }}</strong>
+            loses login. All their job posts stop taking applications.
+          </p>
+        </button>
+      </form>
+
+      {# ── Job ─────────────────────────────────────────── #}
+      {% elif active_report.reported_job %}
+      <form method="POST" action="/admin-panel/reports/{{ active_report.id|hashid }}/action/" id="rpt-act-disable-job">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="disable_job">
+        <button type="button"
+                onclick="confirmAction({title:'Disable this job posting?', body:'&quot;{{ active_report.reported_job.title|escapejs }}&quot; will disappear from public listings and matching. {{ active_report.reported_job.company.name|escapejs }} stays functional. Reversible. The report will be marked Resolved.', ctaLabel:'Yes, disable job', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('rpt-act-disable-job').submit();}})"
+                class="w-full text-left bg-white border border-red-200 text-red-500 rounded-xl px-4 py-3 hover:bg-red-50 transition">
+          <p class="font-bold text-sm">Disable this job posting</p>
+          <p class="text-xs text-muted mt-0.5">
+            <strong class="text-primary">{{ active_report.reported_job.title }}</strong>
+            disappears from public listings + matching. {{ active_report.reported_job.company.name }} stays functional and their other jobs are unaffected.
+          </p>
+        </button>
+      </form>
+      <form method="POST" action="/admin-panel/reports/{{ active_report.id|hashid }}/action/" id="rpt-act-disable-co-of-job">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="disable_company_of_job">
+        <button type="button"
+                onclick="confirmAction({title:'Escalate — Disable {{ active_report.reported_job.company.name|escapejs }} entirely?', body:'ALL reps of the company lose access. EVERY job post they own stops taking applications. Reserve this for systemic bad actors. The report will be marked Resolved.', ctaLabel:'Yes, disable whole company', ctaClass:'bg-red-600 hover:bg-red-700', onConfirm:function(){document.getElementById('rpt-act-disable-co-of-job').submit();}})"
+                class="w-full text-left bg-red-50 border border-red-300 text-red-600 rounded-xl px-4 py-3 hover:bg-red-100 transition">
+          <p class="font-bold text-sm">Escalate — Disable the whole company</p>
+          <p class="text-xs text-muted mt-0.5">
+            <strong class="text-primary">{{ active_report.reported_job.company.name }}</strong>
+            is shut down entirely. All reps lose access; every job stops. Reserve for systemic bad actors.
+          </p>
+        </button>
+      </form>
+
+      {# ── Message ─────────────────────────────────────── #}
+      {% elif active_report.reported_contact %}
+      <form method="POST" action="/admin-panel/reports/{{ active_report.id|hashid }}/action/" id="rpt-act-disable-sender">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="disable_sender">
+        <button type="button"
+                onclick="confirmAction({title:'Disable the sender?', body:'The rep who sent this message loses login. Other {{ active_report.reported_contact.company.name|escapejs }} reps can still work. The report will be marked Resolved.', ctaLabel:'Yes, disable sender', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('rpt-act-disable-sender').submit();}})"
+                class="w-full text-left bg-white border border-red-200 text-red-500 rounded-xl px-4 py-3 hover:bg-red-50 transition">
+          <p class="font-bold text-sm">Disable the sender's account</p>
+          <p class="text-xs text-muted mt-0.5">
+            The rep who sent this message
+            {% if active_report.reported_contact.sender %}
+            (<strong class="text-primary">{{ active_report.reported_contact.sender.email }}</strong>)
+            {% endif %}
+            loses login. Other {{ active_report.reported_contact.company.name }} reps can still work.
+          </p>
+        </button>
+      </form>
+      <form method="POST" action="/admin-panel/reports/{{ active_report.id|hashid }}/action/" id="rpt-act-disable-co-of-contact">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="disable_company_of_contact">
+        <button type="button"
+                onclick="confirmAction({title:'Escalate — Disable {{ active_report.reported_contact.company.name|escapejs }} entirely?', body:'ALL reps of the company lose access. EVERY job post they own stops taking applications. Reserve this for systemic bad actors. The report will be marked Resolved.', ctaLabel:'Yes, disable whole company', ctaClass:'bg-red-600 hover:bg-red-700', onConfirm:function(){document.getElementById('rpt-act-disable-co-of-contact').submit();}})"
+                class="w-full text-left bg-red-50 border border-red-300 text-red-600 rounded-xl px-4 py-3 hover:bg-red-100 transition">
+          <p class="font-bold text-sm">Escalate — Disable the whole company</p>
+          <p class="text-xs text-muted mt-0.5">
+            <strong class="text-primary">{{ active_report.reported_contact.company.name }}</strong>
+            is shut down entirely. All reps lose access; every job stops. Reserve for systemic bad actors.
+          </p>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="flex justify-end">
+      <button type="button" data-close-report-action
+              class="bg-gray-100 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const modal = document.getElementById('report-action-modal');
+  const openBtn = document.getElementById('open-report-action-modal');
+  if (!modal || !openBtn) return;
+  function show() { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  function hide() { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  openBtn.addEventListener('click', show);
+  modal.querySelectorAll('[data-close-report-action]').forEach(function(el) {
+    el.addEventListener('click', hide);
+  });
+})();
+</script>
+{% endif %}
+{% endif %}

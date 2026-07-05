@@ -222,11 +222,19 @@ def parse_resume_pdf(request):
         }, status=400)
 
     from apps.jobseekers.resume_parser import parse_resume
-    # Build the known-skills list from existing Skill rows so matching reflects
-    # what other jobseekers have already entered. Cap to keep the loop tight.
-    known_skills = list(
-        Skill.objects.values_list('name', flat=True).distinct()[:2000]
-    )
+    from apps.jobseekers.skill_vocab import COMMON_SKILLS
+    # Union the hand-curated starter vocab (common PH job skills — office,
+    # trades, healthcare, tech, etc.) with whatever jobseekers have already
+    # typed. Case-insensitive dedupe so we don't double-count "Excel" and
+    # "excel". Cap to keep the whole-word regex loop tight.
+    seen = set()
+    known_skills = []
+    for name in COMMON_SKILLS + list(Skill.objects.values_list('name', flat=True).distinct()[:2000]):
+        low = (name or '').strip().lower()
+        if low and low not in seen:
+            seen.add(low)
+            known_skills.append(name.strip())
+    known_skills = known_skills[:2500]
 
     try:
         result = parse_resume(upload.read(), known_skills=known_skills)
@@ -502,6 +510,60 @@ def follow_company(request, pk):
         following = True
     followers_count = company.followers.count() if hasattr(company, 'followers') else 0
     return JsonResponse({'ok': True, 'following': following, 'followers_count': followers_count})
+
+
+@login_required
+def verify_id(request):
+    """Optional PESO ID-verification submission for jobseekers.
+
+    Submitting a valid PH government ID moves the profile into `pending`
+    review. A PESO admin reviews from the admin panel and approves or
+    denies. Approved profiles show a "PESO Verified" badge to employers.
+
+    Not required to use the site — jobseekers can browse, apply, and be
+    hired without it. The badge is a trust signal, not a gate.
+    """
+    if not request.user.is_jobseeker:
+        return redirect('/employers/dashboard/')
+    try:
+        profile = request.user.jobseeker_profile
+    except JobseekerProfile.DoesNotExist:
+        return redirect('/register/info/')
+
+    error = None
+    saved = False
+
+    if request.method == 'POST':
+        # Reject re-submission while a review is already in progress.
+        if profile.id_verification_status == JobseekerProfile.ID_PENDING:
+            error = 'Your previous submission is still under review.'
+        else:
+            id_doc = request.FILES.get('id_document')
+            if not id_doc:
+                error = 'Please choose a file to upload.'
+            elif id_doc.size > 10 * 1024 * 1024:
+                error = 'File is larger than 10 MB — please choose a smaller image or PDF.'
+            else:
+                from django.utils import timezone
+                profile.id_document = id_doc
+                profile.id_verification_status = JobseekerProfile.ID_PENDING
+                profile.id_submitted_at = timezone.now()
+                profile.id_verification_note = ''
+                profile.id_verified_at = None
+                profile.id_verified_by = None
+                profile.save(update_fields=[
+                    'id_document', 'id_verification_status',
+                    'id_submitted_at', 'id_verification_note',
+                    'id_verified_at', 'id_verified_by',
+                ])
+                saved = True
+
+    return render(request, 'jobseekers/verify_id.html', {
+        'profile': profile,
+        'valid_ph_ids': VALID_PH_IDS,
+        'error': error,
+        'saved': saved,
+    })
 
 
 @login_required

@@ -275,7 +275,15 @@ def get_analytics_context(request):
 
     # ── Labor & employment ────────────────────────────────────────
     total_applications = Application.objects.count()
-    jobs_filled = Application.objects.filter(status='accepted').count()
+    # "Jobs filled" = applications that reached the terminal `hired` state,
+    # which under the two-step hire flow means BOTH the employer offered
+    # AND the jobseeker accepted. `accepted` (In Progress) is only the
+    # employer-forward half — it doesn't count as a placement.
+    jobs_filled = Application.objects.filter(status='hired').count()
+    # Placement rate — hired ÷ total applications. Rounded for display.
+    placement_rate = (
+        round(jobs_filled / total_applications * 100, 1) if total_applications else 0
+    )
 
     # Jobs by Industry — group OPEN jobs by their company's nature_of_company,
     # then roll up using the same NLP nature→industry clustering computed for
@@ -345,6 +353,7 @@ def get_analytics_context(request):
         'company_locations': company_locations,
         'total_applications': total_applications,
         'jobs_filled': jobs_filled,
+        'placement_rate': placement_rate,
         'jobs_by_industry': jobs_by_industry,
         'jobs_by_location': jobs_by_location,
         # ── New dashboard-style monthly series ─────────────────────

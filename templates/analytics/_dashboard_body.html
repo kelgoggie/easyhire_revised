@@ -33,13 +33,14 @@
         <li><a href="#js-sex" class="nav-pill" data-key="js-sex">Sex</a></li>
         <li><a href="#js-age" class="nav-pill" data-key="js-age">Age Group</a></li>
         <li><a href="#js-civil" class="nav-pill" data-key="js-civil">Civil Status</a></li>
+        <li><a href="#js-experience" class="nav-pill" data-key="js-experience">Work Experience</a></li>
         <li><a href="#js-edu" class="nav-pill" data-key="js-edu">Highest Educational Attainment</a></li>
         <li><a href="#js-location" class="nav-pill" data-key="js-location">Location</a></li>
         <li><a href="#js-sectors" class="nav-pill" data-key="js-sectors">Sectors</a></li>
       </ul>
 
       <p class="text-sm font-bold text-primary mb-1">
-        <strong>Employer</strong> <span class="font-normal text-primary/70">Demographics</span>
+        <strong>Company</strong> <span class="font-normal text-primary/70">Demographics</span>
       </p>
       <ul class="space-y-0.5 mb-4 text-sm">
         <li><a href="#emp-accounts" class="nav-pill" data-key="emp-accounts">Registered Accounts</a></li>
@@ -97,6 +98,13 @@
         <div class="chart-box flex-1"><canvas id="chart-js-civil"></canvas></div>
       </div>
 
+      <!-- ── Work Experience ──────────────────────────────────── -->
+      <div data-panel="js-experience" class="analytics-panel hidden flex-1 flex flex-col">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Work Experience</h2>
+        <p class="text-muted text-xs italic mb-4">Registered jobseekers with prior work experience on file vs. those without.</p>
+        <div class="chart-box flex-1"><canvas id="chart-js-experience"></canvas></div>
+      </div>
+
       <!-- ── Highest Educational Attainment ───────────────────── -->
       <div data-panel="js-edu" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Highest Educational Attainment</h2>
@@ -124,8 +132,8 @@
         <p class="text-muted text-xs italic mb-4">New employer accounts per month in {{ selected_year }}.</p>
         <div class="chart-box flex-1"><canvas id="chart-emp-accounts"></canvas></div>
         <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
-          <p class="text-sm text-primary">Total New Employer Accounts (This Year): <strong>{{ employers_this_year }}</strong></p>
-          <p class="text-sm text-primary">Total New Employer Accounts (All Time): <strong>{{ employers_all_time }}</strong></p>
+          <p class="text-sm text-primary">Total New Companies (This Year): <strong>{{ employers_this_year }}</strong></p>
+          <p class="text-sm text-primary">Total New Companies (All Time): <strong>{{ employers_all_time }}</strong></p>
         </div>
       </div>
 
@@ -164,11 +172,15 @@
       <!-- ── Labor: Jobs Filled ───────────────────────────────── -->
       <div data-panel="lab-filled" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Jobs Filled</h2>
-        <p class="text-muted text-xs italic mb-4">Applications marked as accepted by employers, per month in {{ selected_year }}.</p>
+        <p class="text-muted text-xs italic mb-4">Applications where the jobseeker was hired (offer sent + accepted), per month in {{ selected_year }}.</p>
         <div class="chart-box flex-1"><canvas id="chart-lab-filled"></canvas></div>
         <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
           <p class="text-sm text-primary">Total Positions Filled (This Year): <strong>{{ placements_this_year }}</strong></p>
           <p class="text-sm text-primary">Total Positions Filled (All Time): <strong>{{ placements_all_time }}</strong></p>
+          {# Placement rate — hired ÷ total applications, all-time. #}
+          <p class="text-sm text-primary">Placement Rate: <strong>{{ placement_rate }}%</strong>
+            <span class="text-muted text-xs italic">({{ jobs_filled }} hired of {{ total_applications }} applications)</span>
+          </p>
         </div>
       </div>
 
@@ -264,7 +276,8 @@ const D = {
   newEmployers:  {{ new_employers_monthly|safe }},
   apps:          {{ applications_monthly|safe }},
   placements:    {{ placements_monthly|safe }},
-  sex:       { labels: ['Male', 'Female'], data: [{{ men }}, {{ women }}] },
+  sex:        { labels: ['Male', 'Female'], data: [{{ men }}, {{ women }}] },
+  experience: { labels: ['With work experience', 'No work experience'], data: [{{ with_experience }}, {{ without_experience }}] },
   age:       { labels: {{ age_groups|safe }}.map(x => x.label),  data: {{ age_groups|safe }}.map(x => x.count) },
   civil:     { labels: [{% for x in civil_status %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                data:   [{% for x in civil_status %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
@@ -404,6 +417,7 @@ function init(key) {
     case 'js-sex':         charts[key] = pie('chart-js-sex', D.sex.labels, D.sex.data, ['#3B82F6', '#E8A8A8']); break;
     case 'js-age':         charts[key] = barV('chart-js-age', D.age.labels, D.age.data, '#5BA3A0'); break;
     case 'js-civil':       charts[key] = pie('chart-js-civil', D.civil.labels, D.civil.data); break;
+    case 'js-experience':  charts[key] = pie('chart-js-experience', D.experience.labels, D.experience.data, ['#2D4A3E', '#E8DCC4']); break;
     case 'js-edu':         charts[key] = barH('chart-js-edu', D.edu.labels, D.edu.data, '#2D4A3E'); break;
     case 'js-location':    charts[key] = barH('chart-js-location', D.jsLoc.labels, D.jsLoc.data, '#5BA3A0'); break;
     case 'js-sectors':     charts[key] = barH('chart-js-sectors', D.sectors.labels, D.sectors.data, '#E8A838'); break;

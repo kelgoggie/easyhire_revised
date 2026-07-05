@@ -1,0 +1,853 @@
+// EasyHire — Data Model (DBML)
+// -----------------------------------------------------------------
+// Paste this whole file into https://dbdiagram.io/d — it renders an
+// auto-laid-out ERD you can drag around, and export as PNG or PDF.
+//
+// 41 entities across 10 Django modules · Django 5.1 / PostgreSQL
+// -----------------------------------------------------------------
+
+Project easyhire {
+  database_type: 'PostgreSQL'
+  Note: '''
+    Job-matching platform for PESO Iloilo City.
+    Custom User (AbstractBaseUser) forks by user_type into
+    JobseekerProfile or EmployerProfile+Company. Applications and
+    Matches are the join points; nightly snapshot tables feed PESO's
+    analytics dashboards.
+  '''
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Enums
+// ═══════════════════════════════════════════════════════════════
+
+Enum user_type {
+  jobseeker
+  employer
+  admin
+}
+
+Enum sex {
+  M
+  F
+}
+
+Enum sector_code {
+  fresh_graduate
+  lgbtqia
+  osy
+  pwd
+  senior_citizen
+  solo_parent
+  tesda_graduate
+}
+
+Enum education_level {
+  elementary
+  junior_high
+  senior_high
+  vocational
+  associate
+  bachelor
+  master
+  doctorate
+}
+
+Enum info_change_status {
+  pending
+  approved
+  rejected
+}
+
+Enum job_interaction_type {
+  liked
+  hidden
+}
+
+Enum company_type {
+  local
+  overseas
+  bpo
+}
+
+Enum verification_status {
+  unverified
+  pending
+  verification_denied
+  verified
+}
+
+Enum verification_doc_type {
+  mayors_permit
+  philjobnet_accreditation
+  philjobnet_dashboard
+  job_vacancies_list
+  pea_license
+  do174_certificate
+  poea_license
+  job_order
+}
+
+Enum contact_kind {
+  requirements
+  interview
+}
+
+Enum job_location_type {
+  iloilo
+  overseas
+  remote
+}
+
+Enum job_status {
+  open
+  closed
+  draft
+}
+
+Enum application_status {
+  pending
+  viewed
+  accepted
+  rejected
+  hire_pending
+  hired
+}
+
+Enum notification_type_legacy {
+  match
+  new_job_followed
+  new_job_compatible
+  verification_approved
+  verification_denied
+  new_message
+  hide_suggestion
+}
+
+Enum notification_type_activity {
+  company_liked_you
+  jobseekers_liked_job
+  match
+  job_deleted_by_admin
+  personal_info_approved
+  personal_info_rejected
+  new_application
+  application_accepted
+  application_rejected
+  application_hired
+  employer_contacted
+  hire_offered
+  hire_accepted
+  hire_declined
+}
+
+Enum audit_action {
+  verify
+  reject
+  deactivate
+  reactivate
+  import
+  edit
+  delete
+  reset_password
+}
+
+Enum import_type {
+  jobseekers
+  companies
+}
+
+Enum import_status {
+  pending
+  processing
+  complete
+  failed
+}
+
+Enum user_report_account_type {
+  jobseeker
+  employer
+}
+
+Enum user_report_status {
+  open
+  reviewed
+  dismissed
+}
+
+Enum faq_audience {
+  jobseeker
+  employer
+  both
+}
+
+Enum announcement_audience {
+  all
+  jobseekers
+  employers
+}
+
+// ═══════════════════════════════════════════════════════════════
+// accounts
+// ═══════════════════════════════════════════════════════════════
+
+Table users {
+  id integer [pk, increment]
+  email varchar(254) [unique, not null]
+  user_type user_type [not null, default: 'jobseeker']
+  is_active boolean [not null, default: true]
+  is_staff boolean [not null, default: false]
+  consented_to_terms boolean [not null, default: false]
+  consented_at timestamp
+  is_imported boolean [not null, default: false]
+  is_claimed boolean [not null, default: false]
+  claim_token varchar(128) [unique]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  Note: 'Custom AbstractBaseUser + PermissionsMixin · USERNAME_FIELD=email'
+}
+
+// ═══════════════════════════════════════════════════════════════
+// jobseekers
+// ═══════════════════════════════════════════════════════════════
+
+Table sectors {
+  id integer [pk, increment]
+  code sector_code [unique, not null]
+  label varchar(100) [not null]
+}
+
+Table jobseeker_profiles {
+  id integer [pk, increment]
+  user_id integer [ref: - users.id, unique, not null]
+  first_name varchar(100) [not null]
+  middle_name varchar(100)
+  last_name varchar(100) [not null]
+  suffix varchar(20)
+  sex sex [not null]
+  date_of_birth date
+  civil_status varchar(30)
+  house_unit varchar(100)
+  street_barangay varchar(200) [not null]
+  city_municipality varchar(100) [not null, default: 'Iloilo City']
+  province varchar(100) [not null, default: 'Iloilo']
+  province_code varchar(20)
+  city_code varchar(20)
+  barangay_code varchar(20)
+  barangay varchar(200)
+  contact_email varchar(254)
+  phone varchar(20) [not null]
+  job_search_query varchar(255)
+  profile_complete boolean [not null, default: false]
+  profile_visibility varchar(20) [not null, default: 'public']
+  sector_badge_visibility varchar(20) [not null, default: 'public']
+  profile_picture varchar(255)
+  bio text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// M2M: JobseekerProfile.sectors <> Sector
+Table jobseeker_profile_sectors {
+  id integer [pk, increment]
+  jobseekerprofile_id integer [ref: > jobseeker_profiles.id, not null]
+  sector_id integer [ref: > sectors.id, not null]
+  Indexes {
+    (jobseekerprofile_id, sector_id) [unique]
+  }
+}
+
+// M2M: JobseekerProfile.followed_companies <> Company
+Table jobseeker_followed_companies {
+  id integer [pk, increment]
+  jobseekerprofile_id integer [ref: > jobseeker_profiles.id, not null]
+  company_id integer [ref: > companies.id, not null]
+  Indexes {
+    (jobseekerprofile_id, company_id) [unique]
+  }
+}
+
+Table jobseeker_educations {
+  id integer [pk, increment]
+  profile_id integer [ref: > jobseeker_profiles.id, not null]
+  level education_level [not null]
+  course_degree varchar(200)
+  institution varchar(200)
+  year_started integer
+  year_ended integer
+  is_current boolean [not null, default: false]
+}
+
+Table jobseeker_certifications {
+  id integer [pk, increment]
+  profile_id integer [ref: > jobseeker_profiles.id, not null]
+  name varchar(200) [not null]
+  issuing_org varchar(200)
+  year_received integer
+}
+
+Table jobseeker_skills {
+  id integer [pk, increment]
+  profile_id integer [ref: > jobseeker_profiles.id, not null]
+  name varchar(200) [not null]
+  description text
+}
+
+Table jobseeker_experiences {
+  id integer [pk, increment]
+  profile_id integer [ref: > jobseeker_profiles.id, not null]
+  position varchar(200) [not null]
+  company varchar(200)
+  description text
+  month_started varchar(20)
+  year_started integer
+  month_ended varchar(20)
+  year_ended integer
+  is_current boolean [not null, default: false]
+  from_application_id integer [ref: > applications.id]
+  Note: 'SET_NULL on from_application_id'
+}
+
+Table personal_info_change_requests {
+  id integer [pk, increment]
+  profile_id integer [ref: > jobseeker_profiles.id, not null]
+  first_name varchar(100) [not null]
+  middle_name varchar(100)
+  last_name varchar(100) [not null]
+  suffix varchar(20)
+  date_of_birth date
+  sex varchar(10)
+  id_document varchar(255)
+  id_type varchar(50)
+  status info_change_status [not null, default: 'pending']
+  submitted_at timestamp [not null]
+  reviewed_at timestamp
+}
+
+Table jobseeker_job_interactions {
+  id integer [pk, increment]
+  jobseeker_id integer [ref: > jobseeker_profiles.id, not null]
+  job_id integer [ref: > job_postings.id, not null]
+  interaction_type job_interaction_type [not null]
+  created_at timestamp [not null]
+  Indexes {
+    (jobseeker_id, job_id) [unique]
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// employers
+// ═══════════════════════════════════════════════════════════════
+
+Table companies {
+  id integer [pk, increment]
+  name varchar(300) [not null]
+  slug varchar(300) [unique, not null]
+  type_of_company company_type [not null]
+  nature_of_company varchar(200) [not null]
+  description text
+  company_size varchar(50)
+  website varchar(200)
+  logo varchar(255)
+  company_email varchar(254) [not null]
+  recruitment_email varchar(254) [not null]
+  main_branch_address varchar(300) [not null]
+  iloilo_bldg_unit varchar(100)
+  iloilo_street varchar(200)
+  iloilo_barangay_code varchar(20)
+  iloilo_barangay_name varchar(200)
+  iloilo_city varchar(100) [not null, default: 'Iloilo City']
+  iloilo_province varchar(100) [not null, default: 'Iloilo']
+  verification_status verification_status [not null, default: 'unverified']
+  verified_at timestamp
+  verified_by_id integer [ref: > users.id]
+  rejection_note text
+  is_peso_verified boolean [not null, default: false]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  Note: 'SET_NULL on verified_by_id'
+}
+
+// M2M: Company.sector_badges <> Sector
+Table company_sector_badges {
+  id integer [pk, increment]
+  company_id integer [ref: > companies.id, not null]
+  sector_id integer [ref: > sectors.id, not null]
+  Indexes {
+    (company_id, sector_id) [unique]
+  }
+}
+
+Table employer_profiles {
+  id integer [pk, increment]
+  user_id integer [ref: - users.id, unique, not null]
+  company_id integer [ref: > companies.id, not null]
+  first_name varchar(100) [not null]
+  middle_name varchar(100)
+  last_name varchar(100) [not null]
+  suffix varchar(20)
+  position varchar(200) [not null]
+  sex sex [not null]
+  birthday date
+  phone varchar(20) [not null]
+  email varchar(254) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table verification_documents {
+  id integer [pk, increment]
+  company_id integer [ref: > companies.id, not null]
+  doc_type verification_doc_type [not null]
+  file varchar(255) [not null]
+  uploaded_at timestamp [not null]
+  notes text
+}
+
+Table candidate_interactions {
+  id integer [pk, increment]
+  company_id integer [ref: > companies.id, not null]
+  jobseeker_id integer [ref: > jobseeker_profiles.id, not null]
+  job_id integer [ref: > job_postings.id, not null]
+  created_at timestamp [not null]
+  Indexes {
+    (company_id, jobseeker_id, job_id) [unique]
+  }
+}
+
+Table employer_contacts {
+  id integer [pk, increment]
+  sender_id integer [ref: > users.id]
+  company_id integer [ref: > companies.id, not null]
+  recipient_id integer [ref: > jobseeker_profiles.id, not null]
+  job_id integer [ref: > job_postings.id]
+  kind contact_kind [not null]
+  subject varchar(200) [not null]
+  body text [not null]
+  interview_at timestamp
+  interview_location varchar(200)
+  delivered_to_email varchar(254)
+  sent_at timestamp [not null]
+  Note: 'SET_NULL on sender_id and job_id'
+}
+
+// ═══════════════════════════════════════════════════════════════
+// jobs
+// ═══════════════════════════════════════════════════════════════
+
+Table job_postings {
+  id integer [pk, increment]
+  company_id integer [ref: > companies.id, not null]
+  title varchar(300) [not null]
+  location_type job_location_type [not null, default: 'iloilo']
+  bldg_unit varchar(100)
+  street varchar(200)
+  barangay_code varchar(20)
+  barangay_name varchar(200)
+  city varchar(100) [not null, default: 'Iloilo City']
+  overseas_address varchar(300)
+  description text [not null]
+  status job_status [not null, default: 'open']
+  slots integer [not null, default: 1]
+  salary_min decimal(10,2)
+  salary_max decimal(10,2)
+  contact_email varchar(254)
+  contact_phone varchar(20)
+  search_keywords varchar(500)
+  admin_disabled boolean [not null, default: false]
+  admin_disabled_reason text
+  deleted_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  Note: 'deleted_at implements soft-delete with a 30-day purge window'
+}
+
+Table job_education_requirements {
+  id integer [pk, increment]
+  job_id integer [ref: > job_postings.id, not null]
+  level education_level [not null]
+  course_degree varchar(200)
+}
+
+Table job_skill_requirements {
+  id integer [pk, increment]
+  job_id integer [ref: > job_postings.id, not null]
+  name varchar(200) [not null]
+  is_required boolean [not null, default: true]
+}
+
+Table job_certification_requirements {
+  id integer [pk, increment]
+  job_id integer [ref: > job_postings.id, not null]
+  name varchar(200) [not null]
+  issuing_org varchar(200)
+  is_required boolean [not null, default: true]
+}
+
+Table job_experience_requirements {
+  id integer [pk, increment]
+  job_id integer [ref: - job_postings.id, unique, not null]
+  months_required integer [not null, default: 0]
+  description text
+  any_experience_accepted boolean [not null, default: true]
+  preferred_position varchar(200)
+}
+
+Table applications {
+  id integer [pk, increment]
+  jobseeker_id integer [ref: > jobseeker_profiles.id, not null]
+  job_id integer [ref: > job_postings.id]
+  status application_status [not null, default: 'pending']
+  message text
+  created_at timestamp [not null]
+  hired_at timestamp
+  employed_until date
+  Indexes {
+    (jobseeker_id, job_id) [unique]
+  }
+  Note: 'SET_NULL on job_id so historical hires survive posting purge'
+}
+
+// ═══════════════════════════════════════════════════════════════
+// matching
+// ═══════════════════════════════════════════════════════════════
+
+Table compatibility_scores {
+  id integer [pk, increment]
+  jobseeker_id integer [ref: > jobseeker_profiles.id, not null]
+  job_id integer [ref: > job_postings.id, not null]
+  score double [not null]
+  breakdown json [not null]
+  computed_at timestamp [not null]
+  is_stale boolean [not null, default: false]
+  Indexes {
+    (jobseeker_id, job_id) [unique]
+  }
+}
+
+Table matches {
+  id integer [pk, increment]
+  jobseeker_id integer [ref: > jobseeker_profiles.id, not null]
+  company_id integer [ref: > companies.id, not null]
+  job_id integer [ref: > job_postings.id, not null]
+  created_at timestamp [not null]
+  conversation_id integer [ref: - conversations.id, unique]
+  Indexes {
+    (jobseeker_id, company_id, job_id) [unique]
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// messaging (legacy in-app chat)
+// ═══════════════════════════════════════════════════════════════
+
+Table conversations {
+  id integer [pk, increment]
+  jobseeker_id integer [ref: > jobseeker_profiles.id, not null]
+  company_id integer [ref: > companies.id, not null]
+  job_id integer [ref: > job_postings.id]
+  created_at timestamp [not null]
+  Indexes {
+    (jobseeker_id, company_id, job_id) [unique]
+  }
+}
+
+Table messages {
+  id integer [pk, increment]
+  conversation_id integer [ref: > conversations.id, not null]
+  sender_id integer [ref: > users.id, not null]
+  content text [not null]
+  sent_at timestamp [not null]
+  is_read boolean [not null, default: false]
+}
+
+Table notifications {
+  id integer [pk, increment]
+  recipient_id integer [ref: > users.id, not null]
+  notification_type notification_type_legacy [not null]
+  title varchar(200) [not null]
+  message text [not null]
+  is_read boolean [not null, default: false]
+  link varchar(300)
+  job_id integer [ref: > job_postings.id]
+  match_id integer [ref: > matches.id]
+  created_at timestamp [not null]
+  Note: 'Legacy notification table — new flows use activity_notifications'
+}
+
+// ═══════════════════════════════════════════════════════════════
+// notifications (current activity feed)
+// ═══════════════════════════════════════════════════════════════
+
+Table activity_notifications {
+  id integer [pk, increment]
+  recipient_id integer [ref: > users.id, not null]
+  notif_type notification_type_activity [not null]
+  company_id integer [ref: > companies.id]
+  jobseeker_id integer [ref: > jobseeker_profiles.id]
+  job_id integer [ref: > job_postings.id]
+  is_read boolean [not null, default: false]
+  created_at timestamp [not null]
+  liker_count integer [not null, default: 1]
+  liker_preview varchar(200)
+  admin_message text
+}
+
+// ═══════════════════════════════════════════════════════════════
+// admin_panel
+// ═══════════════════════════════════════════════════════════════
+
+Table audit_logs {
+  id integer [pk, increment]
+  admin_id integer [ref: > users.id]
+  action audit_action [not null]
+  target_model varchar(100) [not null]
+  target_id integer [not null]
+  notes text
+  created_at timestamp [not null]
+}
+
+Table import_batches {
+  id integer [pk, increment]
+  imported_by_id integer [ref: > users.id]
+  import_type import_type [not null]
+  file varchar(255) [not null]
+  status import_status [not null, default: 'pending']
+  total_rows integer [not null, default: 0]
+  successful_imports integer [not null, default: 0]
+  failed_imports integer [not null, default: 0]
+  error_log json [not null]
+  created_at timestamp [not null]
+  completed_at timestamp
+}
+
+Table site_settings {
+  id integer [pk, note: 'Singleton — always pk=1']
+  compatibility_threshold double [not null, default: 80.0]
+  hard_to_fill_days integer [not null, default: 30]
+  hard_to_fill_applicant_threshold integer [not null, default: 3]
+  max_hide_suggestions integer [not null, default: 5]
+  maintenance_mode boolean [not null, default: false]
+  maintenance_message text
+  office_address varchar(255)
+  contact_email varchar(254)
+  hotline varchar(40)
+  weight_skills double [not null, default: 0.40]
+  weight_education double [not null, default: 0.25]
+  weight_experience double [not null, default: 0.25]
+  weight_certifications double [not null, default: 0.10]
+  updated_by_id integer [ref: > users.id]
+  updated_at timestamp [not null]
+}
+
+Table user_reports {
+  id integer [pk, increment]
+  reported_jobseeker_id integer [ref: > jobseeker_profiles.id]
+  reported_company_id integer [ref: > companies.id]
+  account_type user_report_account_type [not null]
+  description text [not null]
+  filed_by_id integer [ref: > users.id]
+  status user_report_status [not null, default: 'open']
+  created_at timestamp [not null]
+  reviewed_at timestamp
+  Note: 'Exactly one of reported_jobseeker_id / reported_company_id is set'
+}
+
+Table faqs {
+  id integer [pk, increment]
+  question varchar(300) [not null]
+  answer text [not null]
+  audience faq_audience [not null, default: 'jobseeker']
+  "order" integer [not null, default: 0]
+  is_published boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table admin_announcements {
+  id integer [pk, increment]
+  sender_id integer [ref: > users.id]
+  audience announcement_audience [not null, default: 'all']
+  subject varchar(200) [not null]
+  body text [not null]
+  sent_at timestamp [not null]
+}
+
+// ═══════════════════════════════════════════════════════════════
+// analytics
+// ═══════════════════════════════════════════════════════════════
+
+Table daily_snapshots {
+  id integer [pk, increment]
+  date date [unique, not null]
+  total_jobseekers integer [not null, default: 0]
+  total_employers integer [not null, default: 0]
+  new_jobseekers integer [not null, default: 0]
+  new_employers integer [not null, default: 0]
+  total_job_postings integer [not null, default: 0]
+  active_job_postings integer [not null, default: 0]
+  new_job_postings integer [not null, default: 0]
+  hard_to_fill_jobs integer [not null, default: 0]
+  jobs_placed integer [not null, default: 0]
+  new_matches integer [not null, default: 0]
+  avg_compatibility_score double
+  created_at timestamp [not null]
+}
+
+Table sector_snapshots {
+  id integer [pk, increment]
+  snapshot_id integer [ref: > daily_snapshots.id, not null]
+  sector_code varchar(50) [not null]
+  sector_label varchar(100) [not null]
+  jobseeker_count integer [not null, default: 0]
+  Indexes {
+    (snapshot_id, sector_code) [unique]
+  }
+}
+
+Table education_snapshots {
+  id integer [pk, increment]
+  snapshot_id integer [ref: > daily_snapshots.id, not null]
+  level varchar(50) [not null]
+  level_label varchar(100) [not null]
+  jobseeker_count integer [not null, default: 0]
+  Indexes {
+    (snapshot_id, level) [unique]
+  }
+}
+
+Table company_type_snapshots {
+  id integer [pk, increment]
+  snapshot_id integer [ref: > daily_snapshots.id, not null]
+  company_type varchar(50) [not null]
+  company_type_label varchar(100) [not null]
+  company_count integer [not null, default: 0]
+  active_job_count integer [not null, default: 0]
+  Indexes {
+    (snapshot_id, company_type) [unique]
+  }
+}
+
+Table in_demand_skills {
+  id integer [pk, increment]
+  week_start date [not null]
+  skill_name varchar(200) [not null]
+  job_count integer [not null, default: 0]
+  avg_compatibility double
+  Indexes {
+    (week_start, skill_name) [unique]
+  }
+}
+
+Table location_snapshots {
+  id integer [pk, increment]
+  week_start date [not null]
+  barangay varchar(200) [not null]
+  jobseeker_count integer [not null, default: 0]
+  job_count integer [not null, default: 0]
+  Indexes {
+    (week_start, barangay) [unique]
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// core — PSGC geography
+// ═══════════════════════════════════════════════════════════════
+
+Table provinces {
+  id integer [pk, increment]
+  code varchar(20) [unique, not null]
+  name varchar(200) [not null]
+}
+
+Table cities_municipalities {
+  id integer [pk, increment]
+  code varchar(20) [unique, not null]
+  name varchar(200) [not null]
+  province_id integer [ref: > provinces.id, not null]
+}
+
+Table barangays {
+  id integer [pk, increment]
+  code varchar(20) [unique, not null]
+  name varchar(200) [not null]
+  city_id integer [ref: > cities_municipalities.id, not null]
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Visual grouping (dbdiagram.io draws these as coloured clusters)
+// ═══════════════════════════════════════════════════════════════
+
+TableGroup accounts {
+  users
+}
+
+TableGroup jobseekers {
+  sectors
+  jobseeker_profiles
+  jobseeker_profile_sectors
+  jobseeker_followed_companies
+  jobseeker_educations
+  jobseeker_certifications
+  jobseeker_skills
+  jobseeker_experiences
+  personal_info_change_requests
+  jobseeker_job_interactions
+}
+
+TableGroup employers {
+  companies
+  company_sector_badges
+  employer_profiles
+  verification_documents
+  candidate_interactions
+  employer_contacts
+}
+
+TableGroup jobs {
+  job_postings
+  job_education_requirements
+  job_skill_requirements
+  job_certification_requirements
+  job_experience_requirements
+  applications
+}
+
+TableGroup matching {
+  compatibility_scores
+  matches
+}
+
+TableGroup messaging {
+  conversations
+  messages
+  notifications
+}
+
+TableGroup notifications {
+  activity_notifications
+}
+
+TableGroup admin_panel {
+  audit_logs
+  import_batches
+  site_settings
+  user_reports
+  faqs
+  admin_announcements
+}
+
+TableGroup analytics {
+  daily_snapshots
+  sector_snapshots
+  education_snapshots
+  company_type_snapshots
+  in_demand_skills
+  location_snapshots
+}
+
+TableGroup core {
+  provinces
+  cities_municipalities
+  barangays
+}

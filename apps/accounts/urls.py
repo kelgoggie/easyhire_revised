@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import TemplateView
 from . import views
 
 app_name = 'accounts'
@@ -14,6 +15,15 @@ urlpatterns = [
     # session-rate-limited to one send per 30 seconds.
     path('accounts/resend-verification/', views.resend_verification_email,
          name='resend_verification'),
+
+    # PESO-mediated password recovery. Static info page — password resets
+    # go through easyhire.admin@gmail.com because SMTP isn't configured
+    # against a verified sender domain. See admin_panel/jobseeker_settings
+    # for the "Generate Temporary Password" flow admins use to service
+    # incoming requests.
+    path('password-recovery/', TemplateView.as_view(
+        template_name='public/password_recovery.html'
+    ), name='password_recovery'),
 
     # Employer auth
     path('employers/login/', views.EmployerLoginView.as_view(), name='employer_login'),

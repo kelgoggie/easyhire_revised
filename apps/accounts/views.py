@@ -260,7 +260,11 @@ class EmployerLoginView(View):
             })
         if not user.is_active:
             return render(request, self.template_name, {
-                'error': 'This account has been deactivated.', 'email': email,
+                'error': (
+                    'Your account has been disabled. Contact '
+                    'easyhire.admin@gmail.com for more information.'
+                ),
+                'email': email,
             })
 
         logout(request)
@@ -395,21 +399,22 @@ class EmployerRegisterStep2View(View):
                 consented_to_terms=True,
                 consented_at=timezone.now(),
             )
-            # Kick off allauth's email confirmation — this signup path
-            # doesn't go through allauth's view, so without this call the
-            # EmailAddress row never gets created and no confirmation mail
-            # is sent. Failure here logs but doesn't roll back the whole
-            # employer signup, which is otherwise expensive to re-do.
+            # Employer email verification is skipped by design — the
+            # docs-based Company verification workflow (Mayor's Permit,
+            # PhilJobNet accreditation, etc.) is a much stronger identity
+            # signal than an email link. Mark the EmailAddress row
+            # verified up-front so the "please verify your email" banner
+            # never shows for employers, and no confirmation email goes
+            # out on signup.
             try:
                 from allauth.account.models import EmailAddress
-                email_address, _ = EmailAddress.objects.get_or_create(
+                EmailAddress.objects.update_or_create(
                     user=user, email=user.email,
-                    defaults={'verified': False, 'primary': True},
+                    defaults={'verified': True, 'primary': True},
                 )
-                email_address.send_confirmation(request, signup=True)
             except Exception:
                 import logging
-                logging.getLogger(__name__).exception('Employer signup confirmation email send failed for %s', email)
+                logging.getLogger(__name__).exception('Employer EmailAddress bootstrap failed for %s', email)
 
             # Add slug ... for better looking urls
             
@@ -472,10 +477,29 @@ def logout_view(request):
     # Only POST should mutate state (CSRF-protected)
     if request.method != 'POST':
         return redirect('/dashboard/' if request.user.is_authenticated else '/login/')
+    # Route the logged-out user back to the login page that matches their
+    # role — a company rep dropped on the jobseeker sign-in is confusing.
+    # Read the flag BEFORE logout() blows the session away.
+    was_employer = request.user.is_authenticated and getattr(request.user, 'is_employer', False)
     logout(request)
-    response = redirect('/login/')
+    response = redirect('/employers/login/' if was_employer else '/login/')
     # Bust the back-button cache so the previous authenticated page can't be re-shown
     response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response['Pragma'] = 'no-cache'
     response['Expires'] = '0'
+    # Explicitly delete the session + CSRF cookies. `logout(request)` clears
+    # the session server-side but doesn't always tell the browser to drop
+    # the cookie — some flows saw the stale sessionid re-authenticating on
+    # the very next request. Safer to blow them away by hand.
+    from django.conf import settings as _settings
+    response.delete_cookie(
+        _settings.SESSION_COOKIE_NAME,
+        path=_settings.SESSION_COOKIE_PATH,
+        domain=_settings.SESSION_COOKIE_DOMAIN,
+    )
+    response.delete_cookie(
+        _settings.CSRF_COOKIE_NAME,
+        path=_settings.CSRF_COOKIE_PATH,
+        domain=_settings.CSRF_COOKIE_DOMAIN,
+    )
     return response

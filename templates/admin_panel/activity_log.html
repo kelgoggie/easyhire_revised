@@ -46,7 +46,18 @@
           <td class="px-5 py-3 text-muted italic whitespace-nowrap">{{ entry.created_at|date:"M j, Y g:i A" }}</td>
           <td class="px-4 py-3 text-primary">{{ entry.admin.email|default:"(deleted)" }}</td>
           <td class="px-4 py-3 font-bold text-primary">{{ entry.get_action_display }}</td>
-          <td class="px-4 py-3 text-muted italic">{{ entry.target_model }} <span class="text-muted/60">#{{ entry.target_id }}</span></td>
+          <td class="px-4 py-3 text-muted italic">
+            {% if entry.target_label %}
+              {% if entry.target_url %}
+              <a href="{{ entry.target_url }}" class="text-primary not-italic font-semibold hover:text-teal transition">{{ entry.target_label }}</a>
+              {% else %}
+              <span class="text-primary not-italic font-semibold">{{ entry.target_label }}</span>
+              {% endif %}
+              <span class="text-muted/60 not-italic text-[11px] ml-1">{{ entry.target_model }}</span>
+            {% else %}
+              {{ entry.target_model }} <span class="text-muted/60">#{{ entry.target_id }}</span>
+            {% endif %}
+          </td>
           <td class="px-4 py-3 text-muted text-xs">{{ entry.notes|truncatechars:120 }}</td>
         </tr>
         {% endfor %}

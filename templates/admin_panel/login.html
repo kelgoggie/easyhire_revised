@@ -5,7 +5,10 @@
 {% block navbar %}{% endblock %}
 
 {% block content %}
-<div class="flex flex-col min-h-screen">
+{# Layout intentionally mirrors login_jobseeker.html / employers/login.html:  #}
+{# split content is sized to viewport-minus-navbar so the footer lands just  #}
+{# below the fold instead of getting squeezed to the visible bottom.        #}
+<div>
 
   <!-- Navbar -->
   <nav class="bg-surface px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
@@ -22,7 +25,7 @@
   </nav>
 
   <!-- Split content -->
-  <div class="flex flex-col md:flex-row flex-1">
+  <div class="flex flex-col md:flex-row min-h-[calc(100vh_-_3.75rem)]">
 
     <!-- Left panel: form -->
     <div class="w-full md:w-1/2 bg-surface flex items-center justify-center py-8 md:py-12 px-4 sm:px-8">

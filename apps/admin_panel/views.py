@@ -83,6 +83,40 @@ def _resolve_active_nav(path):
     return ''
 
 
+def _resolve_active_report(request):
+    """Fetch the UserReport referenced by the ?report=<hashid> query param,
+    if any. Used by the admin detail views (jobseeker / company /
+    company_job) to render the yellow "you got here from a report" banner
+    via templates/admin_panel/_report_banner.html.
+
+    Returns None on missing / malformed / unknown ids so callers can pass
+    the result straight into the template context.
+    """
+    hashid = (request.GET.get('report') or '').strip()
+    if not hashid:
+        return None
+    try:
+        from apps.core.hashids import decode as _hashid_decode
+        report_id = _hashid_decode(hashid)
+    except Exception:
+        return None
+    if not report_id:
+        return None
+    from .models import UserReport
+    return (UserReport.objects
+            .select_related('filed_by', 'reported_jobseeker', 'reported_company', 'reported_job')
+            .filter(pk=report_id).first())
+
+
+def _generate_temp_password(length=12):
+    """Random URL-safe password used for PESO-mediated password resets.
+    Avoids ambiguous characters (0/O, 1/l/I) so admins can dictate over
+    the phone without transcription errors."""
+    import secrets
+    alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+
 def _admin_context(request):
     """Shared context for every admin page — sidebar counts + notification feed.
 
@@ -99,6 +133,30 @@ def _admin_context(request):
     pending_jobseekers = PersonalInfoChangeRequest.objects.filter(
         status=PersonalInfoChangeRequest.STATUS_PENDING).count()
     open_reports = UserReport.objects.filter(status=UserReport.STATUS_OPEN).count()
+
+    # ── Bell-dot debounce ─────────────────────────────────────────
+    # Same session-baseline pattern used for jobseeker/employer inbox
+    # dots (see apps.core.context_processors.inbox_status). Without
+    # this, pre-existing pending work fires the amber dot on every
+    # page reload — annoying because most admin activity is background
+    # queue processing.
+    #
+    # Rules:
+    #   - First admin hit of a session: baseline = current, dot off.
+    #   - Later hit with current > baseline: dot on, then baseline
+    #     bumps to current so a plain reload clears it.
+    #   - current < baseline (admin resolved items): silently bump
+    #     baseline down so a subsequent new item still fires the dot.
+    attention_total = pending_companies + pending_jobseekers + open_reports
+    session = request.session
+    if 'admin_attention_seen' not in session:
+        session['admin_attention_seen'] = attention_total
+        show_attention_dot = False
+    else:
+        seen = session['admin_attention_seen']
+        show_attention_dot = attention_total > seen
+        if attention_total != seen:
+            session['admin_attention_seen'] = attention_total
 
     feed = []
     for c in Company.objects.filter(verification_status=Company.PENDING).order_by('-created_at')[:5]:
@@ -121,21 +179,39 @@ def _admin_context(request):
             'url':   f'/admin-panel/jobseekers/{_hashid(r.profile.id)}/',
             'at':    r.submitted_at,
         })
-    for ur in (UserReport.objects.filter(status=UserReport.STATUS_OPEN)
+    for ur in (UserReport.objects
+               .filter(status=UserReport.STATUS_OPEN)
+               .select_related(
+                   'reported_jobseeker', 'reported_company',
+                   'reported_job', 'reported_job__company',
+                   'reported_contact',
+               )
                .order_by('-created_at')[:5]):
         # Trim description for inline display; full text is on the reports page.
         reason = (ur.description or '').strip()
         reason_short = reason if len(reason) <= 120 else reason[:117] + '…'
+        # Jump straight to the thing that was reported (mirrors the Review
+        # link on the reports table), falling back to the reports page if
+        # somehow none of the reported_* FKs is set.
+        rid = _hashid(ur.id)
+        if ur.reported_job_id:
+            report_url = (f'/admin-panel/companies/{_hashid(ur.reported_job.company_id)}'
+                          f'/jobs/{_hashid(ur.reported_job_id)}/?report={rid}')
+        elif ur.reported_contact_id:
+            report_url = f'/admin-panel/messages/{_hashid(ur.reported_contact_id)}/?report={rid}'
+        elif ur.reported_jobseeker_id:
+            report_url = f'/admin-panel/jobseekers/{_hashid(ur.reported_jobseeker_id)}/?report={rid}'
+        elif ur.reported_company_id:
+            report_url = f'/admin-panel/companies/{_hashid(ur.reported_company_id)}/?report={rid}'
+        else:
+            report_url = '/admin-panel/reports/?status=open'
         feed.append({
             'icon': 'flag',
             'actor': ur.filed_by_label,
             'verb':  f'filed a report against {ur.account_label}.',
             'quoted': reason_short,
             'when':  _relative(ur.created_at),
-            # Open the Reports page filtered to this row's status so the
-            # admin lands on it directly (the page auto-opens the Review
-            # modal for ?focus=<id>).
-            'url':   f'/admin-panel/reports/?status=open&focus={_hashid(ur.id)}',
+            'url':   report_url,
             'at':    ur.created_at,
         })
     feed.sort(key=lambda x: x['at'], reverse=True)
@@ -145,7 +221,11 @@ def _admin_context(request):
         'pending_jobseekers':    pending_jobseekers,
         'open_reports':          open_reports,
         'admin_notifications':   feed[:10],
-        'admin_attention_count': pending_companies + pending_jobseekers + open_reports,
+        # attention_count is still passed for the dropdown copy / counts,
+        # but the DOT is now driven by show_attention_dot so it only
+        # fires on genuinely new items (see baseline logic above).
+        'admin_attention_count': attention_total,
+        'show_attention_dot':    show_attention_dot,
         # Auto-derived from URL so child templates don't have to thread it
         # explicitly. Views that need a different highlight (e.g.
         # company_job_detail's came_from_jobs flip) overwrite this in
@@ -241,9 +321,10 @@ def employer_detail(request, company_id):
 
     ctx = _admin_context(request)
     ctx.update({
-        'company':   company,
-        'profile':   profile,
-        'checklist': checklist,
+        'company':       company,
+        'profile':       profile,
+        'checklist':     checklist,
+        'active_report': _resolve_active_report(request),
     })
     return render(request, 'admin_panel/employer_detail.html', ctx)
 
@@ -528,6 +609,7 @@ def jobseeker_detail(request, pk):
         'jobs_page':           jobs_page,
         'jobs_ranked':         list(jobs_page.object_list),
         'jobs_qs_base':        querystring_without(request, 'jobs_page'),
+        'active_report':       _resolve_active_report(request),
     })
     return render(request, 'admin_panel/jobseeker_detail.html', ctx)
 
@@ -541,6 +623,9 @@ def jobseeker_settings(request, pk):
     jobseeker = get_object_or_404(JobseekerProfile.objects.select_related('user'), pk=pk)
     saved_section = None
     error = None
+    # Populated only on the render after form == 'generate_password' so the
+    # template can surface the temp password once in a copyable banner.
+    generated_password = None
 
     if request.method == 'POST':
         form = (request.POST.get('form') or '').strip()
@@ -626,6 +711,53 @@ def jobseeker_settings(request, pk):
                 )
                 saved_section = 'email_verified'
 
+        elif form == 'generate_password':
+            # PESO-mediated password reset. Generates a random temp password,
+            # sets it on the user, and returns it so the admin can relay it
+            # to the jobseeker (usually via a reply to easyhire.admin@gmail.com).
+            temp_password = _generate_temp_password()
+            jobseeker.user.set_password(temp_password)
+            jobseeker.user.save(update_fields=['password'])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_RESET_PASSWORD,
+                target_model='User', target_id=jobseeker.user.id,
+                notes='Admin generated temporary password for PESO-mediated reset.',
+            )
+            saved_section = 'password_generated'
+            generated_password = temp_password
+
+        elif form == 'verify_id_approve':
+            # Approve pending ID verification.
+            from django.utils import timezone
+            jobseeker.id_verification_status = jobseeker.ID_VERIFIED
+            jobseeker.id_verified_at = timezone.now()
+            jobseeker.id_verified_by = request.user
+            jobseeker.id_verification_note = ''
+            jobseeker.save(update_fields=[
+                'id_verification_status', 'id_verified_at',
+                'id_verified_by', 'id_verification_note',
+            ])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_VERIFY,
+                target_model='JobseekerProfile', target_id=jobseeker.id,
+                notes='Approved ID verification.',
+            )
+            saved_section = 'id_verified'
+
+        elif form == 'verify_id_deny':
+            note = (request.POST.get('id_verification_note') or '').strip()
+            jobseeker.id_verification_status = jobseeker.ID_DENIED
+            jobseeker.id_verification_note = note
+            jobseeker.save(update_fields=[
+                'id_verification_status', 'id_verification_note',
+            ])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_REJECT,
+                target_model='JobseekerProfile', target_id=jobseeker.id,
+                notes=f'Denied ID verification. Reason: {note or "(no reason given)"}',
+            )
+            saved_section = 'id_denied'
+
     # True when the jobseeker's email already has a verified EmailAddress row.
     from allauth.account.models import EmailAddress
     email_verified = (
@@ -637,10 +769,11 @@ def jobseeker_settings(request, pk):
 
     ctx = _admin_context(request)
     ctx.update({
-        'jobseeker':     jobseeker,
-        'saved_section': saved_section,
-        'error':         error,
-        'email_verified': email_verified,
+        'jobseeker':          jobseeker,
+        'saved_section':      saved_section,
+        'error':              error,
+        'email_verified':     email_verified,
+        'generated_password': generated_password,
     })
     return render(request, 'admin_panel/jobseeker_settings.html', ctx)
 
@@ -837,12 +970,13 @@ def company_detail(request, pk):
 
     ctx = _admin_context(request)
     ctx.update({
-        'company':      company,
-        'rep':          rep,
-        'jobs':         jobs,
-        'prev_id':      prev_id,
-        'next_id':      next_id,
-        'reasons':      JOB_DELETION_REASONS,
+        'company':       company,
+        'rep':           rep,
+        'jobs':          jobs,
+        'prev_id':       prev_id,
+        'next_id':       next_id,
+        'reasons':       JOB_DELETION_REASONS,
+        'active_report': _resolve_active_report(request),
     })
     return render(request, 'admin_panel/company_detail.html', ctx)
 
@@ -854,6 +988,9 @@ def company_settings(request, pk):
     rep = company.representatives.first()
     saved_section = None
     error = None
+    # Populated only on the render after form == 'generate_password' so the
+    # template can surface the temp password once in a copyable banner.
+    generated_password = None
 
     if request.method == 'POST':
         form = (request.POST.get('form') or '').strip()
@@ -888,6 +1025,19 @@ def company_settings(request, pk):
                     notes='Admin reset password for company representative.',
                 )
                 saved_section = 'password'
+
+        elif form == 'generate_password' and rep:
+            # PESO-mediated password reset for the company rep.
+            temp_password = _generate_temp_password()
+            rep.user.set_password(temp_password)
+            rep.user.save(update_fields=['password'])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_RESET_PASSWORD,
+                target_model='User', target_id=rep.user.id,
+                notes='Admin generated temporary password for PESO-mediated reset.',
+            )
+            saved_section = 'password_generated'
+            generated_password = temp_password
 
         elif form == 'disable' and rep:
             if rep.user_id == request.user.id:
@@ -1007,15 +1157,22 @@ def company_settings(request, pk):
 
     ctx = _admin_context(request)
     ctx.update({
-        'company':         company,
-        'rep':             rep,
-        'saved_section':   saved_section,
-        'error':           error,
-        'checklist':       checklist,
-        'uploaded_count':  sum(1 for item in checklist if item['uploaded']),
+        'company':            company,
+        'rep':                rep,
+        'saved_section':      saved_section,
+        'error':              error,
+        'checklist':          checklist,
+        'uploaded_count':     sum(1 for item in checklist if item['uploaded']),
         'all_reps_email_verified': all_reps_email_verified,
+        'generated_password': generated_password,
         # Status-picker options for the verification form.
-        'verification_choices': Company.VERIFICATION_CHOICES,
+        # 'unverified' is the initial state before the company uploads any
+        # docs — admins have no reason to *set* a company back to it (the
+        # deny/pending states cover every actionable case), so hide it from
+        # the picker. The constant still exists on the model.
+        'verification_choices': [
+            c for c in Company.VERIFICATION_CHOICES if c[0] != Company.UNVERIFIED
+        ],
     })
     return render(request, 'admin_panel/company_settings.html', ctx)
 
@@ -1172,6 +1329,7 @@ def company_job_detail(request, pk, job_id):
         # Reason choices for the Delete modal (the take-down endpoint
         # company_delete_job expects one of these codes).
         'reasons':          JOB_DELETION_REASONS,
+        'active_report':    _resolve_active_report(request),
     })
     return render(request, 'admin_panel/company_job_detail.html', ctx)
 
@@ -1292,6 +1450,45 @@ def report_submit(request):
                 pass
         UserReport.objects.create(
             reported_company=target, account_type=UserReport.ACCOUNT_EMPLOYER,
+            description=description, filed_by=request.user,
+        )
+    elif target_type == 'job':
+        # Reports about a specific job post — separate from company-level
+        # reports so admins can jump straight to the offending posting.
+        from apps.jobs.models import JobPosting
+        target = get_object_or_404(JobPosting, id=target_id)
+        # Disallow employers reporting their own postings.
+        if request.user.is_employer:
+            try:
+                if request.user.employer_profile.company_id == target.company_id:
+                    return JsonResponse({'ok': False, 'error': "You can't report your own job post."}, status=400)
+            except Exception:
+                pass
+        UserReport.objects.create(
+            reported_job=target, account_type=UserReport.ACCOUNT_JOB,
+            description=description, filed_by=request.user,
+        )
+    elif target_type == 'contact':
+        # Reports about a specific EmployerContact (in-app "Interview
+        # Schedule" / "Job Requirements" email). Only the recipient can
+        # report it — no one else has access to see the message body.
+        from apps.employers.models import EmployerContact
+        target = get_object_or_404(EmployerContact, id=target_id)
+        if request.user.is_jobseeker:
+            try:
+                if target.recipient_id != request.user.jobseeker_profile.id:
+                    return JsonResponse({'ok': False, 'error': "You can only report messages sent to you."}, status=403)
+            except Exception:
+                return JsonResponse({'ok': False, 'error': 'Invalid target.'}, status=400)
+        elif request.user.is_employer:
+            # Employers shouldn't be able to report their own outgoing messages.
+            try:
+                if target.company_id == request.user.employer_profile.company_id:
+                    return JsonResponse({'ok': False, 'error': "You can't report a message your company sent."}, status=400)
+            except Exception:
+                pass
+        UserReport.objects.create(
+            reported_contact=target, account_type=UserReport.ACCOUNT_CONTACT,
             description=description, filed_by=request.user,
         )
     else:
@@ -1447,7 +1644,9 @@ def report_list(request):
     status = (request.GET.get('status') or 'open').strip()
 
     qs = UserReport.objects.select_related(
-        'reported_jobseeker', 'reported_company', 'filed_by'
+        'reported_jobseeker', 'reported_company', 'reported_job',
+        'reported_job__company', 'reported_contact', 'reported_contact__company',
+        'filed_by',
     ).order_by('-created_at')
     if status in {'open', 'reviewed', 'dismissed'}:
         qs = qs.filter(status=status)
@@ -1468,6 +1667,33 @@ def report_list(request):
     from apps.core.pagination import querystring_without
     paginator = Paginator(qs, 25)
     page = paginator.get_page(request.GET.get('page') or 1)
+
+    # Attach the per-row target URL + a "what was reported" scope label
+    # so the template stays simple. The existing account_type field (which
+    # says "Jobseeker" / "Employer" — the OWNER category) is kept as-is;
+    # `report_scope` is a separate signal indicating whether the report is
+    # about the whole account, a specific job post, or a specific message.
+    from apps.core.hashids import encode as _hashid_encode
+    for r in page.object_list:
+        rid = _hashid_encode(r.id)
+        if r.reported_job_id:
+            r.target_url = (
+                f'/admin-panel/companies/{_hashid_encode(r.reported_job.company_id)}'
+                f'/jobs/{_hashid_encode(r.reported_job_id)}/?report={rid}'
+            )
+            r.report_scope = 'Job'
+        elif r.reported_contact_id:
+            r.target_url = f'/admin-panel/messages/{_hashid_encode(r.reported_contact_id)}/?report={rid}'
+            r.report_scope = 'Message'
+        elif r.reported_jobseeker_id:
+            r.target_url = f'/admin-panel/jobseekers/{_hashid_encode(r.reported_jobseeker_id)}/?report={rid}'
+            r.report_scope = 'Account'
+        elif r.reported_company_id:
+            r.target_url = f'/admin-panel/companies/{_hashid_encode(r.reported_company_id)}/?report={rid}'
+            r.report_scope = 'Account'
+        else:
+            r.target_url = ''
+            r.report_scope = '—'
 
     ctx = _admin_context(request)
     ctx.update({'page': page, 'search': search, 'status': status,
@@ -1499,6 +1725,159 @@ def report_review(request, report_id):
         notes=f'Marked report as {decision}.',
     )
     return JsonResponse({'ok': True, 'status': report.status})
+
+
+@staff_required
+def report_take_action(request, report_id):
+    """POST an action against a reported target: dismiss, or disable the
+    appropriate thing (jobseeker / company / job / sender rep) based on
+    the report's scope.
+
+    Called from the report banner rendered on jobseeker_detail,
+    company_detail, company_job_detail, and contact_detail. Every non-
+    dismiss action also marks the report as reviewed and audit-logs
+    both the disable and the review.
+    """
+    from django.utils import timezone
+    from django.contrib import messages
+    from .models import UserReport, AuditLog
+
+    if request.method != 'POST':
+        return redirect('/admin-panel/reports/?status=open')
+
+    report = get_object_or_404(UserReport, id=report_id)
+    action = (request.POST.get('action') or '').strip()
+
+    # Guard: allow only the actions valid for this report's scope.
+    valid_actions = {'dismiss'}
+    if report.reported_jobseeker_id:
+        valid_actions |= {'disable_jobseeker'}
+    if report.reported_company_id:
+        valid_actions |= {'disable_company'}
+    if report.reported_job_id:
+        valid_actions |= {'disable_job', 'disable_company_of_job'}
+    if report.reported_contact_id:
+        valid_actions |= {'disable_sender', 'disable_company_of_contact'}
+
+    if action not in valid_actions:
+        messages.error(request, "That action isn't available for this report.")
+        return redirect('/admin-panel/reports/?status=open')
+
+    note_suffix = f' (from report #{report.id}: "{report.description[:80]}")'
+
+    if action == 'dismiss':
+        # No side effects on the target — just close the report.
+        report.status = UserReport.STATUS_DISMISSED
+        report.reviewed_at = timezone.now()
+        report.resolution_note = 'Dismissed — no action taken.'
+        report.save(update_fields=['status', 'reviewed_at', 'resolution_note'])
+        AuditLog.objects.create(
+            admin=request.user, action=AuditLog.ACTION_EDIT,
+            target_model='UserReport', target_id=report.id,
+            notes='Dismissed report — no action taken.',
+        )
+        messages.success(request, 'Report dismissed. No changes made to the target.')
+
+    elif action == 'disable_jobseeker':
+        js = report.reported_jobseeker
+        if js and js.user_id != request.user.id:
+            js.user.is_active = False
+            js.user.save(update_fields=['is_active'])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_DEACTIVATE,
+                target_model='User', target_id=js.user_id,
+                notes='Disabled jobseeker account' + note_suffix,
+            )
+        _mark_resolved(report, request.user, action, note_suffix,
+                       'Disabled jobseeker account.')
+        messages.success(request, f'Disabled account: {js.first_name} {js.last_name}.')
+
+    elif action in ('disable_company', 'disable_company_of_job', 'disable_company_of_contact'):
+        # Resolve which company to disable based on which field is set.
+        if action == 'disable_company':
+            company = report.reported_company
+            resolution = f'Disabled company: {company.name}.'
+        elif action == 'disable_company_of_job':
+            company = report.reported_job.company
+            resolution = f'Escalated — disabled the whole company ({company.name}).'
+        else:
+            company = report.reported_contact.company
+            resolution = f'Escalated — disabled the whole company ({company.name}).'
+        _disable_company(company, request.user, note_suffix)
+        _mark_resolved(report, request.user, action, note_suffix, resolution)
+        messages.success(request, f'Disabled all reps of {company.name}.')
+
+    elif action == 'disable_job':
+        job = report.reported_job
+        if job:
+            job.admin_disabled = True
+            job.admin_disabled_reason = (
+                f'Disabled from user report: {report.description[:200]}'
+            )
+            job.status = 'closed'
+            job.save(update_fields=['admin_disabled', 'admin_disabled_reason', 'status'])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_EDIT,
+                target_model='JobPosting', target_id=job.id,
+                notes='Disabled job posting' + note_suffix,
+            )
+        _mark_resolved(report, request.user, action, note_suffix,
+                       f'Disabled job posting: {job.title}.')
+        messages.success(request, f'Disabled job post: {job.title}.')
+
+    elif action == 'disable_sender':
+        contact = report.reported_contact
+        sender = contact.sender if contact else None
+        if sender and sender.id != request.user.id:
+            sender.is_active = False
+            sender.save(update_fields=['is_active'])
+            AuditLog.objects.create(
+                admin=request.user, action=AuditLog.ACTION_DEACTIVATE,
+                target_model='User', target_id=sender.id,
+                notes='Disabled message-sender rep' + note_suffix,
+            )
+            messages.success(request, f'Disabled sender ({sender.email}).')
+            _mark_resolved(report, request.user, action, note_suffix,
+                           f'Disabled message sender ({sender.email}).')
+        else:
+            messages.warning(request, "Couldn't identify the sender — report closed without account changes.")
+            _mark_resolved(report, request.user, action, note_suffix,
+                           'Sender no longer on file — report closed without changes.')
+
+    return redirect('/admin-panel/reports/?status=open')
+
+
+def _mark_resolved(report, admin, action, note_suffix, resolution_note):
+    """Helper — mark a report as resolved (DB value 'reviewed', label
+    'Resolved') with a short resolution note that surfaces in the
+    reports list Notes column."""
+    from django.utils import timezone
+    from .models import AuditLog
+    report.status = report.STATUS_REVIEWED
+    report.reviewed_at = timezone.now()
+    report.resolution_note = resolution_note
+    report.save(update_fields=['status', 'reviewed_at', 'resolution_note'])
+    AuditLog.objects.create(
+        admin=admin, action=AuditLog.ACTION_EDIT,
+        target_model='UserReport', target_id=report.id,
+        notes=f'Resolved report via action "{action}"{note_suffix}',
+    )
+
+
+def _disable_company(company, admin, note_suffix):
+    """Helper — disable every representative of a company by flipping
+    User.is_active to False on their user accounts. Idempotent."""
+    from .models import AuditLog
+    reps = company.representatives.select_related('user').all()
+    for rep in reps:
+        if rep.user and rep.user.is_active and rep.user_id != admin.id:
+            rep.user.is_active = False
+            rep.user.save(update_fields=['is_active'])
+            AuditLog.objects.create(
+                admin=admin, action=AuditLog.ACTION_DEACTIVATE,
+                target_model='User', target_id=rep.user_id,
+                notes=f'Disabled rep of {company.name}' + note_suffix,
+            )
 
 
 # ── Phase 5: Personal-info change-request review ────────────────────
@@ -1568,6 +1947,30 @@ def change_request_review(request, request_id):
 # ── Activity log viewer ────────────────────────────────────────────
 
 @staff_required
+def contact_detail(request, contact_id):
+    """Admin viewer for a single EmployerContact (in-app message).
+
+    Used when a user reports a specific message from their inbox — the
+    report list routes here with ?report=<hashid> so the admin can read
+    the offending message body, then jump to the sender or recipient's
+    account settings to disable them if warranted.
+    """
+    from apps.employers.models import EmployerContact
+    contact = get_object_or_404(
+        EmployerContact.objects
+        .select_related('company', 'sender', 'recipient', 'job'),
+        pk=contact_id,
+    )
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'contact':       contact,
+        'active_report': _resolve_active_report(request),
+    })
+    return render(request, 'admin_panel/contact_detail.html', ctx)
+
+
+@staff_required
 def activity_log(request):
     from django.core.paginator import Paginator
     from django.db.models import Q
@@ -1589,6 +1992,11 @@ def activity_log(request):
     paginator = Paginator(qs, 25)
     page = paginator.get_page(request.GET.get('page') or 1)
 
+    # Resolve human-readable labels + admin URLs for each row's target
+    # object so the Target column shows "Kelly Ronveaux" instead of
+    # "User #30". Uses batched queries per model to avoid N+1s.
+    _hydrate_audit_targets(page.object_list)
+
     from apps.core.pagination import querystring_without
 
     ctx = _admin_context(request)
@@ -1600,6 +2008,127 @@ def activity_log(request):
         'action_choices': AuditLog.ACTION_CHOICES,
     })
     return render(request, 'admin_panel/activity_log.html', ctx)
+
+
+def _hydrate_audit_targets(entries):
+    """Attach `target_label` and `target_url` to each AuditLog entry in a
+    single batched pass per referenced model. The template renders
+    `target_label` when set and falls back to the raw '#id' otherwise.
+    """
+    from collections import defaultdict
+    from apps.core.hashids import encode as _hashid_encode
+
+    ids_by_model = defaultdict(set)
+    for e in entries:
+        if e.target_model and e.target_id:
+            ids_by_model[e.target_model].add(e.target_id)
+
+    labels = {}  # {(model, id): (label, url_or_None)}
+
+    if 'User' in ids_by_model:
+        from apps.accounts.models import User
+        users = (User.objects
+                 .filter(id__in=ids_by_model['User'])
+                 .select_related('jobseeker_profile', 'employer_profile', 'employer_profile__company'))
+        for u in users:
+            jp = getattr(u, 'jobseeker_profile', None)
+            ep = getattr(u, 'employer_profile', None)
+            if jp:
+                labels[('User', u.id)] = (
+                    f'{jp.first_name} {jp.last_name}'.strip() or u.email,
+                    f'/admin-panel/jobseekers/{_hashid_encode(jp.id)}/',
+                )
+            elif ep and ep.company_id:
+                labels[('User', u.id)] = (
+                    ep.company.name,
+                    f'/admin-panel/companies/{_hashid_encode(ep.company_id)}/',
+                )
+            else:
+                labels[('User', u.id)] = (u.email or f'User #{u.id}', None)
+
+    if 'JobseekerProfile' in ids_by_model:
+        from apps.jobseekers.models import JobseekerProfile
+        for jp in JobseekerProfile.objects.filter(id__in=ids_by_model['JobseekerProfile']).only('id', 'first_name', 'last_name'):
+            labels[('JobseekerProfile', jp.id)] = (
+                f'{jp.first_name} {jp.last_name}'.strip() or f'Jobseeker #{jp.id}',
+                f'/admin-panel/jobseekers/{_hashid_encode(jp.id)}/',
+            )
+
+    if 'Company' in ids_by_model:
+        for c in Company.objects.filter(id__in=ids_by_model['Company']).only('id', 'name'):
+            labels[('Company', c.id)] = (
+                c.name,
+                f'/admin-panel/companies/{_hashid_encode(c.id)}/',
+            )
+
+    if 'JobPosting' in ids_by_model:
+        from apps.jobs.models import JobPosting
+        for j in (JobPosting.objects
+                  .filter(id__in=ids_by_model['JobPosting'])
+                  .select_related('company').only('id', 'title', 'company__name', 'company_id')):
+            labels[('JobPosting', j.id)] = (
+                f'{j.title} — {j.company.name}',
+                f'/admin-panel/companies/{_hashid_encode(j.company_id)}/jobs/{_hashid_encode(j.id)}/',
+            )
+
+    if 'FAQ' in ids_by_model:
+        from .models import FAQ
+        for f in FAQ.objects.filter(id__in=ids_by_model['FAQ']).only('id', 'question'):
+            q = f.question or f'FAQ #{f.id}'
+            labels[('FAQ', f.id)] = (
+                q if len(q) <= 70 else q[:67] + '…',
+                '/admin-panel/faqs/',
+            )
+
+    if 'AdminAnnouncement' in ids_by_model:
+        from .models import AdminAnnouncement
+        for a in AdminAnnouncement.objects.filter(id__in=ids_by_model['AdminAnnouncement']).only('id', 'subject'):
+            labels[('AdminAnnouncement', a.id)] = (
+                a.subject or f'Announcement #{a.id}',
+                '/admin-panel/announcements/',
+            )
+
+    if 'ImportBatch' in ids_by_model:
+        from .models import ImportBatch
+        for ib in ImportBatch.objects.filter(id__in=ids_by_model['ImportBatch']).only('id', 'import_type', 'created_at'):
+            labels[('ImportBatch', ib.id)] = (
+                f'{ib.get_import_type_display()} — {ib.created_at:%b %d, %Y}',
+                '/admin-panel/bulk-import/',
+            )
+
+    if 'PersonalInfoChangeRequest' in ids_by_model:
+        from apps.jobseekers.models import PersonalInfoChangeRequest
+        for pr in (PersonalInfoChangeRequest.objects
+                   .filter(id__in=ids_by_model['PersonalInfoChangeRequest'])
+                   .select_related('profile').only('id', 'profile__id', 'profile__first_name', 'profile__last_name')):
+            p = pr.profile
+            labels[('PersonalInfoChangeRequest', pr.id)] = (
+                f'{p.first_name} {p.last_name} — info change request',
+                f'/admin-panel/jobseekers/{_hashid_encode(p.id)}/',
+            )
+
+    if 'SiteSettings' in ids_by_model:
+        # Singleton — no id-based lookup needed.
+        for sid in ids_by_model['SiteSettings']:
+            labels[('SiteSettings', sid)] = ('Site Settings', '/admin-panel/settings/')
+
+    if 'UserReport' in ids_by_model:
+        from .models import UserReport
+        for r in (UserReport.objects
+                  .filter(id__in=ids_by_model['UserReport'])
+                  .select_related('reported_jobseeker', 'reported_company', 'reported_job', 'reported_job__company')):
+            labels[('UserReport', r.id)] = (
+                f'Report — {r.account_label}',
+                f'/admin-panel/reports/?status={r.status}&focus={_hashid_encode(r.id)}',
+            )
+
+    # Attach onto each row for the template.
+    for e in entries:
+        info = labels.get((e.target_model, e.target_id))
+        if info:
+            e.target_label, e.target_url = info
+        else:
+            e.target_label, e.target_url = None, None
 
 
 # ── Bulk import (CSV) ──────────────────────────────────────────────

@@ -83,6 +83,34 @@
   {% elif saved_section == 'email_verified' %}
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Email verification bypassed for all reps of this company.</div>
   {% endif %}
+
+  {# Copy-once banner for the temp password (see jobseeker_settings.html). #}
+  {% if generated_password %}
+  <div class="mb-6 bg-amber/10 border border-amber/40 rounded-xl px-4 py-4">
+    <div class="flex items-start gap-3">
+      <svg class="w-5 h-5 text-amber flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+      </svg>
+      <div class="min-w-0 flex-1">
+        <p class="text-primary font-bold text-sm mb-1">Temporary password generated</p>
+        <p class="text-muted text-xs mb-3">
+          Copy this now and reply to the representative's password-reset email at
+          <strong class="text-primary">easyhire.admin@gmail.com</strong>. The password
+          won't be shown again once you leave this page. Tell them to change it
+          after first login.
+        </p>
+        <div class="flex items-center gap-2 flex-wrap">
+          <code id="temp-password-value"
+                class="bg-white border border-taupe/40 text-primary text-base font-mono font-bold px-4 py-2 rounded-lg tracking-wider select-all">{{ generated_password }}</code>
+          <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('temp-password-value').textContent); this.textContent='Copied';"
+                  class="bg-primary text-white text-xs font-semibold px-4 py-2 rounded-full hover:bg-teal transition">
+            Copy
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
   {% if error %}
   <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">{{ error }}</div>
   {% endif %}
@@ -132,30 +160,57 @@
 
   {% if rep %}
   <!-- ── Reset Representative Password ─────────────────────────── -->
-  <h3 class="text-lg font-bold text-primary mb-3">Reset Representative Password</h3>
-  <form method="POST" class="mb-8">
+  <h3 class="text-lg font-bold text-primary mb-1">Reset Representative Password</h3>
+  <p class="text-muted text-xs mb-3">
+    Use <strong>Generate</strong> for reset requests received at easyhire.admin@gmail.com — a
+    random temp password shows in a banner for you to copy. Use the manual field only when
+    the rep asked for a specific string in person.
+  </p>
+
+  <form method="POST" id="co-generate-pw-form" class="mb-3">
     {% csrf_token %}
-    <input type="hidden" name="form" value="password">
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
-      <div>
-        <label class="block text-primary text-xs mb-1">New Password</label>
-        <input type="password" name="new_password" minlength="8" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-      </div>
-      <div>
-        <label class="block text-primary text-xs mb-1">Confirm Password</label>
-        <input type="password" name="confirm_password" minlength="8" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-      </div>
-      <div></div>
-      <div class="flex justify-end">
-        <button type="submit"
-                class="bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition w-full">
-          Set Password
-        </button>
-      </div>
-    </div>
+    <input type="hidden" name="form" value="generate_password">
+    <button type="button"
+            onclick="confirmAction({title:'Generate a temporary password?', body:'This will replace {{ rep.first_name|escapejs }}\'s current password with a random one shown on the next screen. They\'ll need to change it after logging in.', ctaLabel:'Generate password', ctaClass:'bg-amber hover:bg-amber/90', onConfirm:function(){document.getElementById('co-generate-pw-form').submit();}})"
+            class="inline-flex items-center gap-2 bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+      </svg>
+      Generate Temporary Password
+    </button>
   </form>
+
+  <details class="mb-8 group">
+    <summary class="text-muted text-xs cursor-pointer hover:text-primary transition list-none inline-flex items-center gap-1">
+      <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+      Or set a specific password manually
+    </summary>
+    <form method="POST" class="mt-3">
+      {% csrf_token %}
+      <input type="hidden" name="form" value="password">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+        <div>
+          <label class="block text-primary text-xs mb-1">New Password</label>
+          <input type="password" name="new_password" minlength="8" required
+                 class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        </div>
+        <div>
+          <label class="block text-primary text-xs mb-1">Confirm Password</label>
+          <input type="password" name="confirm_password" minlength="8" required
+                 class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        </div>
+        <div></div>
+        <div class="flex justify-end">
+          <button type="submit"
+                  class="bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition w-full">
+            Set Password
+          </button>
+        </div>
+      </div>
+    </form>
+  </details>
   {% else %}
   <p class="text-muted text-sm italic text-center">No representative account is linked to this company yet.</p>
   {% endif %}

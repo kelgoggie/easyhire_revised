@@ -17,9 +17,13 @@
     btn.disabled = true;
     btn.textContent = 'Resend in ' + remaining + 's';
     if (msgEl && sentTo) {
+      // Nudge users to check spam — EasyHire's sender domain isn't yet
+      // authenticated so Gmail/Outlook filters flag these messages
+      // aggressively. Removed once we're on a verified domain.
       msgEl.innerHTML =
         '<strong>Email sent.</strong> ' +
-        '<span class="text-muted">Check ' + sentTo + ' for a fresh confirmation link.</span>';
+        '<span class="text-muted">Check ' + sentTo + ' for a fresh confirmation link — ' +
+        "if it's not in your inbox within a minute, check your spam or junk folder.</span>";
     }
     const tick = setInterval(function() {
       remaining -= 1;

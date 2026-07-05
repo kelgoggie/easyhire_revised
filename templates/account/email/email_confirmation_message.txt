@@ -1,0 +1,15 @@
+{% load account %}{% user_display user as user_display %}{% autoescape off %}Hi {{ user_display }},
+
+Welcome to EasyHire!
+
+To verify your account, click this link:
+
+    {{ activate_url }}
+
+Need help? Reply to this email or reach out to us via easyhire.admin@gmail.com
+
+Regards,
+
+EasyHire
+Iloilo City, Philippines 5000
+{% endautoescape %}

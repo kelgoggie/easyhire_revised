@@ -23,9 +23,9 @@
   <!-- Status filter tabs -->
   <div class="flex items-center gap-1.5 mb-5">
     {% with q=search %}
-    <a href="?status=open&q={{ q }}"      class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'open' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">Open</a>
-    <a href="?status=reviewed&q={{ q }}"  class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'reviewed' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">Reviewed</a>
+    <a href="?status=open&q={{ q }}"      class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'open' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">Pending</a>
     <a href="?status=dismissed&q={{ q }}" class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'dismissed' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">Dismissed</a>
+    <a href="?status=reviewed&q={{ q }}"  class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'reviewed' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">Resolved</a>
     <a href="?status=all&q={{ q }}"       class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status == 'all' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">All</a>
     {% endwith %}
   </div>
@@ -35,43 +35,36 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="text-left border-b border-taupe/30 bg-surface/40">
-          <th class="px-5 py-3 text-xs font-bold text-primary">Account Name</th>
-          <th class="px-4 py-3 text-xs font-bold text-primary">Account Type</th>
-          <th class="px-4 py-3 text-xs font-bold text-primary">Report Description</th>
+          <th class="px-5 py-3 text-xs font-bold text-primary">Report filed against</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Reason</th>
           <th class="px-4 py-3 text-xs font-bold text-primary">Filed by</th>
-          <th class="px-4 py-3 text-xs font-bold text-primary">Report Filed</th>
-          <th class="px-4 py-3"></th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Filed on</th>
+          <th class="px-4 py-3 text-xs font-bold text-primary">Status</th>
         </tr>
       </thead>
       <tbody>
         {% for r in page.object_list %}
-        <tr class="report-row border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition"
-            data-report-id="{{ r.id|hashid }}"
-            data-account-name="{{ r.account_label }}"
-            data-account-type="{{ r.get_account_type_display }}"
-            data-description="{{ r.description }}"
-            data-filed-by="{{ r.filed_by_label }}"
-            data-status="{{ r.status }}"
-            data-filed-at="{{ r.created_at|date:'M j, Y g:i A' }}">
-          <td class="px-5 py-3 font-bold text-primary">
-            {% if r.reported_jobseeker %}
-            <a href="/admin-panel/jobseekers/{{ r.reported_jobseeker.id|hashid }}/" class="hover:text-teal transition">{{ r.account_label }}</a>
-            {% elif r.reported_company %}
-            <a href="/admin-panel/companies/{{ r.reported_company.id|hashid }}/" class="hover:text-teal transition">{{ r.account_label }}</a>
-            {% else %}{{ r.account_label }}{% endif %}
+        {# Whole row is clickable — data-href routes to the reported thing. #}
+        <tr class="report-row border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition {% if r.target_url %}cursor-pointer{% endif %}"
+            {% if r.target_url %}data-href="{{ r.target_url }}"
+            onclick="if (event.target.closest('a, button')) return; window.location = this.dataset.href;"{% endif %}>
+          <td class="px-5 py-3">
+            <p class="font-bold text-primary">{{ r.account_label }}</p>
+            <p class="text-muted text-[11px] italic mt-0.5">{{ r.get_account_type_display }}</p>
           </td>
-          <td class="px-4 py-3 text-muted italic">{{ r.get_account_type_display }}</td>
           <td class="px-4 py-3 text-muted italic">{{ r.description|truncatechars:60 }}</td>
           <td class="px-4 py-3 text-muted italic">{{ r.filed_by_label }}</td>
           <td class="px-4 py-3 text-muted italic">{{ r.created_at|date:"M j, Y g:i A" }}</td>
-          <td class="px-4 py-3 text-right">
+          <td class="px-4 py-3">
+            {# For Pending: plain "Pending". For Resolved / Dismissed:      #}
+            {# show the resolution_note (the specific action taken)         #}
+            {# instead of just repeating the status name.                   #}
             {% if r.status == 'open' %}
-            <button type="button" class="review-btn text-muted italic underline hover:text-primary transition">Review...</button>
+            <span class="text-amber text-sm font-semibold">Pending</span>
+            {% elif r.status == 'reviewed' %}
+            <span class="text-teal text-sm">{{ r.resolution_note|default:"Resolved" }}</span>
             {% else %}
-            <span class="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full
-              {% if r.status == 'reviewed' %}bg-teal/15 text-teal{% else %}bg-gray-100 text-muted{% endif %}">
-              {{ r.get_status_display }}
-            </span>
+            <span class="text-muted text-sm">{{ r.resolution_note|default:"Dismissed" }}</span>
             {% endif %}
           </td>
         </tr>

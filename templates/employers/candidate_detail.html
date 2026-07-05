@@ -8,18 +8,21 @@
 
   {# ── Job context header (only when we came from /jobs/<id>/candidates/) ── #}
   {% if current_job %}
-  {# Back-link mirrors whichever tab the employer arrived from. from_tab is #}
-  {# set from the ?from= query param on the referring card link.           #}
+  {# Back-link takes the employer to the exact tab they came from. from_tab #}
+  {# is set from ?from=recommended on the referring card link; anything     #}
+  {# else lands on Applicants.                                              #}
   <a href="/employers/jobs/{{ current_job.id|hashid }}/candidates/?tab={% if from_tab == 'recommended' %}recommended{% else %}applicants{% endif %}"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
     </svg>
-    {% if from_tab == 'recommended' %}Back to Recommended Jobseekers{% else %}Back to Applicants{% endif %}
+    Back to {{ current_job.title }}
   </a>
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
     <div class="min-w-0">
-      <p class="text-muted text-xs uppercase tracking-wide font-semibold">Applied for</p>
+      <p class="text-muted text-xs uppercase tracking-wide font-semibold">
+        {% if application %}Applied for{% else %}Considering for{% endif %}
+      </p>
       <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">{{ current_job.title }}</h1>
       {% if match_score %}
       <div class="mt-2">{% match_badge match_score.total %}</div>

@@ -4,7 +4,10 @@
 {% block admin_content %}
 <div class="py-8 max-w-7xl mx-auto">
 
-  <!-- Breadcrumb-ish back — adapts to where the user came from -->
+  {# Breadcrumb-ish back — adapts to where the user came from.              #}
+  {# Hides when arriving from a report; the _report_banner partial below   #}
+  {# renders "Back to User Reports" in that case.                          #}
+  {% if not active_report %}
   <a href="{% if came_from_jobs %}/admin-panel/jobs/{% else %}/admin-panel/companies/{{ company.id|hashid }}/{% endif %}"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -12,6 +15,7 @@
     </svg>
     {% if came_from_jobs %}Back to Jobs{% else %}Back to {{ company.name }}{% endif %}
   </a>
+  {% endif %}
 
   <!-- Heading -->
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
@@ -80,6 +84,8 @@
   {% endif %}
 
   <div class="border-b border-taupe/40 mb-6"></div>
+
+  {% include "admin_panel/_report_banner.html" %}
 
   <!-- Disable modal (only rendered when the job isn't already disabled) -->
   {% if not job.admin_disabled %}

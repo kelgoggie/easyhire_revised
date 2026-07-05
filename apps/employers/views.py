@@ -56,23 +56,21 @@ def employer_verified_required(view_func):
 
 
 def email_verified_required(view_func):
-    """Block publishing actions (post a job, contact a candidate, etc.) until
-    the user has a verified email address on file. Bounces with a session
-    flag so the dashboard / job-list banner can explain why."""
+    """Formerly blocked publishing actions until email was verified. With
+    SMTP deferred (see /password-recovery/ and thesis notes), the effective
+    identity gate on the employer side is company `verification_status`
+    reviewed by PESO admins — a stronger signal than an automated email
+    link anyway. This decorator now enforces only auth + is_active.
+
+    Kept as a decorator (rather than removed) so the intent at the call
+    site is still readable: "this action is publishing-tier, requires an
+    authenticated + active employer".
+    """
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect('/employers/login/')
-        try:
-            from allauth.account.models import EmailAddress
-            ok = EmailAddress.objects.filter(user=request.user, verified=True).exists()
-        except Exception:
-            ok = True  # don't block on allauth import / DB error
-        if not ok:
-            request.session['pending_block_msg'] = (
-                'Verify your email address to unlock this action — '
-                'check the Email Verification link in the avatar menu.'
-            )
-            return redirect('/employers/dashboard/')
+        if not request.user.is_active:
+            return redirect('/employers/login/')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -124,6 +122,12 @@ def pending(request):
     ]
     uploaded_count = sum(1 for item in checklist if item['uploaded'])
 
+    # Drain flashes: upload rejection (size limit / incomplete set) + the
+    # one-shot "documents submitted" confirmation after a successful
+    # submit_verification() call.
+    upload_error_msg = request.session.pop('upload_error_msg', None)
+    verification_submitted_msg = request.session.pop('verification_submitted_msg', None)
+
     return render(request, 'employers/pending.html', {
         'company': company,
         'profile': profile,
@@ -133,6 +137,8 @@ def pending(request):
         # Lock the upload UI once verified — only PESO bumping the status
         # back to pending/denied re-opens it for the employer.
         'locked': company.verification_status == Company.VERIFIED,
+        'upload_error_msg': upload_error_msg,
+        'verification_submitted_msg': verification_submitted_msg,
     })
 
 
@@ -150,18 +156,90 @@ def upload_document(request):
     if company.verification_status == Company.VERIFIED:
         return redirect('/employers/pending/')
 
+    # 10 MB limit — matches the "Max 10 MB per file" copy on pending.html.
+    # Kept generous because scanned Mayor's Permits and multi-page PDFs
+    # legitimately land in the 3–8 MB range.
+    MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
     doc_type = request.POST.get('doc_type')
     file = request.FILES.get('file')
     if doc_type and file:
+        if file.size > MAX_UPLOAD_BYTES:
+            # Human-readable size for the flash. Uses MB with one decimal.
+            size_mb = file.size / (1024 * 1024)
+            request.session['upload_error_msg'] = (
+                f'"{file.name}" is {size_mb:.1f} MB — larger than the 10 MB '
+                f'per-file limit. Compress the file or split into smaller pages '
+                f'and try again.'
+            )
+            return redirect('/employers/pending/')
+
         VerificationDocument.objects.filter(company=company, doc_type=doc_type).delete()
         VerificationDocument.objects.create(company=company, doc_type=doc_type, file=file)
-        # Any new upload (especially after a denial) puts the application
-        # back into the review queue and clears the prior denial note.
-        if company.verification_status in (Company.UNVERIFIED, Company.DENIED):
-            company.verification_status = Company.PENDING
-            company.rejection_note = ''
-            company.save(update_fields=['verification_status', 'rejection_note'])
+        # Uploads no longer auto-forward to PESO — the employer now hits an
+        # explicit "Submit for Verification" button on pending.html so they
+        # can review the set first. See submit_verification() below.
 
+    return redirect('/employers/pending/')
+
+
+@login_required(login_url='/employers/login/')
+def submit_verification(request):
+    """Explicit push into the PESO review queue.
+
+    Flips UNVERIFIED / DENIED → PENDING. Requires all required documents to
+    be in place so employers can't accidentally submit a half-complete set.
+    """
+    if request.method != 'POST':
+        return redirect('/employers/pending/')
+    try:
+        company = request.user.employer_profile.company
+    except Exception:
+        return redirect('/employers/register/')
+
+    # Nothing to do if already PENDING or VERIFIED — the submit button won't
+    # be rendered in those states either, but guard against POSTing anyway.
+    if company.verification_status not in (Company.UNVERIFIED, Company.DENIED):
+        return redirect('/employers/pending/')
+
+    # Match pending() view's required_docs derivation so we don't submit a
+    # short set. Duplicated for lookup safety — pending() already has this
+    # exact list.
+    required_docs = [
+        VerificationDocument.MAYORS_PERMIT,
+        VerificationDocument.PHILJOBNET_ACCREDITATION,
+        VerificationDocument.PHILJOBNET_DASHBOARD,
+        VerificationDocument.JOB_VACANCIES_LIST,
+    ]
+    if company.type_of_company in ['local', 'overseas']:
+        required_docs += [
+            VerificationDocument.PEA_LICENSE,
+            VerificationDocument.DO174_CERTIFICATE,
+        ]
+    if company.type_of_company == 'overseas':
+        required_docs += [
+            VerificationDocument.POEA_LICENSE,
+            VerificationDocument.JOB_ORDER,
+        ]
+
+    uploaded_types = set(
+        VerificationDocument.objects
+        .filter(company=company)
+        .values_list('doc_type', flat=True)
+    )
+    if not all(dt in uploaded_types for dt in required_docs):
+        request.session['upload_error_msg'] = (
+            'Upload every required document before submitting for verification.'
+        )
+        return redirect('/employers/pending/')
+
+    company.verification_status = Company.PENDING
+    company.rejection_note = ''
+    company.save(update_fields=['verification_status', 'rejection_note'])
+    request.session['verification_submitted_msg'] = (
+        'Documents submitted. PESO Iloilo City will review your application '
+        'within 1–3 business days.'
+    )
     return redirect('/employers/pending/')
 
 
@@ -373,15 +451,9 @@ def job_edit(request, job_id):
                 'This action is unavailable until your company is verified.'
             )
             return redirect('/employers/dashboard/')
-        try:
-            from allauth.account.models import EmailAddress
-            if not EmailAddress.objects.filter(user=request.user, verified=True).exists():
-                request.session['pending_block_msg'] = (
-                    'Verify your email address to unlock this action.'
-                )
-                return redirect('/employers/dashboard/')
-        except Exception:
-            pass
+        # Email-verification gate removed — see email_verified_required
+        # docstring above. Company `verification_status` (PESO-reviewed) is
+        # the actual identity gate for publishing actions.
         job = get_object_or_404(JobPosting, id=job_id, company=company)
         is_admin_edit = False
 
@@ -1309,43 +1381,67 @@ def all_candidates(request):
 
 @employer_required
 def employer_settings(request):
-    """Employer-side settings: edit representative info, change password, deactivate.
+    """Employer-side settings: edit representative info, edit company contact
+    info, change password, deactivate.
 
-    Mirrors the jobseeker settings page but without the PESO-review workflow —
-    employer reps can edit their info directly.
+    Two independent sections:
+      - Representative info (all editable via Edit toggle in the template)
+      - Company info: contact fields editable; name/type/nature locked
+        (admin-only, requires re-verification with additional docs).
     """
-    from datetime import datetime
+    from django.db import IntegrityError
     profile = request.user.employer_profile
+    company = profile.company
     saved_section = None
+    error = None
 
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
 
-        if form_type == 'personal':
+        if form_type == 'representative':
+            # Rep name + position + phone + email. Sex + birthdate removed —
+            # not needed for the rep record.
             profile.first_name  = request.POST.get('first_name',  profile.first_name).strip()
             profile.middle_name = request.POST.get('middle_name', '').strip()
             profile.last_name   = request.POST.get('last_name',   profile.last_name).strip()
             profile.suffix      = request.POST.get('suffix',      '').strip()
             profile.position    = request.POST.get('position',    profile.position).strip()
             profile.phone       = request.POST.get('phone',       profile.phone).strip()
-            sex = request.POST.get('sex', '').strip()
-            if sex in {'M', 'F'}:
-                profile.sex = sex
-            dob_raw = request.POST.get('date_of_birth', '').strip()
-            if dob_raw:
-                for fmt in ('%m/%d/%Y', '%B %d, %Y'):
+            profile.email       = request.POST.get('rep_contact_email', profile.email).strip()
+
+            # Login email (User.email). Enforce uniqueness manually since a
+            # duplicate would raise IntegrityError deep in save() — friendlier
+            # to catch it here and surface a form error.
+            new_login_email = (request.POST.get('rep_login_email') or '').strip()
+            if new_login_email and new_login_email != request.user.email:
+                from apps.accounts.models import User
+                if User.objects.filter(email__iexact=new_login_email).exclude(pk=request.user.pk).exists():
+                    error = 'That login email is already in use by another EasyHire account.'
+                else:
+                    request.user.email = new_login_email
                     try:
-                        profile.birthday = datetime.strptime(dob_raw, fmt).date()
-                        break
-                    except ValueError:
-                        continue
-            profile.save()
-            saved_section = 'personal'
+                        request.user.save(update_fields=['email'])
+                    except IntegrityError:
+                        error = 'That login email is already in use by another EasyHire account.'
+
+            if error is None:
+                profile.save()
+                saved_section = 'representative'
+
+        elif form_type == 'company_contact':
+            # Only the contact fields on Company are editable from here —
+            # name / type_of_company / nature_of_company stay admin-only.
+            company.company_email     = request.POST.get('company_email',     company.company_email).strip()
+            company.recruitment_email = request.POST.get('recruitment_email', company.recruitment_email).strip()
+            company.save(update_fields=['company_email', 'recruitment_email'])
+            saved_section = 'company_contact'
 
     return render(request, 'employers/settings.html', {
         'profile': profile,
-        'company': profile.company,
+        'company': company,
+        'user': request.user,
         'saved_section': saved_section,
+        'error': error,
         'unread_notifications': False,
         'unread_messages': False,
     })

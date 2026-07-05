@@ -1,0 +1,175 @@
+{% extends "base/base_dashboard_jobseeker.html" %}
+{% load static %}
+
+{% block title %}Verify Your Identity — EasyHire{% endblock %}
+
+{% with active_nav="settings" %}
+{% block page_content %}
+<div class="py-8">
+
+  <a href="/settings/" class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back to Settings
+  </a>
+
+  <div class="flex items-baseline justify-between gap-4 flex-wrap mb-2">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Verify Your Identity</h1>
+    <span class="text-muted text-xs italic">Optional</span>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  <!-- Feedback banners -->
+  {% if saved %}
+  <div class="mb-6 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">
+    Thanks — your ID is now under review by PESO Iloilo City. You'll get a notification once
+    it's approved or if further information is needed.
+  </div>
+  {% endif %}
+  {% if error %}
+  <div class="mb-6 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">{{ error }}</div>
+  {% endif %}
+
+  <!-- Current status card -->
+  <div class="bg-white border border-taupe/40 rounded-2xl p-5 sm:p-6 mb-6">
+    <p class="text-primary font-bold text-sm mb-3">Current Status</p>
+    <div class="flex items-center gap-3 flex-wrap">
+      {% if profile.id_verification_status == 'verified' %}
+      <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-teal border border-teal/30 bg-teal/10 px-4 py-2 rounded-full">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        PESO Verified
+      </span>
+      {% if profile.id_verified_at %}
+      <span class="text-muted text-xs italic">Verified on {{ profile.id_verified_at|date:"F j, Y" }}</span>
+      {% endif %}
+      {% elif profile.id_verification_status == 'pending' %}
+      <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-amber border border-amber/30 bg-amber/10 px-4 py-2 rounded-full">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Pending Review
+      </span>
+      {% if profile.id_submitted_at %}
+      <span class="text-muted text-xs italic">Submitted {{ profile.id_submitted_at|date:"F j, Y" }}</span>
+      {% endif %}
+      {% elif profile.id_verification_status == 'denied' %}
+      <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-500 border border-red-200 bg-red-50 px-4 py-2 rounded-full">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+        Verification Denied
+      </span>
+      {% else %}
+      <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-muted border border-taupe/40 bg-taupe/10 px-4 py-2 rounded-full">
+        Not Verified
+      </span>
+      {% endif %}
+    </div>
+
+    {% if profile.id_verification_status == 'denied' and profile.id_verification_note %}
+    <div class="mt-4 border-l-2 border-red-300 pl-4 py-1">
+      <p class="text-primary font-semibold text-xs mb-1">PESO's note:</p>
+      <p class="text-muted text-sm">{{ profile.id_verification_note }}</p>
+      <p class="text-muted text-xs italic mt-2">You may resubmit a new ID below.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Explainer -->
+  <div class="mb-6">
+    <h2 class="text-lg font-bold text-primary mb-2">What is the PESO Verified badge?</h2>
+    <p class="text-muted text-sm leading-relaxed mb-3">
+      Verifying your identity is <strong>completely optional</strong>. You can browse jobs,
+      apply, and be hired without submitting an ID. Verifying just adds a
+      <strong class="text-teal">PESO Verified</strong> badge to your profile so employers
+      can see, at a glance, that your identity has been confirmed by PESO Iloilo City.
+    </p>
+    <p class="text-muted text-sm leading-relaxed">
+      It doesn't unlock any extra features, and PESO can't see or edit your other resume
+      details as part of the review &mdash; only your submitted ID against your name and
+      birthday on file.
+    </p>
+  </div>
+
+  {# Only show the upload form if we're not currently pending review. #}
+  {% if profile.id_verification_status != 'pending' %}
+  <div class="bg-white border border-taupe/40 rounded-2xl p-5 sm:p-6">
+    <p class="text-primary font-bold text-sm mb-1">Submit a Valid Philippine ID</p>
+    <p class="text-muted text-xs mb-4">
+      Upload a clear photo or scan. Accepted formats: JPG, PNG, HEIC, or PDF. Max 10 MB.
+    </p>
+
+    <form method="POST" enctype="multipart/form-data" id="verify-id-form">
+      {% csrf_token %}
+      <input type="file" name="id_document" id="verify-id-file" class="hidden"
+             accept="image/*,.heic,.heif,application/pdf" required>
+
+      <button type="button" id="verify-id-choose"
+              class="w-full flex items-center justify-center gap-2 bg-surface border border-dashed border-taupe/60 text-primary text-sm font-semibold px-4 py-4 rounded-xl hover:bg-taupe/20 transition mb-4">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+        <span id="verify-id-label">Choose file (JPG, PNG, HEIC, or PDF · max 10 MB)</span>
+      </button>
+
+      <div class="flex justify-end">
+        <button type="submit" id="verify-id-submit" disabled
+                class="bg-amber text-white text-sm font-semibold px-8 py-2.5 rounded-full hover:bg-amber/90 transition disabled:opacity-50 disabled:cursor-not-allowed">
+          Submit for Review
+        </button>
+      </div>
+    </form>
+
+    <!-- Accepted IDs -->
+    <details class="mt-6 group">
+      <summary class="text-muted text-xs cursor-pointer hover:text-primary transition list-none inline-flex items-center gap-1">
+        <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+        Which IDs are accepted?
+      </summary>
+      <ul class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-muted text-xs pl-4">
+        {% for id_name in valid_ph_ids %}
+        <li class="list-disc marker:text-teal">{{ id_name }}</li>
+        {% endfor %}
+      </ul>
+    </details>
+  </div>
+  {% else %}
+  <div class="bg-white border border-taupe/40 rounded-2xl p-5 sm:p-6 text-center">
+    <p class="text-primary font-semibold text-sm mb-1">Your submission is being reviewed</p>
+    <p class="text-muted text-xs">You'll be able to resubmit if PESO needs a clearer copy or a different ID.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+(function() {
+  const chooseBtn = document.getElementById('verify-id-choose');
+  const fileInput = document.getElementById('verify-id-file');
+  const label     = document.getElementById('verify-id-label');
+  const submit    = document.getElementById('verify-id-submit');
+  if (!chooseBtn) return;
+
+  chooseBtn.addEventListener('click', function() { fileInput.click(); });
+
+  fileInput.addEventListener('change', function() {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) { submit.disabled = true; return; }
+    if (f.size > 10 * 1024 * 1024) {
+      label.textContent = 'File too large (max 10 MB) — choose another';
+      fileInput.value = '';
+      submit.disabled = true;
+      return;
+    }
+    label.textContent = f.name;
+    submit.disabled = false;
+  });
+})();
+</script>
+{% endblock %}
+{% endwith %}

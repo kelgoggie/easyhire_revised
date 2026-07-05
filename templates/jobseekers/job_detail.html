@@ -326,8 +326,8 @@
     btn.addEventListener('click', function() {
       if (!window.openReportModal) return;
       window.openReportModal({
-        targetType:   'employer',
-        targetId:     {{ job.company.id }},
+        targetType:   'job',
+        targetId:     {{ job.id }},
         contextLabel: 'About: {{ job.title|escapejs }} at {{ job.company.name|escapejs }}',
       });
     });

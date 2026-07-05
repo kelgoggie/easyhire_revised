@@ -9,85 +9,175 @@
 
   <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-primary mb-8">Settings</h1>
 
-  <!-- ── Personal Information ──────────────────────────────────── -->
-  <h2 class="text-lg font-bold text-primary mb-4">Representative Information</h2>
-
-  {% if saved_section == 'personal' %}
+  {# ── Shared feedback banners ────────────────────────────────── #}
+  {% if saved_section == 'representative' %}
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">
-    Your information has been updated.
+    Representative information updated.
+  </div>
+  {% elif saved_section == 'company_contact' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">
+    Company contact information updated.
   </div>
   {% endif %}
+  {% if error %}
+  <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">{{ error }}</div>
+  {% endif %}
 
-  <form method="POST" action="/employers/settings/" class="mb-8">
+  {# ═══════════════════════════════════════════════════════════
+     Representative Information
+     Fields locked by default; "Edit" unlocks them and swaps
+     button copy to "Save". Independent from the Company section.
+     ═══════════════════════════════════════════════════════════ #}
+  <div class="flex items-baseline justify-between gap-3 mb-4">
+    <h2 class="text-lg font-bold text-primary">Representative Information</h2>
+    <button type="button" data-toggle-section="rep"
+            class="section-edit-btn bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition">
+      Edit
+    </button>
+  </div>
+
+  <form method="POST" action="/employers/settings/" class="mb-10" data-section-form="rep">
     {% csrf_token %}
-    <input type="hidden" name="form_type" value="personal">
+    <input type="hidden" name="form_type" value="representative">
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
       <div>
         <label class="block text-primary text-xs mb-1">First Name</label>
-        <input type="text" name="first_name" value="{{ profile.first_name|default:'' }}" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="text" name="first_name" value="{{ profile.first_name|default:'' }}" required disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Middle Name</label>
-        <input type="text" name="middle_name" value="{{ profile.middle_name|default:'' }}"
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="text" name="middle_name" value="{{ profile.middle_name|default:'' }}" disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Last Name</label>
-        <input type="text" name="last_name" value="{{ profile.last_name|default:'' }}" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="text" name="last_name" value="{{ profile.last_name|default:'' }}" required disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Suffix</label>
-        <input type="text" name="suffix" value="{{ profile.suffix|default:'' }}"
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="text" name="suffix" value="{{ profile.suffix|default:'' }}" disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 mb-4">
       <div>
-        <label class="block text-primary text-xs mb-1">Position at {{ company.name|truncatechars:20 }}</label>
-        <input type="text" name="position" value="{{ profile.position|default:'' }}" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <label class="block text-primary text-xs mb-1">Position at {{ company.name|truncatechars:30 }}</label>
+        <input type="text" name="position" value="{{ profile.position|default:'' }}" required disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Phone</label>
-        <input type="text" name="phone" value="{{ profile.phone|default:'' }}"
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-      </div>
-      <div>
-        <label class="block text-primary text-xs mb-1">Sex</label>
-        <div class="relative">
-          <select name="sex" class="w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-            <option value="M" {% if profile.sex == 'M' %}selected{% endif %}>Male</option>
-            <option value="F" {% if profile.sex == 'F' %}selected{% endif %}>Female</option>
-          </select>
-          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-      </div>
-      <div>
-        <label class="block text-primary text-xs mb-1">Birthday</label>
-        <div class="relative">
-          <input type="text" name="date_of_birth" data-datepicker="date" data-min-age="15" data-display-format="long"
-                 value="{% if profile.birthday %}{{ profile.birthday|date:'F j, Y' }}{% endif %}"
-                 placeholder="Select date" readonly autocomplete="off"
-                 class="w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
-          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        </div>
+        <input type="text" name="phone" value="{{ profile.phone|default:'' }}" disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
     </div>
 
-    <div class="flex justify-end">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-primary text-xs mb-1">Login Email <span class="text-muted italic">— used to sign in</span></label>
+        <input type="email" name="rep_login_email" value="{{ user.email|default:'' }}" required disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Contact Email <span class="text-muted italic">— where jobseekers reach you</span></label>
+        <input type="email" name="rep_contact_email" value="{{ profile.email|default:'' }}" disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+    </div>
+
+    <div class="hidden mt-4 flex-none flex justify-end" data-section-save-wrap="rep">
       <button type="submit"
-              class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition">
-        Save Personal Info
+              class="bg-amber text-white text-sm font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition">
+        Save Representative Info
       </button>
     </div>
-    <p class="text-xs text-muted italic mt-3">
-      To edit your company's information (name, address, hiring email), use the
-      <a href="/employers/profile/" class="underline hover:text-primary">Company Profile</a> page.
+  </form>
+
+  {# ═══════════════════════════════════════════════════════════
+     Company / Employer Information
+     Contact emails editable; name / type / nature locked and
+     require admin action (with re-verification docs) to change.
+     ═══════════════════════════════════════════════════════════ #}
+  <div class="flex items-baseline justify-between gap-3 mb-4">
+    <h2 class="text-lg font-bold text-primary">Company Information</h2>
+    <button type="button" data-toggle-section="company"
+            class="section-edit-btn bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition">
+      Edit
+    </button>
+  </div>
+
+  <form method="POST" action="/employers/settings/" class="mb-10" data-section-form="company">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="company_contact">
+
+    {# Editable contact emails #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="block text-primary text-xs mb-1">Company Email</label>
+        <input type="email" name="company_email" value="{{ company.company_email|default:'' }}" required disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Recruitment Email</label>
+        <input type="email" name="recruitment_email" value="{{ company.recruitment_email|default:'' }}" required disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+    </div>
+
+    {# Locked identifying fields — always disabled, no data submitted #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-2">
+      <div>
+        <label class="block text-primary text-xs mb-1">
+          Company Name
+          <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-muted border border-taupe/40 bg-taupe/10 px-2 py-0.5 rounded-full ml-1">
+            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            Admin-only
+          </span>
+        </label>
+        <input type="text" value="{{ company.name }}" disabled
+               class="w-full bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm text-muted cursor-not-allowed">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">
+          Business Type
+          <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-muted border border-taupe/40 bg-taupe/10 px-2 py-0.5 rounded-full ml-1">
+            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            Admin-only
+          </span>
+        </label>
+        <input type="text" value="{{ company.get_type_of_company_display|default:'—' }}" disabled
+               class="w-full bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm text-muted cursor-not-allowed">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">
+          Nature of Company
+          <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-muted border border-taupe/40 bg-taupe/10 px-2 py-0.5 rounded-full ml-1">
+            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            Admin-only
+          </span>
+        </label>
+        <input type="text" value="{{ company.nature_of_company|default:'—' }}" disabled
+               class="w-full bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm text-muted cursor-not-allowed">
+      </div>
+    </div>
+
+    <p class="text-xs text-muted italic mt-2">
+      Company name, business type, and nature of company can only be edited by PESO Iloilo City.
+      Additional supporting documents may be required — contact
+      <a href="mailto:easyhire.admin@gmail.com" class="text-primary underline hover:text-teal transition">easyhire.admin@gmail.com</a>
+      to request a change.
     </p>
+
+    <div class="hidden mt-4 flex-none flex justify-end" data-section-save-wrap="company">
+      <button type="submit"
+              class="bg-amber text-white text-sm font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition">
+        Save Company Info
+      </button>
+    </div>
   </form>
 
   <!-- ── Account ───────────────────────────────────────────────── -->
@@ -177,6 +267,37 @@ function getCookie(n) {
   const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
   if (p.length === 2) return p.pop().split(';').shift();
 }
+
+// ── Per-section Edit → Save toggle ────────────────────────────────
+// Each section has an Edit button (data-toggle-section) tied to a form
+// (data-section-form) and a save wrapper (data-section-save-wrap). The
+// two sections are fully independent — enabling one doesn't touch the
+// other, so an employer can edit rep info without disturbing company
+// info, and vice versa.
+(function() {
+  document.querySelectorAll('[data-toggle-section]').forEach(function(btn) {
+    const key = btn.dataset.toggleSection;
+    const form = document.querySelector('[data-section-form="' + key + '"]');
+    const saveWrap = document.querySelector('[data-section-save-wrap="' + key + '"]');
+    if (!form || !saveWrap) return;
+
+    const fieldSelector = key === 'rep' ? '.rep-field' : '.company-field';
+    let editing = false;
+
+    btn.addEventListener('click', function() {
+      editing = !editing;
+      form.querySelectorAll(fieldSelector).forEach(function(f) { f.disabled = !editing; });
+      saveWrap.classList.toggle('hidden', !editing);
+      btn.textContent = editing ? 'Cancel' : 'Edit';
+      btn.classList.toggle('bg-gray-100', editing);
+      btn.classList.toggle('text-red-500', editing);
+      if (editing) {
+        const first = form.querySelector(fieldSelector);
+        if (first) first.focus();
+      }
+    });
+  });
+})();
 
 // Password change (reuses the same /settings/password/ endpoint as jobseekers)
 (function() {

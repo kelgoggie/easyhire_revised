@@ -8,6 +8,7 @@ urlpatterns = [
     path('employers/dashboard/', views.dashboard, name='dashboard'),
     path('employers/pending/', views.pending, name='pending'),
     path('employers/upload-document/', views.upload_document, name='upload_document'),
+    path('employers/submit-verification/', views.submit_verification, name='submit_verification'),
     path('employers/jobs/', views.job_list, name='job_list'),
     path('employers/jobs/create/', views.job_create, name='job_create'),
     path('employers/jobs/<hashid:job_id>/', views.job_detail, name='job_detail'),

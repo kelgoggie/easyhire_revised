@@ -8,8 +8,8 @@
 {% endblock %}
 
 {% block content %}
-<main class="bg-surface min-h-screen py-6 sm:py-10 px-4 sm:px-6">
-  <div class="max-w-5xl mx-auto">
+<main class="bg-surface min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto">
 
     <!-- Search -->
     <form method="GET" action="/jobs/" class="mb-6">
@@ -39,14 +39,7 @@
           <option value="remote"   {% if location_type == "remote"   %}selected{% endif %}>Remote</option>
           <option value="overseas" {% if location_type == "overseas" %}selected{% endif %}>Overseas</option>
         </select>
-        <select name="sector" onchange="this.form.submit()"
-                class="bg-white border border-gray-200 rounded-full px-4 py-1.5 text-xs text-primary focus:outline-none focus:border-teal transition">
-          <option value="">All Sectors</option>
-          {% for s in sectors %}
-            <option value="{{ s.id }}" {% if sector == s.id|stringformat:"s" %}selected{% endif %}>{{ s.label }}</option>
-          {% endfor %}
-        </select>
-        {% if search or location_type or sector %}
+        {% if search or location_type %}
         <a href="/jobs/" class="text-xs text-muted hover:text-primary transition">Clear</a>
         {% endif %}
       </form>
