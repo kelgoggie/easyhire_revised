@@ -21,6 +21,7 @@
       <div class="hidden md:flex items-center gap-6 text-sm">
         <a href="/about/" class="text-muted hover:text-primary transition">About</a>
         <a href="/jobs/" class="text-muted hover:text-primary transition">Jobs</a>
+        <a href="/analytics/" class="text-muted hover:text-primary transition">Analytics</a>
         <a href="/login/" class="text-primary font-semibold hover:text-teal transition">EasyHire for Jobseekers</a>
       </div>
       <a href="/employers/login/" class="bg-amber text-white text-xs sm:text-sm font-semibold px-5 sm:px-6 py-2 rounded-full hover:bg-amber/90 transition">
@@ -219,12 +220,23 @@
         </div>
 
         <!-- Submit -->
-        <div class="flex justify-end">
+        <div class="flex justify-between items-center gap-3 flex-wrap">
+          {# Cancel and log out — same pattern as the jobseeker step-2 page. #}
+          <button type="button"
+                  onclick="if (confirm('Cancel this registration and log out? Anything you\'ve typed here will be discarded.')) { document.getElementById('cancel-logout-form').submit(); }"
+                  class="text-red-500 text-sm font-semibold hover:text-red-600 transition">
+            Cancel &amp; Log Out
+          </button>
           <button type="submit"
                   class="bg-amber text-white font-semibold px-12 py-3 rounded-full hover:bg-amber/90 transition text-sm">
             Confirm &amp; Submit
           </button>
         </div>
+      </form>
+
+      {# Hidden form for the Cancel & Log Out button (nested-form workaround). #}
+      <form id="cancel-logout-form" method="POST" action="/logout/" class="hidden">
+        {% csrf_token %}
       </form>
     </div>
   </main>

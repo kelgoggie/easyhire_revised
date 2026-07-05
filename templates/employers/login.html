@@ -21,6 +21,7 @@
       <div class="hidden md:flex items-center gap-6 text-sm">
         <a href="/about/" class="text-muted hover:text-primary transition">About</a>
         <a href="/jobs/" class="text-muted hover:text-primary transition">Jobs</a>
+        <a href="/analytics/" class="text-muted hover:text-primary transition">Analytics</a>
         <a href="/login/" class="text-primary font-semibold hover:text-teal transition">EasyHire for Jobseekers</a>
       </div>
       <a href="/login/" class="md:hidden text-primary text-xs font-semibold hover:text-teal transition">For Jobseekers</a>
@@ -44,12 +45,15 @@
         <p class="text-[22px] text-primary font-extrabold italic leading-snug mb-1">Employer!</p>
         <a href="/login/" class="text-xs text-muted underline block mb-5 hover:text-primary transition">Sign in as a Jobseeker.</a>
 
-        <!-- Error banner -->
+        {# Error banner — wrapped so showLanding() can hide it when the user  #}
+        {# clicks Back after a failed attempt.                                #}
+        <div id="login-error-banner">
         {% if error %}
         <div class="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg mb-4">
           {{ error }}
         </div>
         {% endif %}
+        </div>
 
         <!-- Landing state (3 buttons) -->
         <div id="state-landing" {% if error %}style="display:none"{% endif %}>
@@ -140,6 +144,10 @@ function showSignIn() {
 function showLanding() {
   document.getElementById('state-signin').style.display = 'none';
   document.getElementById('state-landing').style.display = 'block';
+  // Clear the "invalid email or password" banner so it doesn't linger on
+  // top of the landing state after clicking Back.
+  var err = document.getElementById('login-error-banner');
+  if (err) err.style.display = 'none';
 }
 
 // Carry the currently-typed sign-in email onto the password recovery page

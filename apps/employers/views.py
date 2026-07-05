@@ -143,6 +143,48 @@ def pending(request):
 
 
 @login_required(login_url='/employers/login/')
+def company_logo_upload(request):
+    """POST an image to replace the company logo. Mirrors the jobseeker
+    profile_picture_upload pattern (5 MB cap, delete-then-attach)."""
+    from django.http import JsonResponse
+    if request.method != 'POST' or not request.user.is_employer:
+        return JsonResponse({'ok': False, 'error': 'Bad request'}, status=400)
+    try:
+        company = request.user.employer_profile.company
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Company not found'}, status=404)
+
+    image = request.FILES.get('image')
+    if not image:
+        return JsonResponse({'ok': False, 'error': 'No image provided'}, status=400)
+    if image.size > 5 * 1024 * 1024:
+        return JsonResponse({'ok': False, 'error': 'Image must be under 5 MB'}, status=400)
+
+    if company.logo:
+        company.logo.delete(save=False)
+    company.logo = image
+    company.save(update_fields=['logo', 'updated_at'])
+    return JsonResponse({'ok': True, 'url': company.logo.url})
+
+
+@login_required(login_url='/employers/login/')
+def company_logo_remove(request):
+    """POST to clear the company logo — restores the placeholder icon."""
+    from django.http import JsonResponse
+    if request.method != 'POST' or not request.user.is_employer:
+        return JsonResponse({'ok': False, 'error': 'Bad request'}, status=400)
+    try:
+        company = request.user.employer_profile.company
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Company not found'}, status=404)
+    if company.logo:
+        company.logo.delete(save=False)
+        company.logo = None
+        company.save(update_fields=['logo', 'updated_at'])
+    return JsonResponse({'ok': True})
+
+
+@login_required(login_url='/employers/login/')
 def upload_document(request):
     if request.method != 'POST':
         return redirect('/employers/pending/')

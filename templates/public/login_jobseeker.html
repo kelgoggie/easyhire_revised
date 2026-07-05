@@ -20,6 +20,7 @@
       <div class="hidden md:flex items-center gap-6 text-sm">
         <a href="/about/" class="text-muted hover:text-primary transition">About</a>
         <a href="/jobs/" class="text-muted hover:text-primary transition">Jobs</a>
+        <a href="/analytics/" class="text-muted hover:text-primary transition">Analytics</a>
         <a href="/employers/login/" class="text-primary font-semibold hover:text-teal transition">EasyHire for Employers</a>
       </div>
       <a href="/employers/login/" class="md:hidden text-primary text-sm font-semibold hover:text-teal transition">For Employers</a>
@@ -43,7 +44,10 @@
         <p class="text-[22px] text-primary font-extrabold italic leading-snug mb-1">Jobseeker!</p>
         <a href="/employers/login/" class="text-xs text-muted underline block mb-5 hover:text-primary transition">Sign in as an Employer.</a>
 
-        <!-- Error banner -->
+        {# Error banner — wrapped so showLanding() can hide it when the user  #}
+        {# clicks "Back" after a failed attempt. Without the wrapper, the    #}
+        {# error stays visible on the landing state which reads as broken.  #}
+        <div id="login-error-banner">
         {% if error == 'invalid_credentials' %}
         <div class="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg mb-4">
           Incorrect email or password. Please try again.
@@ -61,6 +65,7 @@
           for more information.
         </div>
         {% endif %}
+        </div>{# /#login-error-banner #}
 
         <!-- Landing state (3 buttons) -->
         <div id="state-landing" {% if error %}style="display:none"{% endif %}>
@@ -151,6 +156,10 @@ function showSignIn() {
 function showLanding() {
   document.getElementById('state-signin').style.display = 'none';
   document.getElementById('state-landing').style.display = 'block';
+  // Clear the "invalid email or password" banner too — it'd otherwise stay
+  // stuck on top of the landing state and read as broken.
+  var err = document.getElementById('login-error-banner');
+  if (err) err.style.display = 'none';
 }
 
 // Carry the currently-typed sign-in email onto the password recovery page

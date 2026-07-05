@@ -24,14 +24,38 @@
     <!-- Header row: avatar + info + follower count + Create New Job -->
     <div class="flex items-start gap-6 mb-6">
 
-      <!-- Company avatar (z-10 so it sits ABOVE the banner stacking context) -->
-      <div class="relative z-10 w-40 h-40 rounded-full border-4 border-white bg-primary shadow-md flex-shrink-0 flex items-center justify-center overflow-hidden">
-        {% if company.logo %}
-          <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="w-full h-full object-cover">
-        {% else %}
-          <svg class="w-20 h-20 text-white/80" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+      {# Company avatar with hover-reveal edit affordance. Only the company #}
+      {# rep is served this page (see company_profile view — no can_edit   #}
+      {# check needed), so the upload button is always available.          #}
+      <div class="relative z-10 w-40 h-40 rounded-full border-4 border-white bg-primary shadow-md flex-shrink-0 flex-none group">
+        <div class="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+          {% if company.logo %}
+            <img id="company-logo-img" src="{{ company.logo.url }}" alt="{{ company.name }}" class="w-full h-full object-cover">
+          {% else %}
+            <svg id="company-logo-placeholder" class="w-20 h-20 text-white/80" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+            </svg>
+          {% endif %}
+        </div>
+
+        <button type="button" id="company-logo-upload-btn"
+                title="Change logo"
+                class="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-white border border-taupe/50 text-primary shadow flex items-center justify-center hover:bg-surface transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
+        </button>
+
+        <input type="file" id="company-logo-input" accept="image/*,.heic,.heif" class="hidden">
+
+        {% if company.logo %}
+        <button type="button" id="company-logo-remove-btn"
+                title="Remove logo"
+                class="absolute bottom-1 left-1 w-8 h-8 rounded-full bg-white border border-red-200 text-red-500 shadow flex items-center justify-center hover:bg-red-50 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
         {% endif %}
       </div>
 
@@ -237,5 +261,63 @@ document.addEventListener('click', function(e) {
     if (!d.contains(e.target) && !d.previousElementSibling.contains(e.target)) d.classList.add('hidden');
   });
 });
+
+// ── Company logo upload / remove ───────────────────────────────────
+(function() {
+  function getCookie(n) {
+    var v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+  var btn      = document.getElementById('company-logo-upload-btn');
+  var input    = document.getElementById('company-logo-input');
+  var removeBtn = document.getElementById('company-logo-remove-btn');
+  if (!btn || !input) return;
+
+  btn.addEventListener('click', function() { input.click(); });
+
+  input.addEventListener('change', function() {
+    var f = input.files && input.files[0];
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5 MB.');
+      input.value = '';
+      return;
+    }
+    var fd = new FormData();
+    fd.append('image', f);
+    btn.disabled = true;
+    fetch('/employers/profile/logo/upload/', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      body: fd,
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      btn.disabled = false;
+      if (d.ok) {
+        // Full reload so the placeholder swaps to <img> cleanly and the
+        // remove-button appears (its rendering is gated on company.logo).
+        window.location.reload();
+      } else {
+        alert(d.error || 'Upload failed.');
+      }
+    }).catch(function() {
+      btn.disabled = false;
+      alert('Upload failed. Try again.');
+    });
+  });
+
+  if (removeBtn) {
+    removeBtn.addEventListener('click', function() {
+      if (!confirm('Remove your company logo?')) return;
+      removeBtn.disabled = true;
+      fetch('/employers/profile/logo/remove/', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
+      }).then(function(r){ return r.json(); }).then(function(d) {
+        if (d.ok) window.location.reload();
+        else { removeBtn.disabled = false; alert(d.error || 'Failed.'); }
+      });
+    });
+  }
+})();
 </script>
 {% endblock %}

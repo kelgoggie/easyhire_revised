@@ -205,13 +205,28 @@
             </div>
 
             <!-- Submit row -->
-            <div class="flex items-center justify-end mt-10 pt-6 border-t border-gray-100">
+            <div class="flex items-center justify-between mt-10 pt-6 border-t border-gray-100 gap-3 flex-wrap">
+                {# Cancel and log out — for users who got here via Google auth   #}
+                {# (or step-1) and now want to bail. type="button" + confirm() so #}
+                {# they don't nuke half-typed answers by accident. The actual    #}
+                {# POST goes through the hidden #cancel-logout-form below.      #}
+                <button type="button"
+                        onclick="if (confirm('Cancel this registration and log out? Anything you\'ve typed here will be discarded.')) { document.getElementById('cancel-logout-form').submit(); }"
+                        class="text-red-500 text-sm font-semibold hover:text-red-600 transition">
+                    Cancel &amp; Log Out
+                </button>
                 <button type="submit" id="submit-btn"
                         class="bg-amber text-white font-semibold px-10 py-3 rounded-full hover:bg-amber/90 transition text-sm">
                     Confirm &amp; Submit
                 </button>
             </div>
 
+        </form>
+
+        {# Hidden form for the Cancel & Log Out button. Sits outside the      #}
+        {# main #reg-form because HTML forbids nested <form> elements.        #}
+        <form id="cancel-logout-form" method="POST" action="/logout/" class="hidden">
+            {% csrf_token %}
         </form>
     </div>
 </main>
