@@ -32,10 +32,11 @@
 
     <!-- Left panel -->
     <div class="w-full md:w-1/2 bg-surface flex items-center justify-center py-8 md:py-12 px-4 sm:px-8">
-      {# Card sizing: on mobile flex up to a comfortable max-w-sm (~384px)    #}
-      {# with tighter padding; on sm+ snap back to the original 288px pill  #}
-      {# and standard padding so desktop is identical to what shipped before. #}
-      <div class="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 w-full max-w-sm sm:w-72 shadow-sm relative">
+      {# Fixed 288px card on all screen sizes — desktop-oriented look but   #}
+      {# centered on mobile viewports so it reads as a compact login pill,  #}
+      {# not a wall-to-wall panel. `mx-auto` handles centering when the     #}
+      {# parent's justify-center is unavailable (fallback CSS scenario).    #}
+      <div class="bg-white border border-gray-200 rounded-2xl p-8 w-72 mx-auto shadow-sm relative">
 
         <!-- eH icon -->
         <div class="absolute top-4 right-4 w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center overflow-hidden">
