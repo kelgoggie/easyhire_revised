@@ -215,10 +215,20 @@ def get_analytics_context(request):
         count=Count('jobseekers')
     ).order_by('-count')
 
+    # Preferred jobs — stored on each JobseekerProfile as a comma-separated
+    # string ("Computer Science, Education, Information Technology"). The
+    # resume UI treats each entry as a chip, so the analytics aggregation
+    # has to mirror that: split on comma, count each individual title
+    # instead of treating the whole comma-joined string as one label.
     queries = JobseekerProfile.objects.exclude(
         job_search_query=''
     ).values_list('job_search_query', flat=True)
-    query_counter = Counter(q.strip().lower() for q in queries if q.strip())
+    query_counter = Counter()
+    for raw in queries:
+        for piece in (raw or '').split(','):
+            title = piece.strip().lower()
+            if title:
+                query_counter[title] += 1
     jobs_of_interest = [
         {'query': q, 'count': c}
         for q, c in query_counter.most_common(10)

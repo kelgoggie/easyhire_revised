@@ -40,12 +40,18 @@ def inbox_status(request):
 
 
 def notifications_baseline(request):
-    """Mark every pre-existing unread notification as read on the user's
-    FIRST authenticated hit of a session. Same rationale as the inbox
-    baseline above: seeded / carryover activity from before this session
-    shouldn't buzz the bell — only fresh notifications that land after
-    login should. Real notifications keep working normally after this
-    one-time reset because subsequent creates flip is_read=False again."""
+    """Mark PRE-LOGIN unread notifications as read on the user's first
+    authenticated hit of a session. Seeded / carryover activity from before
+    this session shouldn't buzz the bell — but anything created AFTER the
+    user's last_login timestamp is legitimately new and must stay unread.
+
+    Previous version filtered on `is_read=False` alone, which wiped out
+    genuinely fresh notifications when the employer sent a hire offer to a
+    jobseeker who then logged in — the offer was created before the
+    baseline ran and got silently marked read. The `created_at__lt` gate
+    against `last_login` fixes that: fresh > last_login notifications are
+    left alone.
+    """
     user = getattr(request, 'user', None)
     if not user or not user.is_authenticated:
         return {}
@@ -53,7 +59,14 @@ def notifications_baseline(request):
         return {}
     try:
         from apps.notifications.models import Notification
-        Notification.objects.filter(recipient=user, is_read=False).update(is_read=True)
+        qs = Notification.objects.filter(recipient=user, is_read=False)
+        # Only baseline notifications that pre-date this login. If we don't
+        # have a last_login yet (first ever request), leave everything as
+        # unread — the user hasn't been active on the system before this
+        # so any pre-existing rows are seeded and rare.
+        if user.last_login:
+            qs = qs.filter(created_at__lt=user.last_login)
+        qs.update(is_read=True)
     except Exception:
         pass
     request.session['notif_baselined'] = True

@@ -160,32 +160,20 @@ class RegisterStep1JobseekerView(View):
             consented_to_terms=True,
             consented_at=timezone.now(),
         )
-        # Ask allauth to create the EmailAddress row (verified=False) and
-        # send the confirmation link. This custom signup flow bypasses
-        # allauth's own view, so without this call nothing ever hits SMTP.
-        # Wrapped in try/except so a transient email delivery failure
-        # doesn't roll the user's whole signup back — they can still
-        # request a resend from the "Verify your email" banner.
-        #
-        # Skip SMTP for reserved / demo domains: `.test` is RFC 2606
-        # (no MX records exist), so Gmail SMTP spends 5–30s doing DNS
-        # lookups before giving up — long enough to trip Render's proxy
-        # timeout and 500 the whole signup. Test-domain accounts get an
-        # EmailAddress row (unverified, still functional locally) but no
-        # confirmation is queued.
+        # Email verification is retired. PESO's ID-upload workflow is the
+        # authoritative identity signal for jobseekers, so we mark the
+        # allauth EmailAddress row verified up front — no confirmation
+        # email is ever queued, the "Verify your email" banner never
+        # shows, and every SMTP-shaped failure mode disappears with it.
         try:
             from allauth.account.models import EmailAddress
-            email_address, _ = EmailAddress.objects.get_or_create(
+            EmailAddress.objects.update_or_create(
                 user=user, email=user.email,
-                defaults={'verified': False, 'primary': True},
+                defaults={'verified': True, 'primary': True},
             )
-            _skip_suffixes = ('@easyhire.test', '@easyhire.extra', '@easyhire.local')
-            low_email = (user.email or '').lower()
-            if not any(low_email.endswith(s) for s in _skip_suffixes):
-                email_address.send_confirmation(request, signup=True)
         except Exception:
             import logging
-            logging.getLogger(__name__).exception('Signup confirmation email send failed for %s', email)
+            logging.getLogger(__name__).exception('EmailAddress bootstrap failed for %s', email)
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         return redirect('/register/info/')
 
@@ -377,13 +365,33 @@ class EmployerRegisterStep1View(View):
 class EmployerRegisterStep2View(View):
     template_name = 'employers/register_step2.html'
 
+    def _oauth_bypass(self, request):
+        """Employers who signed in via Google skip step 1 entirely — no
+        email + password form, no session prefill. This view accepts the
+        request when the user is already authenticated as an employer
+        without an EmployerProfile yet. Returns True in that case so both
+        GET and POST accept the OAuth-driven caller.
+        """
+        u = request.user
+        if not u.is_authenticated or not u.is_employer:
+            return False
+        try:
+            _ = u.employer_profile
+            return False  # already has a profile — no reason to be here
+        except Exception:
+            return True
+
     def get(self, request):
-        if not request.session.get('employer_reg_email'):
+        oauth_flow = self._oauth_bypass(request)
+        if not request.session.get('employer_reg_email') and not oauth_flow:
             return redirect('/employers/register/')
         from apps.jobseekers.models import Sector
         return render(request, self.template_name, {
             'sectors': Sector.objects.all(),
-            'form': {'company_name': request.session.get('employer_reg_company', '')},
+            # OAuth users start with a blank company_name; email/password
+            # form-step users get their name pre-filled from step 1.
+            'form': {'company_name': '' if oauth_flow else request.session.get('employer_reg_company', '')},
+            'oauth_flow': oauth_flow,
         })
 
     def post(self, request):
@@ -392,8 +400,9 @@ class EmployerRegisterStep2View(View):
         from django.utils.text import slugify
 
         sectors = Sector.objects.all()
+        oauth_flow = self._oauth_bypass(request)
 
-        if not request.session.get('employer_reg_email'):
+        if not request.session.get('employer_reg_email') and not oauth_flow:
             return redirect('/employers/register/')
 
         # Validate required fields
@@ -441,16 +450,32 @@ class EmployerRegisterStep2View(View):
             })
 
         try:
-            # Create user
-            email = request.session['employer_reg_email']
-            password = request.session['employer_reg_password']
-            user = User.objects.create_user(
-                email=email,
-                password=password,
-                user_type=User.EMPLOYER,
-                consented_to_terms=True,
-                consented_at=timezone.now(),
-            )
+            # OAuth-driven employer signup: user already exists (allauth
+            # created them via the Google flow, and populate_user promoted
+            # user_type to 'employer' when the intent was set). Just take
+            # the current authenticated user.
+            if oauth_flow:
+                user = request.user
+                email = user.email
+                # Ensure user_type is set correctly — populate_user may not
+                # have run if this User existed with a jobseeker user_type
+                # from earlier. Explicit here so the profile check downstream
+                # (is_employer) succeeds.
+                if user.user_type != User.EMPLOYER:
+                    user.user_type = User.EMPLOYER
+                    user.save(update_fields=['user_type'])
+            else:
+                # Standard email + password flow — step 1 stashed creds
+                # in the session; create the User now.
+                email = request.session['employer_reg_email']
+                password = request.session['employer_reg_password']
+                user = User.objects.create_user(
+                    email=email,
+                    password=password,
+                    user_type=User.EMPLOYER,
+                    consented_to_terms=True,
+                    consented_at=timezone.now(),
+                )
             # Employer email verification is skipped by design — the
             # docs-based Company verification workflow (Mayor's Permit,
             # PhilJobNet accreditation, etc.) is a much stronger identity
@@ -524,6 +549,17 @@ class EmployerRegisterStep2View(View):
 
 
 # ── Shared ─────────────────────────────────────────────────────────────────────
+
+def employer_google_login(request):
+    """Intent-tagged entry point for the "Sign in with Google" button on
+    the employer login page. Stashes `oauth_intent='employer'` in the
+    session so SocialAccountAdapter.populate_user knows to promote the
+    new user's user_type to EMPLOYER instead of the default JOBSEEKER.
+    Then hands off to allauth's standard Google login URL.
+    """
+    request.session['oauth_intent'] = 'employer'
+    return redirect('/accounts/google/login/?process=login')
+
 
 @never_cache
 def password_recovery(request):

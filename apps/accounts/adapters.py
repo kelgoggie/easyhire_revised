@@ -87,11 +87,21 @@ class AccountAdapter(DefaultAccountAdapter):
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
     def populate_user(self, request, sociallogin, data):
+        """Populate the User from a Google-issued profile. `user_type` is
+        set from `request.session['oauth_intent']` — the employer login
+        page's "Sign in with Google" button routes through
+        /employers/google-login/ which stamps that flag before the OAuth
+        redirect. Anywhere else defaults to jobseeker.
+        """
         from django.contrib.auth import get_user_model
         User = get_user_model()
         user = sociallogin.user
         user.email = data.get('email', '')
-        user.user_type = User.JOBSEEKER
+        intent = (request.session.get('oauth_intent') or '').strip().lower() if request else ''
+        if intent == 'employer':
+            user.user_type = User.EMPLOYER
+        else:
+            user.user_type = User.JOBSEEKER
         user.consented_to_terms = True
         user.consented_at = timezone.now()
         return user

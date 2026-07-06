@@ -234,20 +234,11 @@
 
     <!-- ── Page content + sticky footer ──────────────────────────── -->
     <main id="main-content" class="flex-1 bg-white">
-      {% if not user_email_verified %}
-      {# Same AJAX resend + 30s cooldown pattern used on the jobseeker base. #}
-      <div id="verify-email-banner" class="bg-amber/15 border-b border-amber/30 px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-        <p class="text-primary" id="verify-email-msg">
-          <strong>Verify your email.</strong>
-          <span class="text-muted">Check {{ request.user.email }} for a confirmation link.</span>
-        </p>
-        <button type="button" id="resend-verify-btn"
-                class="bg-amber text-white font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition flex-shrink-0 disabled:opacity-60 disabled:cursor-not-allowed">
-          Resend
-        </button>
-      </div>
-      {% include "base/_resend_verify_script.html" %}
-      {% endif %}
+      {# Employer identity verification is handled through the docs-based    #}
+      {# Company verification workflow (Mayor's Permit, PhilJobNet, etc.),   #}
+      {# not email. That's already surfaced by the pending banner and gates  #}
+      {# job-posting until PESO approves — no email verification banner      #}
+      {# needed on the employer side.                                        #}
       <div class="px-4 sm:px-6 lg:px-8 pb-32 min-h-[calc(100vh_-_3.5rem)]">
         {% block page_content %}{% endblock %}
       </div>

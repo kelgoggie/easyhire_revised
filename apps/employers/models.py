@@ -62,6 +62,19 @@ class Company(models.Model):
         "jobseekers.Sector", blank=True, related_name="companies"
     )
 
+    # Pending sector change (PESO-approval flow). When an employer edits
+    # their sectors from Settings, we store the desired set here and flip
+    # the flag; an admin then approves (moves pending → sector_badges) or
+    # denies (clears pending) from the admin panel. Keeping this on the
+    # Company row instead of a separate model keeps the migration light
+    # and the admin UI a one-click approval next to the existing
+    # verification controls.
+    pending_sector_badges = models.ManyToManyField(
+        "jobseekers.Sector", blank=True, related_name="pending_companies",
+    )
+    sectors_change_pending = models.BooleanField(default=False)
+    sectors_change_requested_at = models.DateTimeField(null=True, blank=True)
+
     # Verification
     verification_status = models.CharField(
         max_length=20, choices=VERIFICATION_CHOICES, default=UNVERIFIED

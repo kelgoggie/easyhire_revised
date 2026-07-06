@@ -450,6 +450,20 @@ def job_create(request):
                 any_experience_accepted='any_experience_accepted' in request.POST,
                 preferred_position=request.POST.get('exp_preferred_position', ''),
             )
+
+        # Notify every jobseeker whose match score against this newly-
+        # posted job clears 80. Runs synchronously — fine at Iloilo scale
+        # (couple thousand seekers max); if it ever starts to add latency
+        # a Celery job is the natural swap.
+        try:
+            from apps.notifications.utils import notify_high_match_jobseekers
+            notify_high_match_jobseekers(job, threshold=80)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                'notify_high_match_jobseekers failed for job %s', job.id,
+            )
+
         return redirect('/employers/jobs/')
 
     # Prefill location with the company's Iloilo branch address as the default.
@@ -1319,12 +1333,10 @@ def candidate_contact(request, jobseeker_id):
         interview_location=interview_location if kind == EmployerContact.KIND_INTERVIEW else '',
     )
 
-    # Delivery channel — `inbox_only` skips the email and only creates the
-    # in-app inbox entry + bell notification. Default (unchecked) sends both.
-    inbox_only = (request.POST.get('inbox_only') or '').strip() == '1'
-    if not inbox_only:
-        # Send the email (gracefully no-ops on SMTP failure).
-        email_employer_contact(contact)
+    # Email delivery is retired — every EmployerContact goes through the
+    # in-app inbox + bell notification only. No SMTP attempts, no delivery
+    # indicator, no timeouts. Jobseekers see the message in Inbox and get
+    # a bell notification pointing them there.
 
     # In-app notification for the jobseeker.
     if jobseeker.user:
@@ -1339,10 +1351,7 @@ def candidate_contact(request, jobseeker_id):
             admin_message=subject,
         )
 
-    if inbox_only:
-        messages.success(request, f'Sent to {jobseeker.first_name}\'s EasyHire inbox (no email).')
-    else:
-        messages.success(request, f'Your message has been sent to {jobseeker.first_name}.')
+    messages.success(request, f'Sent to {jobseeker.first_name}\'s EasyHire inbox.')
     # Bounce back to wherever the employer came from — job detail, candidate
     # list, inbox, etc. Falls back to the candidate profile when the caller
     # didn't provide a next hint. Same-origin check: only accept paths that
@@ -1493,12 +1502,43 @@ def employer_settings(request):
             company.save(update_fields=['company_email', 'recruitment_email'])
             saved_section = 'company_contact'
 
+        elif form_type == 'sectors':
+            # PESO-approved sector change. Store the requested set on the
+            # pending M2M + flip the flag; admin approves or denies from
+            # the admin panel. Employers can also cancel their own pending
+            # request by submitting an empty selection alongside a
+            # `cancel_pending` marker.
+            from apps.jobseekers.models import Sector
+            from django.utils import timezone
+            if request.POST.get('cancel_pending') == '1':
+                company.pending_sector_badges.clear()
+                company.sectors_change_pending = False
+                company.sectors_change_requested_at = None
+                company.save(update_fields=[
+                    'sectors_change_pending', 'sectors_change_requested_at',
+                ])
+                saved_section = 'sectors_cancelled'
+            else:
+                requested = request.POST.getlist('sectors')
+                sectors = Sector.objects.filter(id__in=requested)
+                company.pending_sector_badges.set(sectors)
+                company.sectors_change_pending = True
+                company.sectors_change_requested_at = timezone.now()
+                company.save(update_fields=[
+                    'sectors_change_pending', 'sectors_change_requested_at',
+                ])
+                saved_section = 'sectors'
+
+    from apps.jobseekers.models import Sector
+    all_sectors = Sector.objects.all().order_by('label')
+
     return render(request, 'employers/settings.html', {
         'profile': profile,
         'company': company,
         'user': request.user,
         'saved_section': saved_section,
         'error': error,
+        'all_sectors': all_sectors,
         'unread_notifications': False,
         'unread_messages': False,
     })

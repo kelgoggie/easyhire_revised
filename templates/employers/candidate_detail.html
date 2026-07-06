@@ -768,6 +768,13 @@ ${buildSignature()}`;
           // available actions inside it are what the employer needs to
           // proceed with in the moment.
           try { openContactModal('interview'); } catch (e) { window.location.reload(); }
+        } else if (action === 'hire') {
+          // Instant transition to the "hire_pending" UI without a page
+          // reload. Swap the status pill, replace the action buttons with
+          // Cancel Offer / Reject, and reveal the amber "offer sent"
+          // banner. All three DOM tweaks mirror the Django template
+          // branches at lines 152-197.
+          try { applyHirePendingUI(); } catch (e) { window.location.reload(); }
         } else {
           window.location.reload();
         }
@@ -775,6 +782,48 @@ ${buildSignature()}`;
         alert((d && d.error) || 'Something went wrong.');
       }
     });
+  }
+
+  // Swap the header UI to the hire_pending state. Kept as a self-contained
+  // function so the send() handler above stays flat.
+  function applyHirePendingUI() {
+    // 1) Status pill — flip color + label
+    const pill = document.querySelector('#app-actions').closest('.flex-wrap').querySelector('span');
+    if (pill) {
+      pill.className =
+        'ml-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ' +
+        'bg-amber/15 text-amber border border-amber/30';
+      pill.textContent = 'Hire Offered';
+    }
+    // 2) Action buttons — replace Send Job Offer / Reject with
+    //    Cancel Offer / Reject.
+    wrap.dataset.status = 'hire_pending';
+    wrap.innerHTML =
+      '<button type="button" data-action="cancel_hire"' +
+      ' class="bg-white border border-gray-200 text-muted text-xs font-semibold px-4 py-1.5 rounded-full hover:text-primary hover:border-taupe/40 transition">' +
+      'Cancel Offer</button>' +
+      '<button type="button" data-action="reject"' +
+      ' class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">' +
+      'Reject</button>';
+    // Re-bind click handlers on the new buttons.
+    wrap.querySelectorAll('button[data-action]').forEach(bindActionButton);
+
+    // 3) Insert the amber "Hire offer sent" banner right below the
+    //    header row (only if not already present).
+    if (!document.getElementById('hire-pending-banner')) {
+      const banner = document.createElement('div');
+      banner.id = 'hire-pending-banner';
+      banner.className = 'mb-3 bg-amber/5 border border-amber/30 rounded-xl px-4 py-2.5 text-xs text-primary';
+      banner.innerHTML = '<strong>Hire offer sent.</strong> Awaiting ' +
+        CANDIDATE_NAME.split(' ')[0] +
+        "'s confirmation. They'll see Accept / Decline buttons in their notifications.";
+      // The header row (containing the status pill + wrap) lives inside a
+      // parent div — insert the banner right after it.
+      const headerRow = wrap.closest('.flex-wrap');
+      if (headerRow && headerRow.parentNode) {
+        headerRow.parentNode.insertBefore(banner, headerRow.nextSibling);
+      }
+    }
   }
 
   // Modal copy. The Proceed modal needs the jobseeker's name + job title
@@ -792,7 +841,9 @@ ${buildSignature()}`;
   const JOB_TITLE_FOR_PROCEED = "";
   {% endif %}
 
-  wrap.querySelectorAll('button[data-action]').forEach(function(btn) {
+  // Named binder so we can rebind after `applyHirePendingUI()` replaces
+  // the button DOM without duplicating the confirm/copy logic below.
+  function bindActionButton(btn) {
     btn.addEventListener('click', function() {
       const action = btn.dataset.action;
       const proceedBody =
@@ -816,7 +867,8 @@ ${buildSignature()}`;
         if (confirm(t.title)) send(action);
       }
     });
-  });
+  }
+  wrap.querySelectorAll('button[data-action]').forEach(bindActionButton);
 })();
 </script>
 

@@ -517,6 +517,17 @@ def follow_company(request, pk):
     else:
         profile.followed_companies.add(company)
         following = True
+        # Notify company reps only on FOLLOW (unfollow is silent). Wrapped
+        # so a notification-side crash never breaks the follow toggle.
+        try:
+            from apps.notifications.utils import notify_company_followed
+            notify_company_followed(company, profile)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                'notify_company_followed failed for company %s / jobseeker %s',
+                company.id, profile.id,
+            )
     followers_count = company.followers.count() if hasattr(company, 'followers') else 0
     return JsonResponse({'ok': True, 'following': following, 'followers_count': followers_count})
 

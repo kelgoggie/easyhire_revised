@@ -82,6 +82,67 @@
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Verification status updated. Company reps have been notified.</div>
   {% elif saved_section == 'email_verified' %}
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Email verification bypassed for all reps of this company.</div>
+  {% elif saved_section == 'sectors_approved' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Sector change approved. New sectors are live on the company profile.</div>
+  {% elif saved_section == 'sectors_denied' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">Sector change denied. Company sectors are unchanged.</div>
+  {% endif %}
+
+  {# ── Sector change request (if any) ────────────────────────── #}
+  {% if company.sectors_change_pending %}
+  <div class="mb-6 bg-amber/5 border-2 border-amber/40 rounded-2xl px-5 py-4">
+    <div class="flex items-start gap-3 mb-3">
+      <svg class="w-5 h-5 text-amber flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+      <div class="flex-1">
+        <p class="text-primary font-bold text-sm">Pending sector change request</p>
+        <p class="text-muted text-xs mt-0.5">
+          Submitted {{ company.sectors_change_requested_at|timesince }} ago. Approve to update the company's public sectors and the matching algorithm; deny to keep the current sectors.
+        </p>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+      <div>
+        <p class="text-primary text-xs font-semibold mb-1.5">Current sectors:</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for s in company.sector_badges.all %}
+          <span class="inline-flex items-center gap-1 bg-teal/10 text-teal border border-teal/25 text-xs font-medium px-2.5 py-1 rounded-full">{{ s.label }}</span>
+          {% empty %}
+          <span class="text-muted text-xs italic">None</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        <p class="text-primary text-xs font-semibold mb-1.5">Requested:</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for s in company.pending_sector_badges.all %}
+          <span class="inline-flex items-center gap-1 bg-amber/15 text-amber border border-amber/30 text-xs font-medium px-2.5 py-1 rounded-full">{{ s.label }}</span>
+          {% empty %}
+          <span class="text-muted text-xs italic">None (removing all)</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <form method="POST" action="" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="form"     value="sectors_review">
+        <input type="hidden" name="decision" value="approve">
+        <button type="submit" class="bg-teal text-white text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-teal/90 transition">
+          Approve change
+        </button>
+      </form>
+      <form method="POST" action="" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="form"     value="sectors_review">
+        <input type="hidden" name="decision" value="deny">
+        <button type="submit" class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-red-50 transition">
+          Deny
+        </button>
+      </form>
+    </div>
+  </div>
   {% endif %}
 
   {# Copy-once banner for the temp password (see jobseeker_settings.html). #}

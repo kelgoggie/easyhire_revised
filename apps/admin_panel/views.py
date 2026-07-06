@@ -1120,6 +1120,39 @@ def company_settings(request, pk):
                 )
                 saved_section = 'verification'
 
+        elif form == 'sectors_review':
+            # Approve or deny the employer-submitted sector change.
+            decision = (request.POST.get('decision') or '').strip()
+            if decision == 'approve':
+                pending = list(company.pending_sector_badges.all())
+                company.sector_badges.set(pending)
+                company.pending_sector_badges.clear()
+                company.sectors_change_pending = False
+                company.sectors_change_requested_at = None
+                company.save(update_fields=[
+                    'sectors_change_pending', 'sectors_change_requested_at',
+                ])
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_EDIT,
+                    target_model='Company', target_id=company.id,
+                    notes=f'Approved sector change for "{company.name}" → '
+                          + ', '.join(s.label for s in pending),
+                )
+                saved_section = 'sectors_approved'
+            elif decision == 'deny':
+                company.pending_sector_badges.clear()
+                company.sectors_change_pending = False
+                company.sectors_change_requested_at = None
+                company.save(update_fields=[
+                    'sectors_change_pending', 'sectors_change_requested_at',
+                ])
+                AuditLog.objects.create(
+                    admin=request.user, action=AuditLog.ACTION_EDIT,
+                    target_model='Company', target_id=company.id,
+                    notes=f'Denied sector change for "{company.name}".',
+                )
+                saved_section = 'sectors_denied'
+
     # Verification documents context — same shape pending.html uses so the
     # checklist renders identically here.
     from apps.employers.models import VerificationDocument

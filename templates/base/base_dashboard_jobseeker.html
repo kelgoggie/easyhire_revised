@@ -250,21 +250,30 @@
 
     <!-- ── Page content + footer (footer sits after content, below fold on short pages) -->
     <main id="main-content" class="flex-1 bg-white">
-      {% if not user_email_verified %}
-      {# Email verification banner. The Resend button fires an AJAX POST to  #}
-      {# /accounts/resend-verification/ then locks itself into a 30-second   #}
-      {# cooldown so nobody double-clicks the send / spams SMTP.             #}
-      <div id="verify-email-banner" class="bg-amber/15 border-b border-amber/30 px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-        <p class="text-primary" id="verify-email-msg">
-          <strong>Verify your email.</strong>
-          <span class="text-muted">Check {{ request.user.email }} for a confirmation link.</span>
+      {# Identity verification banner. Shown to any jobseeker who hasn't       #}
+      {# submitted a valid Philippine government ID for PESO review. The old   #}
+      {# email-verification banner was retired — email confirmation is a poor  #}
+      {# identity signal, and PESO reviews the uploaded ID either way, so we   #}
+      {# now use ID verification as the single source of truth for identity.   #}
+      {% if request.user.is_jobseeker and request.user.jobseeker_profile.id_verification_status != 'verified' %}
+      <div id="verify-id-banner" class="bg-amber/15 border-b border-amber/30 px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+        <p class="text-primary">
+          <strong>Verify your identity.</strong>
+          <span class="text-muted">
+            {% if request.user.jobseeker_profile.id_verification_status == 'pending' %}
+              Your ID is under review by PESO Iloilo City — expect a decision within 2 business days.
+            {% else %}
+              Upload a valid Philippine government ID so PESO can verify your account.
+            {% endif %}
+          </span>
         </p>
-        <button type="button" id="resend-verify-btn"
-                class="bg-amber text-white font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition flex-shrink-0 disabled:opacity-60 disabled:cursor-not-allowed">
-          Resend
-        </button>
+        {% if request.user.jobseeker_profile.id_verification_status != 'pending' %}
+        <a href="/settings/verify-id/"
+           class="bg-amber text-white font-semibold px-4 py-1.5 rounded-full hover:bg-amber/90 transition flex-shrink-0">
+          Verify Now
+        </a>
+        {% endif %}
       </div>
-      {% include "base/_resend_verify_script.html" %}
       {% endif %}
       <div class="px-4 sm:px-6 lg:px-8 pb-16 min-h-[calc(100vh_-_3.5rem)]">
         {% block page_content %}{% endblock %}

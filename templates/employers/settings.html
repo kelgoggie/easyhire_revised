@@ -18,6 +18,14 @@
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">
     Company contact information updated.
   </div>
+  {% elif saved_section == 'sectors' %}
+  <div class="mb-4 bg-amber/10 border border-amber/30 text-amber text-sm rounded-xl px-4 py-2.5">
+    Sector change request submitted. PESO Iloilo City will review it — expect a response within 2 business days.
+  </div>
+  {% elif saved_section == 'sectors_cancelled' %}
+  <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">
+    Pending sector request cancelled.
+  </div>
   {% endif %}
   {% if error %}
   <div class="mb-4 bg-red-50 border border-red-200 text-red-500 text-sm rounded-xl px-4 py-2.5">{{ error }}</div>
@@ -152,6 +160,77 @@
     </div>
   </form>
 
+  {# ── Hiring Sectors ─────────────────────────────────────────── #}
+  {# Employers pick sectors at registration; changing them later goes    #}
+  {# through PESO approval (the sector list drives the matching algorithm #}
+  {# and appears on the public company profile, so PESO reviews changes). #}
+  <div class="flex items-baseline justify-between gap-3 mt-8 mb-4">
+    <div>
+      <h2 class="text-lg font-bold text-primary">Hiring Sectors</h2>
+      <p class="text-xs text-muted italic mt-0.5">
+        Which sectors your company is actively hiring from. Changes require PESO Iloilo City approval.
+      </p>
+    </div>
+    {% if not company.sectors_change_pending %}
+    <button type="button" data-toggle-section="sectors"
+            class="section-edit-btn bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition">
+      Edit
+    </button>
+    {% endif %}
+  </div>
+
+  {% if company.sectors_change_pending %}
+  <div class="mb-4 bg-amber/5 border border-amber/30 rounded-xl px-4 py-3 text-sm">
+    <p class="text-amber font-bold text-xs mb-1">PENDING REVIEW</p>
+    <p class="text-primary text-xs mb-2">
+      You've requested a change to your hiring sectors. Awaiting PESO approval — your public profile still shows your current sectors below.
+    </p>
+    {% if company.pending_sector_badges.exists %}
+    <p class="text-primary text-xs font-semibold mb-1.5">Requested sectors:</p>
+    <div class="flex flex-wrap gap-1.5 mb-3">
+      {% for s in company.pending_sector_badges.all %}
+      <span class="inline-flex items-center gap-1 bg-amber/15 text-amber border border-amber/30 text-xs font-medium px-2.5 py-1 rounded-full">
+        {{ s.label }}
+      </span>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted text-xs italic mb-3">Requested: no sectors (removing all badges).</p>
+    {% endif %}
+    <form method="POST" action="/employers/settings/" class="inline">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="sectors">
+      <input type="hidden" name="cancel_pending" value="1">
+      <button type="submit"
+              class="bg-white border border-taupe/40 text-muted text-xs font-semibold px-4 py-1.5 rounded-full hover:text-primary hover:border-taupe/60 transition">
+        Cancel request
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+  <form method="POST" action="/employers/settings/" class="mb-10" data-section-form="sectors">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="sectors">
+    <p class="text-xs text-muted font-medium mb-2">Current sectors:</p>
+    <div class="flex flex-wrap gap-2 mb-3">
+      {% for sector in all_sectors %}
+      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal has-[:disabled]:opacity-50 has-[:disabled]:cursor-not-allowed">
+        <input type="checkbox" name="sectors" value="{{ sector.id }}"
+               {% if sector in company.sector_badges.all %}checked{% endif %}
+               class="sector-field sr-only" disabled>
+        {{ sector.label }}
+      </label>
+      {% endfor %}
+    </div>
+    <div class="hidden mt-2 flex-none flex justify-end" data-section-save-wrap="sectors">
+      <button type="submit"
+              class="bg-amber text-white text-sm font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition">
+        Submit for PESO review
+      </button>
+    </div>
+  </form>
+
   <!-- ── Account ───────────────────────────────────────────────── -->
   <h2 class="text-lg font-bold text-primary mt-8 mb-3">Account</h2>
   <ul class="space-y-2 text-sm">
@@ -253,7 +332,11 @@ function getCookie(n) {
     const saveWrap = document.querySelector('[data-section-save-wrap="' + key + '"]');
     if (!form || !saveWrap) return;
 
-    const fieldSelector = key === 'rep' ? '.rep-field' : '.company-field';
+    const fieldSelector = (
+      key === 'rep' ? '.rep-field'
+      : key === 'sectors' ? '.sector-field'
+      : '.company-field'
+    );
     let editing = false;
 
     btn.addEventListener('click', function() {

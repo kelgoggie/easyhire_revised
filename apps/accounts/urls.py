@@ -23,6 +23,9 @@ urlpatterns = [
 
     # Employer auth
     path('employers/login/', views.EmployerLoginView.as_view(), name='employer_login'),
+    # Intent-tagged Google sign-in — sets a session flag so the OAuth
+    # callback creates the user as an EMPLOYER instead of a JOBSEEKER.
+    path('employers/google-login/', views.employer_google_login, name='employer_google_login'),
     path('employers/register/', views.EmployerRegisterStep1View.as_view(), name='employer_register_step1'),
     path('employers/register/info/', views.EmployerRegisterStep2View.as_view(), name='employer_register_step2'),
 ]
