@@ -180,6 +180,7 @@
         <div class="min-w-0">
           <p class="font-bold text-primary text-base leading-tight">
             {{ item.profile.first_name }} {{ item.profile.last_name }}
+            {% if item.profile.is_id_verified %}<span class="ml-1 inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide bg-teal/15 text-teal border border-teal/30 px-1.5 py-0.5 rounded-full align-middle" title="PESO Verified"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 5v6c0 4.97 3.16 9.13 7.5 10 4.34-.87 7.5-5.03 7.5-10V5L12 2zm-1.09 14L7 12.09l1.41-1.41 2.5 2.5 5.09-5.09L17.41 9.5 10.91 16z"/></svg>Verified</span>{% endif %}
             {% if not seeker_active %}<span class="ml-1 text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full align-middle">User removed</span>{% endif %}
           </p>
           <p class="status-label text-xs mt-0.5
