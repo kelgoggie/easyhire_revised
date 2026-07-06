@@ -10,7 +10,29 @@
   <h1 class="text-5xl font-extrabold text-primary mb-8">Settings</h1>
 
   <!-- ── Personal Information ──────────────────────────────────── -->
-  <h2 class="text-lg font-bold text-primary mb-4">Personal Information</h2>
+  {# Header row mirrors the employer settings pattern: title on the left, #}
+  {# small Edit pill on the right. The heavyweight "submit ID for review" #}
+  {# flow is triggered by the same button — it just visually sits inline  #}
+  {# with the section title instead of taking its own column.             #}
+  <div class="flex items-baseline justify-between gap-3 mb-4">
+    <h2 class="text-lg font-bold text-primary">Personal Information</h2>
+    {% if not pending_change %}
+    <div class="flex items-center gap-2">
+      <button type="button" id="edit-personal-btn"
+              class="bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition">
+        Edit
+      </button>
+      <button type="button" id="submit-personal-btn"
+              class="hidden bg-amber border border-amber text-white text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-amber/90 transition">
+        Submit &amp; Confirm
+      </button>
+    </div>
+    {% else %}
+    <span class="bg-gray-100 border border-gray-200 text-muted text-xs font-semibold px-5 py-1.5 rounded-full cursor-not-allowed">
+      Pending Review
+    </span>
+    {% endif %}
+  </div>
 
   {% with display=pending_change|default:profile %}
   <form id="personal-form" method="POST" action="/settings/" enctype="multipart/form-data" class="mb-6">
@@ -41,7 +63,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
       <div>
         <label class="block text-primary text-xs mb-1">Birthday</label>
         <div class="relative">
@@ -64,24 +86,6 @@
           </select>
           <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </div>
-      </div>
-      <div></div>
-      <div class="flex justify-end">
-        {% if pending_change %}
-        <button type="button" disabled
-                class="bg-gray-100 border border-gray-200 text-muted text-sm font-semibold px-8 py-2 rounded-full w-full cursor-not-allowed">
-          Pending Review
-        </button>
-        {% else %}
-        <button type="button" id="edit-personal-btn"
-                class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition w-full">
-          Edit Personal Information
-        </button>
-        <button type="button" id="submit-personal-btn"
-                class="hidden bg-amber border border-amber text-white text-sm font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition w-full">
-          Submit &amp; Confirm
-        </button>
-        {% endif %}
       </div>
     </div>
 

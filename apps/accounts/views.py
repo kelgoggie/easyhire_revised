@@ -77,6 +77,16 @@ class JobseekerLoginView(View):
 
     def get(self, request):
         if request.user.is_authenticated:
+            # Route to the correct dashboard for the account's role. Without
+            # the is_staff / is_employer branches an admin who truncates
+            # /admin-panel/ off a URL falls through to /dashboard/ and can
+            # land on whichever JobseekerProfile happens to be linked to
+            # their user row — a security-shaped bug even when the outcome
+            # is "your own profile", because the intent is admin panel.
+            if request.user.is_staff:
+                return redirect('/admin-panel/')
+            if request.user.is_employer:
+                return redirect('/employers/dashboard/')
             return redirect('/dashboard/')
         # `?error=inactive` is set by the allauth override at
         # templates/account/account_inactive.html when a disabled user
@@ -256,8 +266,15 @@ class EmployerLoginView(View):
     template_name = 'employers/login.html'
 
     def get(self, request):
-        if request.user.is_authenticated and request.user.is_employer:
-            return redirect('/employers/dashboard/')
+        if request.user.is_authenticated:
+            if request.user.is_staff:
+                return redirect('/admin-panel/')
+            if request.user.is_employer:
+                return redirect('/employers/dashboard/')
+            # Authenticated jobseeker landed on the employer login page — send
+            # them to their own dashboard rather than showing an interstitial.
+            if request.user.is_jobseeker:
+                return redirect('/dashboard/')
         return render(request, self.template_name)
 
     def post(self, request):

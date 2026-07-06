@@ -172,7 +172,7 @@
           {% elif application.status == 'accepted' %}
           <button type="button" data-action="hire"
                   class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">
-            Mark as Hired
+            Send Job Offer
           </button>
           <button type="button" data-action="reject"
                   class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">
@@ -388,6 +388,11 @@
     <form method="POST" action="/employers/candidates/{{ jobseeker.id|hashid }}/contact/" id="contact-form">
       {% csrf_token %}
       <input type="hidden" name="kind" id="contact-kind" value="requirements">
+      {# Carries the source page so the send handler can bounce back to    #}
+      {# whichever list/detail the employer was on (job detail, all       #}
+      {# candidates, inbox, etc.) rather than dumping them on the plain   #}
+      {# candidate profile every time.                                    #}
+      <input type="hidden" name="next" value="{{ request.META.HTTP_REFERER|default:'' }}">
 
       <div class="px-6 pt-5 pb-3 border-b border-gray-100">
         <p class="text-primary font-bold text-base">Contact {{ jobseeker.first_name }} {{ jobseeker.last_name }}</p>
@@ -737,7 +742,7 @@ ${buildSignature()}`;
 </script>
 
 <script>
-// Application lifecycle actions (Proceed / Reject / Mark as Hired / hire offer flow).
+// Application lifecycle actions (Proceed / Reject / Send Job Offer / hire offer flow).
 (function() {
   const wrap = document.getElementById('app-actions');
   if (!wrap) return;
@@ -797,8 +802,8 @@ ${buildSignature()}`;
       const confirmTexts = {
         accept:      { title: 'Proceed with this application?', body: proceedBody, cta: 'Yes, proceed', cls: 'bg-teal hover:bg-teal/90' },
         reject:      { title: 'Reject this application?', body: 'This is terminal — the application cannot be revived.', cta: 'Yes, reject', cls: 'bg-red-500 hover:bg-red-600' },
-        hire:        { title: 'Send a hire offer?',       body: "The jobseeker will get a notification with Accept / Decline buttons. The slot decrement + work-experience entry only happen once they accept.", cta: 'Yes, send offer', cls: 'bg-teal hover:bg-teal/90' },
-        cancel_hire: { title: 'Cancel the hire offer?',   body: 'The offer disappears from the jobseeker’s notifications and the application goes back to In Progress.', cta: 'Yes, cancel offer', cls: 'bg-amber hover:bg-amber/90' },
+        hire:        { title: 'Send a job offer?',        body: "The jobseeker will get a notification with Accept / Decline buttons. The slot decrement + work-experience entry only happen once they accept.", cta: 'Yes, send offer', cls: 'bg-teal hover:bg-teal/90' },
+        cancel_hire: { title: 'Cancel the job offer?',    body: 'The offer disappears from the jobseeker’s notifications and the application goes back to In Progress.', cta: 'Yes, cancel offer', cls: 'bg-amber hover:bg-amber/90' },
       };
       const t = confirmTexts[action];
       if (window.confirmAction) {

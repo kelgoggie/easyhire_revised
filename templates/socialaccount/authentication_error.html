@@ -1,0 +1,22 @@
+{% comment %}
+Overrides allauth's default socialaccount/authentication_error.html —
+reached when Google OAuth errors out mid-flow (token exchange failed,
+account revoked, network hiccup, etc.). Same treatment as
+login_cancelled: silent redirect back to the jobseeker sign-in so users
+never see the unstyled fallback page.
+{% endcomment %}<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="0;url=/login/?error=invalid_credentials">
+  <title>Redirecting…</title>
+  <script>window.location.replace('/login/?error=invalid_credentials');</script>
+</head>
+<body>
+  {% if messages %}{% for m in messages %}{% endfor %}{% endif %}
+  <noscript>
+    <p>Google sign-in failed. <a href="/login/">Return to sign in</a>
+      or contact <a href="mailto:easyhire.admin@gmail.com">easyhire.admin@gmail.com</a>.</p>
+  </noscript>
+</body>
+</html>

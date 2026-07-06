@@ -18,10 +18,16 @@ def employer_required(view_func):
     Use this for pages that should stay usable while a company waits for verification
     (dashboard, settings, company profile, etc.). The pending banner on the dashboard
     tells the user what's still gated.
+
+    Admins hitting employer-only URLs bounce to the admin panel rather than
+    the employer login page — landing them on a sign-in form when they're
+    already signed in reads as broken.
     """
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect('/employers/login/')
+        if request.user.is_staff:
+            return redirect('/admin-panel/')
         if not request.user.is_employer:
             return redirect('/employers/login/')
         try:
@@ -446,12 +452,21 @@ def job_create(request):
             )
         return redirect('/employers/jobs/')
 
-    # Prefill location with the company's Iloilo branch address as the default
+    # Prefill location with the company's Iloilo branch address as the default.
+    # Fallback chain: (1) the company's structured iloilo_* fields captured at
+    # registration, (2) the location of the most recent job the company posted
+    # (so a repeat poster gets last-time's values pre-filled), (3) the free-text
+    # main_branch_address as a street hint (seeded / legacy companies may only
+    # have this filled in). All four keys end up as strings, never None.
+    last_job = (
+        JobPosting.objects.filter(company=company, deleted_at__isnull=True)
+        .order_by('-created_at').first()
+    )
     location_defaults = {
-        'bldg_unit': company.iloilo_bldg_unit or '',
-        'street': company.iloilo_street or '',
-        'barangay_code': company.iloilo_barangay_code or '',
-        'barangay_name': company.iloilo_barangay_name or '',
+        'bldg_unit':     company.iloilo_bldg_unit    or (last_job.bldg_unit     if last_job else '') or '',
+        'street':        company.iloilo_street       or (last_job.street        if last_job else '') or (company.main_branch_address or ''),
+        'barangay_code': company.iloilo_barangay_code or (last_job.barangay_code if last_job else '') or '',
+        'barangay_name': company.iloilo_barangay_name or (last_job.barangay_name if last_job else '') or '',
     }
     return render(request, 'employers/job_form.html', {
         'company': company,
@@ -1345,7 +1360,24 @@ def candidate_contact(request, jobseeker_id):
         messages.success(request, f'Sent to {jobseeker.first_name}\'s EasyHire inbox (no email).')
     else:
         messages.success(request, f'Your message has been sent to {jobseeker.first_name}.')
-    return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
+    # Bounce back to wherever the employer came from — job detail, candidate
+    # list, inbox, etc. Falls back to the candidate profile when the caller
+    # didn't provide a next hint. Same-origin check: only accept paths that
+    # start with '/employers/' so we can't be redirected off-site.
+    next_url = (request.POST.get('next') or '').strip()
+    if next_url:
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(next_url)
+            if parsed.netloc and parsed.netloc != request.get_host():
+                next_url = ''
+            elif parsed.path and not parsed.path.startswith('/employers/'):
+                next_url = ''
+        except Exception:
+            next_url = ''
+    if not next_url:
+        next_url = f'/employers/candidates/{_hashid(jobseeker_id)}/'
+    return redirect(next_url)
 
 
 # Analytics for employers is served by apps/analytics/views.analytics,

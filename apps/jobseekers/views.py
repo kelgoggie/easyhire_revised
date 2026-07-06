@@ -15,6 +15,12 @@ from django.db.models import Q
 
 @login_required
 def dashboard(request):
+    # Admins can be routed here from `/login/` if they're authenticated but
+    # somehow end up on the jobseeker sign-in path. Bounce them to the
+    # admin panel rather than letting them fall through to whichever
+    # JobseekerProfile happens to be attached to their user row.
+    if request.user.is_staff:
+        return redirect('/admin-panel/')
     if not request.user.is_jobseeker:
         return redirect('/employers/dashboard/')
 

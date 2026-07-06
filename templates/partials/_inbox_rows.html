@@ -62,12 +62,15 @@
           {% if item.context and item.kind == 'announcement' %}
           <p class="text-primary text-xs font-semibold mt-1 truncate">{{ item.context }}</p>
           {% endif %}
-          {# Delivery indicator — only present on employer-side outgoing #}
-          {# EmployerContact rows. `delivered_to_email` is populated by  #}
-          {# notifications.email._send() *only* when Gmail SMTP accepts  #}
-          {# the message; blank means the send raised (check runserver   #}
-          {# terminal) or delivery is queued elsewhere.                  #}
-          {% if item.kind == 'interview' or item.kind == 'requirements' %}
+          {# Delivery indicator — only present on the SENDER's copy of an  #}
+          {# outgoing EmployerContact. Jobseekers see incoming messages     #}
+          {# and shouldn't be shown "Delivery pending" (that reads as a    #}
+          {# broken UI on their side). `is_outgoing` is set by the employer #}
+          {# inbox view (apps/core/views.py) — the jobseeker inbox view     #}
+          {# never sets it, so this whole block collapses out.              #}
+          {% if item.is_outgoing and item.kind == 'interview' or item.is_outgoing and item.kind == 'requirements' %}
+            {# outer condition is `is_outgoing AND kind in {interview,requirements}` — #}
+            {# Django templates don't support parens, so it's spelled out per kind.    #}
             {% if item.delivered_to_email %}
             <p class="text-teal text-[11px] italic mt-1">
               <svg class="inline w-3 h-3 mr-0.5 -mt-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>

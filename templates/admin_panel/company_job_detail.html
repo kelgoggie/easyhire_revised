@@ -175,19 +175,30 @@
     });
     disableForm.addEventListener('submit', function(e) {
       e.preventDefault();
+      // Defensive fetch: parse JSON only when the server actually sends JSON,
+      // treat everything else as a server error so we still close the modal
+      // cleanly and surface a message. Previously an unexpected HTML/302
+      // response caused r.json() to throw, the promise chain rejected
+      // silently, and the modal appeared to hang.
       fetch('/admin-panel/jobs/{{ job.id|hashid }}/disable/', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') },
         body: new FormData(disableForm),
-      }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
-        .then(function(pair) {
-          const [ok, d] = pair;
-          if (ok && d.ok) window.location.reload();
-          else {
-            disableErr.textContent = (d && d.error) || 'Something went wrong.';
-            disableErr.classList.remove('hidden');
-          }
-        });
+      }).then(function(r) {
+        const ct = (r.headers.get('Content-Type') || '').toLowerCase();
+        if (ct.indexOf('application/json') === -1) {
+          return { ok: false, error: 'Server returned status ' + r.status + '. Please refresh and try again.' };
+        }
+        return r.json().then(function(d) { return Object.assign({ _httpOk: r.ok }, d); });
+      }).then(function(d) {
+        if (d && d.ok) { window.location.reload(); return; }
+        disableErr.textContent = (d && d.error) || 'Something went wrong. Please refresh and try again.';
+        disableErr.classList.remove('hidden');
+      }).catch(function(err) {
+        disableErr.textContent = 'Network error — check your connection and try again.';
+        disableErr.classList.remove('hidden');
+      });
     });
     {% else %}
     // ── Re-open flow (uses the confirm modal) ────────────────────

@@ -11,13 +11,22 @@ class AccountAdapter(DefaultAccountAdapter):
         user = request.user
         if not user.is_authenticated:
             return '/login/'
-        if user.user_type == 'JOBSEEKER':
+        # Staff first — admins may also carry a jobseeker/employer user_type
+        # from earlier in their account's life; the panel is where they
+        # belong regardless.
+        if user.is_staff:
+            return '/admin-panel/'
+        # NOTE: `user_type` is stored lowercase (see User.JOBSEEKER = 'jobseeker'
+        # in apps/accounts/models.py). Previously compared to the uppercase
+        # string, which always failed and dumped every OAuth login on
+        # /dashboard/ regardless of role.
+        if user.user_type == 'jobseeker':
             try:
                 _ = user.jobseeker_profile
                 return '/dashboard/'
             except Exception:
                 return '/register/info/'
-        if user.user_type == 'EMPLOYER':
+        if user.user_type == 'employer':
             try:
                 _ = user.employer_profile.company
                 return '/employers/dashboard/'

@@ -1,0 +1,24 @@
+{% comment %}
+Overrides allauth's default socialaccount/login_cancelled.html — reached when
+a user aborts the Google OAuth consent screen. Redirects them straight to
+the jobseeker login so they don't hit an unstyled "Login Cancelled" page
+with a stale Django messages dump. No visible flash: the JS redirect fires
+before first paint; meta refresh + noscript fallback exist for JS-disabled
+browsers. Also drops any pending Django messages so a leftover "Successfully
+signed in as X" from a prior session doesn't render on the fallback page.
+{% endcomment %}<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="0;url=/login/">
+  <title>Redirecting…</title>
+  <script>window.location.replace('/login/');</script>
+</head>
+<body>
+  {# Consume any stale messages so they don't render in the noscript fallback. #}
+  {% if messages %}{% for m in messages %}{% endfor %}{% endif %}
+  <noscript>
+    <p>Google sign-in was cancelled. <a href="/login/">Return to sign in</a>.</p>
+  </noscript>
+</body>
+</html>

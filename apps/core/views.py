@@ -197,6 +197,11 @@ def inbox(request):
                 # inbox row so the employer can see at a glance whether
                 # their message actually went out.
                 'delivered_to_email': contact.delivered_to_email or '',
+                # Marks this row as the sender's own outbound copy. The inbox
+                # row template only renders the delivery indicator for
+                # is_outgoing rows — jobseekers seeing an incoming message
+                # shouldn't care whether the employer's SMTP handoff worked.
+                'is_outgoing': True,
                 'report_target_type': '',
                 'report_target_id': None,
                 'report_label': '',

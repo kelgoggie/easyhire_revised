@@ -308,24 +308,49 @@ function getCsrf() {
 }
 
 function saveAvatar() {
-    if (!cropper) return;
     const btn = document.getElementById('avatar-save-btn');
+    function resetBtn() { btn.disabled = false; btn.textContent = 'Save'; }
+    function fail(msg) { resetBtn(); alert(msg); }
+    if (!cropper) return fail('No image loaded — please choose a photo first.');
     btn.disabled = true; btn.textContent = 'Saving...';
-    cropper.getCroppedCanvas({ width: 512, height: 512, imageSmoothingQuality: 'high' })
-        .toBlob(function(blob) {
-            const fd = new FormData();
-            fd.append('image', blob, 'avatar.jpg');
-            fetch('/profile/picture/upload/', {
-                method: 'POST',
-                headers: { 'X-CSRFToken': getCsrf() },
-                body: fd,
-            }).then(r => r.json()).then(function(data) {
-                if (data.ok) { window.location.reload(); }
-                else { alert(data.error || 'Upload failed'); btn.disabled = false; btn.textContent = 'Save'; }
-            }).catch(function() {
-                alert('Upload failed'); btn.disabled = false; btn.textContent = 'Save';
-            });
-        }, 'image/jpeg', 0.92);
+
+    // getCroppedCanvas() can return null if cropperjs failed to init or the
+    // source image is tainted (CORS-cross-origin). Previously the button
+    // silently stuck at "Saving..." with no error visible.
+    let canvas;
+    try {
+        canvas = cropper.getCroppedCanvas({ width: 512, height: 512, imageSmoothingQuality: 'high' });
+    } catch (e) {
+        return fail('Could not process the image. Try a different photo.');
+    }
+    if (!canvas) return fail('Could not process the image. Try a different photo.');
+
+    canvas.toBlob(function(blob) {
+        if (!blob) return fail('Could not encode the image. Try a smaller file.');
+        const fd = new FormData();
+        fd.append('image', blob, 'avatar.jpg');
+        // Same defensive pattern as the admin disable modal: only parse JSON
+        // if the server actually sent JSON. A Cloudinary upload timeout or
+        // Render proxy 502 returns HTML — trying to r.json() that throws
+        // and the button used to stick at "Saving...".
+        fetch('/profile/picture/upload/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': getCsrf() },
+            body: fd,
+        }).then(function(r) {
+            const ct = (r.headers.get('Content-Type') || '').toLowerCase();
+            if (ct.indexOf('application/json') === -1) {
+                return { ok: false, error: 'Upload failed (server status ' + r.status + '). Please refresh and try again.' };
+            }
+            return r.json();
+        }).then(function(data) {
+            if (data && data.ok) { window.location.reload(); return; }
+            fail((data && data.error) || 'Upload failed.');
+        }).catch(function() {
+            fail('Upload failed — check your connection and try again.');
+        });
+    }, 'image/jpeg', 0.92);
 }
 
 function removeAvatar() {

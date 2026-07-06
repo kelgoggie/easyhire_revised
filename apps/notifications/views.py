@@ -103,7 +103,7 @@ def notifications_api(request):
         elif n.notif_type == Notification.HIRE_OFFERED:
             item['actor'] = n.company.name if n.company else 'An employer'
             job_title = n.job.title if n.job else 'a position'
-            item['verb']  = f'wants to tag you as Hired for {job_title}.'
+            item['verb']  = f'sent you a job offer for {job_title}.'
             item['icon']  = 'sparkle'
             # Find the underlying application so the inline Accept/Decline
             # buttons can target it. Bell renders these buttons when
@@ -121,7 +121,7 @@ def notifications_api(request):
             who = (f"{n.jobseeker.first_name} {n.jobseeker.last_name}"
                    if n.jobseeker else 'The jobseeker')
             item['actor'] = who
-            item['verb']  = 'accepted your hire offer.'
+            item['verb']  = 'accepted your job offer.'
             item['icon']  = 'sparkle'
             item['url']   = (f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=applicants&status=hired'
                              if n.job else '/employers/jobs/')
@@ -129,13 +129,16 @@ def notifications_api(request):
             who = (f"{n.jobseeker.first_name} {n.jobseeker.last_name}"
                    if n.jobseeker else 'The jobseeker')
             item['actor'] = who
-            item['verb']  = 'declined your hire offer.'
+            item['verb']  = 'declined your job offer.'
             item['icon']  = 'briefcase'
             item['url']   = (f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=applicants'
                              if n.job else '/employers/jobs/')
         elif n.notif_type == Notification.EMPLOYER_CONTACTED:
             item['actor']  = n.company.name if n.company else 'An employer'
-            item['verb']   = f'sent you {n.liker_preview or "a message"}. Check your email.'
+            # Drop "Check your email" — for test / demo accounts SMTP is
+            # skipped, and even on real accounts the in-app inbox is the
+            # source of truth. The message body is under Inbox → open row.
+            item['verb']   = f'sent you {n.liker_preview or "a message"}.'
             item['quoted'] = n.admin_message or ''
             item['icon']   = 'briefcase'
             # Invites → go to the job detail; other contacts → inbox.
