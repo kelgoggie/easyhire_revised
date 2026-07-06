@@ -266,6 +266,13 @@ if os.getenv('EMAIL_HOST_USER'):
     EMAIL_HOST_USER     = os.getenv('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
     DEFAULT_FROM_EMAIL  = os.getenv('DEFAULT_FROM_EMAIL', f'EasyHire <{EMAIL_HOST_USER}>')
+    # Bound the SMTP socket timeout so a slow Gmail relay or a bad recipient
+    # domain can't hang a user-facing request until Render's proxy times out
+    # (which surfaces as an HTML 500 that the resend-banner reads as
+    # "Server returned an unexpected response (500)" instead of the JSON
+    # error our view meant to send). 10s is enough for a healthy Gmail
+    # handshake and short enough to fail fast when something's wrong.
+    EMAIL_TIMEOUT       = int(os.getenv('EMAIL_TIMEOUT', '10'))
 else:
     EMAIL_BACKEND      = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'EasyHire <noreply@easyhire.local>'

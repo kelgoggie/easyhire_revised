@@ -14,33 +14,43 @@
 
   <div>
 
-    <!-- Search bar -->
-    <form method="GET" action="/applications/" class="mb-6">
-      <input type="hidden" name="sort" value="{{ sort }}">
-      <div class="relative max-w-2xl mx-auto">
-        <input type="text" name="q" value="{{ search|default:'' }}" placeholder="Search Applications..."
-               class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-3 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
-        <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
-          </svg>
-        </button>
-      </div>
-    </form>
+    {# Header row: title on the left, search on the right — mirrors the  #}
+    {# Jobs For You layout so the two pages read as siblings.            #}
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">
+        Your <span>Applications</span>
+      </h1>
+      <form method="GET" action="/applications/" class="w-full sm:w-auto sm:max-w-md sm:flex-1">
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <div class="relative">
+          <input type="text" name="q" value="{{ search|default:'' }}" placeholder="Search Applications..."
+                 class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
+          <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
 
-    <!-- Heading + Sort row -->
-    <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-4">Your Applications</h1>
-
-    <div class="flex items-center gap-2 mb-6">
+    {# Sort row — same right-aligned compact text link pattern as Jobs   #}
+    {# For You. Applications has no tabs (no For You/Liked/Hidden        #}
+    {# equivalent), so the sort dropdown sits alone on the right.        #}
+    <div class="flex items-center justify-end gap-4 mb-6 flex-wrap">
       <div class="relative" id="sort-dropdown-wrapper">
         <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
                 class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/>
           </svg>
-          Sort by...
+          <span>
+            {% if sort == 'oldest' %}Oldest First
+            {% elif sort == 'status' %}By Status
+            {% else %}Most Recent{% endif %}
+          </span>
         </button>
-        <div id="sort-menu" class="hidden absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
+        <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
           <a href="?sort=recent&q={{ search }}"
              class="block px-4 py-2 text-sm {% if sort == 'recent' or not sort %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Most Recent</a>
           <a href="?sort=oldest&q={{ search }}"

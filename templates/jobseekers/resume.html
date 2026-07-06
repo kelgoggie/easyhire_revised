@@ -196,8 +196,8 @@
               Only Show Employers with Similar Badges
             </label>
             <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
-              <input type="radio" name="sector_badge_visibility" value="private"
-                     {% if profile.sector_badge_visibility == 'private' %}checked{% endif %}
+              <input type="radio" name="sector_badge_visibility" value="hidden"
+                     {% if profile.sector_badge_visibility == 'hidden' %}checked{% endif %}
                      class="resume-field sr-only">
               Do Not Show
             </label>
@@ -563,13 +563,23 @@
       </div>
 
       <!-- ── Preferences ───────────────────────────────────────── -->
+      {# Chip-style preference input. The canonical value is a comma-       #}
+      {# separated string on `job_search_query` (matches how analytics      #}
+      {# aggregates Preferred Jobs) — the hidden input at the end is what   #}
+      {# the form actually submits. Existing values are split on `,` and    #}
+      {# rendered as removable chips on load; typing Enter or comma inside  #}
+      {# the visible input converts the buffer into a chip.                 #}
       <div class="bg-white border border-gray-200 rounded-2xl p-5">
         <p class="text-sm font-bold text-primary mb-1">Preferences</p>
         <p class="text-xs text-muted mb-3">Recommend Jobs Related to:</p>
-        <input type="text" name="job_search_query"
-               value="{{ profile.job_search_query|default:'' }}"
-               placeholder="Separate entries with commas"
-               class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+        <div id="preferred-jobs-wrap"
+             class="resume-field flex flex-wrap items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 py-2 focus-within:border-teal transition min-h-[40px]">
+          <input type="text" id="preferred-jobs-typer"
+                 placeholder="Add a job title and press Enter or ,"
+                 class="flex-1 min-w-[8rem] bg-transparent border-none outline-none text-sm text-primary placeholder-gray-300 py-1 px-1">
+        </div>
+        <input type="hidden" name="job_search_query" id="preferred-jobs-hidden"
+               value="{{ profile.job_search_query|default:'' }}">
       </div>
 
       <!-- ── Save + Cancel buttons ─────────────────────────────── -->
@@ -702,6 +712,86 @@ saveBtn.addEventListener('click', function() {
         document.getElementById('resume-form').submit();
     });
 });
+
+// ── Preferred Jobs: chip input ──────────────────────────────────
+// Parses the initial comma-joined string on `#preferred-jobs-hidden` into
+// removable chips inside the visible wrapper. Enter or comma on the typer
+// input flushes the buffer into a chip; clicking the X removes it. On
+// every change the hidden input is re-serialized so the form submits the
+// canonical `foo, bar, baz` string the analytics job aggregation already
+// expects.
+(function() {
+    const wrap    = document.getElementById('preferred-jobs-wrap');
+    const typer   = document.getElementById('preferred-jobs-typer');
+    const hidden  = document.getElementById('preferred-jobs-hidden');
+    if (!wrap || !typer || !hidden) return;
+
+    function currentChips() {
+        return Array.from(wrap.querySelectorAll('[data-pref-chip]'))
+            .map(el => el.dataset.value).filter(Boolean);
+    }
+    function syncHidden() {
+        hidden.value = currentChips().join(', ');
+    }
+    function markDirtyLocal() {
+        resumeDirty = true;
+        const form = document.getElementById('resume-form');
+        if (form) form.dataset.dirty = 'true';
+    }
+    function addChip(raw) {
+        const value = (raw || '').trim().replace(/,+$/, '');
+        if (!value) return;
+        if (currentChips().some(v => v.toLowerCase() === value.toLowerCase())) return;
+        const chip = document.createElement('span');
+        chip.dataset.prefChip = 'true';
+        chip.dataset.value = value;
+        chip.className = 'inline-flex items-center gap-1.5 bg-teal/10 text-teal border border-teal/25 text-xs font-medium px-2.5 py-1 rounded-full';
+        chip.innerHTML = '<span></span>' +
+            '<button type="button" class="w-3.5 h-3.5 rounded-full text-teal/70 hover:text-teal hover:bg-teal/15 flex items-center justify-center transition" aria-label="Remove">' +
+              '<svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' +
+            '</button>';
+        chip.querySelector('span').textContent = value;
+        chip.querySelector('button').addEventListener('click', function() {
+            chip.remove();
+            syncHidden();
+            markDirtyLocal();
+        });
+        wrap.insertBefore(chip, typer);
+        syncHidden();
+    }
+
+    // Initial hydration from the stored value.
+    (hidden.value || '').split(',').forEach(addChip);
+
+    typer.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addChip(typer.value.replace(/,$/, ''));
+            typer.value = '';
+            markDirtyLocal();
+        } else if (e.key === 'Backspace' && !typer.value) {
+            const chips = wrap.querySelectorAll('[data-pref-chip]');
+            if (chips.length) {
+                chips[chips.length - 1].remove();
+                syncHidden();
+                markDirtyLocal();
+            }
+        }
+    });
+    // Flush a lingering typed value on blur so a user who typed something
+    // and just clicked Save without pressing Enter doesn't lose it.
+    typer.addEventListener('blur', function() {
+        if (typer.value.trim()) {
+            addChip(typer.value);
+            typer.value = '';
+            markDirtyLocal();
+        }
+    });
+    // Clicking anywhere in the wrapper focuses the typer for a natural feel.
+    wrap.addEventListener('click', function(e) {
+        if (e.target === wrap) typer.focus();
+    });
+})();
 
 // ── Dirty tracking + navigation guards ────────────────────────
 // Any input/change on the form flips a dirty flag we mirror onto a

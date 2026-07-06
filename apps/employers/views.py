@@ -693,15 +693,16 @@ def job_detail(request, job_id):
 @employer_verified_required
 @email_verified_required
 def invite_to_apply(request, job_id, jobseeker_id):
-    """Send a jobseeker an email + bell notification inviting them to apply for
-    a specific job. Idempotent — won't double-send to the same jobseeker.
+    """Lightweight "Invite to Apply" — creates a single bell notification
+    with a View Job link for the jobseeker. No EmployerContact row, no
+    email — Kelly explicitly wants this to be distinct from Send
+    Requirements. Idempotent: won't create a second notification if one
+    already exists for this (company, job, jobseeker) tuple.
     """
     from django.http import JsonResponse
     from django.contrib import messages as flash
     from apps.jobseekers.models import JobseekerProfile
-    from apps.employers.models import EmployerContact
     from apps.notifications.models import Notification
-    from apps.notifications.email import _send
 
     if request.method != 'POST':
         return redirect(f'/employers/jobs/{_hashid(job_id)}/')
@@ -711,45 +712,27 @@ def invite_to_apply(request, job_id, jobseeker_id):
     job = get_object_or_404(JobPosting, id=job_id, company=company)
     jobseeker = get_object_or_404(JobseekerProfile, id=jobseeker_id)
 
-    # Skip if already invited (idempotent).
-    already = EmployerContact.objects.filter(
-        company=company, job=job, recipient=jobseeker,
-        kind=EmployerContact.KIND_REQUIREMENTS,
-    ).exists()
+    # Idempotency guard: check whether the same invite notification is
+    # already live. Match on (recipient, company, job, type) so re-clicking
+    # Invite to Apply on a previously-invited jobseeker is a no-op.
+    already = False
+    if jobseeker.user:
+        already = Notification.objects.filter(
+            recipient=jobseeker.user,
+            notif_type=Notification.INVITED_TO_APPLY,
+            company=company, job=job,
+        ).exists()
 
-    if not already:
-        subject = f'Invitation to apply — {job.title} at {company.name}'
-        body = (
-            f"Hi {jobseeker.first_name},\n\n"
-            f"{company.name} thinks you'd be a great fit for our open {job.title} role and would like to invite you to apply.\n\n"
-            f"View the full job posting and submit your application on EasyHire:\n"
-            f"https://easyhire-iloilo.onrender.com/jobs/{_hashid(job.id)}/\n\n"
-            f"— {company.name} Recruitment Team"
+    if not already and jobseeker.user:
+        Notification.objects.create(
+            recipient=jobseeker.user,
+            notif_type=Notification.INVITED_TO_APPLY,
+            company=company, jobseeker=jobseeker, job=job,
+            # liker_preview is used elsewhere for grouped nudges — for this
+            # single-source notification we leave it blank; the verb text
+            # is derived from company + job in notifications/views.py.
+            liker_preview=job.title,  # snapshot for post-deletion
         )
-
-        # Record as an EmployerContact (kind=requirements is closest fit).
-        contact = EmployerContact.objects.create(
-            sender=request.user, company=company, recipient=jobseeker, job=job,
-            kind=EmployerContact.KIND_REQUIREMENTS,
-            subject=subject, body=body,
-        )
-
-        # Email the jobseeker.
-        to_email = jobseeker.contact_email or (jobseeker.user.email if jobseeker.user else '')
-        if to_email:
-            _send(to_email, subject, body)
-            contact.delivered_to_email = to_email
-            contact.save(update_fields=['delivered_to_email'])
-
-        # Bell notification.
-        if jobseeker.user:
-            Notification.objects.create(
-                recipient=jobseeker.user,
-                notif_type=Notification.EMPLOYER_CONTACTED,
-                company=company, jobseeker=jobseeker, job=job,
-                liker_preview=f'an invitation to apply for {job.title}',
-                admin_message=subject,
-            )
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'ok': True, 'already': already})

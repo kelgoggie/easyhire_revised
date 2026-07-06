@@ -141,11 +141,17 @@ def notifications_api(request):
             item['verb']   = f'sent you {n.liker_preview or "a message"}.'
             item['quoted'] = n.admin_message or ''
             item['icon']   = 'briefcase'
-            # Invites → go to the job detail; other contacts → inbox.
-            if n.job and 'invitation to apply' in (n.liker_preview or '').lower():
-                item['url'] = f'/jobs/view/{_hashid(n.job.id)}/'
-            else:
-                item['url'] = '/inbox/'
+            item['url']    = '/inbox/'
+        elif n.notif_type == Notification.INVITED_TO_APPLY:
+            # Lightweight nudge — no inbox row, no email. Verb reads as
+            # "{Company} invited you to apply for {Job Title}." and the
+            # notification itself is the whole payload; clicking it takes
+            # the jobseeker straight to the job detail so they can Apply.
+            item['actor'] = n.company.name if n.company else 'An employer'
+            job_title = n.job.title if n.job else 'a role'
+            item['verb'] = f'invited you to apply for {job_title}.'
+            item['icon'] = 'briefcase'
+            item['url']  = f'/jobs/view/{_hashid(n.job.id)}/' if n.job else '/jobs/'
         data.append(item)
 
     return JsonResponse({'notifications': data, 'count': len(data)})

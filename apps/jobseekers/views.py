@@ -49,14 +49,17 @@ def dashboard(request):
         .order_by('-created_at')[:5]
     )
 
-    # Gather recent open jobs from followed companies
+    # Gather recent open jobs from followed companies. Cap at 45 (5 pages of
+    # 9 with the client-side paginator in the template) so a jobseeker who
+    # follows dozens of companies doesn't blow up the dashboard render — 45
+    # is well past the "still useful" threshold for a landing page.
     followed_companies = profile.followed_companies.all()
     followed_jobs = []
     for company in followed_companies:
         jobs = company.job_postings.filter(status='open').order_by('-created_at')[:2]
         for job in jobs:
             followed_jobs.append({'company': company, 'job': job})
-        if len(followed_jobs) >= 6:
+        if len(followed_jobs) >= 45:
             break
 
     return render(request, 'jobseekers/dashboard.html', {

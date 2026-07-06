@@ -66,10 +66,22 @@
         </div>
       </div>
     </div>
-    <div class="flex flex-col items-end gap-2">
-      <a href="/admin-panel/companies/{{ company.id|hashid }}/settings/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-6 py-2 rounded-full hover:bg-taupe/30 transition">Account Settings</a>
+    <div class="flex flex-col items-end gap-1.5 text-sm">
+      <a href="/admin-panel/companies/{{ company.id|hashid }}/settings/"
+         class="text-primary hover:text-teal transition inline-flex items-center gap-1">
+        Account Settings
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+      </a>
       {% if company.verification_status == 'pending' %}
-      <a href="/admin-panel/employers/{{ company.id|hashid }}/" class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">Review Verification</a>
+      <a href="/admin-panel/employers/{{ company.id|hashid }}/"
+         class="text-amber hover:text-amber/80 transition inline-flex items-center gap-1">
+        Review Verification
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+      </a>
       {% endif %}
     </div>
   </div>

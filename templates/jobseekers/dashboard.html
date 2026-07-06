@@ -209,27 +209,51 @@
     <p class="text-muted text-xs mb-4">Recent Job Posts from companies you follow.</p>
 
     {% if followed_jobs %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {% for item in followed_jobs %}
-      <a href="/jobs/view/{{ item.job.id|hashid }}/"
-         class="border border-gray-200 rounded-xl p-4 hover:shadow-md transition hover:border-teal/30 bg-white block">
-        <div class="flex items-start gap-3">
-          <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {% if item.company.logo %}
-              <img src="{{ item.company.logo.url }}" alt="{{ item.company.name }}" class="w-full h-full object-cover">
-            {% else %}
-              <span class="text-primary font-bold text-sm">{{ item.company.name|first|upper }}</span>
-            {% endif %}
+    {# Client-side pagination — the whole list is rendered but only 9 tiles #}
+    {# are visible at a time. Prev / Next buttons flip a `data-page` attr   #}
+    {# on the wrapper; JS at the bottom of the page toggles `.hidden` on    #}
+    {# each tile based on its data-page-index vs the current page.          #}
+    <div id="followed-jobs" data-page="0" data-per-page="9">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for item in followed_jobs %}
+        <a href="/jobs/view/{{ item.job.id|hashid }}/"
+           data-page-index="{{ forloop.counter0 }}"
+           class="followed-tile border border-gray-200 rounded-xl p-4 hover:shadow-md transition hover:border-teal/30 bg-white block">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {% if item.company.logo %}
+                <img src="{{ item.company.logo.url }}" alt="{{ item.company.name }}" class="w-full h-full object-cover">
+              {% else %}
+                <span class="text-primary font-bold text-sm">{{ item.company.name|first|upper }}</span>
+              {% endif %}
+            </div>
+            <div class="min-w-0">
+              <p class="text-muted text-xs truncate">{{ item.company.name }}</p>
+              <p class="font-bold text-primary text-sm leading-tight truncate">{{ item.job.title }}</p>
+              <p class="text-muted text-xs truncate mt-0.5">{{ item.job.location_display }}</p>
+              <p class="text-muted text-xs mt-0.5 italic">Posted {{ item.job.created_at|timesince }} ago</p>
+            </div>
           </div>
-          <div class="min-w-0">
-            <p class="text-muted text-xs truncate">{{ item.company.name }}</p>
-            <p class="font-bold text-primary text-sm leading-tight truncate">{{ item.job.title }}</p>
-            <p class="text-muted text-xs truncate mt-0.5">{{ item.job.location_display }}</p>
-            <p class="text-muted text-xs mt-0.5 italic">Posted {{ item.job.created_at|timesince }} ago</p>
-          </div>
-        </div>
-      </a>
-      {% endfor %}
+        </a>
+        {% endfor %}
+      </div>
+      {# Pager — visually mirrors partials/_pagination.html but works via #}
+      {# JS instead of ?page= URL params.                                #}
+      <nav id="followed-jobs-pager" class="flex items-center justify-center gap-2 mt-6 flex-wrap hidden" aria-label="Pagination">
+        <button type="button" data-followed-prev
+                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 text-xs text-primary hover:bg-surface hover:border-teal/30 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-gray-200">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          Previous
+        </button>
+        <span class="text-xs text-muted px-2">
+          Page <strong id="followed-jobs-page-num" class="text-primary">1</strong> of <span id="followed-jobs-page-total">1</span>
+        </span>
+        <button type="button" data-followed-next
+                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 text-xs text-primary hover:bg-surface hover:border-teal/30 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-gray-200">
+          Next
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </nav>
     </div>
     {% else %}
     <div class="border border-gray-200 rounded-xl px-6 py-10 text-center text-muted text-sm">
@@ -253,6 +277,47 @@ document.querySelectorAll('tr.row-link').forEach(function(tr) {
     if (href) window.location = href;
   });
 });
+
+// ── Followed Companies: client-side paginator ───────────────────
+// The whole list is in the DOM already — this just toggles .hidden on
+// each tile based on its data-page-index vs the current data-page.
+(function() {
+  const wrap  = document.getElementById('followed-jobs');
+  const pager = document.getElementById('followed-jobs-pager');
+  if (!wrap || !pager) return;
+  const tiles   = Array.from(wrap.querySelectorAll('.followed-tile'));
+  const perPage = parseInt(wrap.dataset.perPage, 10) || 9;
+  const total   = Math.ceil(tiles.length / perPage);
+  if (total <= 1) return;  // no pager needed
+
+  pager.classList.remove('hidden');
+  const prev = pager.querySelector('[data-followed-prev]');
+  const next = pager.querySelector('[data-followed-next]');
+  const numEl   = document.getElementById('followed-jobs-page-num');
+  const totalEl = document.getElementById('followed-jobs-page-total');
+  totalEl.textContent = total;
+
+  function render() {
+    const page = parseInt(wrap.dataset.page, 10) || 0;
+    const start = page * perPage;
+    const end   = start + perPage;
+    tiles.forEach((el, i) => {
+      el.classList.toggle('hidden', i < start || i >= end);
+    });
+    numEl.textContent = page + 1;
+    prev.disabled = page === 0;
+    next.disabled = page >= total - 1;
+  }
+  prev.addEventListener('click', function() {
+    const page = parseInt(wrap.dataset.page, 10) || 0;
+    if (page > 0) { wrap.dataset.page = page - 1; render(); }
+  });
+  next.addEventListener('click', function() {
+    const page = parseInt(wrap.dataset.page, 10) || 0;
+    if (page < total - 1) { wrap.dataset.page = page + 1; render(); }
+  });
+  render();
+})();
 </script>
 {% endblock %}
 {% endwith %}

@@ -274,39 +274,44 @@
     {% csrf_token %}
     <input type="hidden" name="form_type" value="privacy">
 
+    {# Chip pattern mirrors the "Who can see these sector badges?" group on #}
+    {# the resume page so the two controls read as siblings. Selected state #}
+    {# uses has-[:checked] to flip the whole label to teal on the checked  #}
+    {# radio — the actual input is sr-only so the styling isn't fighting   #}
+    {# native browser chrome.                                              #}
     <p class="text-sm text-primary mb-2">Profile Visibility</p>
-    <div class="space-y-1.5 mb-5">
-      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+    <div class="flex flex-wrap gap-2 mb-5">
+      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
         <input type="radio" name="profile_visibility" value="public"
-               class="accent-primary w-3.5 h-3.5"
+               class="sr-only"
                {% if profile.profile_visibility != 'hidden' %}checked{% endif %}>
-        Continue showing my profile to Employers after being tagged as Hired.
+        Show my profile after being hired
       </label>
-      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
         <input type="radio" name="profile_visibility" value="hidden"
-               class="accent-primary w-3.5 h-3.5"
+               class="sr-only"
                {% if profile.profile_visibility == 'hidden' %}checked{% endif %}>
-        Don't show my profile to Employers after being tagged as Hired.
+        Hide my profile after being hired
       </label>
     </div>
 
     <p class="text-sm text-primary mb-2">Sector Badge Visibility</p>
-    <div class="space-y-1.5">
-      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+    <div class="flex flex-wrap gap-2">
+      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
         <input type="radio" name="sector_badge_visibility" value="public"
-               class="accent-primary w-3.5 h-3.5"
+               class="sr-only"
                {% if profile.sector_badge_visibility != 'similar' and profile.sector_badge_visibility != 'hidden' %}checked{% endif %}>
         Show All Employers
       </label>
-      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
         <input type="radio" name="sector_badge_visibility" value="similar"
-               class="accent-primary w-3.5 h-3.5"
+               class="sr-only"
                {% if profile.sector_badge_visibility == 'similar' %}checked{% endif %}>
         Only Show Employers with Similar Badges
       </label>
-      <label class="flex items-center gap-2 text-sm text-primary italic cursor-pointer">
+      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
         <input type="radio" name="sector_badge_visibility" value="hidden"
-               class="accent-primary w-3.5 h-3.5"
+               class="sr-only"
                {% if profile.sector_badge_visibility == 'hidden' %}checked{% endif %}>
         Do Not Show
       </label>

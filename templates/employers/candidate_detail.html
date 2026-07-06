@@ -762,11 +762,12 @@ ${buildSignature()}`;
       const [ok, d] = pair;
       if (ok && d.ok) {
         if (action === 'accept') {
-          // After accept, bounce back with a flag that auto-opens the
-          // Schedule Interview composer (next step in the hiring flow).
-          const url = new URL(window.location);
-          url.searchParams.set('open_interview', '1');
-          window.location = url.toString();
+          // Instant open — skip the page reload so the composer appears
+          // immediately. The Proceed / Reject buttons at the top will
+          // stay stale until the next navigation, but the modal + newly
+          // available actions inside it are what the employer needs to
+          // proceed with in the moment.
+          try { openContactModal('interview'); } catch (e) { window.location.reload(); }
         } else {
           window.location.reload();
         }

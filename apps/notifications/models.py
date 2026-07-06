@@ -16,6 +16,10 @@ class Notification(models.Model):
     APPLICATION_REJECTED  = 'application_rejected'   # jobseeker-facing
     APPLICATION_HIRED     = 'application_hired'      # jobseeker-facing
     EMPLOYER_CONTACTED    = 'employer_contacted'     # jobseeker-facing: employer sent requirements or interview
+    # "Invite to Apply" — a lightweight nudge (no inbox row, no email, just
+    # a notification with a View Job link). Employer clicks the button on
+    # the Recommended Jobseekers card; jobseeker gets a bell notification.
+    INVITED_TO_APPLY      = 'invited_to_apply'       # jobseeker-facing
     # Two-step hire flow: employer offers, jobseeker accepts/declines.
     HIRE_OFFERED          = 'hire_offered'           # jobseeker-facing: employer wants to mark them as Hired
     HIRE_ACCEPTED         = 'hire_accepted'          # employer-facing: jobseeker confirmed
@@ -33,6 +37,7 @@ class Notification(models.Model):
         (APPLICATION_REJECTED,   'Application Rejected'),
         (APPLICATION_HIRED,      'Application Hired'),
         (EMPLOYER_CONTACTED,     'Employer Sent Contact'),
+        (INVITED_TO_APPLY,       'Invited to Apply'),
         (HIRE_OFFERED,           'Hire Offered'),
         (HIRE_ACCEPTED,          'Hire Accepted'),
         (HIRE_DECLINED,          'Hire Declined'),
