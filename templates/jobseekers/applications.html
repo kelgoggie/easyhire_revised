@@ -5,9 +5,14 @@
 
 {% with active_nav="applications" %}
 {% block page_content %}
-<div class="min-h-screen">
+{# Base layout (base_dashboard_jobseeker.html) already provides horizontal   #}
+{# padding via `px-4 sm:px-6 lg:px-8` on its content wrapper — pages just   #}
+{# add py-8 like the dashboard does. The old max-w-6xl mx-auto here added  #}
+{# a second, tighter constraint that made this page's margins visibly     #}
+{# narrower than the rest of the site.                                     #}
+<div class="py-8">
 
-  <div class="max-w-6xl mx-auto py-8">
+  <div>
 
     <!-- Search bar -->
     <form method="GET" action="/applications/" class="mb-6">

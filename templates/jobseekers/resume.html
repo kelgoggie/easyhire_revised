@@ -704,15 +704,25 @@ saveBtn.addEventListener('click', function() {
 });
 
 // ── Dirty tracking + navigation guards ────────────────────────
-// Any input/change on the form flips resumeDirty. Cancel offers a
-// confirm modal; beforeunload triggers the browser's native "you have
+// Any input/change on the form flips a dirty flag we mirror onto a
+// data-attribute on the form itself so it's inspectable via DevTools
+// (`document.getElementById('resume-form').dataset.dirty`). Cancel opens
+// a confirm modal; beforeunload triggers the browser's native "you have
 // unsaved changes" popup on tab close, back button, or link click.
-(function() {
+const _resumeForm = document.getElementById('resume-form');
+if (_resumeForm) {
+    _resumeForm.dataset.dirty = 'false';
+    function markDirty() {
+        resumeDirty = true;
+        _resumeForm.dataset.dirty = 'true';
+    }
+    // Delegated listeners on the form catch every field, including inputs
+    // wrapped by the autocomplete widget (which moves them into a new
+    // .relative div — the events still bubble up to the form).
+    _resumeForm.addEventListener('input',  markDirty);
+    _resumeForm.addEventListener('change', markDirty);
+
     const cancelBtn = document.getElementById('cancel-btn');
-    const resumeForm = document.getElementById('resume-form');
-    if (!resumeForm) return;
-    resumeForm.addEventListener('input',  function() { resumeDirty = true; });
-    resumeForm.addEventListener('change', function() { resumeDirty = true; });
     if (cancelBtn) {
         cancelBtn.addEventListener('click', function() {
             if (!resumeDirty) { lockForm(); return; }
@@ -724,15 +734,26 @@ saveBtn.addEventListener('click', function() {
             );
         });
     }
-    // Browser native "you have unsaved changes" popup. Only fires when
-    // the form is actually dirty — clean navigation is unaffected.
-    window.addEventListener('beforeunload', function(e) {
-        if (!resumeDirty) return;
-        e.preventDefault();
-        e.returnValue = '';  // required by Chrome / Edge
-        return '';
-    });
-})();
+}
+
+// beforeunload registered unconditionally at top-level so a hoisting
+// or scoping quirk can't leave the page unguarded. The handler is a
+// no-op when the form isn't dirty — normal navigation is unaffected.
+// Chrome/Edge require both preventDefault() and returnValue. Firefox
+// only needs one. Setting both is safe on all engines.
+window.addEventListener('beforeunload', function(e) {
+    if (!resumeDirty) return;
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+});
+// Older iOS Safari and some Android browsers only fire `pagehide` on
+// link clicks, not beforeunload. Registering both catches everything.
+window.addEventListener('pagehide', function(e) {
+    if (!resumeDirty || !e.cancelable) return;
+    e.preventDefault();
+    e.returnValue = '';
+});
 
 // ── Section toggle (collapsible) ─────────────────────────────────
 // Each Education / Certification / Skills / Experience card starts

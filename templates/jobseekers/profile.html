@@ -231,7 +231,11 @@
 
       <!-- Step 2: cropper (hidden until image is picked) -->
       <div id="avatar-cropper" class="hidden">
-        <div class="bg-gray-900 rounded-xl overflow-hidden mb-4" style="max-height: 380px;">
+        {# min-height guarantees the cropper area is visible even in the    #}
+        {# split second before Cropper mounts, and if the image fails to    #}
+        {# decode we still see the empty dark box (which prompts the user   #}
+        {# that something went wrong rather than a collapsed modal).        #}
+        <div class="bg-gray-900 rounded-xl overflow-hidden mb-4" style="max-height: 380px; min-height: 280px;">
           <img id="cropper-image" src="" alt="" style="max-width: 100%; display: block;">
         </div>
         <p class="text-muted text-xs text-center mb-3">Drag to reposition. Pinch / scroll to zoom. Crop to a square.</p>
@@ -282,22 +286,49 @@ fileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5 MB.'); return; }
+    // Cropperjs comes from a CDN — if the network was slow / blocked / a
+    // browser extension nuked it, `Cropper` will be undefined at this
+    // point and calling `new Cropper(...)` would throw silently, leaving
+    // an empty container and the user stuck. Bail with a clear message.
+    if (typeof Cropper === 'undefined') {
+        alert('The image editor didn\'t load. Please refresh the page and try again.');
+        return;
+    }
     const reader = new FileReader();
+    reader.onerror = function() {
+        alert('Could not read that file. Try another photo.');
+    };
     reader.onload = function(ev) {
+        // Set image FIRST, THEN reveal the cropper step, THEN init Cropper
+        // once the image has decoded. Doing it in that order avoids the
+        // "empty modal" state Kelly hit — where the container was shown
+        // before the image had dimensions and Cropper mounted on a
+        // zero-height image.
+        cropperImg.onload = function() {
+            if (cropper) { cropper.destroy(); cropper = null; }
+            try {
+                cropper = new Cropper(cropperImg, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 0.9,
+                    cropBoxResizable: true,
+                    cropBoxMovable: true,
+                    background: false,
+                    guides: false,
+                });
+            } catch (err) {
+                alert('The image editor could not open this photo. Try a different image (JPG or PNG).');
+                resetPicker();
+            }
+        };
+        cropperImg.onerror = function() {
+            alert('Could not display that photo. Try a JPG or PNG under 5 MB.');
+            resetPicker();
+        };
         cropperImg.src = ev.target.result;
         pickerStep.classList.add('hidden');
         cropperStep.classList.remove('hidden');
-        if (cropper) cropper.destroy();
-        cropper = new Cropper(cropperImg, {
-            aspectRatio: 1,
-            viewMode: 1,
-            dragMode: 'move',
-            autoCropArea: 0.9,
-            cropBoxResizable: true,
-            cropBoxMovable: true,
-            background: false,
-            guides: false,
-        });
     };
     reader.readAsDataURL(file);
 });
