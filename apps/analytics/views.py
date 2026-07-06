@@ -146,29 +146,68 @@ def get_analytics_context(request):
     overseas_jobs = all_jobs.filter(location_type='overseas').count()
     remote_jobs = all_jobs.filter(location_type='remote').count()
 
+    # Aggregate open jobs by normalized title (case-insensitive, whitespace
+    # stripped) so multiple postings of "Bank Teller" across BDO, Metrobank,
+    # etc. collapse into one row. Titles are the labor-market signal — an
+    # employer analyst cares "which ROLES take longest to fill", not which
+    # specific posts. Company identity is intentionally dropped.
     hard_to_fill = [job for job in all_jobs.select_related('company') if job.is_hard_to_fill]
     hard_to_fill_count = len(hard_to_fill)
 
-    in_demand = list(
-        JobPosting.objects.filter(status='open', deleted_at__isnull=True).annotate(
-            interaction_count=Count('jobseeker_interactions')
-        ).select_related('company').order_by('-interaction_count')[:10]
+    from django.utils import timezone as _tz
+    in_demand_open = list(
+        JobPosting.objects.filter(status='open', deleted_at__isnull=True)
+        .annotate(interaction_count=Count('jobseeker_interactions'))
     )
 
-    # Chart-shaped payloads for the two pie panels. In Demand uses each
-    # job's interaction_count as its slice weight; Hard to Fill uses days
-    # open (bigger slice = more stuck) since "hard to fill" doesn't have
-    # a natural per-job quantity otherwise. Only include jobs with a
-    # positive value so we don't render zero-area slices.
-    from django.utils import timezone as _tz
+    def _norm_title(title):
+        return ' '.join((title or '').strip().split()).lower()
+
+    # In Demand: aggregate by title, sum interactions, avg per post. Rank
+    # by total interactions descending. Top 10 titles only.
+    demand_groups = {}
+    for j in in_demand_open:
+        key = _norm_title(j.title)
+        if not key or not j.interaction_count:
+            continue
+        g = demand_groups.setdefault(key, {
+            'display': j.title.strip(), 'total_interactions': 0, 'post_count': 0,
+        })
+        g['total_interactions'] += j.interaction_count
+        g['post_count'] += 1
+    in_demand_top = sorted(
+        demand_groups.values(), key=lambda g: g['total_interactions'], reverse=True,
+    )[:10]
+    for g in in_demand_top:
+        g['avg_interactions'] = round(g['total_interactions'] / g['post_count'], 1) if g['post_count'] else 0
     in_demand_chart = [
-        {'label': f'{j.title} — {j.company.name}', 'count': j.interaction_count}
-        for j in in_demand if (j.interaction_count or 0) > 0
+        {'label': g['display'], 'count': g['total_interactions']}
+        for g in in_demand_top
     ]
+
+    # Hard to Fill: aggregate hard-to-fill posts by title. Rank by average
+    # days open (a title that stays open longer on average is a stronger
+    # skills-gap signal than one with lots of posts). Top 10 titles only.
+    hard_groups = {}
+    now = _tz.now()
+    for j in hard_to_fill:
+        key = _norm_title(j.title)
+        if not key:
+            continue
+        days_open = max((now - j.created_at).days, 1)
+        g = hard_groups.setdefault(key, {
+            'display': j.title.strip(), 'post_count': 0, 'total_days': 0,
+        })
+        g['post_count'] += 1
+        g['total_days'] += days_open
+    for g in hard_groups.values():
+        g['avg_days'] = round(g['total_days'] / g['post_count'], 1) if g['post_count'] else 0
+    hard_to_fill_top = sorted(
+        hard_groups.values(), key=lambda g: g['avg_days'], reverse=True,
+    )[:10]
     hard_to_fill_chart = [
-        {'label': f'{j.title} — {j.company.name}',
-         'count': max((_tz.now() - j.created_at).days, 1)}
-        for j in hard_to_fill
+        {'label': g['display'], 'count': g['avg_days']}
+        for g in hard_to_fill_top
     ]
 
     # Applicant Insights
@@ -337,9 +376,10 @@ def get_analytics_context(request):
         'remote_jobs': remote_jobs,
         'hard_to_fill_count': hard_to_fill_count,
         'hard_to_fill': hard_to_fill[:5],
-        'in_demand': in_demand,
         'in_demand_chart': in_demand_chart,
         'hard_to_fill_chart': hard_to_fill_chart,
+        'in_demand_top': in_demand_top,
+        'hard_to_fill_top': hard_to_fill_top,
         'sector_data': sector_data,
         'jobs_of_interest': jobs_of_interest,
         'common_skills': common_skills,

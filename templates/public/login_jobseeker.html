@@ -57,6 +57,11 @@
           That account is not a jobseeker account.
           <a href="/employers/login/" class="text-teal font-semibold underline">Log in as employer?</a>
         </div>
+        {% elif error == 'staff_mismatch' %}
+        <div class="bg-amber/10 text-primary text-xs px-3 py-2 rounded-lg mb-4">
+          Admin accounts sign in at
+          <a href="/admin-panel/login/" class="text-teal font-semibold underline">the admin panel</a>.
+        </div>
         {% elif error == 'inactive' %}
         <div class="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg mb-4">
           Your account has been disabled. Contact

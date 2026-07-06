@@ -499,15 +499,15 @@
               <div>
                 <label class="block text-xs text-muted mb-1">Duration</label>
                 <div class="flex items-center gap-1">
-                  <input type="text" name="exp_start_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off"
+                  <input type="text" name="exp_start_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" size="1"
                          value="{% if exp.year_started %}{% if exp.month_started %}{{ exp.month_started|month_name }} {% else %}Jan {% endif %}{{ exp.year_started }}{% endif %}"
                          placeholder="Select Start Date"
-                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
+                         class="resume-field flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
                   <span class="text-gray-300 text-xs">–</span>
-                  <input type="text" name="exp_end_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" {% if exp.is_current %}disabled{% endif %}
+                  <input type="text" name="exp_end_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" size="1" {% if exp.is_current %}disabled{% endif %}
                          value="{% if exp.year_ended and not exp.is_current %}{% if exp.month_ended %}{{ exp.month_ended|month_name }} {% else %}Jan {% endif %}{{ exp.year_ended }}{% endif %}"
                          placeholder="Select End Date"
-                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+                         class="resume-field flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
                 </div>
                 <label class="inline-flex items-center gap-1 text-xs text-muted mt-1 cursor-pointer">
                   <input type="checkbox" name="exp_is_current" value="{{ forloop.counter0 }}" {% if exp.is_current %}checked{% endif %} class="resume-field accent-teal exp-current-cb"> Present
@@ -534,11 +534,11 @@
               <div>
                 <label class="block text-xs text-muted mb-1">Duration</label>
                 <div class="flex items-center gap-1">
-                  <input type="text" name="exp_start_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" placeholder="Select Start Date"
-                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
+                  <input type="text" name="exp_start_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" size="1" placeholder="Select Start Date"
+                         class="resume-field flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
                   <span class="text-gray-300 text-xs">–</span>
-                  <input type="text" name="exp_end_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" placeholder="Select End Date"
-                         class="resume-field flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+                  <input type="text" name="exp_end_month_year" data-datepicker="month" data-display-format="long" data-max-date="{% now 'Y-m-d' %}" readonly autocomplete="off" size="1" placeholder="Select End Date"
+                         class="resume-field flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
                 </div>
                 <label class="inline-flex items-center gap-1 text-xs text-muted mt-1 cursor-pointer">
                   <input type="checkbox" name="exp_is_current" value="0" class="resume-field accent-teal exp-current-cb"> Present
@@ -563,10 +563,16 @@
                class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
       </div>
 
-      <!-- ── Save button ───────────────────────────────────────── -->
-      {# Save action is always visible now that the form is editable by  #}
-      {# default. Cancel dropped — refreshing the page discards edits.  #}
-      <div id="form-actions" class="pb-8 text-center">
+      <!-- ── Save + Cancel buttons ─────────────────────────────── -->
+      {# Both actions always visible — the form is editable by default. #}
+      {# Cancel prompts a confirm modal if any field has been edited;   #}
+      {# otherwise it's a no-op reload. Save opens the existing confirm #}
+      {# modal via showConfirm() below.                                 #}
+      <div id="form-actions" class="pb-8 flex flex-wrap items-center justify-center gap-3">
+        <button type="button" id="cancel-btn"
+                class="bg-gray-100 text-primary font-semibold px-10 py-3 rounded-full hover:bg-gray-200 transition text-sm">
+          Cancel
+        </button>
         <button type="button" id="save-confirm-btn"
                 class="bg-amber text-white font-semibold px-20 py-3 rounded-full hover:bg-amber/90 transition text-sm">
           Confirm &amp; Save Changes
@@ -648,6 +654,29 @@ saveBtn.addEventListener('click', function() {
         document.getElementById('resume-form').submit();
     });
 });
+
+// ── Cancel button ────────────────────────────────────────────────
+// Tracks dirty state via a single flag flipped by any input/change
+// event on the resume form. If dirty, Cancel opens the confirmation
+// modal (reusing showConfirm) and reloads only after user confirms.
+// If clean, Cancel is a no-op — nothing to discard.
+(function() {
+    const cancelBtn = document.getElementById('cancel-btn');
+    const resumeForm = document.getElementById('resume-form');
+    if (!cancelBtn || !resumeForm) return;
+    let dirty = false;
+    resumeForm.addEventListener('input',  () => { dirty = true; });
+    resumeForm.addEventListener('change', () => { dirty = true; });
+    cancelBtn.addEventListener('click', function() {
+        if (!dirty) return;
+        showConfirm(
+            'Discard your changes?',
+            'Any unsaved edits to your resume will be lost.',
+            'Discard changes',
+            function() { window.location.reload(); }
+        );
+    });
+})();
 
 // ── Section toggle (collapsible) ─────────────────────────────────
 // Each Education / Certification / Skills / Experience card starts

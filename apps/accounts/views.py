@@ -4,7 +4,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from .models import User
 
@@ -69,6 +71,7 @@ def resend_verification_email(request):
 
 # JOBSEEKER
 
+@method_decorator(never_cache, name='dispatch')
 class JobseekerLoginView(View):
     template_name = 'public/login_jobseeker.html'
 
@@ -82,7 +85,7 @@ class JobseekerLoginView(View):
         # dumping them on allauth's generic "Account Inactive" page.
         ctx = {}
         err = (request.GET.get('error') or '').strip().lower()
-        if err in ('inactive', 'invalid_credentials', 'employer_mismatch'):
+        if err in ('inactive', 'invalid_credentials', 'employer_mismatch', 'staff_mismatch'):
             ctx['error'] = err
         return render(request, self.template_name, ctx)
 
@@ -93,6 +96,8 @@ class JobseekerLoginView(View):
 
         if user is None:
             return render(request, self.template_name, {'error': 'invalid_credentials'})
+        if user.is_staff:
+            return render(request, self.template_name, {'error': 'staff_mismatch'})
         if user.is_employer:
             return render(request, self.template_name, {'error': 'employer_mismatch'})
         if not user.is_active:
@@ -246,6 +251,7 @@ class RegisterStep2JobseekerView(View):
 
 # EMPLOYER
 
+@method_decorator(never_cache, name='dispatch')
 class EmployerLoginView(View):
     template_name = 'employers/login.html'
 
@@ -262,6 +268,10 @@ class EmployerLoginView(View):
         if user is None:
             return render(request, self.template_name, {
                 'error': 'Invalid email or password.', 'email': email,
+            })
+        if user.is_staff:
+            return render(request, self.template_name, {
+                'error': 'Admin accounts sign in at /admin-panel/login/.', 'email': email,
             })
         if not user.is_employer:
             return render(request, self.template_name, {

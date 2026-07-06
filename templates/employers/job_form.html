@@ -16,7 +16,8 @@
              value="{{ job.title|default:'' }}"
              placeholder="Job Title"
              class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary bg-transparent border-b-2 border-transparent focus:border-teal focus:outline-none transition flex-1 min-w-0 py-1">
-      <a href="{% if is_admin_edit %}/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/{% elif job %}/employers/jobs/{{ job.id|hashid }}/{% else %}/employers/jobs/{% endif %}"
+      <a id="cancel-link"
+         href="{% if is_admin_edit %}/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/{% elif job %}/employers/jobs/{{ job.id|hashid }}/{% else %}/employers/jobs/{% endif %}"
          class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition flex-shrink-0">
         Cancel
       </a>
@@ -320,6 +321,25 @@
   </form>
 </div>
 
+{# ── Cancel confirmation modal ────────────────────────────────── #}
+<div id="cancel-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10 text-center">
+    <p class="text-primary font-semibold text-base mb-2">Discard your changes?</p>
+    <p class="text-muted text-sm mb-6">Any unsaved edits to this job post will be lost.</p>
+    <div class="flex gap-3 justify-center">
+      <button id="cancel-yes" type="button"
+              class="bg-red-500 text-white font-semibold px-6 py-2.5 rounded-full hover:bg-red-600 transition text-sm">
+        Discard changes
+      </button>
+      <button id="cancel-no" type="button"
+              class="bg-gray-100 text-primary font-semibold px-6 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
+        Keep editing
+      </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block page_scripts %}
@@ -559,7 +579,35 @@ barangaySelect.addEventListener('change', function() {
 document.getElementById('job-form').addEventListener('submit', function() {
   const sel = barangaySelect;
   document.getElementById('job_barangay_name').value = sel.options[sel.selectedIndex].text;
+  window.__jobFormSubmitting = true;  // suppress cancel-dirty guard when navigating away via Save
 });
+
+// ── Cancel confirmation ───────────────────────────────────────────
+// Track "dirty" state: any input/change on the form after page load flips
+// __jobFormDirty. Cancel link is intercepted — if dirty, show a confirm
+// modal; if clean, allow immediate navigation.
+(function() {
+  const form   = document.getElementById('job-form');
+  const cancel = document.getElementById('cancel-link');
+  const modal  = document.getElementById('cancel-modal');
+  const yes    = document.getElementById('cancel-yes');
+  const no     = document.getElementById('cancel-no');
+  if (!form || !cancel || !modal) return;
+
+  let dirty = false;
+  form.addEventListener('input',  () => { dirty = true; });
+  form.addEventListener('change', () => { dirty = true; });
+
+  cancel.addEventListener('click', function(e) {
+    if (!dirty || window.__jobFormSubmitting) return;
+    e.preventDefault();
+    modal.classList.remove('hidden'); modal.classList.add('flex');
+    yes.onclick = function() { window.location = cancel.getAttribute('href'); };
+    no.onclick  = function() {
+      modal.classList.add('hidden'); modal.classList.remove('flex');
+    };
+  });
+})();
 </script>
 {% endblock %}
 {% endwith %}

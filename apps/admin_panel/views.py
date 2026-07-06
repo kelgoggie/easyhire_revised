@@ -2,10 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from apps.core.hashids import encode as _hashid
 from apps.employers.models import Company, VerificationDocument
 
 
+@never_cache
 def admin_login(request):
     if request.user.is_authenticated and request.user.is_staff:
         return redirect('/admin-panel/')
@@ -33,6 +35,11 @@ def admin_logout(request):
 
 
 def staff_required(view_func):
+    """Gate a view on is_authenticated + is_staff. Also applies @never_cache
+    so the browser can't restore the authenticated page from BFCache after
+    a logout — that was showing the pre-logout admin dashboard when a user
+    hit the browser Back button, which read as an accidental "re-login"."""
+    @never_cache
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated or not request.user.is_staff:
             return redirect('/admin-panel/login/')

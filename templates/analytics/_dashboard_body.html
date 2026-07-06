@@ -208,8 +208,25 @@
       <!-- ── Labor: In Demand Jobs (pie) ──────────────────────── -->
       <div data-panel="lab-demand" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">In Demand Jobs</h2>
+        <p class="text-muted text-xs italic mb-4">Top 10 job titles ranked by total jobseeker interactions across all currently-open postings. Multiple posts of the same role are aggregated.</p>
         {% if in_demand_chart %}
         <div class="chart-box flex-1"><canvas id="chart-lab-demand"></canvas></div>
+        <div class="mt-3 text-xs">
+          <div class="grid grid-cols-12 gap-2 pb-1 border-b border-taupe/30 font-semibold text-muted uppercase text-[10px] tracking-wide">
+            <div class="col-span-6">Job Title</div>
+            <div class="col-span-2 text-right">Posts</div>
+            <div class="col-span-2 text-right">Total</div>
+            <div class="col-span-2 text-right">Avg / Post</div>
+          </div>
+          {% for g in in_demand_top %}
+          <div class="grid grid-cols-12 gap-2 py-1.5 border-b border-taupe/10 text-primary">
+            <div class="col-span-6 truncate">{{ g.display }}</div>
+            <div class="col-span-2 text-right">{{ g.post_count }}</div>
+            <div class="col-span-2 text-right">{{ g.total_interactions }}</div>
+            <div class="col-span-2 text-right">{{ g.avg_interactions }}</div>
+          </div>
+          {% endfor %}
+        </div>
         {% else %}
         <p class="text-muted text-sm italic">No interaction data yet.</p>
         {% endif %}
@@ -218,10 +235,24 @@
       <!-- ── Labor: Hard to Fill Jobs (pie) ───────────────────── -->
       <div data-panel="lab-hard" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Hard to Fill Jobs</h2>
-        <p class="text-muted text-xs italic mb-1">Open 30+ days with fewer than 3 applicants. Slice size = days the post has been open.</p>
+        <p class="text-muted text-xs italic mb-1">Posts open 30+ days with fewer than 3 applicants. Top 10 job titles ranked by average days open; multiple posts of the same role are aggregated.</p>
         <p class="text-6xl font-extrabold text-amber mb-4">{{ hard_to_fill_count }}</p>
         {% if hard_to_fill_chart %}
         <div class="chart-box flex-1"><canvas id="chart-lab-hard"></canvas></div>
+        <div class="mt-3 text-xs">
+          <div class="grid grid-cols-12 gap-2 pb-1 border-b border-taupe/30 font-semibold text-muted uppercase text-[10px] tracking-wide">
+            <div class="col-span-6">Job Title</div>
+            <div class="col-span-3 text-right">Stuck Posts</div>
+            <div class="col-span-3 text-right">Avg Days Open</div>
+          </div>
+          {% for g in hard_to_fill_top %}
+          <div class="grid grid-cols-12 gap-2 py-1.5 border-b border-taupe/10 text-primary">
+            <div class="col-span-6 truncate">{{ g.display }}</div>
+            <div class="col-span-3 text-right">{{ g.post_count }}</div>
+            <div class="col-span-3 text-right">{{ g.avg_days }}</div>
+          </div>
+          {% endfor %}
+        </div>
         {% else %}
         <p class="text-muted text-sm italic">No hard-to-fill jobs right now.</p>
         {% endif %}
@@ -417,7 +448,7 @@ function init(key) {
     case 'js-sex':         charts[key] = pie('chart-js-sex', D.sex.labels, D.sex.data, ['#3B82F6', '#E8A8A8']); break;
     case 'js-age':         charts[key] = barV('chart-js-age', D.age.labels, D.age.data, '#5BA3A0'); break;
     case 'js-civil':       charts[key] = pie('chart-js-civil', D.civil.labels, D.civil.data); break;
-    case 'js-experience':  charts[key] = pie('chart-js-experience', D.experience.labels, D.experience.data, ['#2D4A3E', '#E8DCC4']); break;
+    case 'js-experience':  charts[key] = pie('chart-js-experience', D.experience.labels, D.experience.data, ['#2D4A3E', '#A8D4B8']); break;
     case 'js-edu':         charts[key] = barH('chart-js-edu', D.edu.labels, D.edu.data, '#2D4A3E'); break;
     case 'js-location':    charts[key] = barH('chart-js-location', D.jsLoc.labels, D.jsLoc.data, '#5BA3A0'); break;
     case 'js-sectors':     charts[key] = barH('chart-js-sectors', D.sectors.labels, D.sectors.data, '#E8A838'); break;
