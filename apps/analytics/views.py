@@ -356,9 +356,30 @@ def get_analytics_context(request):
         for label, count in industry_job_counter.most_common(12)
     ]
 
+    # Jobs by location — aggregated to the BARANGAY level, not the street.
+    # Some seeded / free-text `barangay_name` values are actually street names
+    # ("Iznart Street", "Ledesma Street") because the address was captured
+    # loosely. Strip the trailing street suffix so those collapse to the bare
+    # barangay-ish token, then re-aggregate. Rows where the field is empty
+    # or purely street-noise fall through to the city.
+    import re as _re
+    _street_suffix = _re.compile(
+        r'\s+(?:street|st\.?|avenue|ave\.?|road|rd\.?|drive|dr\.?|blvd\.?|boulevard|highway|hwy\.?|lane|ln\.?)$',
+        _re.IGNORECASE,
+    )
+    location_counter = Counter()
+    for row in (
+        JobPosting.objects
+        .filter(status='open', deleted_at__isnull=True)
+        .values('barangay_name', 'city')
+    ):
+        raw = (row['barangay_name'] or '').strip()
+        normalized = _street_suffix.sub('', raw).strip()
+        label = normalized or (row['city'] or '').strip() or 'Unspecified'
+        location_counter[label] += 1
     jobs_by_location = [
-        {'label': row['barangay_name'] or row['city'] or 'Unspecified', 'count': row['count']}
-        for row in JobPosting.objects.filter(status='open', deleted_at__isnull=True).values('barangay_name', 'city').annotate(count=Count('id')).order_by('-count')[:15]
+        {'label': label, 'count': count}
+        for label, count in location_counter.most_common(15)
     ]
 
     def format_months(qs):
