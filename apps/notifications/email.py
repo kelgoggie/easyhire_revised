@@ -8,8 +8,21 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 
 
+# Seeded/demo accounts use these reserved-suffix domains — they never resolve
+# in DNS, so Gmail SMTP hangs 5–30s doing MX lookups before giving up. That
+# blocks the user-facing request and can push it past Render's proxy timeout,
+# surfacing as a 502/500 to the browser even though `_send` catches the SMTP
+# exception. Skipping SMTP entirely for these domains keeps demos snappy and
+# the in-app inbox path still records the message.
+_SKIP_SMTP_SUFFIXES = ('@easyhire.test', '@easyhire.extra', '@easyhire.local')
+
+
 def _send(to_email, subject, body):
     if not to_email:
+        return False
+    low = to_email.strip().lower()
+    if any(low.endswith(s) for s in _SKIP_SMTP_SUFFIXES):
+        print(f'[email] skipping SMTP for demo/test recipient: {to_email}')
         return False
     try:
         msg = EmailMessage(
