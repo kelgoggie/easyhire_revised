@@ -684,7 +684,14 @@ lockForm();
 initAutocompletes();
 
 if (editBtn) {
-    editBtn.addEventListener('click', unlockForm);
+    editBtn.addEventListener('click', function() {
+        showConfirm(
+            'Edit your resume?',
+            'Unlocks every field for editing. You can Cancel later to discard changes without saving.',
+            'Yes, edit',
+            unlockForm
+        );
+    });
 }
 
 saveBtn.addEventListener('click', function() {

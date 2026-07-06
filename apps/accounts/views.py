@@ -509,6 +509,29 @@ class EmployerRegisterStep2View(View):
 
 # ── Shared ─────────────────────────────────────────────────────────────────────
 
+@never_cache
+def password_recovery(request):
+    """PESO-mediated password recovery info page.
+
+    Renders a static info page. The `prefill` value is what the "Forgot
+    password" click on the sign-in page carries over — either via `?email=`
+    or the `eh_last_email` cookie set on the last successful login. Locking
+    the reset input to that email prevents a shared-machine attacker from
+    typing an arbitrary address and blasting a reset link to it.
+
+    Prefill lookup was inlined in the template as
+    `request.GET.email|default:request.COOKIES.eh_last_email|default:''` —
+    but `{% with %}` doesn't swallow VariableDoesNotExist the way plain
+    interpolation does, so the page crashed the moment the cookie wasn't
+    set. Moved to the view so it's expressed in plain Python.
+    """
+    prefill = (
+        (request.GET.get('email') or '').strip()
+        or (request.COOKIES.get('eh_last_email') or '').strip()
+    )
+    return render(request, 'public/password_recovery.html', {'prefill': prefill})
+
+
 def logout_view(request):
     # Only POST should mutate state (CSRF-protected)
     if request.method != 'POST':

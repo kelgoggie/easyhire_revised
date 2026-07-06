@@ -235,8 +235,7 @@
       <!-- ── Labor: Hard to Fill Jobs (pie) ───────────────────── -->
       <div data-panel="lab-hard" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Hard to Fill Jobs</h2>
-        <p class="text-muted text-xs italic mb-1">Posts open 30+ days with fewer than 3 applicants. Top 10 job titles ranked by average days open; multiple posts of the same role are aggregated.</p>
-        <p class="text-6xl font-extrabold text-amber mb-4">{{ hard_to_fill_count }}</p>
+        <p class="text-muted text-xs italic mb-4">Posts open 30+ days with fewer than 3 applicants. Top 10 job titles ranked by average days open; multiple posts of the same role are aggregated.</p>
         {% if hard_to_fill_chart %}
         <div class="chart-box flex-1"><canvas id="chart-lab-hard"></canvas></div>
         <div class="mt-3 text-xs">
