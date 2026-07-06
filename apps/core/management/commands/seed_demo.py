@@ -319,7 +319,14 @@ class Command(BaseCommand):
                     'last_name': jd['last'],
                     'sex': jd['sex'],
                     'date_of_birth': dob,
-                    'civil_status': random.choice(['single', 'married']),
+                    # Weighted mix across all 5 civil statuses so the demographics
+                    # pie chart doesn't render as a single-married duopoly. Rough
+                    # weights mirror general PH working-age distribution — single
+                    # majority, married common, widowed/separated/annulled thin.
+                    'civil_status': random.choices(
+                        ['single', 'married', 'widowed', 'separated', 'annulled'],
+                        weights=[55, 30, 6, 6, 3], k=1,
+                    )[0],
                     'street_barangay': f"{random.randint(10, 999)} {random.choice(['Iznart', 'Rizal', 'Luna', 'Bonifacio', 'Aldeguer', 'Quezon'])} Street",
                     'barangay': jd['barangay'],
                     'city_municipality': 'Iloilo City',
