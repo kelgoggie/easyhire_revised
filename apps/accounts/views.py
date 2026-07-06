@@ -42,7 +42,13 @@ def resend_verification_email(request):
             user=request.user, email=request.user.email,
             defaults={'verified': False, 'primary': True},
         )
-        email_address.send_confirmation(request, signup=False)
+        # Same skip as the signup flow — SMTP relay to `.test` / `.extra`
+        # hangs on DNS. Return ok=True so the banner button flips to its
+        # "sent" state and the user isn't left staring at an error.
+        _skip_suffixes = ('@easyhire.test', '@easyhire.extra', '@easyhire.local')
+        low_email = (request.user.email or '').lower()
+        if not any(low_email.endswith(s) for s in _skip_suffixes):
+            email_address.send_confirmation(request, signup=False)
     except Exception as exc:
         import logging
         logging.getLogger(__name__).exception(
@@ -160,13 +166,23 @@ class RegisterStep1JobseekerView(View):
         # Wrapped in try/except so a transient email delivery failure
         # doesn't roll the user's whole signup back — they can still
         # request a resend from the "Verify your email" banner.
+        #
+        # Skip SMTP for reserved / demo domains: `.test` is RFC 2606
+        # (no MX records exist), so Gmail SMTP spends 5–30s doing DNS
+        # lookups before giving up — long enough to trip Render's proxy
+        # timeout and 500 the whole signup. Test-domain accounts get an
+        # EmailAddress row (unverified, still functional locally) but no
+        # confirmation is queued.
         try:
             from allauth.account.models import EmailAddress
             email_address, _ = EmailAddress.objects.get_or_create(
                 user=user, email=user.email,
                 defaults={'verified': False, 'primary': True},
             )
-            email_address.send_confirmation(request, signup=True)
+            _skip_suffixes = ('@easyhire.test', '@easyhire.extra', '@easyhire.local')
+            low_email = (user.email or '').lower()
+            if not any(low_email.endswith(s) for s in _skip_suffixes):
+                email_address.send_confirmation(request, signup=True)
         except Exception:
             import logging
             logging.getLogger(__name__).exception('Signup confirmation email send failed for %s', email)
