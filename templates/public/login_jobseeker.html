@@ -32,7 +32,10 @@
 
     <!-- Left panel -->
     <div class="w-full md:w-1/2 bg-surface flex items-center justify-center py-8 md:py-12 px-4 sm:px-8">
-      <div class="bg-white border border-gray-200 rounded-2xl p-8 w-72 shadow-sm relative">
+      {# Card was `w-72` (288px fixed) which was crushing on narrow phones —  #}
+      {# now width flexes with the viewport up to a comfortable max, then     #}
+      {# clamps to the original 288px on sm+ so desktop looks unchanged.      #}
+      <div class="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 w-full max-w-xs sm:w-72 shadow-sm relative">
 
         <!-- eH icon -->
         <div class="absolute top-4 right-4 w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center overflow-hidden">

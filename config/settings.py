@@ -174,7 +174,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Philippine Standard Time (UTC+8). USE_TZ stays True so all timestamps in
+# the DB are stored as timezone-aware UTC; TIME_ZONE only controls how
+# datetimes render in templates and admin, and how `timezone.localtime()`
+# resolves. That's what the user actually sees.
+TIME_ZONE = 'Asia/Manila'
 
 USE_I18N = True
 

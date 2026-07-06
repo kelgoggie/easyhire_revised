@@ -40,18 +40,24 @@ def inbox_status(request):
 
 
 def notifications_baseline(request):
-    """Mark PRE-LOGIN unread notifications as read on the user's first
-    authenticated hit of a session. Seeded / carryover activity from before
-    this session shouldn't buzz the bell — but anything created AFTER the
-    user's last_login timestamp is legitimately new and must stay unread.
+    """Mark stale unread notifications as read on the user's first
+    authenticated hit of a session. Seeded / carryover activity from long
+    before this session shouldn't buzz the bell.
 
-    Previous version filtered on `is_read=False` alone, which wiped out
-    genuinely fresh notifications when the employer sent a hire offer to a
-    jobseeker who then logged in — the offer was created before the
-    baseline ran and got silently marked read. The `created_at__lt` gate
-    against `last_login` fixes that: fresh > last_login notifications are
-    left alone.
+    Guarded by a GRACE_PERIOD so notifications created within the last
+    15 minutes are never baselined — even if they technically pre-date
+    this login. That covers the common demo flow: employer sends an offer,
+    logs out, jobseeker logs in a moment later. Without the grace period
+    the just-sent offer would be silently marked read and the jobseeker
+    would never see it.
+
+    Combined guard: baseline only when the notification is BOTH older
+    than the user's last_login AND older than GRACE_PERIOD.
     """
+    from datetime import timedelta
+    from django.utils import timezone as _tz
+    GRACE_PERIOD = timedelta(minutes=15)
+
     user = getattr(request, 'user', None)
     if not user or not user.is_authenticated:
         return {}
@@ -59,14 +65,16 @@ def notifications_baseline(request):
         return {}
     try:
         from apps.notifications.models import Notification
-        qs = Notification.objects.filter(recipient=user, is_read=False)
-        # Only baseline notifications that pre-date this login. If we don't
-        # have a last_login yet (first ever request), leave everything as
-        # unread — the user hasn't been active on the system before this
-        # so any pre-existing rows are seeded and rare.
-        if user.last_login:
-            qs = qs.filter(created_at__lt=user.last_login)
-        qs.update(is_read=True)
+        cutoff = _tz.now() - GRACE_PERIOD
+        # If we have a last_login, cap the cutoff at whichever is EARLIER
+        # (older) — that way a user who's been logged out for hours doesn't
+        # accidentally baseline notifications from the last 15 min AFTER
+        # login. The grace period is a floor, not a ceiling.
+        if user.last_login and user.last_login < cutoff:
+            cutoff = user.last_login
+        Notification.objects.filter(
+            recipient=user, is_read=False, created_at__lt=cutoff,
+        ).update(is_read=True)
     except Exception:
         pass
     request.session['notif_baselined'] = True

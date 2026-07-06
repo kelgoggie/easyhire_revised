@@ -515,32 +515,10 @@
       </div>
 
       <div class="px-6 pt-3 pb-4 border-t border-gray-100">
-        <!-- Delivery toggle -->
-        <div class="mb-4">
-          <p class="text-primary text-xs font-medium mb-1.5">Delivery</p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <label class="flex items-start gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
-              <input type="radio" name="delivery" value="both" checked
-                     onchange="document.getElementById('contact-inbox-only').value = ''; document.getElementById('contact-send-btn').textContent = 'Send Email + Inbox';"
-                     class="accent-teal mt-0.5">
-              <span class="min-w-0">
-                <span class="font-semibold block">Email + EasyHire Inbox</span>
-                <span class="text-muted leading-tight">Email lands in their Gmail; copy also in their inbox.</span>
-              </span>
-            </label>
-            <label class="flex items-start gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary cursor-pointer hover:border-teal/40 transition has-[:checked]:border-teal has-[:checked]:bg-teal/5">
-              <input type="radio" name="delivery" value="inbox"
-                     onchange="document.getElementById('contact-inbox-only').value = '1'; document.getElementById('contact-send-btn').textContent = 'Send to Inbox';"
-                     class="accent-teal mt-0.5">
-              <span class="min-w-0">
-                <span class="font-semibold block">EasyHire Inbox only</span>
-                <span class="text-muted leading-tight">Skip email; deliver only on-platform.</span>
-              </span>
-            </label>
-          </div>
-          <input type="hidden" name="inbox_only" id="contact-inbox-only" value="">
-        </div>
-
+        {# Delivery toggle removed — EasyHire no longer attempts SMTP for   #}
+        {# interview / requirements messages, so the "Email + Inbox" vs    #}
+        {# "Inbox only" choice was misleading. Everything now lands in the #}
+        {# jobseeker's in-app inbox + bell notification.                    #}
         <div class="flex justify-end gap-3">
           <button type="button" onclick="closeContactModal()"
                   class="bg-gray-100 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition">
@@ -548,7 +526,7 @@
           </button>
           <button type="submit" id="contact-send-btn"
                   class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
-            Send Email + Inbox
+            Send Message
           </button>
         </div>
       </div>
@@ -762,6 +740,13 @@ ${buildSignature()}`;
     if (p.length === 2) return p.pop().split(';').shift();
   }
   function send(action) {
+    // OPTIMISTIC POP for `accept`: open the composer BEFORE the network
+    // round-trip. The employer perceives Proceed as instantaneous instead
+    // of waiting on AJAX. The status update runs in the background — if
+    // it errors, we close the modal + alert.
+    if (action === 'accept') {
+      try { openContactModal('interview'); } catch (e) { /* if modal missing, we'll fall back to reload after AJAX */ }
+    }
     const fd = new FormData();
     fd.append('action', action);
     fetch('/employers/applications/' + appId + '/status/', {
@@ -772,12 +757,7 @@ ${buildSignature()}`;
       const [ok, d] = pair;
       if (ok && d.ok) {
         if (action === 'accept') {
-          // Instant open — skip the page reload so the composer appears
-          // immediately. The Proceed / Reject buttons at the top will
-          // stay stale until the next navigation, but the modal + newly
-          // available actions inside it are what the employer needs to
-          // proceed with in the moment.
-          try { openContactModal('interview'); } catch (e) { window.location.reload(); }
+          // Modal already opened optimistically above — nothing more to do.
         } else if (action === 'hire') {
           // Instant transition to the "hire_pending" UI without a page
           // reload. Swap the status pill, replace the action buttons with
@@ -789,8 +769,19 @@ ${buildSignature()}`;
           window.location.reload();
         }
       } else {
+        // Roll back the optimistic modal open on `accept` failure so the
+        // employer isn't sitting on a composer whose status update didn't
+        // stick server-side.
+        if (action === 'accept') {
+          try { closeContactModal(); } catch (e) {}
+        }
         alert((d && d.error) || 'Something went wrong.');
       }
+    }).catch(function() {
+      if (action === 'accept') {
+        try { closeContactModal(); } catch (e) {}
+      }
+      alert('Network error — please refresh and try again.');
     });
   }
 
