@@ -470,7 +470,13 @@ def company_public(request, pk):
     company = get_object_or_404(Company, pk=pk)
 
     jobs = (
-        JobPosting.objects.filter(company=company, status=JobPosting.STATUS_OPEN)
+        # Public (jobseeker-facing) company profile: only genuinely-open
+        # jobs. Soft-deleted / admin_disabled ones are excluded so they
+        # never surface off the employer's own trash / disabled tabs.
+        JobPosting.objects.filter(
+            company=company, status=JobPosting.STATUS_OPEN,
+            deleted_at__isnull=True, admin_disabled=False,
+        )
         .annotate(
             liked_by_count=Count(
                 'jobseeker_interactions',
