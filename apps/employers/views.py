@@ -1089,9 +1089,13 @@ def company_profile(request):
 
         return redirect('/employers/profile/')
 
-    # Job posts (with applicants + liked-by counts) for the card grid
+    # Job posts (with applicants + liked-by counts) for the card grid.
+    # Excludes admin_disabled jobs — those are PESO take-downs and don't
+    # belong on the company's public profile (they're visible in the
+    # employer's own /jobs/ list with a distinct "Disabled by Admin" chip
+    # so the rep knows why, but on the profile they're just gone).
     jobs = (
-        JobPosting.objects.filter(company=company)
+        JobPosting.objects.filter(company=company, admin_disabled=False)
         .annotate(
             applicants_count=Count('applications', distinct=True),
             liked_by_count=Count(

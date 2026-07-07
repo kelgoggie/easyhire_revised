@@ -246,9 +246,11 @@ def dashboard(request):
     from apps.accounts.models import User
     from apps.jobs.models import JobPosting
     from .models import UserReport
-    from apps.matching.engine import (
-        WEIGHT_SKILLS, WEIGHT_EDUCATION, WEIGHT_EXPERIENCE, WEIGHT_CERTIFICATIONS,
-    )
+    # Read weights via get_weights() so the dashboard reflects whatever
+    # the admin edited on /admin-panel/settings/. The old code imported
+    # the module-level WEIGHT_* CONSTANTS which are only fallbacks; edits
+    # to SiteSettings never propagated back to the dashboard display.
+    from apps.matching.engine import get_weights
 
     pending_approvals = (
         Company.objects.filter(verification_status=Company.PENDING)
@@ -261,6 +263,7 @@ def dashboard(request):
         .order_by('-created_at')[:5]
     )
 
+    weights = get_weights()
     ctx = _admin_context(request)
     ctx.update({
         'total_users':       User.objects.count(),
@@ -270,10 +273,10 @@ def dashboard(request):
         'pending_approvals': pending_approvals,
         'recent_reports':    recent_reports,
         'algorithm_weights': {
-            'skills':         round(WEIGHT_SKILLS * 100),
-            'education':      round(WEIGHT_EDUCATION * 100),
-            'experience':     round(WEIGHT_EXPERIENCE * 100),
-            'certifications': round(WEIGHT_CERTIFICATIONS * 100),
+            'skills':         round(weights[0] * 100),
+            'education':      round(weights[1] * 100),
+            'experience':     round(weights[2] * 100),
+            'certifications': round(weights[3] * 100),
         },
     })
     return render(request, 'admin_panel/dashboard.html', ctx)
@@ -1905,9 +1908,12 @@ def _mark_resolved(report, admin, action, note_suffix, resolution_note):
 
 
 def _disable_company(company, admin, note_suffix):
-    """Helper — disable every representative of a company by flipping
-    User.is_active to False on their user accounts. Idempotent."""
+    """Helper — disable every representative of a company AND cascade the
+    disable to every job the company posted. Reps get User.is_active=False;
+    jobs get admin_disabled=True + status=closed with a reason that points
+    back at the company-level takedown. Idempotent — re-runs are no-ops."""
     from .models import AuditLog
+    from apps.jobs.models import JobPosting
     reps = company.representatives.select_related('user').all()
     for rep in reps:
         if rep.user and rep.user.is_active and rep.user_id != admin.id:
@@ -1918,6 +1924,25 @@ def _disable_company(company, admin, note_suffix):
                 target_model='User', target_id=rep.user_id,
                 notes=f'Disabled rep of {company.name}' + note_suffix,
             )
+    # Cascade the disable to every open/closed job the company owns.
+    # Jobs already admin_disabled stay put (the reason may differ, but the
+    # net effect — hidden everywhere — is the same).
+    company_disable_reason = 'Company disabled by PESO.' + note_suffix
+    active_jobs = JobPosting.objects.filter(
+        company=company, admin_disabled=False, deleted_at__isnull=True,
+    )
+    for job in active_jobs:
+        job.admin_disabled = True
+        job.admin_disabled_reason = company_disable_reason
+        job.status = 'closed'
+        job.save(update_fields=[
+            'admin_disabled', 'admin_disabled_reason', 'status',
+        ])
+        AuditLog.objects.create(
+            admin=admin, action=AuditLog.ACTION_EDIT,
+            target_model='JobPosting', target_id=job.id,
+            notes=f'Auto-disabled job "{job.title}"' + note_suffix,
+        )
 
 
 # ── Phase 5: Personal-info change-request review ────────────────────
