@@ -150,7 +150,7 @@
         {% if item.profile.id in invited_ids %}
         <button type="button" disabled
                 class="block w-full text-center bg-teal/10 border border-teal/30 text-teal text-xs font-semibold py-2 rounded-full cursor-default mt-auto">
-          ✓ Invited
+          ✓ Invitation Sent
         </button>
         {% else %}
         <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/invite/{{ item.profile.id|hashid }}/" class="invite-form mt-auto" data-jobseeker-name="{{ item.profile.first_name }}">
@@ -175,21 +175,60 @@
 </div>
 
 <script>
-// Wrap Invite buttons in a confirmation modal so the employer is sure.
+// Invite to Apply — confirm, then fire AJAX and flip the button to
+// "Invitation Sent" in place. Skips the full page reload so the employer
+// sees instant feedback on every card they invite.
+function getCsrfCookie() {
+  const v = '; ' + document.cookie, p = v.split('; csrftoken=');
+  if (p.length === 2) return p.pop().split(';').shift();
+}
+function replaceWithInvitedBadge(formEl) {
+  const badge = document.createElement('button');
+  badge.type = 'button';
+  badge.disabled = true;
+  badge.className = 'block w-full text-center bg-teal/10 border border-teal/30 text-teal text-xs font-semibold py-2 rounded-full cursor-default mt-auto';
+  badge.innerHTML = '✓ Invitation Sent';
+  formEl.replaceWith(badge);
+}
 document.querySelectorAll('form.invite-form').forEach(function(form) {
   form.addEventListener('submit', function(e) {
     e.preventDefault();
     const name = form.dataset.jobseekerName || 'this candidate';
+    const submitBtn = form.querySelector('button[type="submit"]');
+    function fire() {
+      if (submitBtn) submitBtn.disabled = true;
+      fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCsrfCookie() || '',
+        },
+        body: new FormData(form),
+      }).then(function(r) { return r.json().then(function(d) { return [r.ok, d]; }); })
+        .then(function(pair) {
+          const [ok, d] = pair;
+          if (ok && d.ok) {
+            replaceWithInvitedBadge(form);
+          } else {
+            if (submitBtn) submitBtn.disabled = false;
+            alert((d && d.error) || 'Could not send invitation. Please try again.');
+          }
+        })
+        .catch(function() {
+          if (submitBtn) submitBtn.disabled = false;
+          alert('Network error — invitation not sent.');
+        });
+    }
     if (window.confirmAction) {
       window.confirmAction({
         title: 'Invite ' + name + ' to apply?',
-        body:  'EasyHire will email ' + name + ' an invitation and add it to their inbox. They can choose whether to apply.',
+        body:  name + ' will get a notification pointing them to this job post. They can then choose whether to apply.',
         ctaLabel: 'Yes, send invitation',
         ctaClass: 'bg-amber hover:bg-amber/90',
-        onConfirm: function() { form.submit(); },
+        onConfirm: fire,
       });
     } else {
-      form.submit();
+      fire();
     }
   });
 });

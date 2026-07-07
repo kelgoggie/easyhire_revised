@@ -133,6 +133,12 @@ def notifications_api(request):
             item['icon']  = 'briefcase'
             item['url']   = (f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=applicants'
                              if n.job else '/employers/jobs/')
+        elif n.notif_type == Notification.APPLICATION_UNHIRED:
+            item['actor'] = n.company.name if n.company else 'An employer'
+            job_title = n.job.title if n.job else 'a role'
+            item['verb'] = f'marked your employment as ended for {job_title}.'
+            item['icon'] = 'briefcase'
+            item['url']  = '/applications/'
         elif n.notif_type == Notification.EMPLOYER_CONTACTED:
             item['actor']  = n.company.name if n.company else 'An employer'
             # Drop "Check your email" — for test / demo accounts SMTP is

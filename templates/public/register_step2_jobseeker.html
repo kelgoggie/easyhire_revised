@@ -42,12 +42,14 @@
                             <input type="text" name="first_name" id="first_name" required
                                    value="{{ prefill.first_name|default:'' }}"
                                    placeholder="Juan"
+                                   autocomplete="given-name"
                                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
                         </div>
                         <div>
                             <label class="block text-primary text-xs font-medium mb-1">Middle Name</label>
                             <input type="text" name="middle_name" id="middle_name"
                                    placeholder="Santos"
+                                   autocomplete="off"
                                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
                         </div>
                     </div>
@@ -59,11 +61,13 @@
                             <input type="text" name="last_name" id="last_name" required
                                    value="{{ prefill.last_name|default:'' }}"
                                    placeholder="Dela Cruz"
+                                   autocomplete="family-name"
                                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
                         </div>
                         <div class="col-span-2">
                             <label class="block text-primary text-xs font-medium mb-1">Suffix</label>
                             <input type="text" name="suffix" placeholder="Jr./Sr./III"
+                                   autocomplete="honorific-suffix"
                                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
                         </div>
                     </div>

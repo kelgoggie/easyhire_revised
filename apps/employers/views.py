@@ -689,9 +689,17 @@ def job_detail(request, job_id):
     ranked = [r for r in ranked if r['profile'].id not in applicant_ids][:8]
 
     # Jobseekers who have already been invited to apply for this job.
-    invited_ids = set(EmployerContact.objects.filter(
-        company=company, job=job, kind=EmployerContact.KIND_REQUIREMENTS,
-    ).values_list('recipient_id', flat=True))
+    # Sourced from the INVITED_TO_APPLY notification rows (invite_to_apply
+    # was rewritten to be notification-only — no EmployerContact created
+    # anymore, so the old EmployerContact-based check silently returned
+    # an empty set and the button stayed at "Invite to Apply" forever).
+    from apps.notifications.models import Notification
+    invited_ids = set(
+        Notification.objects.filter(
+            notif_type=Notification.INVITED_TO_APPLY,
+            company=company, job=job,
+        ).values_list('jobseeker_id', flat=True)
+    )
 
     return render(request, 'employers/job_detail.html', {
         'company': company,
@@ -992,6 +1000,18 @@ def application_update_status(request, app_id):
             we.month_ended = str(end_date.month)
             we.year_ended  = end_date.year
             we.save(update_fields=['is_current', 'month_ended', 'year_ended'])
+        # Notify the jobseeker their employment was marked ended. The 'else'
+        # branch below handles notifications for accept/reject/hire — this
+        # is the parallel path for unhire.
+        if app.jobseeker and app.jobseeker.user:
+            from apps.notifications.models import Notification
+            Notification.objects.create(
+                recipient=app.jobseeker.user,
+                notif_type=Notification.APPLICATION_UNHIRED,
+                company=app.job.company if app.job else None,
+                jobseeker=app.jobseeker,
+                job=app.job,
+            )
     else:
         # All other actions update the status field. Note: 'hire' moves into
         # the hire_pending offer state — no side effects yet. The slot

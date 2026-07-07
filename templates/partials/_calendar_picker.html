@@ -4,8 +4,13 @@ Usage: <input type="text" data-datepicker="date">   -> MM/DD/YYYY
        <input type="text" data-datepicker="month">  -> YYYY-MM
 Optional: data-min-age="15", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-DD"
 {% endcomment %}
-<div id="dp-backdrop" class="fixed inset-0 z-40 hidden"></div>
-<div id="dp-popup" class="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 hidden" style="width:280px;">
+{# z-[55] and z-[60] chosen deliberately: modal wrappers across the app  #}
+{# use z-50, so the datepicker needs to sit ABOVE them when it opens on  #}
+{# a modal-hosted input (e.g. the Un-hire modal's End date field). Any  #}
+{# future modal that also needs to be above the datepicker should go   #}
+{# z-[70] or higher.                                                    #}
+<div id="dp-backdrop" class="fixed inset-0 z-[55] hidden"></div>
+<div id="dp-popup" class="fixed z-[60] bg-white border border-gray-200 rounded-2xl shadow-xl p-4 hidden" style="width:280px;">
     <div class="flex items-center justify-between mb-3">
         <button type="button" data-dp-action="prev" class="text-muted hover:text-primary px-2 text-lg leading-none">&#8249;</button>
         <span id="dp-label" class="text-sm font-semibold text-primary"></span>

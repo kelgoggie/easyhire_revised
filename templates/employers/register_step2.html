@@ -175,21 +175,25 @@
           <div>
             <label class="block text-primary text-xs font-medium mb-1">First Name*</label>
             <input type="text" name="first_name" value="{{ form.first_name|default:'' }}"
+                   autocomplete="given-name"
                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
           </div>
           <div>
             <label class="block text-primary text-xs font-medium mb-1">Middle Name</label>
             <input type="text" name="middle_name" value="{{ form.middle_name|default:'' }}"
+                   autocomplete="off"
                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
           </div>
           <div>
             <label class="block text-primary text-xs font-medium mb-1">Last Name*</label>
             <input type="text" name="last_name" value="{{ form.last_name|default:'' }}"
+                   autocomplete="family-name"
                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
           </div>
           <div>
             <label class="block text-primary text-xs font-medium mb-1">Suffix</label>
             <input type="text" name="suffix" value="{{ form.suffix|default:'' }}" placeholder="Jr./Sr./III"
+                   autocomplete="honorific-suffix"
                    class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
           </div>
         </div>

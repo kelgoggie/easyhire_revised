@@ -24,6 +24,10 @@ class Notification(models.Model):
     HIRE_OFFERED          = 'hire_offered'           # jobseeker-facing: employer wants to mark them as Hired
     HIRE_ACCEPTED         = 'hire_accepted'          # employer-facing: jobseeker confirmed
     HIRE_DECLINED         = 'hire_declined'          # employer-facing: jobseeker said no
+    # Employer clicked Un-hire on a previously-hired jobseeker. Fires a
+    # jobseeker-facing notification so they see their employment status
+    # change without having to check /applications/.
+    APPLICATION_UNHIRED   = 'application_unhired'    # jobseeker-facing
 
     TYPE_CHOICES = [
         (COMPANY_LIKED_YOU,      'Company Liked You'),
@@ -41,6 +45,7 @@ class Notification(models.Model):
         (HIRE_OFFERED,           'Hire Offered'),
         (HIRE_ACCEPTED,          'Hire Accepted'),
         (HIRE_DECLINED,          'Hire Declined'),
+        (APPLICATION_UNHIRED,    'Application Un-hired'),
     ]
 
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_notifications')
