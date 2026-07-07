@@ -1,0 +1,266 @@
+﻿<script>
+// â”€â”€ Show X buttons only when the entry has any content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function refreshEntryVisibility(entry) {
+  const filled = Array.from(entry.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea'))
+    .some(el => (el.value || '').trim() !== '');
+  entry.classList.toggle('has-content', filled);
+}
+function watchEntry(entry) {
+  if (!entry || entry.dataset.watched) return;
+  entry.dataset.watched = 'true';
+  entry.addEventListener('input', () => refreshEntryVisibility(entry));
+  entry.addEventListener('change', () => refreshEntryVisibility(entry));
+  refreshEntryVisibility(entry);
+}
+function watchAllEntries() {
+  document.querySelectorAll('#edu-container .edu-row, #exp-entry, #cert-container .cert-row').forEach(watchEntry);
+}
+
+// â”€â”€ Carousel: only one .carousel-slide inside a container is visible â”€â”€
+// at a time. renderCarousel() reads the .dataset.active flag and hides
+// the rest; carouselStep(Â±1) moves the active slide.
+function renderCarousel(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const section = container.closest('[data-section]');
+  const slides = Array.from(container.querySelectorAll('.carousel-slide'));
+  const counter = section && section.querySelector('[data-carousel-counter]');
+  const prev    = section && section.querySelector('.carousel-prev');
+  const next    = section && section.querySelector('.carousel-next');
+  if (!slides.length) {
+    if (counter) counter.textContent = '0 / 0';
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
+    return;
+  }
+  let activeIdx = slides.findIndex(s => s.dataset.active === 'true');
+  if (activeIdx < 0) activeIdx = 0;
+  slides.forEach((s, i) => {
+    const on = (i === activeIdx);
+    s.classList.toggle('hidden', !on);
+    s.dataset.active = on ? 'true' : 'false';
+  });
+  if (counter) counter.textContent = (activeIdx + 1) + ' / ' + slides.length;
+  if (prev) prev.disabled = (activeIdx === 0);
+  if (next) next.disabled = (activeIdx === slides.length - 1);
+}
+function carouselStep(containerId, delta) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const slides = Array.from(container.querySelectorAll('.carousel-slide'));
+  if (!slides.length) return;
+  let idx = slides.findIndex(s => s.dataset.active === 'true');
+  if (idx < 0) idx = 0;
+  const newIdx = Math.max(0, Math.min(slides.length - 1, idx + delta));
+  slides.forEach((s, i) => s.dataset.active = (i === newIdx) ? 'true' : 'false');
+  renderCarousel(containerId);
+}
+
+// â”€â”€ Education (carousel, one entry visible at a time) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function removeEdu(btn) {
+  const container = document.getElementById('edu-container');
+  const slides = Array.from(container.querySelectorAll('.edu-row'));
+  const row = btn.closest('.edu-row');
+  const removedIdx = slides.indexOf(row);
+  if (slides.length > 1) {
+    row.remove();
+    const remaining = Array.from(container.querySelectorAll('.edu-row'));
+    const newIdx = Math.max(0, removedIdx - 1);
+    remaining.forEach((s, i) => s.dataset.active = (i === newIdx) ? 'true' : 'false');
+  } else {
+    row.querySelectorAll('input, select').forEach(el => el.value = '');
+    refreshEntryVisibility(row);
+  }
+  renderCarousel('edu-container');
+}
+function addEdu() {
+  const container = document.getElementById('edu-container');
+  const template = container.querySelector('.edu-row');
+  if (!template) return;
+  const clone = template.cloneNode(true);
+  delete clone.dataset.watched;
+  clone.classList.remove('hidden');
+  clone.querySelectorAll('input:not([type=hidden]), select').forEach(el => {
+    el.value = '';
+    delete el.dataset.autocomplete;
+  });
+  // Prepend so the fresh entry becomes the active carousel slide.
+  container.insertBefore(clone, container.firstElementChild);
+  Array.from(container.querySelectorAll('.edu-row')).forEach((s, i) => {
+    s.dataset.active = (i === 0) ? 'true' : 'false';
+  });
+  watchEntry(clone);
+  renderCarousel('edu-container');
+  initAutocompletes();
+}
+
+// â”€â”€ Experience (single entry â€” model is OneToOne) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function clearExp() {
+  document.querySelector('[name="exp_months"]').value = '';
+  document.querySelector('[name="exp_preferred_position"]').value = '';
+  const cb = document.querySelector('[name="any_experience_accepted"]');
+  if (cb) cb.checked = false;
+  syncExperienceMutex();
+  refreshEntryVisibility(document.getElementById('exp-entry'));
+}
+
+// â”€â”€ Experience mutex â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// When "Any Experience accepted" is checked, lock + clear the Job
+// Title/Industry field so the two settings can't contradict each other.
+const anyExpCb = document.querySelector('[name="any_experience_accepted"]');
+const posInput = document.querySelector('[name="exp_preferred_position"]');
+function syncExperienceMutex() {
+  if (!anyExpCb || !posInput) return;
+  if (anyExpCb.checked) {
+    posInput.value = '';
+    posInput.disabled = true;
+    posInput.classList.add('bg-gray-50', 'cursor-not-allowed', 'text-muted');
+  } else {
+    posInput.disabled = false;
+    posInput.classList.remove('bg-gray-50', 'cursor-not-allowed', 'text-muted');
+  }
+}
+if (anyExpCb) anyExpCb.addEventListener('change', syncExperienceMutex);
+syncExperienceMutex();
+
+// â”€â”€ Certifications (carousel, one entry visible at a time) â”€â”€â”€â”€â”€â”€
+function removeCert(btn) {
+  const container = document.getElementById('cert-container');
+  const slides = Array.from(container.querySelectorAll('.cert-row'));
+  const row = btn.closest('.cert-row');
+  const removedIdx = slides.indexOf(row);
+  if (slides.length > 1) {
+    row.remove();
+    const remaining = Array.from(container.querySelectorAll('.cert-row'));
+    const newIdx = Math.max(0, removedIdx - 1);
+    remaining.forEach((s, i) => s.dataset.active = (i === newIdx) ? 'true' : 'false');
+  } else {
+    row.querySelectorAll('input').forEach(el => el.value = '');
+    refreshEntryVisibility(row);
+  }
+  renderCarousel('cert-container');
+}
+
+// â”€â”€ Skills tag input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const skillInput = document.getElementById('skill-input');
+const skillTags  = document.getElementById('skill-tags');
+
+function addSkillChip(name) {
+  name = name.trim();
+  if (!name) return;
+  const existing = Array.from(skillTags.querySelectorAll('input[name="skill_name"]')).map(i => i.value.toLowerCase());
+  if (existing.includes(name.toLowerCase())) return;
+  const span = document.createElement('span');
+  span.className = 'skill-chip relative inline-flex items-center gap-1 bg-teal/15 text-primary text-xs pl-3 pr-5 py-1 rounded-full border border-teal/20';
+  span.innerHTML = `${name}<button type="button" onclick="this.parentElement.remove()" title="Remove" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg></button><input type="hidden" name="skill_name" value="${name}">`;
+  skillTags.appendChild(span);
+}
+skillInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    addSkillChip(this.value.replace(/,$/, ''));
+    this.value = '';
+  }
+});
+skillInput.addEventListener('blur', function() {
+  if (this.value.trim()) { addSkillChip(this.value); this.value = ''; }
+});
+
+// â”€â”€ Add Certification entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function addCert() {
+  const container = document.getElementById('cert-container');
+  const div = document.createElement('div');
+  div.className = 'cert-row carousel-slide relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2';
+  div.innerHTML = `
+    <button type="button" onclick="removeCert(this)" title="Remove"
+            class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <input type="text" name="cert_name" placeholder="Certification name" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+    <input type="text" name="cert_org" placeholder="Issuing organization" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+  `;
+  // Prepend so the fresh entry lands as the active carousel slide.
+  container.insertBefore(div, container.firstElementChild);
+  Array.from(container.querySelectorAll('.cert-row')).forEach((s, i) => {
+    s.dataset.active = (i === 0) ? 'true' : 'false';
+  });
+  watchEntry(div);
+  renderCarousel('cert-container');
+  initAutocompletes();
+}
+
+// Initialise X-visibility for every existing entry on first paint
+watchAllEntries();
+
+// Seed carousel state on load â€” first slide active, hide the rest.
+renderCarousel('edu-container');
+renderCarousel('cert-container');
+
+// â”€â”€ Autocomplete (powered by partials/_autocomplete.html) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function initAutocompletes() {
+  const ac = window.createAutocomplete;
+  if (!ac) return;
+  document.querySelectorAll('input[name="title"]'                ).forEach(el => ac(el, '/api/autocomplete/positions/'));
+  document.querySelectorAll('input[name="edu_course"]'           ).forEach(el => ac(el, '/api/autocomplete/degrees/'));
+  document.querySelectorAll('input[name="cert_name"]'            ).forEach(el => ac(el, '/api/autocomplete/certifications/'));
+  document.querySelectorAll('input[name="cert_org"]'             ).forEach(el => ac(el, '/api/autocomplete/institutions/'));
+  document.querySelectorAll('input[name="exp_preferred_position"]').forEach(el => ac(el, '/api/autocomplete/positions/'));
+  document.querySelectorAll('input#skill-input'                  ).forEach(el => ac(el, '/api/autocomplete/skills/'));
+}
+initAutocompletes();
+
+// â”€â”€ Barangay dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const barangaySelect = document.getElementById('job_barangay');
+const ILOILO_CITY_CODE = '063022000';
+const savedBarangayCode = '{{ job.barangay_code|default:location_defaults.barangay_code|default:"" }}';
+fetch('/api/barangays/' + ILOILO_CITY_CODE + '/')
+  .then(res => res.json())
+  .then(barangays => {
+    barangaySelect.innerHTML = '<option value="">Select Barangay...</option>';
+    barangays.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.code;
+      opt.textContent = b.name;
+      barangaySelect.appendChild(opt);
+    });
+    if (savedBarangayCode) {
+      barangaySelect.value = savedBarangayCode;
+      document.getElementById('job_barangay_name').value = barangaySelect.options[barangaySelect.selectedIndex].text;
+    }
+  });
+barangaySelect.addEventListener('change', function() {
+  document.getElementById('job_barangay_name').value = this.options[this.selectedIndex].text;
+});
+document.getElementById('job-form').addEventListener('submit', function() {
+  const sel = barangaySelect;
+  document.getElementById('job_barangay_name').value = sel.options[sel.selectedIndex].text;
+  window.__jobFormSubmitting = true;  // suppress cancel-dirty guard when navigating away via Save
+});
+
+// â”€â”€ Cancel confirmation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Track "dirty" state: any input/change on the form after page load flips
+// __jobFormDirty. Cancel link is intercepted â€” if dirty, show a confirm
+// modal; if clean, allow immediate navigation.
+(function() {
+  const form   = document.getElementById('job-form');
+  const cancel = document.getElementById('cancel-link');
+  const modal  = document.getElementById('cancel-modal');
+  const yes    = document.getElementById('cancel-yes');
+  const no     = document.getElementById('cancel-no');
+  if (!form || !cancel || !modal) return;
+
+  let dirty = false;
+  form.addEventListener('input',  () => { dirty = true; });
+  form.addEventListener('change', () => { dirty = true; });
+
+  cancel.addEventListener('click', function(e) {
+    if (!dirty || window.__jobFormSubmitting) return;
+    e.preventDefault();
+    modal.classList.remove('hidden'); modal.classList.add('flex');
+    yes.onclick = function() { window.location = cancel.getAttribute('href'); };
+    no.onclick  = function() {
+      modal.classList.add('hidden'); modal.classList.remove('flex');
+    };
+  });
+})();
+</script>

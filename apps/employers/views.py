@@ -487,6 +487,10 @@ def job_create(request):
         'action': 'Create',
         'job': None,
         'location_defaults': location_defaults,
+        # Job creation always runs under the employer chrome; admins don't
+        # create jobs for a company, they just moderate existing ones.
+        'base_template': 'base/base_dashboard_employer.html',
+        'is_admin_edit': False,
         'unread_notifications': False,
         'unread_messages': False,
     })
@@ -599,6 +603,14 @@ def job_edit(request, job_id):
         'action': 'Edit',
         'job': job,
         'is_admin_edit': is_admin_edit,
+        # Route the template through the admin chrome when a PESO admin is
+        # editing — the employer sidebar's tabs (Dashboard / My Job Posts /
+        # Analytics / Verification) are nonsensical for an admin who came
+        # in from the admin panel.
+        'base_template': (
+            'admin_panel/base_admin.html' if is_admin_edit
+            else 'base/base_dashboard_employer.html'
+        ),
         # All edit-mode prefills come from `job.*`; this empty dict just keeps
         # the template's `|default:location_defaults.*` chain from raising.
         'location_defaults': {'bldg_unit': '', 'street': '', 'barangay_code': '', 'barangay_name': ''},

@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -2505,6 +2506,7 @@ def admin_edit_resume(request, pk):
         'year_range':     range(1980, 2031),
         'saved':          saved,
     })
+    return render(request, 'admin_panel/admin_edit_resume.html', ctx)
 
 
 # ── Admin: global jobs index + take-down actions ─────────────────────
