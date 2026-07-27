@@ -166,7 +166,7 @@ def inbox(request):
                 'url': resume_link or '/inbox/',
                 # Expandable detail: application message + View Resume CTA.
                 'detail_body': app.message or '(No application message sent.)',
-                'detail_cta_label': 'View resume' if resume_link else '',
+                'detail_cta_label': 'View résumé' if resume_link else '',
                 'detail_cta_url':   resume_link,
                 'report_target_type': 'jobseeker' if (app.jobseeker and seeker_active) else '',
                 'report_target_id': app.jobseeker.id if (app.jobseeker and seeker_active) else None,

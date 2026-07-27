@@ -100,7 +100,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'apps.accounts.context_processors.email_verification_status',
                 'apps.core.context_processors.inbox_status',
                 'apps.core.context_processors.notifications_baseline',
             ],

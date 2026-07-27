@@ -25,7 +25,10 @@
       </p>
       <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">{{ current_job.title }}</h1>
       {% if match_score %}
-      <div class="mt-2">{% match_badge match_score.total %}</div>
+      <div class="mt-2 flex items-center gap-2 flex-wrap">
+        {% match_badge match_score.total %}
+        <span class="text-primary font-extrabold text-lg leading-none">{{ match_score.total }}%</span>
+      </div>
       {% endif %}
     </div>
     <div class="flex items-center gap-2 flex-shrink-0 sm:pt-2">
@@ -97,15 +100,15 @@
       </button>
       {% endif %}
 
-      <!-- Like -->
+      <!-- Bookmark -->
       <form method="POST" action="/employers/candidates/{{ jobseeker.id|hashid }}/like/">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}{% if current_job %}?job={{ current_job.id|hashid }}{% endif %}">
-        <button type="submit" title="{% if is_liked %}Liked{% else %}Like this jobseeker{% endif %}"
+        <button type="submit" title="{% if is_liked %}Bookmarked{% else %}Bookmark this jobseeker{% endif %}"
                 class="w-9 h-9 flex items-center justify-center rounded-full border transition
-                       {% if is_liked %}bg-teal text-white border-teal{% else %}bg-white text-muted border-taupe/30 hover:border-teal hover:text-teal{% endif %}">
+                       {% if is_liked %}bg-amber text-white border-amber{% else %}bg-white text-muted border-taupe/30 hover:border-amber hover:text-amber{% endif %}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            <path d="M17 3H7a2 2 0 00-2 2v16l7-3 7 3V5a2 2 0 00-2-2z"/>
           </svg>
         </button>
       </form>
@@ -151,7 +154,16 @@
     </div>
   </div>
 
-  {# ── Main card: application msg + bio + resume grid ───────────────── #}
+  {# ── Compatibility Breakdown (only when we have a job context, so the #}
+  {# breakdown is meaningful — mirrors what PESO admins see for the same #}
+  {# jobseeker + job pair on the admin's job_match_detail page).         #}
+  {% if match_score %}
+  <div class="mb-5">
+    {% include "partials/_match_breakdown.html" with breakdown=match_score.breakdown score=match_score.total %}
+  </div>
+  {% endif %}
+
+  {# ── Main card: application msg + bio + résumé grid ───────────────── #}
   <div class="bg-surface border border-taupe/30 rounded-2xl p-5 sm:p-6 relative">
 
 
@@ -632,7 +644,7 @@ ${buildSignature()}`;
 
 We're excited about your application. Before we move forward, please send the following requirements so we can finalize next steps:
 
-  • Updated resume (PDF)
+  • Updated résumé (PDF)
   • Valid government ID
   • Proof of past employment / certifications (if applicable)
 

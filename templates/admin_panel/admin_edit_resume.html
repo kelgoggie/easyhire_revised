@@ -1,22 +1,22 @@
 {% extends "admin_panel/base_admin.html" %}
-{% block title %}Edit Resume — {{ jobseeker.first_name }} {{ jobseeker.last_name }}{% endblock %}
+{% block title %}Edit Résumé — {{ jobseeker.first_name }} {{ jobseeker.last_name }}{% endblock %}
 
 {% with active_nav="jobseekers" %}
 {% block admin_content %}
 <div class="py-8 max-w-6xl mx-auto">
 
-  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Edit Resume</h1>
+  <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Edit Résumé</h1>
   <p class="text-muted text-sm mb-2">{{ jobseeker.first_name }} {{ jobseeker.last_name }} · {{ jobseeker.user.email }}</p>
   <div class="border-b border-taupe/40 mb-6"></div>
 
   {% if saved %}
   <div class="mb-4 bg-teal/10 border border-teal/30 text-teal text-sm rounded-xl px-4 py-2.5">
-    Resume changes saved. The matching engine will reflect them on the next score recompute.
+    Résumé changes saved. The matching engine will reflect them on the next score recompute.
   </div>
   {% endif %}
 
   <p class="text-xs text-muted italic mb-4">
-    Edits made here overwrite the jobseeker's resume. The jobseeker can still update their own resume afterward.
+    Edits made here overwrite the jobseeker's résumé. The jobseeker can still update their own résumé afterward.
   </p>
 
   <form method="POST" class="space-y-6">
@@ -176,7 +176,7 @@
     <!-- Save -->
     <div class="flex justify-end gap-3">
       <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/" class="bg-gray-100 text-primary font-semibold px-6 py-2 rounded-full hover:bg-gray-200 transition text-sm">Cancel</a>
-      <button type="submit" class="bg-amber text-white font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition text-sm">Save Resume</button>
+      <button type="submit" class="bg-amber text-white font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition text-sm">Save Résumé</button>
     </div>
   </form>
 </div>

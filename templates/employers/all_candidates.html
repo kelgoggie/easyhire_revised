@@ -136,17 +136,18 @@
                 <div class="flex items-center justify-between mt-auto pt-3 border-t border-taupe/10">
 
                     <div class="flex items-center gap-2">
-                      <!-- Like -->
+                      <!-- Bookmark -->
                       <form method="POST" action="/employers/candidates/{{ js.id|hashid }}/like/"
                             onclick="event.stopPropagation()">
                           {% csrf_token %}
                           <input type="hidden" name="next" value="/employers/all_candidates/?sort={{ sort }}&q={{ search }}">
                           <button type="submit"
+                                  title="{% if js.id in liked_ids %}Bookmarked{% else %}Bookmark this jobseeker{% endif %}"
                                   class="w-8 h-8 flex items-center justify-center rounded-full border transition
                                          {% if js.id in liked_ids %}text-amber border-amber/30{% else %}border-taupe/30 text-taupe hover:border-amber hover:text-amber{% endif %}">
                               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
                                    {% if js.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
-                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 3H7a2 2 0 00-2 2v16l7-3 7 3V5a2 2 0 00-2-2z"/>
                               </svg>
                           </button>
                       </form>

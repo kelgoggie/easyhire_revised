@@ -227,7 +227,7 @@ def parse_resume_pdf(request):
     if not name.endswith(allowed_ext):
         return JsonResponse({
             'ok': False,
-            'error': 'Upload a PDF or a photo (JPG, PNG, or HEIC) of your resume.',
+            'error': 'Upload a PDF or a photo (JPG, PNG, or HEIC) of your résumé.',
         }, status=400)
 
     from apps.jobseekers.resume_parser import parse_resume
@@ -252,7 +252,7 @@ def parse_resume_pdf(request):
         print(f'[resume_parser] {type(e).__name__}: {e}')
         return JsonResponse({
             'ok': False,
-            'error': "We couldn't read that file. Try a different resume, or fill in the form manually.",
+            'error': "We couldn't read that file. Try a different résumé, or fill in the form manually.",
         }, status=400)
 
     # The parser returns {'ok': False, 'error': ...} for handled failures
@@ -1699,20 +1699,24 @@ def autocomplete_positions(request):
     query = request.GET.get('q', '').strip()
     db_positions = JobPosting.objects.filter(status='open', deleted_at__isnull=True).values_list(
         'title', flat=True).distinct()
-    return _autocomplete_response(query, db_positions, STATIC_POSITIONS, cache_key='positions')
+    # semantic=False across all autocomplete endpoints so typing-UX flows
+    # never trigger the sentence-transformers model load (~300MB RAM).
+    # NLP is reserved for analytics clustering, kept warmable via
+    # `manage.py warm_nlp` when a full-fat panel view is planned.
+    return _autocomplete_response(query, db_positions, STATIC_POSITIONS, cache_key='positions', semantic=False)
 
 
 def autocomplete_degrees(request):
     query = request.GET.get('q', '').strip()
     # Degrees: static only (canonical PH degree list is comprehensive)
-    return _autocomplete_response(query, [], STATIC_DEGREES, cache_key='degrees')
+    return _autocomplete_response(query, [], STATIC_DEGREES, cache_key='degrees', semantic=False)
 
 
 def autocomplete_certifications(request):
     query = request.GET.get('q', '').strip()
     from apps.jobseekers.models import Certification as JobseekerCert
     db_certs = JobseekerCert.objects.values_list('name', flat=True).distinct()
-    return _autocomplete_response(query, db_certs, STATIC_CERTS, cache_key='certs')
+    return _autocomplete_response(query, db_certs, STATIC_CERTS, cache_key='certs', semantic=False)
 
 
 def autocomplete_institutions(request):

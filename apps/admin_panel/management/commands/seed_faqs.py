@@ -49,9 +49,9 @@ EMPLOYER_FAQS = [
     ),
     (
         "What do the match scores mean?",
-        "Each applicant gets a score from 0-100 based on how closely their resume matches your job's requirements "
+        "Each applicant gets a score from 0-100 based on how closely their résumé matches your job's requirements "
         "(skills, education, experience, certifications). Tiers range from <strong>Perfect Match</strong> (98+) down to "
-        "<strong>Poor Match</strong>. Recommended Candidates surfaces people who haven't applied but match strongly — useful "
+        "<strong>Unmatched</strong>. Recommended Candidates surfaces people who haven't applied but match strongly — useful "
         "when you have a hard-to-fill role.",
     ),
     (
@@ -77,15 +77,15 @@ JOBSEEKER_FAQS = [
     ),
     (
         "What does the match score mean?",
-        "Match scores reflect how well your resume aligns with a job's requirements. Tiers range from "
+        "Match scores reflect how well your résumé aligns with a job's requirements. Tiers range from "
         "<strong>Perfect</strong> (98+) and <strong>Great</strong> (90+) down to <strong>Poor</strong>. "
         "The algorithm weighs your skills, education, experience, certifications, location, and sector profile. "
-        "The more complete your resume, the more accurate the match.",
+        "The more complete your résumé, the more accurate the match.",
     ),
     (
-        "How do I edit my resume?",
-        "Go to <strong>Resume</strong> in the sidebar and click <strong>Edit Resume</strong>. You can add or remove education, "
-        "skills, work experience, and certifications. If you have an existing PDF resume, use <strong>Upload PDF</strong> to "
+        "How do I edit my résumé?",
+        "Go to <strong>Résumé</strong> in the sidebar and click <strong>Edit Résumé</strong>. You can add or remove education, "
+        "skills, work experience, and certifications. If you have an existing PDF résumé, use <strong>Upload PDF</strong> to "
         "autofill the form — you can still review and tweak the fields before saving.",
     ),
     (
@@ -95,20 +95,20 @@ JOBSEEKER_FAQS = [
         "Once submitted, PESO Administrators review your request within <strong>2 business days</strong>.",
     ),
     (
-        "How do I see jobs I've liked or hidden?",
-        "On the <strong>Jobs For You</strong> page, switch to the <strong>Liked</strong> or <strong>Hidden</strong> tab at "
+        "How do I see jobs I've bookmarked or hidden?",
+        "On the <strong>Jobs For You</strong> page, switch to the <strong>Bookmarked</strong> or <strong>Hidden</strong> tab at "
         "the top. Hidden jobs won't appear in your main recommendations, but you can unhide them at any time by clicking "
         "the slashed-eye icon on the card.",
     ),
     (
         "Why am I not seeing personalised job recommendations?",
-        "Recommendations require a complete resume. Visit the <strong>Resume</strong> page and fill in your skills, "
-        "education, and work experience. Once your resume is marked complete, the matching engine starts producing "
+        "Recommendations require a complete résumé. Visit the <strong>Résumé</strong> page and fill in your skills, "
+        "education, and work experience. Once your résumé is marked complete, the matching engine starts producing "
         "personalised results.",
     ),
     (
         "What information do employers see about me?",
-        "Employers see the resume fields you've filled in (skills, experience, education, certifications) along with the "
+        "Employers see the résumé fields you've filled in (skills, experience, education, certifications) along with the "
         "sector badges that apply to you. You can control visibility from the <strong>Privacy &amp; Preferences</strong> section "
         "of Settings — including whether your profile stays visible after you've been tagged as Hired, and which employers "
         "can see your sector badges.",

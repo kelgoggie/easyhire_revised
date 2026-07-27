@@ -24,13 +24,13 @@
         {{ job.slots }} slot{{ job.slots|pluralize }} open
       </span>
 
-      <!-- Like -->
-      <button type="button" id="like-btn" title="{% if job.id in liked_ids %}Unlike{% else %}Like{% endif %} this job"
+      <!-- Bookmark -->
+      <button type="button" id="like-btn" title="{% if job.id in liked_ids %}Remove bookmark{% else %}Bookmark{% endif %} this job"
               class="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 bg-white transition
-                     {% if job.id in liked_ids %}text-red-400{% else %}text-gray-300 hover:text-red-400{% endif %}">
+                     {% if job.id in liked_ids %}text-amber{% else %}text-gray-300 hover:text-amber{% endif %}">
         <svg class="w-4 h-4" viewBox="0 0 24 24"
              {% if job.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
-          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 3H7a2 2 0 00-2 2v16l7-3 7 3V5a2 2 0 00-2-2z"/>
         </svg>
       </button>
 
@@ -257,7 +257,7 @@
   </script>
   {% endif %}
 
-  <!-- ── Like / Hide AJAX ──────────────────────────────────────── -->
+  <!-- ── Bookmark / Hide AJAX ──────────────────────────────────── -->
   <script>
   (function() {
     function getCookie(n) {
@@ -283,18 +283,18 @@
     bind(document.getElementById('like-btn'), '/jobs/{{ job.id|hashid }}/save/', function(btn, on) {
       const svg = btn.querySelector('svg');
       if (on) {
-        btn.classList.remove('text-gray-300', 'hover:text-red-400');
-        btn.classList.add('text-red-400');
+        btn.classList.remove('text-gray-300', 'hover:text-amber');
+        btn.classList.add('text-amber');
         svg.setAttribute('fill', 'currentColor');
         svg.removeAttribute('stroke'); svg.removeAttribute('stroke-width');
-        btn.title = 'Unlike this job';
+        btn.title = 'Remove bookmark';
       } else {
-        btn.classList.add('text-gray-300', 'hover:text-red-400');
-        btn.classList.remove('text-red-400');
+        btn.classList.add('text-gray-300', 'hover:text-amber');
+        btn.classList.remove('text-amber');
         svg.setAttribute('fill', 'none');
         svg.setAttribute('stroke', 'currentColor');
         svg.setAttribute('stroke-width', '2');
-        btn.title = 'Like this job';
+        btn.title = 'Bookmark this job';
       }
     }, null, null, 'liked');
 

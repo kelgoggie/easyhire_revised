@@ -10,11 +10,6 @@ urlpatterns = [
     path('register/', views.RegisterStep1JobseekerView.as_view(), name='register_step1'),
     path('register/info/', views.RegisterStep2JobseekerView.as_view(), name='register_step2'),
 
-    # One-click resend for the "Verify your email" banner. JSON endpoint,
-    # session-rate-limited to one send per 30 seconds.
-    path('accounts/resend-verification/', views.resend_verification_email,
-         name='resend_verification'),
-
     # PESO-mediated password recovery. Info page — password resets go through
     # easyhire.admin@gmail.com because SMTP isn't configured against a verified
     # sender domain. See admin_panel/jobseeker_settings for the "Generate

@@ -41,7 +41,7 @@ def notifications_api(request):
         }
         if n.notif_type == Notification.COMPANY_LIKED_YOU:
             item['actor'] = n.company.name if n.company else 'Employer'
-            item['verb']  = 'liked your resume.'
+            item['verb']  = 'bookmarked your résumé.'
             item['icon']  = 'heart'
             item['url']   = f'/jobs/view/{_hashid(n.job.id)}/' if n.job else '#'
         elif n.notif_type == Notification.MATCH:
@@ -55,7 +55,7 @@ def notifications_api(request):
             item['url'] = f'/jobs/view/{_hashid(n.job.id)}/' if n.job else '#'
         elif n.notif_type == Notification.JOBSEEKERS_LIKED_JOB:
             item['actor'] = n.liker_preview or 'Someone'
-            item['verb']  = 'liked your job post.'
+            item['verb']  = 'bookmarked your job post.'
             item['icon']  = 'heart'
             item['url']   = f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=liked_by' if n.job else '#'
         elif n.notif_type == Notification.JOB_DELETED_BY_ADMIN:

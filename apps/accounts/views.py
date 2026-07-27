@@ -1,78 +1,11 @@
 import re
-import time
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from .models import User
-
-
-@login_required
-def resend_verification_email(request):
-    """One-click resend of the allauth confirmation email — hit from the
-    "Verify your email" banner. Rate-limited to one send per 30 seconds
-    per user (session cookie) so refresh-spam doesn't hammer SMTP or trip
-    Gmail's flood detection. Returns JSON so the banner button can update
-    its own state without a full page navigation."""
-    if request.method != 'POST':
-        return JsonResponse({'ok': False, 'error': 'POST only.'}, status=405)
-
-    RATE_LIMIT_SECONDS = 30
-    now_ts = int(time.time())
-    last_ts = int(request.session.get('resend_verification_last', 0))
-    remaining = RATE_LIMIT_SECONDS - (now_ts - last_ts)
-    if remaining > 0:
-        return JsonResponse({
-            'ok': False,
-            'error': f'Please wait {remaining}s before trying again.',
-            'wait': remaining,
-        }, status=429)
-
-    try:
-        from allauth.account.models import EmailAddress
-        # Use the model's send_confirmation method — the free-function
-        # send_email_confirmation was moved between allauth versions
-        # (allauth.account.utils in <0.55, allauth.account.email in newer,
-        # and neither location is stable). Model method is the durable API.
-        email_address, _ = EmailAddress.objects.get_or_create(
-            user=request.user, email=request.user.email,
-            defaults={'verified': False, 'primary': True},
-        )
-        # Same skip as the signup flow — SMTP relay to `.test` / `.extra`
-        # hangs on DNS. Return ok=True so the banner button flips to its
-        # "sent" state and the user isn't left staring at an error.
-        _skip_suffixes = ('@easyhire.test', '@easyhire.extra', '@easyhire.local')
-        low_email = (request.user.email or '').lower()
-        if not any(low_email.endswith(s) for s in _skip_suffixes):
-            email_address.send_confirmation(request, signup=False)
-    except Exception as exc:
-        import logging
-        logging.getLogger(__name__).exception(
-            'Resend verification email failed for %s', request.user.email
-        )
-        # Surface the exception class + first line of the message in the
-        # response body so a debugging session can inspect the real cause
-        # from the browser Network tab even when the Render log window
-        # has rolled past the traceback. Full stack trace is still logged
-        # server-side via .exception() above.
-        first_line = str(exc).splitlines()[0][:300] if str(exc) else ''
-        return JsonResponse({
-            'ok': False,
-            'error': 'Could not send email right now. Please try again shortly.',
-            'exception_class': type(exc).__name__,
-            'exception_message': first_line,
-        }, status=500)
-
-    request.session['resend_verification_last'] = now_ts
-    return JsonResponse({
-        'ok': True,
-        'sent_to': request.user.email,
-        'wait': RATE_LIMIT_SECONDS,
-    })
 
 
 # JOBSEEKER

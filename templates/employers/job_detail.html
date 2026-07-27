@@ -113,7 +113,7 @@
       </div>
       <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=recommended" class="text-teal text-sm font-semibold hover:underline">View all &rsaquo;</a>
     </div>
-    <p class="text-muted text-xs mb-4">Jobseekers ranked by how well their resume matches this job's requirements. Invite the best fits to apply.</p>
+    <p class="text-muted text-xs mb-4">Jobseekers ranked by how well their résumé matches this job's requirements. Invite the best fits to apply.</p>
 
     {% if ranked %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -130,7 +130,10 @@
             </p>
             <p class="text-muted text-xs italic truncate mt-0.5">{{ item.profile.barangay|default:item.profile.city_municipality }}</p>
           </div>
-          {% match_badge item.score %}
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            {% match_badge item.score %}
+            <span class="text-primary font-extrabold text-sm leading-none">{{ item.score }}%</span>
+          </div>
         </div>
 
         <div class="flex flex-wrap gap-1.5 mb-3 flex-1">

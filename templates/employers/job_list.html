@@ -65,7 +65,7 @@
         </svg>
         <span class="text-primary">·
           {% if sort == 'oldest' %}Oldest
-          {% elif sort == 'most_liked' %}Most Liked
+          {% elif sort == 'most_liked' %}Most Bookmarked
           {% else %}Newest{% endif %}
         </span>
       </button>
@@ -74,7 +74,7 @@
       <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
         <a href="?sort=newest{{ status_q }}{{ q_q }}"     class="block px-4 py-2 text-sm {% if sort == 'newest' or not sort %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Newest</a>
         <a href="?sort=oldest{{ status_q }}{{ q_q }}"     class="block px-4 py-2 text-sm {% if sort == 'oldest' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest</a>
-        <a href="?sort=most_liked{{ status_q }}{{ q_q }}" class="block px-4 py-2 text-sm {% if sort == 'most_liked' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Most Liked</a>
+        <a href="?sort=most_liked{{ status_q }}{{ q_q }}" class="block px-4 py-2 text-sm {% if sort == 'most_liked' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Most Bookmarked</a>
       </div>
       {% endwith %}
       {% endwith %}
@@ -108,9 +108,9 @@
           <p class="text-muted text-xs italic mb-1">Posted on {{ job.created_at|date:"F j, Y" }}</p>
           <p class="text-muted text-xs flex items-center gap-1">
             <svg class="w-3 h-3 text-amber" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              <path d="M17 3H7a2 2 0 00-2 2v16l7-3 7 3V5a2 2 0 00-2-2z"/>
             </svg>
-            Liked by {{ job.liked_by_count|default:0 }} jobseeker{{ job.liked_by_count|pluralize }}
+            Bookmarked by {{ job.liked_by_count|default:0 }} jobseeker{{ job.liked_by_count|pluralize }}
           </p>
         </div>
 

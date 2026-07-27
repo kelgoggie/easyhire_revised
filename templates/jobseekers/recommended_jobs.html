@@ -14,7 +14,7 @@
     {# hanging above a left-aligned title.                                #}
     <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
       <h1 id="page-heading" class="text-3xl sm:text-4xl font-extrabold text-primary">
-        {% if tab == 'liked' %}Liked <span>Jobs</span>
+        {% if tab == 'liked' %}Bookmarked <span>Jobs</span>
         {% elif tab == 'hidden' %}Hidden <span>Jobs</span>
         {% else %}Jobs <span>For You</span>{% endif %}
       </h1>
@@ -46,7 +46,7 @@
         </button>
         <button type="button" data-tab="liked"
                 class="tab-btn px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'liked' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
-          Liked
+          Bookmarked
         </button>
         <button type="button" data-tab="hidden"
                 class="tab-btn px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'hidden' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
@@ -150,11 +150,11 @@
     {% if not profile.profile_complete %}
     <div class="bg-amber/10 border border-amber/30 rounded-2xl px-4 sm:px-6 py-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
-        <p class="text-primary font-semibold text-sm">Your resume is incomplete</p>
-        <p class="text-muted text-xs mt-0.5">Complete your resume to get personalised job recommendations.</p>
+        <p class="text-primary font-semibold text-sm">Your résumé is incomplete</p>
+        <p class="text-muted text-xs mt-0.5">Complete your résumé to get personalised job recommendations.</p>
       </div>
       <a href="/resume/" class="bg-amber text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-amber/90 transition flex-shrink-0 sm:ml-4 w-fit">
-        Complete Resume
+        Complete Résumé
       </a>
     </div>
     {% endif %}
@@ -199,7 +199,7 @@ function getCookie(name) {
     if (p.length === 2) return p.pop().split(';').shift();
 }
 
-// ── Like / Unlike ─────────────────────────────────────────────────────
+// ── Bookmark / Remove bookmark ────────────────────────────────────────
 function toggleLike(jobId, btn) {
     btn.disabled = true;
     fetch('/jobs/' + jobId + '/save/', {
@@ -209,14 +209,14 @@ function toggleLike(jobId, btn) {
         btn.disabled = false;
         const svg = btn.querySelector('svg');
         if (data.liked) {
-            btn.classList.remove('text-gray-300', 'hover:text-red-400');
-            btn.classList.add('text-red-400');
+            btn.classList.remove('text-gray-300', 'hover:text-amber');
+            btn.classList.add('text-amber');
             svg.setAttribute('fill', 'currentColor');
             svg.removeAttribute('stroke');
             svg.removeAttribute('stroke-width');
         } else {
-            btn.classList.add('text-gray-300', 'hover:text-red-400');
-            btn.classList.remove('text-red-400');
+            btn.classList.add('text-gray-300', 'hover:text-amber');
+            btn.classList.remove('text-amber');
             svg.setAttribute('fill', 'none');
             svg.setAttribute('stroke', 'currentColor');
             svg.setAttribute('stroke-width', '2');
@@ -296,7 +296,7 @@ function reloadGrid(pushState) {
 
 function updateHeading() {
     const h = document.getElementById('page-heading');
-    if (currentTab === 'liked')       h.innerHTML = 'Liked <span>Jobs</span>';
+    if (currentTab === 'liked')       h.innerHTML = 'Bookmarked <span>Jobs</span>';
     else if (currentTab === 'hidden') h.innerHTML = 'Hidden <span>Jobs</span>';
     else                              h.innerHTML = 'Jobs <span>For You</span>';
 }

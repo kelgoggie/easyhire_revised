@@ -1,11 +1,69 @@
 {% extends "base/base_dashboard_jobseeker.html" %}
 {% load static match_tags %}
 
-{% block title %}My Resume — EasyHire{% endblock %}
+{% block title %}My Résumé — EasyHire{% endblock %}
 
 {% with active_nav="resume" %}
 {% block page_content %}
 <div class="min-h-screen">
+
+  {# View-mode / edit-mode contrast styling. Lives inline so it ships with the #}
+  {# form regardless of the fallback-CSS state (the site occasionally boots    #}
+  {# without the Tailwind CDN when the network is flaky).                     #}
+  <style>
+    /* Card wrappers fade their border to transparent in view mode so the page #}
+       reads as a display view; borders return in edit mode.                    */
+    #resume-form.resume-locked .bg-white.border.border-gray-200.rounded-2xl,
+    #resume-form.resume-locked [data-section] {
+      border-color: transparent !important;
+      background-color: transparent !important;
+    }
+    /* Inner entry cards inside carousels + skill rows: same treatment. */
+    #resume-form.resume-locked .education-row,
+    #resume-form.resume-locked .cert-row,
+    #resume-form.resume-locked .exp-row,
+    #resume-form.resume-locked .skill-row {
+      border-color: transparent !important;
+    }
+    /* Text/select/textarea fields go transparent + muted so they read as
+       display values instead of tappable inputs. */
+    #resume-form.resume-locked .resume-field {
+      background-color: transparent !important;
+      border-color: transparent !important;
+      color: #7d7d7d !important;   /* muted */
+      cursor: default !important;
+      box-shadow: none !important;
+    }
+    #resume-form.resume-locked .resume-field::placeholder {
+      color: transparent !important;
+    }
+    /* Add Entry + Remove X buttons hidden in view mode. Carousel prev/next
+       stay visible so users can still page through their existing entries. */
+    #resume-form.resume-locked .add-remove-btn:not(.carousel-prev):not(.carousel-next) {
+      display: none !important;
+    }
+    /* Bulk-add controls: skill input + the "Add a job title" typer inside
+       the Preferred Jobs chip wrap. The chip wrap itself stays visible so
+       users can still SEE their preferred jobs; only the typer and each
+       chip's X button are hidden. PDF upload stays visible — its own path
+       calls ensureUnlocked() when a file is picked. */
+    #resume-form.resume-locked #skill-input,
+    #resume-form.resume-locked #preferred-jobs-typer,
+    #resume-form.resume-locked [data-pref-chip] > button {
+      display: none !important;
+    }
+    /* Sector + visibility chips: dim slightly so the group doesn't look
+       clickable. The underlying checkbox/radio is already disabled by
+       lockForm() so state can't change. */
+    #resume-form.resume-locked label:has(> .resume-field.sr-only) {
+      pointer-events: none;
+      opacity: 0.75;
+    }
+    /* Edit mode: bump borders one shade darker so the switch reads clearly. */
+    #resume-form:not(.resume-locked) .resume-field:not(.sr-only) {
+      border-color: #cbd5d5 !important;  /* between gray-200 and gray-300 */
+    }
+  </style>
 
   <form method="POST" action="/resume/" enctype="multipart/form-data" id="resume-form">
     {% csrf_token %}
@@ -13,14 +71,14 @@
     <!-- ── Page header ─────────────────────────────────────────── -->
     <div class="flex items-center justify-between pt-8 pb-4">
       <div class="flex items-center gap-3">
-        <h1 class="text-3xl font-extrabold text-primary">Your Resume</h1>
+        <h1 class="text-3xl font-extrabold text-primary">Your Résumé</h1>
       </div>
       <label id="pdf-upload-label" class="flex items-center gap-2 bg-surface border border-taupe/30 rounded-xl px-4 py-2 cursor-pointer hover:bg-taupe/10 transition">
         <svg id="pdf-upload-icon" class="w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
         </svg>
         <span id="pdf-upload-text" class="text-xs text-muted leading-tight">
-          Upload <strong>Resume (PDF or photo)</strong> to<br>automatically fill out form fields
+          Upload <strong>Résumé (PDF or photo)</strong> to<br>automatically fill out form fields
         </span>
         <input type="file" name="resume_pdf" id="pdf-upload-input"
                accept="application/pdf,.pdf,image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif"
@@ -46,7 +104,7 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
         </svg>
-        Edit Resume
+        Edit Résumé
       </button>
     </div>
     <div class="border-b border-taupe/30 mb-6"></div>
@@ -671,16 +729,22 @@ function getAllFields() {
 // the header row unlocks the form and reveals the actions. Also arms
 // the beforeunload guard once the form is dirty.
 let resumeDirty = false;
+const resumeForm = document.getElementById('resume-form');
+function isResumeLocked() {
+    return !!(resumeForm && resumeForm.classList.contains('resume-locked'));
+}
 function lockForm() {
     getAllFields().forEach(function(f) { f.disabled = true; });
     if (formActions) { formActions.classList.add('hidden'); formActions.classList.remove('flex'); }
     if (editBtn)     { editBtn.classList.remove('hidden'); }
+    if (resumeForm)  { resumeForm.classList.add('resume-locked'); }
     resumeDirty = false;
 }
 function unlockForm() {
     getAllFields().forEach(function(f) { f.disabled = false; });
     if (formActions) { formActions.classList.remove('hidden'); formActions.classList.add('flex'); }
     if (editBtn)     { editBtn.classList.add('hidden'); }
+    if (resumeForm)  { resumeForm.classList.remove('resume-locked'); }
     // Refocus the first editable field for a fast keyboard flow.
     const first = document.querySelector('#resume-form input:not([type="hidden"]):not([type="file"])');
     if (first) { try { first.focus(); } catch(e) {} }
@@ -696,7 +760,7 @@ initAutocompletes();
 if (editBtn) {
     editBtn.addEventListener('click', function() {
         showConfirm(
-            'Edit your resume?',
+            'Edit your résumé?',
             'Unlocks every field for editing. You can Cancel later to discard changes without saving.',
             'Yes, edit',
             unlockForm
@@ -705,7 +769,7 @@ if (editBtn) {
 }
 
 saveBtn.addEventListener('click', function() {
-    showConfirm('Save your resume?', 'This will update your profile and re-run job matching.', 'Yes, save', function() {
+    showConfirm('Save your résumé?', 'This will update your profile and re-run job matching.', 'Yes, save', function() {
         // Clear the dirty flag before submit so beforeunload doesn't fire
         // on the redirect back to the resume page after save.
         resumeDirty = false;
@@ -818,7 +882,7 @@ if (_resumeForm) {
             if (!resumeDirty) { lockForm(); return; }
             showConfirm(
                 'Discard your changes?',
-                'Any unsaved edits to your resume will be lost.',
+                'Any unsaved edits to your résumé will be lost.',
                 'Discard changes',
                 function() { window.location.reload(); }
             );
@@ -936,6 +1000,7 @@ function refreshSkillsCount() {
 }
 function addSkillRow(name, description) {
     if (!skillList) return;
+    if (isResumeLocked()) return;  // Guard: never add rows in view mode.
     name = (name || '').trim();
     if (!name) return;
     const existing = Array.from(skillList.querySelectorAll('input[name="skill_name"]'))
@@ -960,6 +1025,7 @@ function addSkillRow(name, description) {
     refreshSkillsCount();
 }
 function removeSkillRow(btn) {
+    if (isResumeLocked()) return;
     const row = btn.closest('.skill-row');
     if (row) row.remove();
     refreshSkillsCount();
@@ -983,6 +1049,7 @@ if (skillInput) {
 // slide is blanked in place rather than deleted so the section keeps
 // its template to clone from.
 function removeCard(btn) {
+    if (isResumeLocked()) return;
     const card = btn.closest('.education-row, .cert-row, .exp-row');
     if (!card) return;
     const container = card.parentElement;
@@ -1006,6 +1073,7 @@ function removeCard(btn) {
 // active carousel slide — matches the "slide in from the front" UX
 // the user asked for.
 function addRow(type) {
+    if (isResumeLocked()) return;
     const cfg = {
         education:     { containerId: 'education-container',     slideClass: 'education-row' },
         certification: { containerId: 'certification-container', slideClass: 'cert-row' },
@@ -1116,7 +1184,7 @@ watchAllEntries();
   function setBusy() {
     label.classList.add('pointer-events-none', 'opacity-70');
     replaceIcon('<svg id="pdf-upload-icon" class="w-4 h-4 text-teal animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></svg>');
-    textEl.innerHTML = '<span class="text-primary font-semibold">Parsing resume...</span>';
+    textEl.innerHTML = '<span class="text-primary font-semibold">Parsing résumé...</span>';
   }
   function setDone(filename) {
     label.classList.remove('pointer-events-none', 'opacity-70');
@@ -1239,7 +1307,7 @@ watchAllEntries();
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (!data.ok) { setError(data.error || 'Could not parse resume.'); return; }
+      if (!data.ok) { setError(data.error || 'Could not parse résumé.'); return; }
       ensureUnlocked();
       setIfEmpty('contact_email', data.email);
       setIfEmpty('phone', data.phone);

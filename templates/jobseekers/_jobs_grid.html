@@ -65,15 +65,15 @@
       </div>
     </div>
 
-    <!-- Bottom: heart + View Job -->
+    <!-- Bottom: bookmark + View Job -->
     <div class="px-4 pb-4 pt-1">
       <div class="flex justify-end mb-2">
-        <button type="button" title="{% if item.job.id in liked_ids %}Unlike{% else %}Like{% endif %} this job"
-                class="like-btn w-6 h-6 flex items-center justify-center transition {% if item.job.id in liked_ids %}text-red-400{% else %}text-gray-300 hover:text-red-400{% endif %}"
+        <button type="button" title="{% if item.job.id in liked_ids %}Remove bookmark{% else %}Bookmark{% endif %} this job"
+                class="like-btn w-6 h-6 flex items-center justify-center transition {% if item.job.id in liked_ids %}text-amber{% else %}text-gray-300 hover:text-amber{% endif %}"
                 onclick="event.preventDefault(); event.stopPropagation(); toggleLike('{{ item.job.id|hashid }}', this)">
           <svg class="w-4 h-4" viewBox="0 0 24 24"
                {% if item.job.id in liked_ids %}fill="currentColor"{% else %}fill="none" stroke="currentColor" stroke-width="2"{% endif %}>
-            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 3H7a2 2 0 00-2 2v16l7-3 7 3V5a2 2 0 00-2-2z"/>
           </svg>
         </button>
       </div>
@@ -90,7 +90,7 @@
   <p class="text-muted text-sm">
     {% if min_match %}No jobs match this threshold. Lower the minimum match filter to see more.
     {% elif search %}No jobs found for &ldquo;{{ search }}&rdquo;.
-    {% elif tab == 'liked' %}You haven't liked any jobs yet.
+    {% elif tab == 'liked' %}You haven't bookmarked any jobs yet.
     {% elif tab == 'hidden' %}You haven't hidden any jobs yet.
     {% else %}No open jobs available right now. Check back soon!{% endif %}
   </p>

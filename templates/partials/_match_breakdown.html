@@ -1,0 +1,55 @@
+{# Compatibility Breakdown card. Same visual as the admin's job_match_detail  #}
+{# breakdown so employers see the exact same signal PESO sees. Expects a       #}
+{# `breakdown` dict with keys skills/education/experience/certifications        #}
+{# (0-100 ints). Optional `score` overall percent. Falls back gracefully if    #}
+{# any key is missing.                                                          #}
+<div class="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
+  <div class="flex items-center justify-between mb-1">
+    <p class="text-sm font-bold text-primary">Compatibility Breakdown</p>
+    {% if score or score == 0 %}
+    <p class="text-2xl font-extrabold text-primary leading-none">{{ score }}%</p>
+    {% endif %}
+  </div>
+  <p class="text-muted text-xs mb-4">How this jobseeker scored on each requirement category for this job.</p>
+
+  {% with b=breakdown %}
+  <div class="space-y-3">
+    <div>
+      <div class="flex justify-between text-xs mb-1">
+        <span class="text-primary font-semibold">Skills:</span>
+        <span class="text-muted">{{ b.skills|default:0 }}%</span>
+      </div>
+      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full bg-green-300" style="width: {{ b.skills|default:0 }}%"></div>
+      </div>
+    </div>
+    <div>
+      <div class="flex justify-between text-xs mb-1">
+        <span class="text-primary font-semibold">Education:</span>
+        <span class="text-muted">{{ b.education|default:0 }}%</span>
+      </div>
+      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full bg-teal/40" style="width: {{ b.education|default:0 }}%"></div>
+      </div>
+    </div>
+    <div>
+      <div class="flex justify-between text-xs mb-1">
+        <span class="text-primary font-semibold">Experience:</span>
+        <span class="text-muted">{{ b.experience|default:0 }}%</span>
+      </div>
+      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full bg-purple-300" style="width: {{ b.experience|default:0 }}%"></div>
+      </div>
+    </div>
+    <div>
+      <div class="flex justify-between text-xs mb-1">
+        <span class="text-primary font-semibold">Certifications:</span>
+        <span class="text-muted">{{ b.certifications|default:0 }}%</span>
+      </div>
+      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full bg-gray-400" style="width: {{ b.certifications|default:0 }}%"></div>
+      </div>
+    </div>
+  </div>
+  {% endwith %}
+</div>

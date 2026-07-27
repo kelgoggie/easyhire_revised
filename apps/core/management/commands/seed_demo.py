@@ -434,7 +434,7 @@ class Command(BaseCommand):
                 subject='Welcome to EasyHire — Iloilo City PESO is live!',
                 body=('Hello Iloilo!\n\n'
                       'EasyHire is the official digital platform of PESO Iloilo City. '
-                      'Jobseekers can complete their resume, browse open jobs, and apply directly. '
+                      'Jobseekers can complete their résumé, browse open jobs, and apply directly. '
                       'Employers can post jobs, browse matched candidates, and schedule interviews.\n\n'
                       'For help or feedback, contact peso@iloilocity.gov.ph.\n\n'
                       '— PESO Iloilo City'),
