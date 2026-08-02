@@ -51,7 +51,7 @@
 
         <div class="px-4 pt-4 pb-3 flex-1">
           <p class="font-bold text-primary text-base leading-tight mb-0.5">{{ job.title }}</p>
-          <p class="text-primary text-xs mb-0.5">{{ job.company.name }}</p>
+          <p class="text-primary text-xs mb-0.5">{{ job.company.name }}{% include "partials/_verified_badge.html" with verified=job.company.is_verified %}</p>
           <p class="text-muted text-xs italic mb-3">{{ job.location_display }}</p>
 
           <div class="flex flex-col gap-1.5">

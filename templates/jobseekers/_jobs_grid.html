@@ -22,7 +22,7 @@
     <div class="px-4 pb-3 flex-1">
       <p class="font-bold text-primary text-base leading-tight mb-0.5">{{ item.job.title }}</p>
       <p class="text-primary text-xs mb-0.5">
-        <span onclick="event.preventDefault(); event.stopPropagation(); window.location='/companies/{{ item.job.company.id|hashid }}/'" class="hover:text-teal transition cursor-pointer">{{ item.job.company.name }}</span>
+        <span onclick="event.preventDefault(); event.stopPropagation(); window.location='/companies/{{ item.job.company.id|hashid }}/'" class="hover:text-teal transition cursor-pointer">{{ item.job.company.name }}</span>{% include "partials/_verified_badge.html" with verified=item.job.company.is_verified %}
       </p>
       <p class="text-muted text-xs italic mb-3">{{ item.job.location_display }}</p>
 

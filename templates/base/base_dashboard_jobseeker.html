@@ -368,6 +368,9 @@ function markAllRead() {
 }
 function fetchNotifications() {
   fetch('/api/notifications/').then(function(r){return r.json();}).then(function(d){
+    // Top-right pop-up toasts for anything newly-arrived since the last
+    // poll — dedupes against localStorage inside the helper.
+    if (window.renderNotifToasts) window.renderNotifToasts(d.notifications || []);
     var dot = document.getElementById('notif-dot');
     var list = document.getElementById('notif-list');
     if (!d.notifications || !d.notifications.length) {
@@ -485,6 +488,7 @@ function closeLogoutModal() {
 </div>
 
 {% include "partials/_confirm_modal.html" %}
+{% include "base/_notification_toasts.html" %}
 
 {% block page_scripts %}{% endblock %}
 {% endblock %}

@@ -1,0 +1,183 @@
+{# Toast notifications — top-right pop-ups that fade after 10s when a new     #}
+{# notification arrives. Rides on the existing 15s /api/notifications/ poll   #}
+{# in each dashboard base; called via window.renderNotifToasts(list). Dedupes #}
+{# against localStorage so the same notification never re-toasts after a     #}
+{# refresh or a subsequent poll.                                             #}
+<style>
+  #notif-toasts {
+    position: fixed;
+    top: 5.5rem;         /* below the navbar (h-16 + gap) */
+    right: 1rem;
+    z-index: 70;         /* above modals (z-60) but below the mobile drawer */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none; /* only the cards themselves are interactive */
+    max-width: calc(100vw - 2rem);
+    width: 22rem;
+  }
+  .notif-toast {
+    pointer-events: auto;
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.05);
+    padding: 0.75rem 0.9rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    animation: notif-toast-in 220ms cubic-bezier(.2,.9,.3,1.2);
+    text-decoration: none;
+    color: inherit;
+  }
+  .notif-toast.leaving {
+    animation: notif-toast-out 260ms ease forwards;
+  }
+  @keyframes notif-toast-in {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes notif-toast-out {
+    to { opacity: 0; transform: translateX(20px); }
+  }
+  .notif-toast-icon {
+    flex-shrink: 0;
+    width: 2.25rem; height: 2.25rem;
+    border-radius: 9999px;
+    background: rgba(202, 174, 132, 0.35);  /* taupe/40 */
+    color: #2f3a34;                          /* primary */
+    display: flex; align-items: center; justify-content: center;
+  }
+  .notif-toast-body { flex: 1; min-width: 0; }
+  .notif-toast-title { font-size: 0.85rem; color: #2f3a34; line-height: 1.3; }
+  .notif-toast-title b { font-weight: 700; }
+  .notif-toast-meta  { font-size: 0.7rem; color: #7d7d7d; margin-top: 0.15rem; font-style: italic; }
+  .notif-toast-close {
+    flex-shrink: 0;
+    width: 1.25rem; height: 1.25rem;
+    border-radius: 9999px;
+    background: transparent;
+    color: #9ca3a3;
+    border: 0;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 120ms ease, color 120ms ease;
+  }
+  .notif-toast-close:hover { background: rgba(0,0,0,0.06); color: #2f3a34; }
+</style>
+
+<div id="notif-toasts" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+(function() {
+  const STORAGE_KEY   = 'easyhire_seen_notif_ids';
+  const MAX_TRACKED   = 200;   // trim localStorage to this many ids
+  const MAX_PER_POLL  = 3;     // never spam more than 3 new toasts at once
+  const DISMISS_MS    = 10000; // fade out after 10s
+  const container = document.getElementById('notif-toasts');
+  if (!container) return;
+
+  function loadSeen() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveSeen(arr) {
+    try {
+      const trimmed = arr.slice(-MAX_TRACKED);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    } catch (e) {}
+  }
+
+  // Reuse the icon set already defined in the surrounding notification JS.
+  // The bell code sets `window.NOTIF_ICONS` implicitly by declaring `const`;
+  // we duplicate a minimal fallback so this partial stays standalone even
+  // if the bell code changes shape.
+  const FALLBACK_ICONS = {
+    heart:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
+    sparkle:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6L12 2z"/></svg>',
+    briefcase: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-4V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H4a2 2 0 00-2 2v11a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 0h-4V4h4v2z"/></svg>',
+  };
+
+  function iconFor(kind) {
+    const set = (typeof window !== 'undefined' && window.NOTIF_ICONS) || FALLBACK_ICONS;
+    return set[kind] || set.heart || FALLBACK_ICONS.heart;
+  }
+
+  function escapeText(s) {
+    return (s || '').replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
+    }[c]));
+  }
+
+  function dismiss(toast) {
+    if (!toast || toast.classList.contains('leaving')) return;
+    toast.classList.add('leaving');
+    setTimeout(() => toast.remove(), 260);
+  }
+
+  function buildToast(notif) {
+    // Hire-offer notifications get inline Accept/Decline in the bell
+    // dropdown — a toast can't fit those controls readably, so we render
+    // the "you have a hire offer" message and let the user tap through
+    // to the bell / applications page.
+    const url = notif.url && notif.url !== '#' ? notif.url : '/inbox/';
+    const el = document.createElement('a');
+    el.className = 'notif-toast';
+    el.href = url;
+    el.setAttribute('data-notif-id', notif.id);
+    el.innerHTML =
+      '<span class="notif-toast-icon">' + iconFor(notif.icon) + '</span>' +
+      '<div class="notif-toast-body">' +
+        '<p class="notif-toast-title"><b>' + escapeText(notif.actor) + '</b> ' + escapeText(notif.verb) + '</p>' +
+        (notif.meta
+          ? '<p class="notif-toast-meta">' + escapeText(notif.meta) + '</p>'
+          : ''
+        ) +
+      '</div>' +
+      '<button type="button" class="notif-toast-close" aria-label="Dismiss">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>' +
+        '</svg>' +
+      '</button>';
+
+    // Close button: swallow the click so the parent anchor doesn't navigate.
+    el.querySelector('.notif-toast-close').addEventListener('click', function(ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      dismiss(el);
+    });
+
+    // Auto-dismiss after DISMISS_MS.
+    setTimeout(() => dismiss(el), DISMISS_MS);
+    return el;
+  }
+
+  // Public entry: called from each dashboard base's fetchNotifications()
+  // success handler with the full list of currently-unread notifications
+  // the bell just received. We only toast IDs we haven't shown before.
+  window.renderNotifToasts = function(notifs) {
+    if (!Array.isArray(notifs) || !notifs.length) return;
+    const seen = new Set(loadSeen());
+    // First-ever load — user has a backlog. Seed localStorage with every
+    // current ID so we don't dump 20 toasts on top of them, but skip the
+    // toast render entirely. Subsequent polls will toast only what's truly
+    // new since this seeding.
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      saveSeen(notifs.map(n => n.id));
+      return;
+    }
+    const fresh = notifs.filter(n => !seen.has(n.id));
+    if (!fresh.length) return;
+    // Cap the burst so a big batch doesn't cover the viewport.
+    fresh.slice(0, MAX_PER_POLL).forEach(n => {
+      container.appendChild(buildToast(n));
+    });
+    // Track every fresh ID (even ones we didn't render) so they don't
+    // resurface on the next poll.
+    fresh.forEach(n => seen.add(n.id));
+    saveSeen(Array.from(seen));
+  };
+})();
+</script>

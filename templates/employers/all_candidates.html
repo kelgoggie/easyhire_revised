@@ -79,7 +79,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-primary font-extrabold text-sm leading-tight truncate">
-                            <a href="/employers/candidates/{{ js.id|hashid }}/" class="hover:text-teal transition">{{ js.first_name }} {{ js.last_name }}</a>
+                            <a href="/employers/candidates/{{ js.id|hashid }}/" class="hover:text-teal transition">{{ js.first_name }} {{ js.last_name }}</a>{% include "partials/_verified_badge.html" with verified=js.is_id_verified label="PESO Verified" %}
                         </p>
                         <p class="text-muted text-xs truncate">{{ js.city_municipality|default:"Iloilo City" }}</p>
                     </div>

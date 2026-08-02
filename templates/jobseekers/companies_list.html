@@ -54,7 +54,7 @@
           {% endif %}
         </div>
         <div class="min-w-0 flex-1">
-          <p class="font-bold text-primary text-base leading-tight truncate">{{ company.name }}</p>
+          <p class="font-bold text-primary text-base leading-tight truncate">{{ company.name }}{% include "partials/_verified_badge.html" with verified=company.is_verified %}</p>
           <p class="text-muted text-xs italic truncate">{{ company.nature_of_company|default:"—" }}</p>
         </div>
         {% if company.id in followed_ids %}

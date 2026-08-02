@@ -79,7 +79,7 @@
               {% if job.status == 'closed' %}<span class="ml-1 text-[10px] font-semibold uppercase tracking-wide bg-gray-100 text-muted px-2 py-0.5 rounded-full align-middle">Closed</span>{% endif %}
             </p>
             <p class="text-primary text-xs mb-0.5">
-              <a href="/companies/{{ job.company.id|hashid }}/" class="hover:text-teal transition">{{ job.company.name }}</a>
+              <a href="/companies/{{ job.company.id|hashid }}/" class="hover:text-teal transition">{{ job.company.name }}</a>{% include "partials/_verified_badge.html" with verified=job.company.is_verified %}
             </p>
             <p class="text-muted text-xs italic mb-0.5">{{ item.app.job.location_display }}</p>
             <p class="text-gray-400 text-xs">Applied {{ item.app.created_at|timesince }} ago</p>
@@ -103,9 +103,9 @@
                 In Progress
               </span>
             {% elif item.app.status == 'rejected' %}
-              <span class="inline-flex items-center gap-1 bg-red-50 text-red-500 text-xs font-semibold px-2.5 py-1 rounded-full border border-red-200">
+              <span class="inline-flex items-center gap-1 bg-gray-100 text-muted text-xs font-semibold px-2.5 py-1 rounded-full border border-gray-200">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                Rejected
+                Not Selected
               </span>
             {% else %}
               {# 'pending' or 'viewed' — both display as Pending to the jobseeker. #}

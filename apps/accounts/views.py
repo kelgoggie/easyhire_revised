@@ -139,7 +139,13 @@ class RegisterStep2JobseekerView(View):
         except Exception:
             pass
 
-        return render(request, self.template_name, {'prefill': prefill})
+        # Prefill the Contact Email field with the account email the user
+        # signed up with (or their Google OAuth email). Field stays editable —
+        # they can override if their preferred contact email differs.
+        return render(request, self.template_name, {
+            'prefill': prefill,
+            'session_email': request.user.email or '',
+        })
 
     def post(self, request):
         from apps.jobseekers.models import JobseekerProfile
@@ -319,11 +325,22 @@ class EmployerRegisterStep2View(View):
         if not request.session.get('employer_reg_email') and not oauth_flow:
             return redirect('/employers/register/')
         from apps.jobseekers.models import Sector
+        # Prefill Company Email + Recruitment Email with whatever email the
+        # signup started from — session for the email/password path, the
+        # authenticated user for the OAuth path. Both fields stay editable.
+        signup_email = (
+            request.user.email if oauth_flow
+            else request.session.get('employer_reg_email', '')
+        ) or ''
         return render(request, self.template_name, {
             'sectors': Sector.objects.all(),
             # OAuth users start with a blank company_name; email/password
             # form-step users get their name pre-filled from step 1.
-            'form': {'company_name': '' if oauth_flow else request.session.get('employer_reg_company', '')},
+            'form': {
+                'company_name': '' if oauth_flow else request.session.get('employer_reg_company', ''),
+                'company_email': signup_email,
+                'recruitment_email': signup_email,
+            },
             'oauth_flow': oauth_flow,
         })
 

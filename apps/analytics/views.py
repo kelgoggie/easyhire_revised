@@ -103,17 +103,42 @@ def get_analytics_context(request):
     placements_monthly     = monthly_counts_for_year(
         Application.objects.filter(status='accepted'), selected_year
     )
+    # Comparison-chart series: actual hires (terminal 'hired' state, not
+    # 'accepted' which is still mid-flow) and new job postings per month.
+    hired_monthly = monthly_counts_for_year(
+        Application.objects.filter(status='hired'), selected_year
+    )
+    new_jobs_monthly = monthly_counts_for_year(
+        JobPosting.objects.filter(deleted_at__isnull=True), selected_year
+    )
 
     # Totals for the chart footers
     jobseekers_this_year = sum(new_jobseekers_monthly)
     employers_this_year  = sum(new_employers_monthly)
     applications_this_year = sum(applications_monthly)
     placements_this_year   = sum(placements_monthly)
+    hired_this_year        = sum(hired_monthly)
+    new_jobs_this_year     = sum(new_jobs_monthly)
 
     jobseekers_all_time  = JobseekerProfile.objects.count()
     employers_all_time   = EmployerProfile.objects.count()
     applications_all_time = Application.objects.count()
     placements_all_time   = Application.objects.filter(status='accepted').count()
+    hired_all_time        = Application.objects.filter(status='hired').count()
+
+    # External-hire totals for the EasyHire-vs-External comparison. The
+    # field is a running counter without per-month history, so we can only
+    # show YTD (jobs posted this year) and all-time snapshots — not a
+    # per-month line like the other comparisons.
+    from django.db.models import Sum
+    external_hires_this_year = (
+        JobPosting.objects
+        .filter(created_at__year=selected_year)
+        .aggregate(total=Sum('externally_hired_count'))['total']
+    ) or 0
+    external_hires_all_time = (
+        JobPosting.objects.aggregate(total=Sum('externally_hired_count'))['total']
+    ) or 0
 
     # Years that actually have data (for the dropdown)
     js_year_rows = JobseekerProfile.objects.dates('created_at', 'year', order='DESC')
@@ -240,13 +265,22 @@ def get_analytics_context(request):
         ).order_by('-count')[:10]
     )
 
-    barangay_data = list(
-        JobseekerProfile.objects.exclude(
-            barangay=''
-        ).values('barangay').annotate(
-            count=Count('id')
-        ).order_by('-count')[:20]
-    )
+    # Jobseeker locations — aggregated to Iloilo City DISTRICT (7 buckets)
+    # instead of the ~180-barangay long tail. See apps/analytics/iloilo_districts
+    # for the mapping and its ambiguity notes.
+    from apps.analytics.iloilo_districts import resolve_district, DISTRICTS
+    _district_counter = Counter()
+    for row in JobseekerProfile.objects.exclude(barangay='').values('barangay'):
+        _district_counter[resolve_district(row['barangay'])] += 1
+    # Preserve the canonical district order in the chart, drop empty buckets,
+    # then append 'Other' last when present so unmapped rows are visible but
+    # never lead the list.
+    barangay_data = [
+        {'barangay': d, 'count': _district_counter[d]}
+        for d in DISTRICTS if _district_counter[d]
+    ]
+    if _district_counter.get('Other'):
+        barangay_data.append({'barangay': 'Other', 'count': _district_counter['Other']})
 
     # ── Age groups ────────────────────────────────────────────────
     today = date.today()
@@ -317,10 +351,17 @@ def get_analytics_context(request):
         for label, count in industry_counter.most_common(12)
     ]
 
+    # Company locations rolled up to Iloilo City DISTRICT (same reason as
+    # jobseeker locations above — 7 clean buckets beats a 30-entry long tail).
+    _co_district_counter = Counter()
+    for row in Company.objects.exclude(iloilo_barangay_name='').values('iloilo_barangay_name'):
+        _co_district_counter[resolve_district(row['iloilo_barangay_name'])] += 1
     company_locations = [
-        {'label': row['iloilo_barangay_name'] or 'Unspecified', 'count': row['count']}
-        for row in Company.objects.exclude(iloilo_barangay_name='').values('iloilo_barangay_name').annotate(count=Count('id')).order_by('-count')[:15]
+        {'label': d, 'count': _co_district_counter[d]}
+        for d in DISTRICTS if _co_district_counter[d]
     ]
+    if _co_district_counter.get('Other'):
+        company_locations.append({'label': 'Other', 'count': _co_district_counter['Other']})
 
     # ── Labor & employment ────────────────────────────────────────
     total_applications = Application.objects.count()
@@ -356,31 +397,23 @@ def get_analytics_context(request):
         for label, count in industry_job_counter.most_common(12)
     ]
 
-    # Jobs by location — aggregated to the BARANGAY level, not the street.
-    # Some seeded / free-text `barangay_name` values are actually street names
-    # ("Iznart Street", "Ledesma Street") because the address was captured
-    # loosely. Strip the trailing street suffix so those collapse to the bare
-    # barangay-ish token, then re-aggregate. Rows where the field is empty
-    # or purely street-noise fall through to the city.
-    import re as _re
-    _street_suffix = _re.compile(
-        r'\s+(?:street|st\.?|avenue|ave\.?|road|rd\.?|drive|dr\.?|blvd\.?|boulevard|highway|hwy\.?|lane|ln\.?)$',
-        _re.IGNORECASE,
-    )
+    # Jobs by location — same district roll-up. Rows whose `barangay_name` is
+    # empty or purely a street noise-word fall through to the city, which then
+    # resolves back to 'Other' when the city isn't recognisable.
     location_counter = Counter()
     for row in (
         JobPosting.objects
-        .filter(status='open', deleted_at__isnull=True)
+        .filter(status='open', deleted_at__isnull=True, admin_disabled=False)
         .values('barangay_name', 'city')
     ):
-        raw = (row['barangay_name'] or '').strip()
-        normalized = _street_suffix.sub('', raw).strip()
-        label = normalized or (row['city'] or '').strip() or 'Unspecified'
-        location_counter[label] += 1
+        raw = (row['barangay_name'] or '').strip() or (row['city'] or '').strip()
+        location_counter[resolve_district(raw)] += 1
     jobs_by_location = [
-        {'label': label, 'count': count}
-        for label, count in location_counter.most_common(15)
+        {'label': d, 'count': location_counter[d]}
+        for d in DISTRICTS if location_counter[d]
     ]
+    if location_counter.get('Other'):
+        jobs_by_location.append({'label': 'Other', 'count': location_counter['Other']})
 
     def format_months(qs):
         return [
@@ -442,6 +475,14 @@ def get_analytics_context(request):
         'employers_all_time': employers_all_time,
         'applications_all_time': applications_all_time,
         'placements_all_time': placements_all_time,
+        # Comparison-chart series requested by panelists for line-graph views.
+        'hired_monthly':          hired_monthly,
+        'new_jobs_monthly':       new_jobs_monthly,
+        'hired_this_year':        hired_this_year,
+        'hired_all_time':         hired_all_time,
+        'new_jobs_this_year':     new_jobs_this_year,
+        'external_hires_this_year': external_hires_this_year,
+        'external_hires_all_time':  external_hires_all_time,
     }
 
 
@@ -467,3 +508,144 @@ def analytics(request):
         if getattr(request.user, 'is_employer', False):
             return render(request, 'employers/analytics.html', context)
     return render(request, 'public/analytics.html', context)
+
+
+def analytics_csv(request):
+    """PESO-admin CSV export of everything the analytics dashboard renders.
+
+    One file, multiple stacked tables. Each table gets its own section
+    header row (blank line + `== Section Name ==`) so Excel opens it as
+    a readable multi-section sheet. Reuses `get_analytics_context()` so
+    the numbers exactly match what admins see on the dashboard.
+    """
+    import csv
+    from django.http import HttpResponse, HttpResponseForbidden
+
+    if not (request.user.is_authenticated and getattr(request.user, 'is_staff', False)):
+        return HttpResponseForbidden('Admin-only export.')
+
+    ctx = get_analytics_context(request)
+    year = ctx['selected_year']
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="easyhire-analytics-{year}.csv"'
+    w = csv.writer(response)
+
+    def section(title):
+        w.writerow([])
+        w.writerow([f'== {title} =='])
+
+    MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    def monthly_row(label, series):
+        w.writerow([label, *series, sum(series)])
+
+    # ── Header block ──────────────────────────────────────────────
+    w.writerow(['EasyHire Analytics Export'])
+    w.writerow(['Year', year])
+    w.writerow(['Generated at', ctx.get('now', '') or ''])
+
+    # ── Monthly time series (12 months + total) ──────────────────
+    section(f'Monthly Time Series ({year})')
+    w.writerow(['Series', *MONTHS, 'Total'])
+    monthly_row('New Jobseekers',   ctx['new_jobseekers_monthly'])
+    monthly_row('New Employers',    ctx['new_employers_monthly'])
+    monthly_row('New Jobs Posted',  ctx['new_jobs_monthly'])
+    monthly_row('Applications',     ctx['applications_monthly'])
+    monthly_row('Placements',       ctx['placements_monthly'])
+    monthly_row('Hired',            ctx['hired_monthly'])
+
+    # ── Headline totals ──────────────────────────────────────────
+    section('Headline Totals')
+    w.writerow(['Metric', 'This Year', 'All Time'])
+    w.writerow(['New Jobseekers',   ctx['jobseekers_this_year'],   ctx['jobseekers_all_time']])
+    w.writerow(['New Employers',    ctx['employers_this_year'],    ctx['employers_all_time']])
+    w.writerow(['Applications',     ctx['applications_this_year'], ctx['applications_all_time']])
+    w.writerow(['Placements (accepted)', ctx['placements_this_year'], ctx['placements_all_time']])
+    w.writerow(['Hired (terminal)', ctx['hired_this_year'],        ctx['hired_all_time']])
+    w.writerow(['Hired externally', ctx['external_hires_this_year'], ctx['external_hires_all_time']])
+    w.writerow(['Placement Rate (all time)', f"{ctx['placement_rate']}%", ''])
+
+    # ── Jobseeker demographics ───────────────────────────────────
+    section('Jobseekers by Sex')
+    w.writerow(['Category', 'Count'])
+    w.writerow(['Male',   ctx['men']])
+    w.writerow(['Female', ctx['women']])
+
+    section('Jobseekers by Age Group')
+    w.writerow(['Age Group', 'Count'])
+    for row in ctx.get('age_groups', []):
+        w.writerow([row['label'], row['count']])
+
+    section('Jobseekers by Civil Status')
+    w.writerow(['Status', 'Count', 'Percent'])
+    for row in ctx.get('civil_status', []):
+        w.writerow([row['label'], row['count'], f"{row.get('pct', 0)}%"])
+
+    section('Jobseekers by Work Experience')
+    w.writerow(['Category', 'Count', 'Percent'])
+    w.writerow(['With work experience',
+                ctx['with_experience'], f"{ctx['with_experience_pct']}%"])
+    w.writerow(['No work experience',
+                ctx['without_experience'], f"{ctx['without_experience_pct']}%"])
+
+    section('Jobseekers by Highest Educational Attainment')
+    w.writerow(['Level', 'Count'])
+    for row in ctx.get('education_breakdown', []):
+        w.writerow([row['label'], row['count']])
+
+    section('Jobseekers by District')
+    w.writerow(['District', 'Count'])
+    for row in ctx.get('barangay_data', []):
+        w.writerow([row['barangay'], row['count']])
+
+    section('Jobseekers by Sector')
+    w.writerow(['Sector', 'Count'])
+    for row in ctx.get('sector_data', []):
+        w.writerow([row['label'], row['count']])
+
+    # ── Company demographics ─────────────────────────────────────
+    section('Companies by Business Type')
+    w.writerow(['Type', 'Count'])
+    for row in ctx.get('company_types', []):
+        w.writerow([row['label'], row['count']])
+
+    section('Companies by Nature of Business')
+    w.writerow(['Nature', 'Count'])
+    for row in ctx.get('company_natures', []):
+        w.writerow([row['label'], row['count']])
+
+    section('Companies by District')
+    w.writerow(['District', 'Count'])
+    for row in ctx.get('company_locations', []):
+        w.writerow([row['label'], row['count']])
+
+    # ── Labor & employment ───────────────────────────────────────
+    section('Jobs by Industry')
+    w.writerow(['Industry', 'Count'])
+    for row in ctx.get('jobs_by_industry', []):
+        w.writerow([row['label'], row['count']])
+
+    section('Jobs by District')
+    w.writerow(['District', 'Count'])
+    for row in ctx.get('jobs_by_location', []):
+        w.writerow([row['label'], row['count']])
+
+    section('Preferred Jobs (jobseeker résumé "Recommend Jobs Related to")')
+    w.writerow(['Query', 'Count'])
+    for row in ctx.get('jobs_of_interest', []):
+        w.writerow([row['query'], row['count']])
+
+    section('In-Demand Jobs (aggregate interactions)')
+    w.writerow(['Job Title', 'Posts', 'Total Interactions', 'Avg / Post'])
+    for row in ctx.get('in_demand_top', []):
+        w.writerow([row['display'], row['post_count'],
+                    row['total_interactions'], row['avg_interactions']])
+
+    section('Hard to Fill Jobs (open 30+ days, <3 applicants)')
+    w.writerow(['Job Title', 'Stuck Posts', 'Avg Days Open'])
+    for row in ctx.get('hard_to_fill_top', []):
+        w.writerow([row['display'], row['post_count'], row['avg_days']])
+
+    return response

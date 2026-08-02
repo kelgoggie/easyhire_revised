@@ -1,0 +1,6 @@
+{# Small verified checkmark badge to append after a name. Renders nothing   #}
+{# unless the caller passes `verified=True`. Include with:                   #}
+{#   {% include "partials/_verified_badge.html" with verified=js.is_id_verified %}     #}
+{#   {% include "partials/_verified_badge.html" with verified=company.is_verified %}   #}
+{# Pass `label` to override the tooltip (default "Verified").                #}
+{% if verified %}<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-teal text-white align-middle ml-1 flex-shrink-0" title="{{ label|default:'Verified' }}" aria-label="{{ label|default:'Verified' }}"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span>{% endif %}

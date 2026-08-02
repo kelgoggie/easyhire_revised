@@ -108,7 +108,7 @@
               data-href="/jobs/view/{{ item.job.id|hashid }}/">
             <td class="px-5 py-3 font-semibold text-primary">{{ item.job.title }}</td>
             <td class="px-4 py-3 text-muted italic text-xs">
-              <a href="/companies/{{ item.job.company.id|hashid }}/" class="hover:text-teal transition">{{ item.job.company.name|truncatechars:25 }}</a>
+              <a href="/companies/{{ item.job.company.id|hashid }}/" class="hover:text-teal transition">{{ item.job.company.name|truncatechars:25 }}</a>{% include "partials/_verified_badge.html" with verified=item.job.company.is_verified %}
             </td>
             <td class="px-4 py-3 text-muted text-xs">{{ item.job.location_display|truncatechars:25 }}</td>
             <td class="px-4 py-3 text-muted text-xs">{{ item.job.slots }} slot{{ item.job.slots|pluralize }} open</td>
@@ -161,7 +161,7 @@
               data-href="/jobs/view/{{ app.job.id|hashid }}/">
             <td class="px-5 py-3 font-semibold text-primary">{{ app.job.title }}</td>
             <td class="px-4 py-3 text-muted italic text-xs">
-              <a href="/companies/{{ app.job.company.id|hashid }}/" class="hover:text-teal transition">{{ app.job.company.name|truncatechars:25 }}</a>
+              <a href="/companies/{{ app.job.company.id|hashid }}/" class="hover:text-teal transition">{{ app.job.company.name|truncatechars:25 }}</a>{% include "partials/_verified_badge.html" with verified=app.job.company.is_verified %}
             </td>
             <td class="px-4 py-3 text-muted text-xs">{{ app.job.location_display|truncatechars:25 }}</td>
             <td class="px-4 py-3">
@@ -174,8 +174,8 @@
                   <span class="w-1.5 h-1.5 rounded-full bg-teal inline-block"></span>In Progress
                 </span>
               {% elif app.status == 'rejected' %}
-                <span class="inline-flex items-center gap-1 bg-red-50 text-red-500 text-xs font-semibold px-3 py-1 rounded-full border border-red-200">
-                  <span class="w-1.5 h-1.5 rounded-full bg-red-400 inline-block"></span>Rejected
+                <span class="inline-flex items-center gap-1 bg-gray-100 text-muted text-xs font-semibold px-3 py-1 rounded-full border border-gray-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block"></span>Not Selected
                 </span>
               {% else %}
                 {# 'pending' or 'viewed' — both show as Pending. #}
@@ -228,7 +228,7 @@
               {% endif %}
             </div>
             <div class="min-w-0">
-              <p class="text-muted text-xs truncate">{{ item.company.name }}</p>
+              <p class="text-muted text-xs truncate">{{ item.company.name }}{% include "partials/_verified_badge.html" with verified=item.company.is_verified %}</p>
               <p class="font-bold text-primary text-sm leading-tight truncate">{{ item.job.title }}</p>
               <p class="text-muted text-xs truncate mt-0.5">{{ item.job.location_display }}</p>
               <p class="text-muted text-xs mt-0.5 italic">Posted {{ item.job.created_at|timesince }} ago</p>

@@ -3,20 +3,32 @@
   <!-- ── Header row ──────────────────────────────────────────────── -->
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
     <h1 class="text-2xl sm:text-3xl font-extrabold text-primary">Analytics</h1>
-    <form method="GET" action="" class="text-right">
-      <label for="year-select" class="block text-xs text-muted mb-1">Show Results for:</label>
-      <div class="relative">
-        <select id="year-select" name="year" onchange="this.form.submit()"
-                class="appearance-none bg-white border border-gray-200 rounded-full px-5 py-2 pr-10 text-sm text-primary italic focus:outline-none focus:border-teal transition cursor-pointer min-w-[180px]">
-          {% for y in available_years %}
-            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
-          {% endfor %}
-        </select>
-        <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+    <div class="flex items-end gap-3">
+      {% if request.user.is_staff %}
+      <a href="/analytics/export.csv?year={{ selected_year }}"
+         class="inline-flex items-center gap-1.5 bg-teal text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-teal/90 transition"
+         title="Download every dashboard table as a single CSV (PESO Admin only).">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0 0l-4-4m4 4l4-4"/>
         </svg>
-      </div>
-    </form>
+        Download CSV
+      </a>
+      {% endif %}
+      <form method="GET" action="" class="text-right">
+        <label for="year-select" class="block text-xs text-muted mb-1">Show Results for:</label>
+        <div class="relative">
+          <select id="year-select" name="year" onchange="this.form.submit()"
+                  class="appearance-none bg-white border border-gray-200 rounded-full px-5 py-2 pr-10 text-sm text-primary italic focus:outline-none focus:border-teal transition cursor-pointer min-w-[180px]">
+            {% for y in available_years %}
+              <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- ── Main card: left rail + right pane ───────────────────────── -->
@@ -60,6 +72,15 @@
         <li><a href="#lab-searched" class="nav-pill" data-key="lab-searched">Preferred Jobs</a></li>
         <li><a href="#lab-demand" class="nav-pill" data-key="lab-demand">In Demand Jobs</a></li>
         <li><a href="#lab-hard" class="nav-pill" data-key="lab-hard">Hard to Fill Jobs</a></li>
+      </ul>
+
+      <p class="text-sm font-bold text-primary mb-1 mt-4">
+        <strong>Comparisons</strong>
+      </p>
+      <ul class="space-y-0.5 text-sm">
+        <li><a href="#cmp-apps-hired" class="nav-pill" data-key="cmp-apps-hired">Applications vs Hired</a></li>
+        <li><a href="#cmp-jobs-apps"  class="nav-pill" data-key="cmp-jobs-apps">New Jobs vs Applications</a></li>
+        <li><a href="#cmp-eh-ext"     class="nav-pill" data-key="cmp-eh-ext">Hired via EasyHire vs Externally</a></li>
       </ul>
     </nav>
 
@@ -115,7 +136,7 @@
       <!-- ── Jobseeker Location ───────────────────────────────── -->
       <div data-panel="js-location" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Location</h2>
-        <p class="text-muted text-xs italic mb-4">Where Iloilo City jobseekers live, by barangay.</p>
+        <p class="text-muted text-xs italic mb-4">Where Iloilo City jobseekers live, by district.</p>
         <div class="chart-box flex-1"><canvas id="chart-js-location"></canvas></div>
       </div>
 
@@ -154,7 +175,7 @@
       <!-- ── Employer: Location ───────────────────────────────── -->
       <div data-panel="emp-location" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Location</h2>
-        <p class="text-muted text-xs italic mb-4">Where registered employers are based, by Iloilo barangay.</p>
+        <p class="text-muted text-xs italic mb-4">Where registered employers are based, by Iloilo City district.</p>
         <div class="chart-box flex-1"><canvas id="chart-emp-location"></canvas></div>
       </div>
 
@@ -194,7 +215,7 @@
       <!-- ── Labor: Jobs by Location ──────────────────────────── -->
       <div data-panel="lab-location" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Jobs by Location</h2>
-        <p class="text-muted text-xs italic mb-4">Where open jobs are located.</p>
+        <p class="text-muted text-xs italic mb-4">Where open jobs are located, by Iloilo City district.</p>
         <div class="chart-box flex-1"><canvas id="chart-lab-location"></canvas></div>
       </div>
 
@@ -255,6 +276,50 @@
         {% else %}
         <p class="text-muted text-sm italic">No hard-to-fill jobs right now.</p>
         {% endif %}
+      </div>
+
+      <!-- ── Comparison: Applications vs Hired ──────────────────── -->
+      <div data-panel="cmp-apps-hired" class="analytics-panel hidden flex-1 flex flex-col">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Applications vs Hired</h2>
+        <p class="text-muted text-xs italic mb-4">
+          Applications submitted vs jobseekers who reached the terminal Hired state, per month in {{ selected_year }}.
+          A widening gap means matches aren't converting to hires — worth a look at the matching algorithm or employer response times.
+        </p>
+        <div class="chart-box flex-1"><canvas id="chart-cmp-apps-hired"></canvas></div>
+        <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
+          <p class="text-sm text-primary">Applications (This Year): <strong>{{ applications_this_year }}</strong></p>
+          <p class="text-sm text-primary">Hired (This Year): <strong>{{ hired_this_year }}</strong></p>
+          <p class="text-sm text-primary">Conversion Rate: <strong>{% if applications_this_year %}{{ hired_this_year|floatformat:0 }} / {{ applications_this_year }}{% else %}—{% endif %}</strong></p>
+        </div>
+      </div>
+
+      <!-- ── Comparison: New Jobs vs Applications ───────────────── -->
+      <div data-panel="cmp-jobs-apps" class="analytics-panel hidden flex-1 flex flex-col">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">New Jobs vs Applications</h2>
+        <p class="text-muted text-xs italic mb-4">
+          New job postings vs applications submitted, per month in {{ selected_year }}.
+          When applications outpace new jobs, jobseekers are chasing a shrinking pool — a signal PESO can use to attract more employers.
+        </p>
+        <div class="chart-box flex-1"><canvas id="chart-cmp-jobs-apps"></canvas></div>
+        <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
+          <p class="text-sm text-primary">New Jobs Posted (This Year): <strong>{{ new_jobs_this_year }}</strong></p>
+          <p class="text-sm text-primary">Applications Submitted (This Year): <strong>{{ applications_this_year }}</strong></p>
+        </div>
+      </div>
+
+      <!-- ── Comparison: Hired via EasyHire vs Externally ───────── -->
+      <div data-panel="cmp-eh-ext" class="analytics-panel hidden flex-1 flex flex-col">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Hired via EasyHire vs Externally</h2>
+        <p class="text-muted text-xs italic mb-4">
+          Snapshot of total hires in {{ selected_year }}. External hires are stored as a running counter per job posting, not timestamped events — so this comparison shows year-to-date totals rather than a per-month line.
+        </p>
+        <div class="chart-box flex-1"><canvas id="chart-cmp-eh-ext"></canvas></div>
+        <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
+          <p class="text-sm text-primary">Hired via EasyHire (This Year): <strong>{{ hired_this_year }}</strong></p>
+          <p class="text-sm text-primary">Hired Externally (This Year): <strong>{{ external_hires_this_year }}</strong></p>
+          <p class="text-sm text-primary">Hired via EasyHire (All Time): <strong>{{ hired_all_time }}</strong></p>
+          <p class="text-sm text-primary">Hired Externally (All Time): <strong>{{ external_hires_all_time }}</strong></p>
+        </div>
       </div>
 
     </section>
@@ -335,6 +400,10 @@ const D = {
   hard:      { labels: [{% for x in hard_to_fill_chart %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                data:   [{% for x in hard_to_fill_chart %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
                unit:   'day' },
+  hired:      {{ hired_monthly|safe }},
+  newJobs:    {{ new_jobs_monthly|safe }},
+  ehVsExt:    { labels: ['Hired via EasyHire', 'Hired externally'],
+                data:   [{{ hired_this_year }}, {{ external_hires_this_year }}] },
 };
 
 // ── Chart.js defaults — KEY to preventing infinite scroll ────────────
@@ -343,6 +412,57 @@ Chart.defaults.font.size = 11;
 Chart.defaults.color = '#595959';
 Chart.defaults.responsive = true;
 Chart.defaults.maintainAspectRatio = false;   // critical
+
+// ── Always-visible data labels plugin ────────────────────────────────
+// Draws each value directly onto the chart (bars, pies, and line points)
+// so panelists don't have to hover to read numbers. Registered globally
+// so every Chart instance in this file picks it up automatically. Skips
+// zero/null values to avoid label clutter on empty months.
+const AlwaysOnDataLabels = {
+  id: 'alwaysOnDataLabels',
+  afterDatasetsDraw(chart) {
+    const {ctx} = chart;
+    const kind = chart.config.type;
+    ctx.save();
+    ctx.font = '600 11px Inter, sans-serif';
+    ctx.textBaseline = 'middle';
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      meta.data.forEach((el, i) => {
+        const val = ds.data[i];
+        if (val === undefined || val === null || val === 0) return;
+        const label = String(val);
+        if (kind === 'bar') {
+          if (chart.options.indexAxis === 'y') {
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#2D4A3E';
+            ctx.fillText(label, el.x + 6, el.y);
+          } else {
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#2D4A3E';
+            ctx.fillText(label, el.x, el.y - 8);
+          }
+        } else if (kind === 'line') {
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#2D4A3E';
+          ctx.fillText(label, el.x, el.y - 10);
+        } else if (kind === 'pie' || kind === 'doughnut') {
+          const pos = el.tooltipPosition();
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#ffffff';
+          // Faint dark halo behind the white number so it stays readable
+          // on light slices (E8DCC4, EFE7C8, etc.).
+          ctx.shadowColor = 'rgba(0,0,0,0.45)';
+          ctx.shadowBlur = 3;
+          ctx.fillText(label, pos.x, pos.y);
+          ctx.shadowBlur = 0;
+        }
+      });
+    });
+    ctx.restore();
+  },
+};
+Chart.register(AlwaysOnDataLabels);
 
 // ── Chart factories ─────────────────────────────────────────────────
 function monthlyBar(canvasId, data) {
@@ -354,6 +474,101 @@ function monthlyBar(canvasId, data) {
       datasets: [{
         data, backgroundColor: MONTH_COLORS, borderWidth: 0,
         borderRadius: 4, maxBarThickness: 48,
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => c.parsed.y } },
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+function monthlyMultiLine(canvasId, series) {
+  // Draws N labelled lines on one time axis. `series` is an array of
+  // { label, data, color } objects — each maps to a Chart.js dataset with
+  // its own colour, semi-transparent fill, and legend entry.
+  const ctx = document.getElementById(canvasId); if (!ctx) return;
+  return new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: MONTH_LABELS,
+      datasets: series.map(function(s) {
+        return {
+          label: s.label,
+          data: s.data,
+          borderColor: s.color,
+          backgroundColor: s.color + '22',
+          fill: false,
+          tension: 0.35,
+          pointBackgroundColor: s.color,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 1.5,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2,
+        };
+      }),
+    },
+    options: {
+      plugins: {
+        legend: {
+          display: true, position: 'top', align: 'end',
+          labels: { boxWidth: 12, boxHeight: 12, padding: 12, usePointStyle: true },
+        },
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+function comparisonBar(canvasId, labels, data, colors) {
+  // Small horizontal-bar comparison chart, one bar per label. Used for
+  // the EasyHire-vs-External totals where per-month series aren't
+  // available (external hires are stored as running counters, not
+  // timestamped events).
+  const ctx = document.getElementById(canvasId); if (!ctx) return;
+  return new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, borderRadius: 6, maxBarThickness: 44 }] },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
+        y: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+function monthlyLine(canvasId, data, color) {
+  const ctx = document.getElementById(canvasId); if (!ctx) return;
+  color = color || '#2D4A3E';
+  return new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: MONTH_LABELS,
+      datasets: [{
+        data,
+        borderColor: color,
+        backgroundColor: color + '22',
+        fill: true,
+        tension: 0.35,
+        pointBackgroundColor: color,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1.5,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 2,
       }]
     },
     options: {
@@ -443,7 +658,7 @@ function init(key) {
     return;
   }
   switch (key) {
-    case 'js-accounts':    charts[key] = monthlyBar('chart-js-accounts', D.newJobseekers); break;
+    case 'js-accounts':    charts[key] = monthlyLine('chart-js-accounts', D.newJobseekers, '#2D4A3E'); break;
     case 'js-sex':         charts[key] = pie('chart-js-sex', D.sex.labels, D.sex.data, ['#3B82F6', '#E8A8A8']); break;
     case 'js-age':         charts[key] = barV('chart-js-age', D.age.labels, D.age.data, '#5BA3A0'); break;
     case 'js-civil':       charts[key] = pie('chart-js-civil', D.civil.labels, D.civil.data); break;
@@ -451,7 +666,7 @@ function init(key) {
     case 'js-edu':         charts[key] = barH('chart-js-edu', D.edu.labels, D.edu.data, '#2D4A3E'); break;
     case 'js-location':    charts[key] = barH('chart-js-location', D.jsLoc.labels, D.jsLoc.data, '#5BA3A0'); break;
     case 'js-sectors':     charts[key] = barH('chart-js-sectors', D.sectors.labels, D.sectors.data, '#E8A838'); break;
-    case 'emp-accounts':   charts[key] = monthlyBar('chart-emp-accounts', D.newEmployers); break;
+    case 'emp-accounts':   charts[key] = monthlyLine('chart-emp-accounts', D.newEmployers, '#5BA3A0'); break;
     case 'emp-type':       charts[key] = pie('chart-emp-type', D.empType.labels, D.empType.data); break;
     case 'emp-nature':     charts[key] = barH('chart-emp-nature', D.empNat.labels, D.empNat.data, '#2D4A3E'); break;
     case 'emp-location':   charts[key] = barH('chart-emp-location', D.empLoc.labels, D.empLoc.data, '#5BA3A0'); break;
@@ -462,6 +677,16 @@ function init(key) {
     case 'lab-searched':   charts[key] = barH('chart-lab-searched', D.searched.labels, D.searched.data, '#E8A838'); break;
     case 'lab-demand':     charts[key] = pie('chart-lab-demand',   D.demand.labels, D.demand.data, null, D.demand.unit); break;
     case 'lab-hard':       charts[key] = pie('chart-lab-hard',     D.hard.labels,   D.hard.data,   null, D.hard.unit);   break;
+    case 'cmp-apps-hired': charts[key] = monthlyMultiLine('chart-cmp-apps-hired', [
+                             { label: 'Applications', data: D.apps,  color: '#5BA3A0' },
+                             { label: 'Hired',        data: D.hired, color: '#2D4A3E' },
+                           ]); break;
+    case 'cmp-jobs-apps':  charts[key] = monthlyMultiLine('chart-cmp-jobs-apps', [
+                             { label: 'New Jobs Posted', data: D.newJobs, color: '#E8A838' },
+                             { label: 'Applications',    data: D.apps,    color: '#5BA3A0' },
+                           ]); break;
+    case 'cmp-eh-ext':     charts[key] = comparisonBar('chart-cmp-eh-ext',
+                             D.ehVsExt.labels, D.ehVsExt.data, ['#2D4A3E', '#E8A838']); break;
   }
 }
 

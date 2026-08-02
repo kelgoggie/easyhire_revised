@@ -25,6 +25,47 @@ def help_view(request):
     return render(request, template, {'faqs': faqs})
 
 
+_INTERVIEW_PREFIXES = (
+    # (prefix stored on EmployerContact.interview_location, canonical kind)
+    ('Office: ',          'onsite'),
+    ('Online meeting: ',  'online'),
+    ('Phone call: ',      'phone'),
+)
+
+
+def _parse_interview_location(raw):
+    """Split the stored `interview_location` string back into (kind, value).
+
+    Employers compose interviews via a radio + a single text field; the
+    submit handler prefixes the value with 'Office: ' / 'Online meeting: '
+    / 'Phone call: ' so `EmployerContact.interview_location` is a single
+    column. Here we invert that so the inbox letter-view can label the
+    line correctly ("Venue" / "Link" / "Phone Number") and print just
+    the value without the prefix.
+    """
+    if not raw:
+        return ('', '')
+    for prefix, kind in _INTERVIEW_PREFIXES:
+        if raw.startswith(prefix):
+            return (kind, raw[len(prefix):].strip())
+    return ('', raw.strip())
+
+
+def _employer_display_name(contact):
+    """Best-effort sender name for the interview letter closing.
+    Falls back to empty when the sender was removed or lacks a profile;
+    the company name is always rendered below either way.
+    """
+    if not contact.sender_id:
+        return ''
+    try:
+        prof = contact.sender.employer_profile
+    except Exception:
+        return ''
+    parts = [prof.first_name or '', prof.last_name or '']
+    return ' '.join(p for p in parts if p).strip()
+
+
 @login_required
 def inbox(request):
     """Unified inbox combining applications, interview schedules, and admin
@@ -89,6 +130,7 @@ def inbox(request):
                 # come through here as None (SET_NULL) and just won't link.
                 sender_job_url = f'/jobs/view/{_hashid(contact.job.id)}/'
             verb = (f'sent you {"interview details" if contact.kind == EmployerContact.KIND_INTERVIEW else "job requirements"}.')
+            interview_kind, interview_value = _parse_interview_location(contact.interview_location)
             items.append({
                 'kind': contact.kind,
                 # Plain-text actor kept as a fallback for the row template /
@@ -105,6 +147,12 @@ def inbox(request):
                 'detail_body': contact.body,
                 'detail_interview_at': contact.interview_at,
                 'detail_interview_location': contact.interview_location,
+                # Letter-view enrichment for the interview detail block:
+                # `_inbox_rows.html` uses these to render Dear/schedule/thanks.
+                'detail_interview_kind':  interview_kind,     # 'onsite'/'online'/'phone'/''
+                'detail_interview_value': interview_value,    # prefix stripped
+                'detail_recipient_name':  profile.first_name or '',
+                'detail_sender_name':     _employer_display_name(contact),
                 'detail_company': contact.company.name,
                 # Reports on inbox messages target the specific EmployerContact
                 # (the message itself) so an admin lands on the message body
@@ -181,6 +229,7 @@ def inbox(request):
             if contact.recipient:
                 jname = f"{contact.recipient.first_name} {contact.recipient.last_name}".strip()
             kind_label = 'an Interview' if contact.kind == EmployerContact.KIND_INTERVIEW else 'Job Requirements'
+            interview_kind, interview_value = _parse_interview_location(contact.interview_location)
             items.append({
                 'kind': contact.kind,
                 'actor': jname or 'Candidate',
@@ -191,6 +240,14 @@ def inbox(request):
                 'detail_body': contact.body,
                 'detail_interview_at': contact.interview_at,
                 'detail_interview_location': contact.interview_location,
+                # Same letter-view enrichment the jobseeker branch adds — so
+                # the employer viewing their own outbound copy sees exactly
+                # what the jobseeker sees.
+                'detail_interview_kind':  interview_kind,
+                'detail_interview_value': interview_value,
+                'detail_recipient_name':  (contact.recipient.first_name if contact.recipient else '') or '',
+                'detail_sender_name':     _employer_display_name(contact),
+                'detail_company':         contact.company.name,
                 # Delivery status — populated by notifications.email._send()
                 # only when the SMTP handoff succeeds. Rendered as a small
                 # "Sent · delivered to X" / "Delivery pending" line on the

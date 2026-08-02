@@ -684,7 +684,41 @@ def job_close(request, job_id):
             job.save(update_fields=['status'])
     return redirect(request.POST.get('next') or '/employers/jobs/')
 
-    
+
+@employer_verified_required
+def job_mark_external_hires(request, job_id):
+    """Record how many people were hired for this job outside the platform.
+
+    Informational only — doesn't decrement `slots` or auto-close the job;
+    the employer keeps using the existing Close Job action when the posting
+    is fully filled. Sends JSON when called via AJAX so the modal can
+    update the button label in place; falls back to a redirect otherwise.
+    """
+    from django.http import JsonResponse
+    profile = request.user.employer_profile
+    job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    if request.method != 'POST':
+        return redirect(f'/employers/jobs/{_hashid(job.id)}/')
+
+    raw = (request.POST.get('count') or '').strip()
+    try:
+        count = int(raw)
+    except (TypeError, ValueError):
+        count = -1
+    if count < 0:
+        if is_ajax:
+            return JsonResponse({'ok': False, 'error': 'Enter a whole number 0 or greater.'}, status=400)
+        return redirect(f'/employers/jobs/{_hashid(job.id)}/')
+
+    job.externally_hired_count = count
+    job.save(update_fields=['externally_hired_count'])
+
+    if is_ajax:
+        return JsonResponse({'ok': True, 'count': count})
+    return redirect(f'/employers/jobs/{_hashid(job.id)}/')
+
+
 @employer_required
 def job_detail(request, job_id):
     from apps.matching.engine import get_ranked_jobseekers

@@ -296,22 +296,22 @@
     </div>
 
     <p class="text-sm text-primary mb-2">Sector Badge Visibility</p>
-    <div class="flex flex-wrap gap-2">
-      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
+    <div class="space-y-2">
+      <label class="flex items-center gap-2 cursor-pointer text-sm text-primary">
         <input type="radio" name="sector_badge_visibility" value="public"
-               class="sr-only"
+               class="accent-teal"
                {% if profile.sector_badge_visibility != 'similar' and profile.sector_badge_visibility != 'hidden' %}checked{% endif %}>
         Show All Employers
       </label>
-      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
+      <label class="flex items-center gap-2 cursor-pointer text-sm text-primary">
         <input type="radio" name="sector_badge_visibility" value="similar"
-               class="sr-only"
+               class="accent-teal"
                {% if profile.sector_badge_visibility == 'similar' %}checked{% endif %}>
         Only Show Employers with Similar Badges
       </label>
-      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
+      <label class="flex items-center gap-2 cursor-pointer text-sm text-primary">
         <input type="radio" name="sector_badge_visibility" value="hidden"
-               class="sr-only"
+               class="accent-teal"
                {% if profile.sector_badge_visibility == 'hidden' %}checked{% endif %}>
         Do Not Show
       </label>

@@ -39,7 +39,7 @@ def dashboard(request):
     if profile.profile_complete:
         ranked_jobs = get_ranked_jobs(profile)[:5]
     else:
-        ranked_jobs = JobPosting.objects.filter(status='open', deleted_at__isnull=True).order_by('-created_at').select_related('company')[:5]
+        ranked_jobs = JobPosting.objects.filter(status='open', deleted_at__isnull=True, admin_disabled=False).order_by('-created_at').select_related('company')[:5]
         ranked_jobs = [{'job': j, 'score': None} for j in ranked_jobs]
 
     applications = (
@@ -56,7 +56,7 @@ def dashboard(request):
     followed_companies = profile.followed_companies.all()
     followed_jobs = []
     for company in followed_companies:
-        jobs = company.job_postings.filter(status='open').order_by('-created_at')[:2]
+        jobs = company.job_postings.filter(status='open', deleted_at__isnull=True, admin_disabled=False).order_by('-created_at')[:2]
         for job in jobs:
             followed_jobs.append({'company': company, 'job': job})
         if len(followed_jobs) >= 45:
@@ -86,7 +86,12 @@ def job_apply(request, job_id):
         return redirect('/register/info/')
 
     from apps.jobs.models import Application
-    job = get_object_or_404(JobPosting, id=job_id, status='open')
+    # Jobseekers must never be able to apply to an admin-disabled or
+    # soft-deleted job even via a stale link — those postings are off-limits.
+    job = get_object_or_404(
+        JobPosting, id=job_id, status='open',
+        deleted_at__isnull=True, admin_disabled=False,
+    )
     message = (request.POST.get('message') or '').strip()
     app, created = Application.objects.get_or_create(
         jobseeker=profile, job=job,
@@ -430,7 +435,11 @@ def companies_list(request):
 
     qs = qs.annotate(
         open_jobs_count=Count('job_postings',
-                              filter=DjQ(job_postings__status=JobPosting.STATUS_OPEN)),
+                              filter=DjQ(
+                                  job_postings__status=JobPosting.STATUS_OPEN,
+                                  job_postings__deleted_at__isnull=True,
+                                  job_postings__admin_disabled=False,
+                              )),
     )
 
     if sort == 'jobs':
@@ -975,9 +984,11 @@ def recommended_jobs(request):
             )
         return qs
 
-    # Soft-deleted jobs stay in the DB (in the employer's Trash tab) but
-    # must not surface in Liked / Hidden / recommendations lists.
-    base_qs = JobPosting.objects.filter(deleted_at__isnull=True).select_related(
+    # Soft-deleted OR admin-disabled jobs stay in the DB (employer's Trash /
+    # Disabled tabs) but must not surface in Bookmarked / Hidden / recs.
+    base_qs = JobPosting.objects.filter(
+        deleted_at__isnull=True, admin_disabled=False,
+    ).select_related(
         'company', 'experience_requirement'
     ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
 
@@ -1697,7 +1708,7 @@ def autocomplete_skills(request):
 
 def autocomplete_positions(request):
     query = request.GET.get('q', '').strip()
-    db_positions = JobPosting.objects.filter(status='open', deleted_at__isnull=True).values_list(
+    db_positions = JobPosting.objects.filter(status='open', deleted_at__isnull=True, admin_disabled=False).values_list(
         'title', flat=True).distinct()
     # semantic=False across all autocomplete endpoints so typing-UX flows
     # never trigger the sentence-transformers model load (~300MB RAM).

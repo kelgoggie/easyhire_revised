@@ -226,11 +226,15 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 
 # ── Session Security ──────────────────────────────────────────────
-# Keep sessions persistent across browser restarts so Render cold-starts
-# and tab closures don't surprise-logout users. SESSION_COOKIE_AGE
-# controls the actual lifetime.
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 14  # 14 days
+# Sessions die when the last browser window closes — matches the mental
+# model of "close the app to sign out" that admins expect after a shared-
+# workstation session. Page refreshes and tab-to-tab navigation don't
+# trigger a logout because the browser only discards session cookies on
+# full browser exit. SESSION_COOKIE_AGE is a hard server-side ceiling
+# for the rare case a browser hangs on to the cookie longer than it
+# should (e.g. Chrome's "continue where you left off" restore).
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 14  # 14 days (hard ceiling)
 SESSION_SAVE_EVERY_REQUEST = True       # slides the expiry forward on every request
 SESSION_COOKIE_HTTPONLY = True
 

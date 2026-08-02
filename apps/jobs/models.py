@@ -76,6 +76,13 @@ class JobPosting(models.Model):
     # intact even after the JobPosting itself is gone.
     deleted_at = models.DateTimeField(null=True, blank=True)
 
+    # Employers can record hires they made outside EasyHire (walk-ins,
+    # referrals, other job boards) so the platform's stats reflect the true
+    # fulfillment of the posting. Purely informational — doesn't decrement
+    # slots or auto-close the job; the employer still uses the Close Job
+    # action when the posting is fully filled.
+    externally_hired_count = models.PositiveIntegerField(default=0)
+
     class Meta:
         db_table = "job_postings"
         ordering = ["-created_at"]

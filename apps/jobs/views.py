@@ -14,7 +14,9 @@ class PublicJobListView(View):
     template_name = 'public/jobs.html'
 
     def get(self, request):
-        jobs = JobPosting.objects.filter(status=JobPosting.STATUS_OPEN, deleted_at__isnull=True).select_related(
+        jobs = JobPosting.objects.filter(
+            status=JobPosting.STATUS_OPEN, deleted_at__isnull=True, admin_disabled=False,
+        ).select_related(
             'company',
             'experience_requirement',
         ).prefetch_related(
@@ -54,7 +56,9 @@ class PublicJobDetailView(View):
 
     def get(self, request, pk):
         all_jobs = list(JobPosting.objects.filter(
-            status=JobPosting.STATUS_OPEN
+            status=JobPosting.STATUS_OPEN,
+            deleted_at__isnull=True,
+            admin_disabled=False,
         ).order_by('-created_at').values_list('id', flat=True))
 
         job = get_object_or_404(
@@ -68,6 +72,8 @@ class PublicJobDetailView(View):
             ),
             pk=pk,
             status=JobPosting.STATUS_OPEN,
+            deleted_at__isnull=True,
+            admin_disabled=False,
         )
 
         # Prev/next
@@ -136,10 +142,14 @@ class JobseekerJobDetailView(View):
             ),
             pk=pk,
             status=JobPosting.STATUS_OPEN,
+            deleted_at__isnull=True,
+            admin_disabled=False,
         )
 
         all_jobs = list(JobPosting.objects.filter(
-            status=JobPosting.STATUS_OPEN
+            status=JobPosting.STATUS_OPEN,
+            deleted_at__isnull=True,
+            admin_disabled=False,
         ).order_by('-created_at').values_list('id', flat=True))
 
         try:
