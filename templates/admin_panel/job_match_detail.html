@@ -1,19 +1,20 @@
 {% extends "admin_panel/base_admin.html" %}
+{% load admin_nav %}
 {% block title %}{{ jobseeker.first_name }} {{ jobseeker.last_name }} — {{ job.title }} — EasyHire Admin{% endblock %}
 
 {% block admin_content %}
-<div class="py-8 max-w-7xl mx-auto">
+<div class="py-8">
 
-  {# Back link. Context-aware: when the admin arrived via ?from=jobseeker     #}
-  {# (clicked a Top Compatible Job from the jobseeker detail page), back     #}
-  {# returns to the jobseeker. Otherwise it returns to the job's candidate   #}
-  {# list under its company.                                                 #}
-  <a href="{{ back_url }}"
+  {# Back link — the view still computes a semantically-correct default   #}
+  {# via `back_url` + `back_label`, but smart_back overrides that with    #}
+  {# the actual Referer when the admin arrived from a page we can label.  #}
+  {% smart_back back_url back_label as back %}
+  <a href="{{ back.url }}"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
     </svg>
-    {{ back_label }}
+    {{ back.label }}
   </a>
 
   <!-- Heading -->

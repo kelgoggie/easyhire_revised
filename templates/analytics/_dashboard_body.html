@@ -38,6 +38,19 @@
     <nav class="w-full md:w-60 flex-shrink-0 border-b md:border-b-0 md:border-r border-gray-200 px-4 py-5 overflow-y-auto md:max-h-[600px]">
 
       <p class="text-sm font-bold text-primary mb-1">
+        <strong>Labor &amp;</strong> <span class="font-normal text-primary/70">Employment</span>
+      </p>
+      <ul class="space-y-0.5 mb-4 text-sm">
+        <li><a href="#lab-applications" class="nav-pill" data-key="lab-applications">Applications</a></li>
+        <li><a href="#lab-filled" class="nav-pill" data-key="lab-filled">Jobs Filled</a></li>
+        <li><a href="#lab-industry" class="nav-pill" data-key="lab-industry">Jobs by Industry</a></li>
+        <li><a href="#lab-location" class="nav-pill" data-key="lab-location">Jobs by Location</a></li>
+        <li><a href="#lab-searched" class="nav-pill" data-key="lab-searched">Preferred Jobs</a></li>
+        <li><a href="#lab-demand" class="nav-pill" data-key="lab-demand">In Demand Jobs</a></li>
+        <li><a href="#lab-hard" class="nav-pill" data-key="lab-hard">Hard to Fill Jobs</a></li>
+      </ul>
+
+      <p class="text-sm font-bold text-primary mb-1">
         <strong>Jobseeker</strong> <span class="font-normal text-primary/70">Demographics</span>
       </p>
       <ul class="space-y-0.5 mb-4 text-sm">
@@ -61,19 +74,6 @@
         <li><a href="#emp-location" class="nav-pill" data-key="emp-location">Location</a></li>
       </ul>
 
-      <p class="text-sm font-bold text-primary mb-1">
-        <strong>Labor &amp;</strong> <span class="font-normal text-primary/70">Employment</span>
-      </p>
-      <ul class="space-y-0.5 text-sm">
-        <li><a href="#lab-applications" class="nav-pill" data-key="lab-applications">Applications</a></li>
-        <li><a href="#lab-filled" class="nav-pill" data-key="lab-filled">Jobs Filled</a></li>
-        <li><a href="#lab-industry" class="nav-pill" data-key="lab-industry">Jobs by Industry</a></li>
-        <li><a href="#lab-location" class="nav-pill" data-key="lab-location">Jobs by Location</a></li>
-        <li><a href="#lab-searched" class="nav-pill" data-key="lab-searched">Preferred Jobs</a></li>
-        <li><a href="#lab-demand" class="nav-pill" data-key="lab-demand">In Demand Jobs</a></li>
-        <li><a href="#lab-hard" class="nav-pill" data-key="lab-hard">Hard to Fill Jobs</a></li>
-      </ul>
-
       <p class="text-sm font-bold text-primary mb-1 mt-4">
         <strong>Comparisons</strong>
       </p>
@@ -88,7 +88,7 @@
     <section class="flex-1 p-4 sm:p-6 bg-white flex flex-col">
 
       <!-- ── Jobseeker: Registered Accounts ────────────────────── -->
-      <div data-panel="js-accounts" class="analytics-panel flex-1 flex flex-col">
+      <div data-panel="js-accounts" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Registered Accounts</h2>
         <p class="text-muted text-xs italic mb-4">New jobseeker accounts per month in {{ selected_year }}.</p>
         <div class="chart-box flex-1"><canvas id="chart-js-accounts"></canvas></div>
@@ -180,7 +180,7 @@
       </div>
 
       <!-- ── Labor: Applications ──────────────────────────────── -->
-      <div data-panel="lab-applications" class="analytics-panel hidden flex-1 flex flex-col">
+      <div data-panel="lab-applications" class="analytics-panel flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Applications</h2>
         <p class="text-muted text-xs italic mb-4">Applications submitted per month in {{ selected_year }}.</p>
         <div class="chart-box flex-1"><canvas id="chart-lab-applications"></canvas></div>
@@ -418,6 +418,15 @@ Chart.defaults.maintainAspectRatio = false;   // critical
 // so panelists don't have to hover to read numbers. Registered globally
 // so every Chart instance in this file picks it up automatically. Skips
 // zero/null values to avoid label clutter on empty months.
+//
+// Bar / line labels: drawn above the mark. Chart factories add `grace`
+// on the y-axis so the tallest label always has room above the plot area
+// instead of getting clipped by the top edge (issue seen on the Age Group
+// chart where "16" on the tallest bar was cropped).
+//
+// Pie / doughnut labels: drawn OUTSIDE the slice, near the arc's midpoint,
+// with a short leader-line style anchor. Text alignment flips based on
+// which half of the pie the slice sits in so nothing runs off the canvas.
 const AlwaysOnDataLabels = {
   id: 'alwaysOnDataLabels',
   afterDatasetsDraw(chart) {
@@ -447,15 +456,17 @@ const AlwaysOnDataLabels = {
           ctx.fillStyle = '#2D4A3E';
           ctx.fillText(label, el.x, el.y - 10);
         } else if (kind === 'pie' || kind === 'doughnut') {
-          const pos = el.tooltipPosition();
-          ctx.textAlign = 'center';
-          ctx.fillStyle = '#ffffff';
-          // Faint dark halo behind the white number so it stays readable
-          // on light slices (E8DCC4, EFE7C8, etc.).
-          ctx.shadowColor = 'rgba(0,0,0,0.45)';
-          ctx.shadowBlur = 3;
-          ctx.fillText(label, pos.x, pos.y);
-          ctx.shadowBlur = 0;
+          // Draw label OUTSIDE the slice near its midpoint. Uses the
+          // arc's centre + radii + start/end angles from Chart.js's
+          // ArcElement, then anchors text-align to whichever side of
+          // the canvas the label sits on so it never runs off the edge.
+          const angle = (el.startAngle + el.endAngle) / 2;
+          const r = (el.outerRadius || 0) + 14;
+          const x = el.x + Math.cos(angle) * r;
+          const y = el.y + Math.sin(angle) * r;
+          ctx.textAlign = Math.cos(angle) >= 0 ? 'left' : 'right';
+          ctx.fillStyle = '#2D4A3E';
+          ctx.fillText(label, x, y);
         }
       });
     });
@@ -463,6 +474,16 @@ const AlwaysOnDataLabels = {
   },
 };
 Chart.register(AlwaysOnDataLabels);
+
+// Shared y-axis config for bar/line — `grace: '15%'` adds headroom above
+// the max data value so the always-on data label at the top of the tallest
+// bar/point can't be clipped by the plot edge.
+const Y_AXIS_WITH_HEADROOM = {
+  beginAtZero: true,
+  grace: '15%',
+  ticks: { precision: 0 },
+  grid: { color: '#E5E5E5' },
+};
 
 // ── Chart factories ─────────────────────────────────────────────────
 function monthlyBar(canvasId, data) {
@@ -482,7 +503,7 @@ function monthlyBar(canvasId, data) {
         tooltip: { callbacks: { label: c => c.parsed.y } },
       },
       scales: {
-        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
+        y: Y_AXIS_WITH_HEADROOM,
         x: { grid: { display: false } },
       },
     },
@@ -505,7 +526,7 @@ function monthlyMultiLine(canvasId, series) {
           borderColor: s.color,
           backgroundColor: s.color + '22',
           fill: false,
-          tension: 0.35,
+          tension: 0,
           pointBackgroundColor: s.color,
           pointBorderColor: '#ffffff',
           pointBorderWidth: 1.5,
@@ -523,7 +544,7 @@ function monthlyMultiLine(canvasId, series) {
         },
       },
       scales: {
-        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
+        y: Y_AXIS_WITH_HEADROOM,
         x: { grid: { display: false } },
       },
     },
@@ -543,7 +564,7 @@ function comparisonBar(canvasId, labels, data, colors) {
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: {
-        x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
+        x: { beginAtZero: true, grace: '15%', ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
         y: { grid: { display: false } },
       },
     },
@@ -562,7 +583,7 @@ function monthlyLine(canvasId, data, color) {
         borderColor: color,
         backgroundColor: color + '22',
         fill: true,
-        tension: 0.35,
+        tension: 0,
         pointBackgroundColor: color,
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1.5,
@@ -577,7 +598,7 @@ function monthlyLine(canvasId, data, color) {
         tooltip: { callbacks: { label: c => c.parsed.y } },
       },
       scales: {
-        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
+        y: Y_AXIS_WITH_HEADROOM,
         x: { grid: { display: false } },
       },
     },
@@ -593,7 +614,7 @@ function barH(canvasId, labels, data, color) {
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: {
-        x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
+        x: { beginAtZero: true, grace: '15%', ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
         y: { grid: { display: false } },
       },
     },
@@ -608,7 +629,7 @@ function barV(canvasId, labels, data, color) {
     options: {
       plugins: { legend: { display: false } },
       scales: {
-        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#E5E5E5' } },
+        y: Y_AXIS_WITH_HEADROOM,
         x: { grid: { display: false } },
       },
     },
@@ -631,6 +652,9 @@ function pie(canvasId, labels, data, colors, unit) {
       hoverBackgroundColor: colors, hoverBorderColor: '#fff',
     }] },
     options: {
+      // Extra layout padding gives the outside data labels + legend room
+      // to breathe without being clipped by the canvas edge.
+      layout: { padding: { top: 12, bottom: 12, left: 12, right: 24 } },
       plugins: {
         legend: { position: 'right', labels: { boxWidth: 12, padding: 10 } },
         tooltip: {
@@ -709,9 +733,10 @@ document.querySelectorAll('.nav-pill').forEach(a => {
   });
 });
 
-// Initial selection from URL hash, else first item
-const initialKey = (window.location.hash || '').replace('#', '') || 'js-accounts';
+// Initial selection from URL hash, else the first sidebar item (which is
+// now Labor & Employment > Applications after the sidebar re-order).
+const initialKey = (window.location.hash || '').replace('#', '') || 'lab-applications';
 const valid = !!document.querySelector('.nav-pill[data-key="' + initialKey + '"]');
-selectPanel(valid ? initialKey : 'js-accounts');
+selectPanel(valid ? initialKey : 'lab-applications');
 </script>
 {% endblock %}

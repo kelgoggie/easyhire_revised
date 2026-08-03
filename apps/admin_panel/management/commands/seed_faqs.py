@@ -50,9 +50,13 @@ EMPLOYER_FAQS = [
     (
         "What do the match scores mean?",
         "Each applicant gets a score from 0-100 based on how closely their résumé matches your job's requirements "
-        "(skills, education, experience, certifications). Tiers range from <strong>Perfect Match</strong> (98+) down to "
-        "<strong>Unmatched</strong>. Recommended Candidates surfaces people who haven't applied but match strongly — useful "
-        "when you have a hard-to-fill role.",
+        "(skills, education, experience, certifications). There are five tiers: "
+        "<strong>Perfect Match</strong> (98+), "
+        "<strong>Great Match</strong> (90-97), "
+        "<strong>Good Match</strong> (80-89), "
+        "<strong>Decent Match</strong> (70-79), and "
+        "<strong>Unmatched</strong> (below 70). "
+        "The Recommended Candidates list surfaces jobseekers who haven't applied but match strongly — useful when you have a hard-to-fill role.",
     ),
     (
         "How do I update my company information?",
@@ -77,10 +81,16 @@ JOBSEEKER_FAQS = [
     ),
     (
         "What does the match score mean?",
-        "Match scores reflect how well your résumé aligns with a job's requirements. Tiers range from "
-        "<strong>Perfect</strong> (98+) and <strong>Great</strong> (90+) down to <strong>Poor</strong>. "
+        "Every job you see comes with a score from 0-100 showing how well your résumé lines up with what the employer is looking for. "
+        "There are five tiers: "
+        "<strong>Perfect Match</strong> (98+), "
+        "<strong>Great Match</strong> (90-97), "
+        "<strong>Good Match</strong> (80-89), "
+        "<strong>Decent Match</strong> (70-79), and "
+        "<strong>Unmatched</strong> (below 70). "
         "The algorithm weighs your skills, education, experience, certifications, location, and sector profile. "
-        "The more complete your résumé, the more accurate the match.",
+        "<strong>Unmatched</strong> doesn't mean you did anything wrong — it just means this particular job isn't a strong fit for your résumé today. "
+        "The more complete your résumé, the more accurate every score becomes.",
     ),
     (
         "How do I edit my résumé?",

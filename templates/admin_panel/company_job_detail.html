@@ -1,20 +1,37 @@
 {% extends "admin_panel/base_admin.html" %}
+{% load admin_nav %}
 {% block title %}{{ job.title }} — {{ company.name }} — EasyHire Admin{% endblock %}
 
 {% block admin_content %}
-<div class="py-8 max-w-7xl mx-auto">
+<div class="py-8">
 
   {# Breadcrumb-ish back — adapts to where the user came from.              #}
   {# Hides when arriving from a report; the _report_banner partial below   #}
   {# renders "Back to User Reports" in that case.                          #}
   {% if not active_report %}
-  <a href="{% if came_from_jobs %}/admin-panel/jobs/{% else %}/admin-panel/companies/{{ company.id|hashid }}/{% endif %}"
-     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
-    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-    </svg>
-    {% if came_from_jobs %}Back to Jobs{% else %}Back to {{ company.name }}{% endif %}
-  </a>
+  {% if came_from_jobs %}
+    {% with fallback_url="/admin-panel/jobs/" fallback_label="Back to Jobs" %}
+    {% smart_back fallback_url fallback_label as back %}
+    <a href="{{ back.url }}" class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+      {{ back.label }}
+    </a>
+    {% endwith %}
+  {% else %}
+    {% with cid=company.id|hashid %}
+    {% with fallback_url="/admin-panel/companies/"|add:cid|add:"/" fallback_label="Back to "|add:company.name %}
+    {% smart_back fallback_url fallback_label as back %}
+    <a href="{{ back.url }}" class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+      {{ back.label }}
+    </a>
+    {% endwith %}
+    {% endwith %}
+  {% endif %}
   {% endif %}
 
   <!-- Heading -->

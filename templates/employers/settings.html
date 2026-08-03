@@ -213,12 +213,12 @@
     {% csrf_token %}
     <input type="hidden" name="form_type" value="sectors">
     <p class="text-xs text-muted font-medium mb-2">Current sectors:</p>
-    <div class="flex flex-wrap gap-2 mb-3">
+    <div class="grid grid-cols-2 gap-2 mb-3">
       {% for sector in all_sectors %}
-      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal has-[:disabled]:opacity-50 has-[:disabled]:cursor-not-allowed">
+      <label class="flex items-center gap-2 cursor-pointer text-sm text-primary has-[:disabled]:opacity-50 has-[:disabled]:cursor-not-allowed">
         <input type="checkbox" name="sectors" value="{{ sector.id }}"
                {% if sector in company.sector_badges.all %}checked{% endif %}
-               class="sector-field sr-only" disabled>
+               class="sector-field accent-teal" disabled>
         {{ sector.label }}
       </label>
       {% endfor %}

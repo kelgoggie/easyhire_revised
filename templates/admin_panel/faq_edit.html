@@ -1,16 +1,18 @@
 {% extends "admin_panel/base_admin.html" %}
+{% load admin_nav %}
 {% block title %}{% if faq %}Edit FAQ{% else %}New FAQ{% endif %} — EasyHire Admin{% endblock %}
 
 {% with active_nav="faqs" %}
 {% block admin_content %}
-<div class="py-8 max-w-7xl mx-auto">
+<div class="py-8">
 
-  <a href="/admin-panel/faqs/"
+  {% smart_back "/admin-panel/faqs/" "Back to FAQs" as back %}
+  <a href="{{ back.url }}"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
     </svg>
-    Back to FAQs
+    {{ back.label }}
   </a>
 
   <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">
