@@ -1,8 +1,9 @@
 {# Compatibility Breakdown card. Same visual as the admin's job_match_detail  #}
 {# breakdown so employers see the exact same signal PESO sees. Expects a       #}
 {# `breakdown` dict with keys skills/education/experience/certifications        #}
-{# (0-100 ints). Optional `score` overall percent. Falls back gracefully if    #}
-{# any key is missing.                                                          #}
+{# (0-100 ints), an optional `score` overall percent, and an optional          #}
+{# `matched_items` dict of {category: [{name, met}, ...]} for the per-        #}
+{# requirement tags rendered under each bar.                                   #}
 <div class="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
   <div class="flex items-center justify-between mb-1">
     <p class="text-sm font-bold text-primary">Compatibility Breakdown</p>
@@ -12,17 +13,32 @@
   </div>
   <p class="text-muted text-xs mb-4">How this jobseeker scored on each requirement category for this job.</p>
 
-  {% with b=breakdown %}
-  <div class="space-y-3">
+  {% with b=breakdown m=matched_items %}
+  <div class="space-y-4">
+
+    {# ── Skills ── #}
     <div>
       <div class="flex justify-between text-xs mb-1">
         <span class="text-primary font-semibold">Skills:</span>
         <span class="text-muted">{{ b.skills|default:0 }}%</span>
       </div>
       <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div class="h-full bg-green-300" style="width: {{ b.skills|default:0 }}%"></div>
+        <div class="h-full bg-teal" style="width: {{ b.skills|default:0 }}%"></div>
       </div>
+      {% if m.skills %}
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        {% for item in m.skills %}
+          {% if item.met %}
+          <span class="inline-flex items-center bg-teal/15 text-teal border border-teal/30 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">{{ item.name }}</span>
+          {% else %}
+          <span class="inline-flex items-center bg-gray-100 text-muted border border-gray-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">{{ item.name }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
+
+    {# ── Education ── #}
     <div>
       <div class="flex justify-between text-xs mb-1">
         <span class="text-primary font-semibold">Education:</span>
@@ -31,7 +47,20 @@
       <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div class="h-full bg-teal/40" style="width: {{ b.education|default:0 }}%"></div>
       </div>
+      {% if m.education %}
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        {% for item in m.education %}
+          {% if item.met %}
+          <span class="inline-flex items-center bg-teal/15 text-teal border border-teal/30 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">{{ item.name }}</span>
+          {% else %}
+          <span class="inline-flex items-center bg-gray-100 text-muted border border-gray-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">{{ item.name }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
+
+    {# ── Experience ── #}
     <div>
       <div class="flex justify-between text-xs mb-1">
         <span class="text-primary font-semibold">Experience:</span>
@@ -40,7 +69,20 @@
       <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div class="h-full bg-purple-300" style="width: {{ b.experience|default:0 }}%"></div>
       </div>
+      {% if m.experience %}
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        {% for item in m.experience %}
+          {% if item.met %}
+          <span class="inline-flex items-center bg-teal/15 text-teal border border-teal/30 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">{{ item.name }}</span>
+          {% else %}
+          <span class="inline-flex items-center bg-gray-100 text-muted border border-gray-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">{{ item.name }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
+
+    {# ── Certifications ── #}
     <div>
       <div class="flex justify-between text-xs mb-1">
         <span class="text-primary font-semibold">Certifications:</span>
@@ -49,7 +91,19 @@
       <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div class="h-full bg-gray-400" style="width: {{ b.certifications|default:0 }}%"></div>
       </div>
+      {% if m.certifications %}
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        {% for item in m.certifications %}
+          {% if item.met %}
+          <span class="inline-flex items-center bg-teal/15 text-teal border border-teal/30 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">{{ item.name }}</span>
+          {% else %}
+          <span class="inline-flex items-center bg-gray-100 text-muted border border-gray-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">{{ item.name }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
+
   </div>
   {% endwith %}
 </div>

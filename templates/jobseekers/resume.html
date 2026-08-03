@@ -204,17 +204,18 @@
           <p class="text-sm font-bold text-primary mb-1">Sectors</p>
           <p class="text-xs text-muted mb-3">Select which sector/s you belong to so the algorithm can recommend more inclusive employers for you.</p>
 
-          {# Manual + auto sectors both render as a 2-column grid of rounded #}
-          {# rectangles. Manual ones are toggle checkboxes (label wraps an  #}
-          {# sr-only input, has-[:checked] flips the pill teal). Auto ones  #}
-          {# are read-only info chips.                                      #}
+          {# Manual + auto sectors render as native checkboxes (visible box  #}
+          {# indicators + accent-teal fill), 2-col grid. Data model is       #}
+          {# ManyToMany so we can't literally use <input type="radio">.      #}
+          {# Auto-applied entries render as disabled + checked checkboxes so #}
+          {# jobseekers see the same control style but can't toggle them.   #}
           <p class="text-xs text-muted font-medium mb-2">Which sectors do you belong to?</p>
           <div class="grid grid-cols-2 gap-2 mb-3">
             {% for sector in manual_sectors %}
-            <label class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-primary">
               <input type="checkbox" name="sectors" value="{{ sector.id }}"
                      {% if sector in profile.sectors.all %}checked{% endif %}
-                     class="resume-field sr-only">
+                     class="resume-field accent-teal">
               {{ sector.label }}
             </label>
             {% endfor %}
@@ -226,12 +227,10 @@
             <p class="text-xs text-muted mb-2">Auto-applied:</p>
             <div class="grid grid-cols-2 gap-2">
               {% for sector in auto_sectors %}
-              <span class="flex items-center gap-2 border border-teal/25 bg-teal/8 rounded-lg px-3 py-2 text-xs text-teal">
-                <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                </svg>
+              <label class="flex items-center gap-2 text-xs text-teal opacity-90 cursor-not-allowed">
+                <input type="checkbox" checked disabled class="accent-teal">
                 {{ sector.label }}
-              </span>
+              </label>
               {% endfor %}
             </div>
           </div>

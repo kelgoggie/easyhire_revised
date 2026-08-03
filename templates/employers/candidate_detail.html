@@ -1,23 +1,39 @@
 {% extends "base/base_dashboard_employer.html" %}
-{% load static match_tags %}
+{% load static match_tags employer_nav %}
 
 {% block title %}{{ jobseeker.full_name }} — EasyHire{% endblock %}
 
 {% block page_content %}
 <div class="py-6">
 
-  {# ── Job context header (only when we came from /jobs/<id>/candidates/) ── #}
+  {# ── Job-scoped back link ─────────────────────────────────────────────── #}
+  {# Label reflects the actual tab the employer came from — Applicants vs   #}
+  {# Recommended Jobseekers — so the affordance is honest about the return  #}
+  {# destination. `from_tab` is set from ?from=recommended on the referring #}
+  {# card link; anything else lands on Applicants.                          #}
   {% if current_job %}
-  {# Back-link takes the employer to the exact tab they came from. from_tab #}
-  {# is set from ?from=recommended on the referring card link; anything     #}
-  {# else lands on Applicants.                                              #}
   <a href="/employers/jobs/{{ current_job.id|hashid }}/candidates/?tab={% if from_tab == 'recommended' %}recommended{% else %}applicants{% endif %}"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
     </svg>
-    Back to {{ current_job.title }}
+    {% if from_tab == 'recommended' %}Back to Recommended Jobseekers{% else %}Back to Applicants{% endif %}
   </a>
+  {% else %}
+  {# Non-job-scoped detail (arrived from All Candidates, Company Profile, #}
+  {# etc.). smart_back reads the Referer and picks a matching label; the #}
+  {# fallback lands on All Candidates so there's always somewhere to go. #}
+  {% smart_back "/employers/all_candidates/" "Back to All Candidates" as back %}
+  <a href="{{ back.url }}"
+     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    {{ back.label }}
+  </a>
+  {% endif %}
+
+  {% if current_job %}
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
     <div class="min-w-0">
       <p class="text-muted text-xs uppercase tracking-wide font-semibold">
@@ -159,7 +175,7 @@
   {# jobseeker + job pair on the admin's job_match_detail page).         #}
   {% if match_score %}
   <div class="mb-5">
-    {% include "partials/_match_breakdown.html" with breakdown=match_score.breakdown score=match_score.total %}
+    {% include "partials/_match_breakdown.html" with breakdown=match_score.breakdown score=match_score.total matched_items=match_score.matched_items %}
   </div>
   {% endif %}
 

@@ -1,11 +1,23 @@
 {% extends "base/base_dashboard_employer.html" %}
-{% load static match_tags %}
+{% load static match_tags employer_nav %}
 
 {% block title %}{{ job.title }} — EasyHire for Employers{% endblock %}
 
 {% with active_nav="jobs" %}
 {% block page_content %}
 <div class="py-8">
+
+  {# Smart back — Jobs list is the default entry point for this page, but #}
+  {# if the employer got here from somewhere else (Dashboard, Inbox, etc.) #}
+  {# smart_back honours that. #}
+  {% smart_back "/employers/jobs/" "Back to Jobs" as back %}
+  <a href="{{ back.url }}"
+     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    {{ back.label }}
+  </a>
 
   <!-- ── Title row ──────────────────────────────────────────────── -->
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-2">
@@ -135,7 +147,7 @@
       {% for item in ranked %}
       <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col cursor-pointer"
            data-jobseeker-id="{{ item.profile.id|hashid }}"
-           onclick="if (event.target.closest('a, button, form')) return; window.location='/employers/candidates/{{ item.profile.id|hashid }}/';">
+           onclick="if (event.target.closest('a, button, form')) return; window.location='/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}&from=recommended';">
 
         <div class="flex items-start justify-between gap-3 mb-3">
           <div class="min-w-0 flex-1">

@@ -547,6 +547,45 @@ def compute_match_score(job, profile):
     jobseeker_district = get_district(getattr(profile, 'barangay', ''))
     job_district = get_district(getattr(job, 'barangay_name', ''))
 
+    # ── Per-requirement match tags (rendered by _match_breakdown.html) ──
+    # For each category we build a list of {name, met} entries derived
+    # from the JOB's requirements — each item is coloured teal (met) or
+    # gray (missing) in the template. Non-required rows are skipped so
+    # employers only see must-haves.
+    skill_items = [
+        {'name': rs.name,
+         'met': any(fuzzy_match(rs.name, js) for js in jobseeker_skills)}
+        for rs in required_skills
+    ]
+    cert_items = [
+        {'name': rc.name,
+         'met': any(fuzzy_match(rc.name, jc) for jc in jobseeker_certs)}
+        for rc in required_certs
+    ]
+
+    edu_items = []
+    try:
+        edu_req = job.education_requirement
+    except Exception:
+        edu_req = None
+    if edu_req:
+        edu_label = edu_req.get_level_display()
+        if edu_req.course_degree:
+            edu_label = f'{edu_label} — {edu_req.course_degree}'
+        edu_items = [{'name': edu_label, 'met': edu >= 1.0}]
+
+    exp_items = []
+    try:
+        exp_req = job.experience_requirement
+    except Exception:
+        exp_req = None
+    if exp_req:
+        try:
+            exp_label = exp_req.display_experience
+        except Exception:
+            exp_label = f'{req_months} month{"" if req_months == 1 else "s"} experience'
+        exp_items = [{'name': exp_label, 'met': exp >= 1.0}]
+
     return {
         'total': round(total * 100),
         'breakdown': {
@@ -556,6 +595,12 @@ def compute_match_score(job, profile):
             'certifications': round(certs * 100),
             'query_boost': round(query_boost * 100),
             'location_boost': round(location_boost * 100),
+        },
+        'matched_items': {
+            'skills':         skill_items,
+            'education':      edu_items,
+            'experience':     exp_items,
+            'certifications': cert_items,
         },
         'counts': {
             'skills_matched': matched_skills,
