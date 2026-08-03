@@ -78,31 +78,34 @@
   {% endif %}
 
   <!-- ── Personal Information ──────────────────────────────────── -->
+  {# Fields start disabled. Clicking "Edit" enables them and the button    #}
+  {# swaps to "Save" (which now truly submits the form). This mirrors the  #}
+  {# lock/unlock pattern used on the jobseeker's own résumé page.          #}
   <h3 class="text-lg font-bold text-primary mb-3">Personal Information</h3>
-  <form method="POST" class="mb-8">
+  <form method="POST" class="mb-8" id="personal-form">
     {% csrf_token %}
     <input type="hidden" name="form" value="personal">
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
       <div>
         <label class="block text-primary text-xs mb-1">First Name</label>
-        <input type="text" name="first_name" value="{{ jobseeker.first_name }}" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="text" name="first_name" value="{{ jobseeker.first_name }}" required disabled
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Middle Name</label>
-        <input type="text" name="middle_name" value="{{ jobseeker.middle_name }}"
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="text" name="middle_name" value="{{ jobseeker.middle_name }}" disabled
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Last Name</label>
-        <input type="text" name="last_name" value="{{ jobseeker.last_name }}" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="text" name="last_name" value="{{ jobseeker.last_name }}" required disabled
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Suffix</label>
-        <input type="text" name="suffix" value="{{ jobseeker.suffix }}"
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="text" name="suffix" value="{{ jobseeker.suffix }}" disabled
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
     </div>
 
@@ -112,15 +115,16 @@
         <div class="relative">
           <input type="text" name="date_of_birth" data-datepicker="date" data-display-format="long"
                  value="{% if jobseeker.date_of_birth %}{{ jobseeker.date_of_birth|date:'F j, Y' }}{% endif %}"
-                 placeholder="Select date" readonly autocomplete="off"
-                 class="w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
+                 placeholder="Select date" readonly autocomplete="off" disabled
+                 class="personal-field w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
           <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         </div>
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Sex</label>
         <div class="relative">
-          <select name="sex" class="w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+          <select name="sex" disabled
+                  class="personal-field w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
             <option value="M" {% if jobseeker.sex == 'M' %}selected{% endif %}>Male</option>
             <option value="F" {% if jobseeker.sex == 'F' %}selected{% endif %}>Female</option>
           </select>
@@ -129,13 +133,34 @@
       </div>
       <div></div>
       <div class="flex justify-end">
-        <button type="submit"
+        <button type="button" id="personal-edit-btn"
                 class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-8 py-2 rounded-full hover:bg-taupe/30 transition w-full">
           Edit
+        </button>
+        <button type="submit" id="personal-save-btn"
+                class="hidden bg-amber text-white text-sm font-semibold px-8 py-2 rounded-full hover:bg-amber/90 transition w-full">
+          Save
         </button>
       </div>
     </div>
   </form>
+
+  <script>
+  (function() {
+    const editBtn = document.getElementById('personal-edit-btn');
+    const saveBtn = document.getElementById('personal-save-btn');
+    const fields  = document.querySelectorAll('#personal-form .personal-field');
+    if (!editBtn || !saveBtn) return;
+    editBtn.addEventListener('click', function() {
+      fields.forEach(function(f) { f.disabled = false; });
+      editBtn.classList.add('hidden');
+      saveBtn.classList.remove('hidden');
+      // Focus the first field so it's clear the form is now editable.
+      const first = document.querySelector('#personal-form .personal-field:not([readonly])');
+      if (first) { try { first.focus(); } catch(e) {} }
+    });
+  })();
+  </script>
 
   <!-- ── Reset Password ────────────────────────────────────────── -->
   {# Two paths: (1) generate a random temp password (used for PESO-mediated  #}

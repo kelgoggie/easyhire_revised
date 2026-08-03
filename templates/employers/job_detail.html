@@ -203,6 +203,33 @@
 
 </div>
 
+<!-- ── External hires modal ─────────────────────────────────────────── -->
+{# Modal lives above the <script> block so the IIFE below finds it via  #}
+{# document.getElementById() at parse time — inline scripts execute in  #}
+{# document order, and the modal used to sit AFTER the script which  #}
+{# meant the guard `if (!modal) return` bailed and the button click     #}
+{# never got its handler.                                              #}
+<div id="external-hires-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" data-backdrop></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
+    <p class="text-primary font-bold text-base mb-1">Mark hired externally</p>
+    <p class="text-muted text-xs mb-4">Record how many people you hired for <strong>{{ job.title }}</strong> outside EasyHire (walk-ins, referrals, other job boards). This is informational — it doesn't close the job or change your slot count.</p>
+    <form id="external-hires-form" method="POST" action="/employers/jobs/{{ job.id|hashid }}/external-hires/">
+      {% csrf_token %}
+      <label for="external-hires-input" class="block text-primary text-xs font-medium mb-1">Number hired externally</label>
+      <input type="number" name="count" id="external-hires-input" min="0" step="1" value="{{ job.externally_hired_count|default:0 }}"
+             class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+      <p id="external-hires-error" class="hidden text-red-500 text-xs mt-2"></p>
+      <div class="flex justify-end gap-3 mt-5">
+        <button type="button" id="external-hires-cancel"
+                class="bg-gray-100 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition">Cancel</button>
+        <button type="submit"
+                class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 // Invite to Apply — confirm, then fire AJAX and flip the button to
 // "Invitation Sent" in place. Skips the full page reload so the employer
@@ -323,28 +350,6 @@ document.querySelectorAll('form.invite-form').forEach(function(form) {
   });
 })();
 </script>
-
-<!-- ── External hires modal ─────────────────────────────────────────── -->
-<div id="external-hires-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-  <div class="absolute inset-0 bg-black/40" data-backdrop></div>
-  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
-    <p class="text-primary font-bold text-base mb-1">Mark hired externally</p>
-    <p class="text-muted text-xs mb-4">Record how many people you hired for <strong>{{ job.title }}</strong> outside EasyHire (walk-ins, referrals, other job boards). This is informational — it doesn't close the job or change your slot count.</p>
-    <form id="external-hires-form" method="POST" action="/employers/jobs/{{ job.id|hashid }}/external-hires/">
-      {% csrf_token %}
-      <label for="external-hires-input" class="block text-primary text-xs font-medium mb-1">Number hired externally</label>
-      <input type="number" name="count" id="external-hires-input" min="0" step="1" value="{{ job.externally_hired_count|default:0 }}"
-             class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
-      <p id="external-hires-error" class="hidden text-red-500 text-xs mt-2"></p>
-      <div class="flex justify-end gap-3 mt-5">
-        <button type="button" id="external-hires-cancel"
-                class="bg-gray-100 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition">Cancel</button>
-        <button type="submit"
-                class="bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">Save</button>
-      </div>
-    </form>
-  </div>
-</div>
 
 {% endblock %}
 {% endwith %}

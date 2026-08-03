@@ -1,0 +1,159 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load static match_tags admin_nav %}
+{% block title %}Compatible Jobs — {{ jobseeker.first_name }} {{ jobseeker.last_name }}{% endblock %}
+
+{% with active_nav="jobseekers" %}
+{% block admin_content %}
+<div class="py-8">
+
+  {% with jid=jobseeker.id|hashid js_name=jobseeker.first_name|add:" "|add:jobseeker.last_name %}
+  {% with fallback_url="/admin-panel/jobseekers/"|add:jid|add:"/" fallback_label="Back to "|add:js_name %}
+  {% smart_back fallback_url fallback_label as back %}
+  <a href="{{ back.url }}" class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    {{ back.label }}
+  </a>
+  {% endwith %}
+  {% endwith %}
+
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+    <div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-primary leading-tight">Compatible Jobs</h1>
+      <p class="text-muted text-sm mt-0.5">
+        Open jobs ranked by match score for
+        <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/" class="text-primary font-semibold hover:text-teal transition">{{ jobseeker.first_name }} {{ jobseeker.last_name }}</a>.
+      </p>
+    </div>
+    <form id="search-form" method="GET" action="" class="w-full sm:w-auto sm:max-w-md sm:flex-1">
+      <input type="hidden" name="sort" value="{{ sort }}">
+      <input type="hidden" name="min_match" value="{{ min_match }}">
+      <div class="relative">
+        <input type="text" name="q" value="{{ search|default:'' }}" placeholder="Search jobs..."
+               class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
+        <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+          </svg>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {# Sort + min-match filter row, mirrors the jobseeker /jobs/for-you/ UX. #}
+  <div class="flex items-center justify-between gap-4 mb-6 flex-wrap">
+    <div class="flex items-center gap-1.5 flex-wrap">
+      {% for m in min_match_choices %}
+      <a href="?{% if search %}q={{ search|urlencode }}&{% endif %}sort={{ sort }}{% if m.value %}&min_match={{ m.value }}{% endif %}"
+         class="px-3 py-1 rounded-full text-xs font-semibold transition border
+                {% if m.value == min_match %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+        {{ m.label }}
+      </a>
+      {% endfor %}
+    </div>
+    <div class="relative" id="sort-wrapper">
+      <button type="button" onclick="document.getElementById('sort-menu').classList.toggle('hidden')"
+              class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 8h10M11 12h4"/>
+        </svg>
+        <span>
+          {% if sort == 'date_new' %}Recently Posted
+          {% elif sort == 'date_old' %}Oldest First
+          {% else %}Best Match{% endif %}
+        </span>
+      </button>
+      <div id="sort-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
+        {% with base_q="?q="|add:search %}
+        <a href="{{ base_q }}&sort=match{% if min_match %}&min_match={{ min_match }}{% endif %}"    class="block px-4 py-2 text-sm {% if sort == 'match' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Best Match</a>
+        <a href="{{ base_q }}&sort=date_new{% if min_match %}&min_match={{ min_match }}{% endif %}" class="block px-4 py-2 text-sm {% if sort == 'date_new' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Recently Posted</a>
+        <a href="{{ base_q }}&sort=date_old{% if min_match %}&min_match={{ min_match }}{% endif %}" class="block px-4 py-2 text-sm {% if sort == 'date_old' %}text-teal font-semibold{% else %}text-primary hover:bg-surface{% endif %}">Oldest First</a>
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+
+  {# Card grid — mirrors jobseekers/_jobs_grid.html visually (same rounded #}
+  {# cards, badge in the top-right, education/skills/experience/cert tags)  #}
+  {# but each card links to the admin's per-job match detail so PESO can    #}
+  {# inspect the score breakdown. No like/hide buttons — this is admin.     #}
+  {% if ranked_jobs %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for item in ranked_jobs %}
+    <a href="/admin-panel/companies/{{ item.job.company.id|hashid }}/jobs/{{ item.job.id|hashid }}/match/{{ jobseeker.id|hashid }}/?from=jobseeker"
+       class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
+      <div class="flex items-start justify-end px-4 pt-3 pb-1 min-h-[28px]">
+        {% match_badge item.score %}
+      </div>
+      <div class="px-4 pb-3 flex-1">
+        <p class="font-bold text-primary text-base leading-tight mb-0.5">{{ item.job.title }}</p>
+        <p class="text-primary text-xs mb-0.5">
+          {{ item.job.company.name }}{% include "partials/_verified_badge.html" with verified=item.job.company.is_verified %}
+        </p>
+        <p class="text-muted text-xs italic mb-3">{{ item.job.location_display }}</p>
+
+        <div class="flex flex-col gap-1.5">
+          {% if item.job.education_requirement %}
+          <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20 w-fit max-w-full">
+            <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+            <span class="truncate">{{ item.job.education_requirement.get_level_display }}</span>
+          </span>
+          {% endif %}
+
+          {% with skills=item.job.skill_requirements.all %}
+          {% if skills %}
+          <div class="grid grid-cols-2 gap-1">
+            {% for skill in skills|slice:":2" %}
+            <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2 py-0.5 rounded-full border border-green-200 truncate">
+              <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+              <span class="truncate">{{ skill.name }}</span>
+            </span>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endwith %}
+
+          {% if item.job.experience_requirement %}
+          <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2.5 py-0.5 rounded-full border border-purple-200 w-fit max-w-full">
+            <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span class="truncate">{{ item.job.experience_requirement.display_experience }}</span>
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="px-4 pb-4 pt-1">
+        <span class="block w-full text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full">
+          Inspect Match
+        </span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if page.paginator.num_pages > 1 %}
+  {% with page=page qs_base=qs_base page_param="page" %}
+  {% include "partials/_pagination.html" %}
+  {% endwith %}
+  {% endif %}
+  {% else %}
+  <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+    <p class="text-muted text-sm">
+      {% if search %}No jobs found for &ldquo;{{ search }}&rdquo;.
+      {% elif min_match %}No jobs match this threshold. Lower the minimum match filter to see more.
+      {% else %}No open jobs available right now, or this jobseeker hasn't completed their profile.{% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+document.addEventListener('click', function(e) {
+  const w = document.getElementById('sort-wrapper');
+  const m = document.getElementById('sort-menu');
+  if (w && m && !w.contains(e.target)) m.classList.add('hidden');
+});
+</script>
+{% endblock %}
+{% endwith %}

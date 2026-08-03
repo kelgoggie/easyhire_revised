@@ -118,6 +118,8 @@
   <div class="bg-surface/60 border border-taupe/40 rounded-2xl p-5">
     <div class="flex items-baseline justify-between mb-3">
       <p class="text-primary font-bold text-sm">Job Posts <span class="text-muted font-normal">({{ jobs|length }})</span></p>
+      <a href="/admin-panel/companies/{{ company.id|hashid }}/job-posts/"
+         class="text-teal text-xs font-semibold hover:underline">View all &rsaquo;</a>
     </div>
     {% if jobs %}
     <div class="space-y-2">

@@ -911,6 +911,24 @@ def candidates(request, job_id):
     if min_match:
         ranked = [r for r in ranked if (r.get('score') or 0) >= min_match]
 
+    # Free-text search across both tabs. Substring match (case-insensitive)
+    # on the jobseeker's full name and any listed skill — same fields as
+    # the All Candidates page so the mental model is consistent.
+    search = (request.GET.get('q') or '').strip()
+    if search:
+        needle = search.lower()
+        from apps.jobseekers.models import Skill
+        def _matches(r):
+            p = r.get('profile')
+            if not p:
+                return False
+            name = f"{p.first_name or ''} {p.last_name or ''}".strip().lower()
+            if needle in name:
+                return True
+            skills = Skill.objects.filter(profile=p).values_list('name', flat=True)
+            return any(needle in (s or '').lower() for s in skills)
+        ranked = [r for r in ranked if _matches(r)]
+
     from apps.core.pagination import paginate, querystring_without
     page = paginate(request, ranked, per_page=12)
 
@@ -935,6 +953,7 @@ def candidates(request, job_id):
         'status_counts': status_counts,
         'min_match': min_match,
         'min_match_choices': min_match_choices,
+        'search': search,
         'page': page,
         'qs_base': querystring_without(request, 'page'),
         'unread_notifications': False,
@@ -1256,11 +1275,31 @@ def candidate_detail(request, jobseeker_id):
         except Exception:
             match_score = None
 
-        # Build applicant order — same sort as the candidates page.
-        ordered_ids = list(Application.objects
-                           .filter(job=current_job)
-                           .order_by('-created_at')
-                           .values_list('jobseeker_id', flat=True))
+        # Build prev/next order. Which list to walk depends on where the
+        # employer came from:
+        #   ?from=recommended  → walk get_ranked_jobseekers() minus applicants
+        #                        (mirrors the Recommended tab on candidates page)
+        #   default            → walk Application.objects for this job
+        #                        (mirrors the Applicants tab)
+        # Without this split, Recommended-tab arrivals were always locked out
+        # of Previous/Next because the ordering list only held applicants.
+        _from_tab = (request.GET.get('from') or '').strip().lower()
+        if _from_tab == 'recommended':
+            from apps.matching.engine import get_ranked_jobseekers
+            _applicant_ids = set(
+                Application.objects.filter(job=current_job)
+                .values_list('jobseeker_id', flat=True)
+            )
+            ordered_ids = [
+                r['profile'].id
+                for r in get_ranked_jobseekers(current_job)
+                if r['profile'].id not in _applicant_ids
+            ]
+        else:
+            ordered_ids = list(Application.objects
+                               .filter(job=current_job)
+                               .order_by('-created_at')
+                               .values_list('jobseeker_id', flat=True))
         if jobseeker.id in ordered_ids:
             idx = ordered_ids.index(jobseeker.id)
             if idx > 0:

@@ -1,4 +1,5 @@
 {% extends "admin_panel/base_admin.html" %}
+{% load static %}
 {% block title %}Jobseekers — EasyHire Admin{% endblock %}
 
 {% with active_nav="jobseekers" %}
@@ -15,7 +16,6 @@
       {% if sex_filter %}<input type="hidden" name="sex" value="{{ sex_filter }}">{% endif %}
       {% if sector_codes %}<input type="hidden" name="sectors" value="{{ sector_codes|join:',' }}">{% endif %}
       {% if edu_levels %}<input type="hidden" name="edu" value="{{ edu_levels|join:',' }}">{% endif %}
-      {% if cities_selected %}<input type="hidden" name="city" value="{{ cities_selected|join:',' }}">{% endif %}
       <div class="relative">
         <input type="text" name="q" value="{{ search }}" placeholder="Search Jobseekers..."
                class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
@@ -37,6 +37,10 @@
       <a href="?tab=deactivated{% if search %}&q={{ search|urlencode }}{% endif %}&sort={{ sort }}{{ filter_qs }}"
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'deactivated' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         Deactivated <span class="opacity-70">({{ deactivated_count }})</span>
+      </a>
+      <a href="?tab=verified{% if search %}&q={{ search|urlencode }}{% endif %}&sort={{ sort }}{{ filter_qs }}"
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'verified' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+        Verified <span class="opacity-70">({{ verified_count }})</span>
       </a>
       <a href="?tab=unverified{% if search %}&q={{ search|urlencode }}{% endif %}&sort={{ sort }}{{ filter_qs }}"
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if tab == 'unverified' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
@@ -66,8 +70,7 @@
              data-base="?tab={{ tab }}&sort={{ sort }}{% if search %}&q={{ search|urlencode }}{% endif %}"
              data-sex="{{ sex_filter }}"
              data-sectors="{{ sector_codes|join:',' }}"
-             data-edu="{{ edu_levels|join:',' }}"
-             data-city="{{ cities_selected|join:',' }}">
+             data-edu="{{ edu_levels|join:',' }}">
 
           {# Sex — single-select. Clicking the active chip clears it. #}
           <div class="mb-3">
@@ -112,21 +115,6 @@
             </div>
           </div>
 
-          {% if city_choices %}
-          <div class="mb-3">
-            <p class="text-muted text-xs font-medium mb-1.5">City</p>
-            <div class="flex flex-wrap gap-1.5">
-              {% for c in city_choices %}
-              <button type="button" data-filter="city" data-value="{{ c.code }}"
-                      class="filter-chip px-3 py-1 rounded-full text-xs font-semibold transition border
-                             {% if c.code in cities_selected %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
-                {{ c.label }}
-              </button>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-
           <div class="pt-3 border-t border-gray-100 flex justify-end">
             <a href="?tab={{ tab }}&sort={{ sort }}{% if search %}&q={{ search|urlencode }}{% endif %}"
                class="text-muted text-xs font-semibold hover:text-primary transition {% if not has_filters %}opacity-40 pointer-events-none{% endif %}">
@@ -170,7 +158,7 @@
       <a href="/admin-panel/jobseekers/{{ js.id|hashid }}/"
          class="block bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition h-full">
 
-        <p class="font-bold text-primary text-base leading-tight pr-8">{{ js.first_name }} {{ js.last_name }}</p>
+        <p class="font-bold text-primary text-base leading-tight pr-8">{{ js.first_name }} {{ js.last_name }}{% include "partials/_verified_badge.html" with verified=js.is_id_verified label="PESO Verified" %}</p>
         <p class="text-muted text-xs italic mb-3">Joined {{ js.created_at|date:"M j Y" }}</p>
 
         {# Highest education snippet — picks first prefetched row (already sorted DESC year_started). #}
@@ -354,7 +342,6 @@ document.addEventListener('click', function(e) {
     sex:     panel.dataset.sex     || '',
     sectors: (panel.dataset.sectors || '').split(',').filter(Boolean),
     edu:     (panel.dataset.edu     || '').split(',').filter(Boolean),
-    city:    (panel.dataset.city    || '').split(',').filter(Boolean),
   };
 
   function toggleMulti(list, value) {
@@ -367,7 +354,6 @@ document.addEventListener('click', function(e) {
     if (state.sex) url += '&sex=' + encodeURIComponent(state.sex);
     if (state.sectors.length) url += '&sectors=' + state.sectors.map(encodeURIComponent).join(',');
     if (state.edu.length)     url += '&edu=' + state.edu.map(encodeURIComponent).join(',');
-    if (state.city.length)    url += '&city=' + state.city.map(encodeURIComponent).join(',');
     return url;
   }
 

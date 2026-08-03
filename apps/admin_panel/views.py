@@ -426,12 +426,13 @@ def jobseeker_list(request):
     search = (request.GET.get('q') or '').strip()
     sort   = (request.GET.get('sort') or 'newest').strip()
     tab    = (request.GET.get('tab')  or 'all').strip()
-    if tab not in {'all', 'deactivated', 'unverified'}:
+    if tab not in {'all', 'deactivated', 'verified', 'unverified'}:
         tab = 'all'
 
     # ── Filter params ─────────────────────────────────────────────
-    # Sex is single-select; the rest are multi-select CSV so the URL stays
-    # short and mirrors the chip-panel pattern from recommended_jobs.
+    # Sex is single-select; sectors/education are multi-select CSV. City
+    # filter was removed — admins were filtering by full city name which
+    # is redundant when we already surface district in each card.
     sex_filter = (request.GET.get('sex') or '').strip().upper()
     if sex_filter not in {'M', 'F'}:
         sex_filter = ''
@@ -442,7 +443,6 @@ def jobseeker_list(request):
 
     sector_codes    = _csv('sectors')
     edu_levels      = _csv('edu')
-    cities_selected = _csv('city')
 
     valid_sector_codes = {c for c, _ in Sector.SECTOR_CHOICES}
     sector_codes = [s for s in sector_codes if s in valid_sector_codes]
@@ -476,17 +476,22 @@ def jobseeker_list(request):
         qs = qs.filter(sectors__code__in=sector_codes).distinct()
     if edu_levels:
         qs = qs.filter(educations__level__in=edu_levels).distinct()
-    if cities_selected:
-        qs = qs.filter(city_municipality__in=cities_selected)
 
     deactivated_count = qs.filter(user__is_active=False).count()
-    unverified_count  = qs.exclude(user__emailaddress__verified=True).count()
+    # Verified/Unverified refer to ID verification (PESO Verified badge), not
+    # email — email verification was retired app-wide. Verified = the admin
+    # approved a submitted ID; Unverified = anything else (never submitted,
+    # pending review, or denied).
+    verified_count    = qs.filter(id_verification_status=JobseekerProfile.ID_VERIFIED).count()
+    unverified_count  = qs.exclude(id_verification_status=JobseekerProfile.ID_VERIFIED).count()
     all_count         = qs.count()
 
     if tab == 'deactivated':
         qs = qs.filter(user__is_active=False)
+    elif tab == 'verified':
+        qs = qs.filter(id_verification_status=JobseekerProfile.ID_VERIFIED)
     elif tab == 'unverified':
-        qs = qs.exclude(user__emailaddress__verified=True)
+        qs = qs.exclude(id_verification_status=JobseekerProfile.ID_VERIFIED)
 
     if sort == 'oldest':       qs = qs.order_by('created_at')
     elif sort == 'name_az':    qs = qs.order_by('first_name', 'last_name')
@@ -497,19 +502,8 @@ def jobseeker_list(request):
     paginator = Paginator(qs, 24)
     page = paginator.get_page(request.GET.get('page') or 1)
 
-    # Chip-choice sources for the template. City list is dynamic — pulled
-    # from actual DB rows so we don't offer "Iloilo City" when nobody's
-    # from there yet.
     sector_choices = [{'code': c, 'label': l} for c, l in Sector.SECTOR_CHOICES]
     edu_choices    = [{'code': c, 'label': l} for c, l in Education.LEVELS]
-    cities_present = list(
-        JobseekerProfile.objects
-        .exclude(city_municipality='')
-        .values_list('city_municipality', flat=True)
-        .distinct()
-        .order_by('city_municipality')
-    )
-    city_choices = [{'code': c, 'label': c} for c in cities_present]
 
     # `filter_qs` is a URL fragment ("&sex=M&sectors=pwd,...") the template
     # appends to tab/sort links so switching one axis doesn't reset the
@@ -519,7 +513,6 @@ def jobseeker_list(request):
     if sex_filter:      _fp['sex']     = sex_filter
     if sector_codes:    _fp['sectors'] = ','.join(sector_codes)
     if edu_levels:      _fp['edu']     = ','.join(edu_levels)
-    if cities_selected: _fp['city']    = ','.join(cities_selected)
     filter_qs = ('&' + urlencode(_fp)) if _fp else ''
 
     ctx = _admin_context(request)
@@ -530,15 +523,14 @@ def jobseeker_list(request):
         'tab':               tab,
         'all_count':         all_count,
         'deactivated_count': deactivated_count,
+        'verified_count':    verified_count,
         'unverified_count':  unverified_count,
         'qs_base':           querystring_without(request, 'page'),
         'sex_filter':        sex_filter,
         'sector_codes':      sector_codes,
         'edu_levels':        edu_levels,
-        'cities_selected':   cities_selected,
         'sector_choices':    sector_choices,
         'edu_choices':       edu_choices,
-        'city_choices':      city_choices,
         'has_filters':       bool(_fp),
         'filter_qs':         filter_qs,
     })
@@ -623,6 +615,250 @@ def jobseeker_detail(request, pk):
         'active_report':       _resolve_active_report(request),
     })
     return render(request, 'admin_panel/jobseeker_detail.html', ctx)
+
+
+@staff_required
+def company_job_posts(request, pk):
+    """Full-page grid of every job a company has posted — same rounded-card
+    visual as the employer's own /employers/jobs/ list so admins reading
+    both surfaces see the same layout.
+    """
+    from apps.jobs.models import JobPosting
+    from django.db.models import Count
+    from apps.core.pagination import paginate, querystring_without
+
+    company = get_object_or_404(Company, pk=pk)
+
+    status_filter = (request.GET.get('status') or '').strip().lower()
+    search        = (request.GET.get('q') or '').strip()
+
+    qs = (JobPosting.objects.filter(company=company)
+          .select_related('company')
+          .annotate(applicants_count=Count('applications', distinct=True))
+          .order_by('-created_at'))
+
+    if status_filter == 'open':
+        qs = qs.filter(status='open', admin_disabled=False, deleted_at__isnull=True)
+    elif status_filter == 'closed':
+        qs = qs.filter(status='closed', deleted_at__isnull=True)
+    elif status_filter == 'disabled':
+        qs = qs.filter(admin_disabled=True)
+    elif status_filter == 'deleted':
+        qs = qs.exclude(deleted_at__isnull=True)
+
+    if search:
+        qs = qs.filter(title__icontains=search)
+
+    all_qs = JobPosting.objects.filter(company=company)
+    counts = {
+        'all':      all_qs.count(),
+        'open':     all_qs.filter(status='open', admin_disabled=False, deleted_at__isnull=True).count(),
+        'closed':   all_qs.filter(status='closed', deleted_at__isnull=True).count(),
+        'disabled': all_qs.filter(admin_disabled=True).count(),
+        'deleted':  all_qs.exclude(deleted_at__isnull=True).count(),
+    }
+
+    page = paginate(request, list(qs), per_page=12)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'active_nav':    'companies',
+        'company':       company,
+        'jobs':          list(page.object_list),
+        'page':          page,
+        'qs_base':       querystring_without(request, 'page'),
+        'status_filter': status_filter,
+        'search':        search,
+        'counts':        counts,
+    })
+    return render(request, 'admin_panel/company_job_posts.html', ctx)
+
+
+@staff_required
+def company_job_all_matches(request, pk, job_id):
+    """Full-page ranked-jobseeker grid for a specific job — the 'View all'
+    destination from the Top Matches section on company_job_detail. Same
+    visual shape as jobseeker_compatible_jobs so both admin browse pages
+    share a mental model.
+    """
+    from apps.jobs.models import JobPosting, Application
+    from apps.matching.engine import get_ranked_jobseekers
+    from apps.core.pagination import paginate, querystring_without
+
+    company = get_object_or_404(Company, pk=pk)
+    job = get_object_or_404(JobPosting.objects.select_related('company'), pk=job_id, company=company)
+
+    applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
+    ranked = [r for r in get_ranked_jobseekers(job) if r['profile'].id not in applicant_ids]
+
+    search = (request.GET.get('q') or '').strip()
+    try:
+        min_match = int(request.GET.get('min_match') or 0)
+    except (TypeError, ValueError):
+        min_match = 0
+
+    if search:
+        needle = search.lower()
+        ranked = [r for r in ranked
+                  if needle in (r['profile'].first_name or '').lower()
+                  or needle in (r['profile'].last_name or '').lower()]
+    if min_match:
+        ranked = [r for r in ranked if (r.get('score') or 0) >= min_match]
+
+    page = paginate(request, ranked, per_page=12)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'active_nav': 'companies',
+        'company':    company,
+        'job':        job,
+        'ranked':     list(page.object_list),
+        'page':       page,
+        'qs_base':    querystring_without(request, 'page'),
+        'search':     search,
+        'min_match':  min_match,
+        'min_match_choices': [
+            {'value': 0,  'label': 'Any match'},
+            {'value': 98, 'label': 'Perfect'},
+            {'value': 90, 'label': 'Great+'},
+            {'value': 80, 'label': 'Good+'},
+            {'value': 70, 'label': 'Decent+'},
+        ],
+        'total':      len(ranked),
+    })
+    return render(request, 'admin_panel/company_job_all_matches.html', ctx)
+
+
+@staff_required
+def jobseeker_compatible_jobs(request, pk):
+    """Full-page 'Jobs for You'-style grid for a specific jobseeker.
+    Same visual language as the jobseeker's /jobs/for-you/ page so admins
+    inspecting a candidate's match landscape see it the way the candidate
+    would. Excludes jobs the jobseeker already applied to (those live on
+    the Applications page). Sortable, filterable, paginated.
+    """
+    from apps.jobseekers.models import JobseekerProfile
+    from apps.jobs.models import JobPosting, Application
+    from apps.matching.engine import compute_match_score
+    from apps.core.pagination import paginate, querystring_without
+
+    jobseeker = get_object_or_404(JobseekerProfile.objects.select_related('user'), pk=pk)
+
+    already_applied = set(
+        Application.objects.filter(jobseeker=jobseeker).values_list('job_id', flat=True)
+    )
+
+    search    = (request.GET.get('q') or '').strip()
+    sort      = (request.GET.get('sort') or 'match').strip().lower()
+    try:
+        min_match = int(request.GET.get('min_match') or 0)
+    except (TypeError, ValueError):
+        min_match = 0
+
+    ranked = []
+    if jobseeker.profile_complete:
+        for job in (JobPosting.objects
+                    .filter(status=JobPosting.STATUS_OPEN,
+                            deleted_at__isnull=True, admin_disabled=False)
+                    .exclude(id__in=already_applied)
+                    .select_related('company', 'experience_requirement')
+                    .prefetch_related('skill_requirements', 'education_requirements',
+                                      'certification_requirements')):
+            try:
+                s = compute_match_score(job, jobseeker)
+                ranked.append({'job': job, 'score': s.get('total', 0)})
+            except Exception:
+                continue
+
+    if search:
+        needle = search.lower()
+        ranked = [r for r in ranked
+                  if needle in r['job'].title.lower()
+                  or needle in (r['job'].company.name or '').lower()]
+    if min_match:
+        ranked = [r for r in ranked if (r.get('score') or 0) >= min_match]
+
+    if sort == 'date_new':
+        ranked.sort(key=lambda r: r['job'].created_at, reverse=True)
+    elif sort == 'date_old':
+        ranked.sort(key=lambda r: r['job'].created_at)
+    else:  # 'match'
+        ranked.sort(key=lambda r: -(r.get('score') or 0))
+
+    page = paginate(request, ranked, per_page=12)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'jobseeker': jobseeker,
+        'ranked_jobs': list(page.object_list),
+        'page': page,
+        'qs_base': querystring_without(request, 'page'),
+        'search': search,
+        'sort': sort,
+        'min_match': min_match,
+        'min_match_choices': [
+            {'value': 0,  'label': 'Any match'},
+            {'value': 98, 'label': 'Perfect'},
+            {'value': 90, 'label': 'Great+'},
+            {'value': 80, 'label': 'Good+'},
+            {'value': 70, 'label': 'Decent+'},
+        ],
+    })
+    return render(request, 'admin_panel/jobseeker_compatible_jobs.html', ctx)
+
+
+@staff_required
+def jobseeker_applications_list(request, pk):
+    """Full-page grid of every application a specific jobseeker has ever
+    submitted. Mirrors the jobseeker's /applications/ page visually.
+    """
+    from apps.jobseekers.models import JobseekerProfile
+    from apps.jobs.models import Application
+    from apps.core.pagination import paginate, querystring_without
+
+    jobseeker = get_object_or_404(JobseekerProfile.objects.select_related('user'), pk=pk)
+
+    apps_qs = (Application.objects
+               .filter(jobseeker=jobseeker)
+               .select_related('job', 'job__company')
+               .order_by('-created_at'))
+
+    status_filter = (request.GET.get('status') or '').strip().lower()
+    valid_statuses = {Application.STATUS_PENDING, Application.STATUS_VIEWED,
+                      Application.STATUS_ACCEPTED, Application.STATUS_HIRE_PENDING,
+                      Application.STATUS_REJECTED, Application.STATUS_HIRED}
+    if status_filter in valid_statuses:
+        apps_qs = apps_qs.filter(status=status_filter)
+
+    # Count per status (unfiltered) — drives the chip counts.
+    status_counts_raw = (Application.objects.filter(jobseeker=jobseeker)
+                        .values_list('status', flat=True))
+    per_status = {s: 0 for s in valid_statuses}
+    for s in status_counts_raw:
+        if s in per_status:
+            per_status[s] += 1
+    status_counts = [
+        (Application.STATUS_PENDING,      'Pending',      per_status[Application.STATUS_PENDING]),
+        (Application.STATUS_VIEWED,       'Viewed',       per_status[Application.STATUS_VIEWED]),
+        (Application.STATUS_ACCEPTED,     'In Progress',  per_status[Application.STATUS_ACCEPTED]),
+        (Application.STATUS_HIRE_PENDING, 'Hire Offered', per_status[Application.STATUS_HIRE_PENDING]),
+        (Application.STATUS_REJECTED,     'Rejected',     per_status[Application.STATUS_REJECTED]),
+        (Application.STATUS_HIRED,        'Hired',        per_status[Application.STATUS_HIRED]),
+    ]
+
+    page = paginate(request, list(apps_qs), per_page=12)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'jobseeker': jobseeker,
+        'apps_page': page,
+        'applications': list(page.object_list),
+        'total_apps': sum(per_status.values()),
+        'status_counts': status_counts,
+        'status_filter': status_filter if status_filter in valid_statuses else '',
+        'qs_base': querystring_without(request, 'page'),
+    })
+    return render(request, 'admin_panel/jobseeker_applications_list.html', ctx)
 
 
 @staff_required
@@ -985,6 +1221,17 @@ def company_settings(request, pk):
             company.recruitment_email = request.POST.get('recruitment_email', company.recruitment_email).strip()
             company.main_branch_address = request.POST.get('main_branch_address', company.main_branch_address).strip()
             company.description       = request.POST.get('description', '').strip()
+            # Nature + size + type + Iloilo branch — same fields the employer's
+            # own settings page saves. Admin gets a superset so they can fix
+            # anything the company got wrong at registration.
+            company.nature_of_company = request.POST.get('nature_of_company', company.nature_of_company or '').strip()
+            company.company_size      = request.POST.get('company_size', company.company_size or '').strip()
+            _type = (request.POST.get('type_of_company') or '').strip()
+            if _type in {'local', 'overseas', 'bpo'}:
+                company.type_of_company = _type
+            company.iloilo_bldg_unit     = request.POST.get('iloilo_bldg_unit', company.iloilo_bldg_unit or '').strip()
+            company.iloilo_street        = request.POST.get('iloilo_street', company.iloilo_street or '').strip()
+            company.iloilo_barangay_name = request.POST.get('iloilo_barangay_name', company.iloilo_barangay_name or '').strip()
             company.save()
             AuditLog.objects.create(
                 admin=request.user, action=AuditLog.ACTION_EDIT,
@@ -2338,9 +2585,21 @@ def admin_edit_resume(request, pk):
     saved = False
 
     if request.method == 'POST':
-        # Bio
-        jobseeker.bio = (request.POST.get('bio') or '').strip()
-        jobseeker.save(update_fields=['bio'])
+        # Bio + Contact & Address (persisted alongside résumé data on the same
+        # profile). Blank strings are stored as-is so admins can clear a field
+        # by wiping it — same behaviour as the jobseeker's own résumé page.
+        jobseeker.bio               = (request.POST.get('bio') or '').strip()
+        jobseeker.contact_email     = (request.POST.get('contact_email') or '').strip()
+        jobseeker.phone             = (request.POST.get('phone') or '').strip()
+        jobseeker.house_unit        = (request.POST.get('house_unit') or '').strip()
+        jobseeker.street_barangay   = (request.POST.get('street_barangay') or '').strip()
+        jobseeker.barangay          = (request.POST.get('barangay') or '').strip()
+        jobseeker.city_municipality = (request.POST.get('city_municipality') or 'Iloilo City').strip()
+        jobseeker.save(update_fields=[
+            'bio', 'contact_email', 'phone',
+            'house_unit', 'street_barangay',
+            'barangay', 'city_municipality',
+        ])
 
         # Wipe-and-recreate the four list-style sections (same pattern the
         # jobseeker view uses) — kept simple to mirror that flow.

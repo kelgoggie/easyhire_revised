@@ -161,47 +161,116 @@
   {% endif %}
 
   <!-- ── Company Information ───────────────────────────────────── -->
+  {# Fields start locked (disabled). Clicking "Edit" unlocks them and the  #}
+  {# button swaps to "Save Changes". Same lock/unlock pattern used on the  #}
+  {# jobseeker Account Settings page — keeps the admin surfaces consistent. #}
   <h3 class="text-lg font-bold text-primary mb-3">Company Information</h3>
-  <form method="POST" class="mb-8">
+  <form method="POST" class="mb-8" id="company-form">
     {% csrf_token %}
     <input type="hidden" name="form" value="company">
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
       <div>
         <label class="block text-primary text-xs mb-1">Company Name</label>
-        <input type="text" name="name" value="{{ company.name }}" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="text" name="name" value="{{ company.name }}" required disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
-        <label class="block text-primary text-xs mb-1">Main Branch Address</label>
-        <input type="text" name="main_branch_address" value="{{ company.main_branch_address }}"
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <label class="block text-primary text-xs mb-1">Nature of Company</label>
+        <input type="text" name="nature_of_company" value="{{ company.nature_of_company|default:'' }}"
+               placeholder="e.g. Retail, Healthcare, BPO" disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Type of Company</label>
+        <div class="relative">
+          <select name="type_of_company" disabled
+                  class="company-field w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+            <option value="local"    {% if company.type_of_company == 'local' %}selected{% endif %}>Local (Iloilo City)</option>
+            <option value="overseas" {% if company.type_of_company == 'overseas' %}selected{% endif %}>Overseas</option>
+            <option value="bpo"      {% if company.type_of_company == 'bpo' %}selected{% endif %}>BPO</option>
+          </select>
+          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Company Size</label>
+        <input type="text" name="company_size" value="{{ company.company_size|default:'' }}"
+               placeholder="e.g. 50-100 employees" disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Company Email</label>
-        <input type="email" name="company_email" value="{{ company.company_email }}" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="email" name="company_email" value="{{ company.company_email }}" required disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Hiring (Recruitment) Email</label>
-        <input type="email" name="recruitment_email" value="{{ company.recruitment_email }}" required
-               class="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+        <input type="email" name="recruitment_email" value="{{ company.recruitment_email }}" required disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+      </div>
+    </div>
+
+    <p class="text-sm font-bold text-primary mb-2">Main Branch Address</p>
+    <div class="mb-4">
+      <input type="text" name="main_branch_address" value="{{ company.main_branch_address }}" disabled
+             placeholder="Free-text branch address (used for non-Iloilo / overseas)"
+             class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+    </div>
+
+    <p class="text-sm font-bold text-primary mb-2">Iloilo City Branch Address</p>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      <div>
+        <label class="block text-primary text-xs mb-1">Bldg/Unit No.</label>
+        <input type="text" name="iloilo_bldg_unit" value="{{ company.iloilo_bldg_unit|default:'' }}" disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Street</label>
+        <input type="text" name="iloilo_street" value="{{ company.iloilo_street|default:'' }}" disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Barangay</label>
+        <input type="text" name="iloilo_barangay_name" value="{{ company.iloilo_barangay_name|default:'' }}"
+               placeholder="e.g. Jaro" disabled
+               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
     </div>
 
     <div class="mb-4">
       <label class="block text-primary text-xs mb-1">Description</label>
-      <textarea name="description" rows="3"
-                class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition resize-none">{{ company.description }}</textarea>
+      <textarea name="description" rows="3" disabled
+                class="company-field w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition resize-none disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">{{ company.description }}</textarea>
     </div>
 
     <div class="flex justify-end">
-      <button type="submit"
+      <button type="button" id="company-edit-btn"
               class="bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition">
-        Save Company Info
+        Edit
+      </button>
+      <button type="submit" id="company-save-btn"
+              class="hidden bg-amber text-white text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-amber/90 transition">
+        Save Changes
       </button>
     </div>
   </form>
+
+  <script>
+  (function() {
+    const editBtn = document.getElementById('company-edit-btn');
+    const saveBtn = document.getElementById('company-save-btn');
+    const fields  = document.querySelectorAll('#company-form .company-field');
+    if (!editBtn || !saveBtn) return;
+    editBtn.addEventListener('click', function() {
+      fields.forEach(function(f) { f.disabled = false; });
+      editBtn.classList.add('hidden');
+      saveBtn.classList.remove('hidden');
+      const first = document.querySelector('#company-form .company-field:not([readonly])');
+      if (first) { try { first.focus(); } catch(e) {} }
+    });
+  })();
+  </script>
 
   {% if rep %}
   <!-- ── Reset Representative Password ─────────────────────────── -->

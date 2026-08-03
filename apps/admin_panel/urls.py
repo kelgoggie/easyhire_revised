@@ -15,6 +15,8 @@ urlpatterns = [
     path('admin-panel/jobseekers/', views.jobseeker_list, name='jobseeker_list'),
     path('admin-panel/jobseekers/<hashid:pk>/', views.jobseeker_detail, name='jobseeker_detail'),
     path('admin-panel/jobseekers/<hashid:pk>/settings/',                     views.jobseeker_settings,              name='jobseeker_settings'),
+    path('admin-panel/jobseekers/<hashid:pk>/compatible-jobs/',              views.jobseeker_compatible_jobs,       name='jobseeker_compatible_jobs'),
+    path('admin-panel/jobseekers/<hashid:pk>/applications/',                 views.jobseeker_applications_list,     name='jobseeker_applications_list'),
     path('admin-panel/jobseekers/<hashid:pk>/applications/<hashid:app_id>/',    views.jobseeker_application_detail,    name='jobseeker_application_detail'),
 
     path('admin-panel/companies/',                                        views.company_list,                    name='company_list'),
@@ -26,7 +28,9 @@ urlpatterns = [
     path('admin-panel/jobs/<hashid:job_id>/edit/',                        employer_views.job_edit,               name='admin_job_edit'),
     path('admin-panel/companies/<hashid:pk>/',                               views.company_detail,                  name='company_detail'),
     path('admin-panel/companies/<hashid:pk>/settings/',                      views.company_settings,                name='company_settings'),
+    path('admin-panel/companies/<hashid:pk>/job-posts/',                       views.company_job_posts,               name='company_job_posts'),
     path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/',             views.company_job_detail,              name='company_job_detail'),
+    path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/matches/',     views.company_job_all_matches,         name='company_job_all_matches'),
     path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/match/<hashid:jobseeker_id>/', views.job_match_detail,    name='job_match_detail'),
     path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/delete/',      views.company_delete_job,              name='company_delete_job'),
 

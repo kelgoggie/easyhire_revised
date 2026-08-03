@@ -49,13 +49,13 @@
     </div>
     <div class="flex items-center gap-2 flex-shrink-0 sm:pt-2">
       {% if prev_id %}
-      <a href="/employers/candidates/{{ prev_id|hashid }}/?job={{ current_job.id|hashid }}"
+      <a href="/employers/candidates/{{ prev_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
          class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
       {% else %}
       <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">&lt; Previous</span>
       {% endif %}
       {% if next_id %}
-      <a href="/employers/candidates/{{ next_id|hashid }}/?job={{ current_job.id|hashid }}"
+      <a href="/employers/candidates/{{ next_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
          class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
       {% else %}
       <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">Next &gt;</span>

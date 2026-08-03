@@ -3,7 +3,7 @@
 
 {% with active_nav="jobseekers" %}
 {% block admin_content %}
-<div class="py-8 max-w-6xl mx-auto">
+<div class="py-8">
 
   <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Edit Résumé</h1>
   <p class="text-muted text-sm mb-2">{{ jobseeker.first_name }} {{ jobseeker.last_name }} · {{ jobseeker.user.email }}</p>
@@ -21,6 +21,60 @@
 
   <form method="POST" class="space-y-6">
     {% csrf_token %}
+
+    <!-- Contact & Address -->
+    {# Address + contact fields live on JobseekerProfile alongside résumé   #}
+    {# data — admins editing on behalf of a jobseeker often need to correct #}
+    {# these too (typo in phone, wrong barangay after they moved).          #}
+    <div class="bg-white border border-gray-200 rounded-2xl p-5">
+      <p class="text-sm font-bold text-primary mb-3">Contact &amp; Address</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="block text-primary text-xs mb-1">Contact Email</label>
+          <input type="email" name="contact_email" value="{{ jobseeker.contact_email|default:'' }}"
+                 placeholder="{{ jobseeker.user.email }}"
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+        </div>
+        <div>
+          <label class="block text-primary text-xs mb-1">Contact Number</label>
+          <input type="tel" name="phone" value="{{ jobseeker.phone|default:'' }}"
+                 placeholder="e.g. +63 909 XXXX XXX"
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="block text-primary text-xs mb-1">House/Unit No.</label>
+          <input type="text" name="house_unit" value="{{ jobseeker.house_unit|default:'' }}"
+                 placeholder="e.g. 12-201, 5B"
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+        </div>
+        <div>
+          <label class="block text-primary text-xs mb-1">Street</label>
+          <input type="text" name="street_barangay" value="{{ jobseeker.street_barangay|default:'' }}"
+                 placeholder="e.g. Iznart St."
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-primary text-xs mb-1">Barangay</label>
+          <input type="text" name="barangay" value="{{ jobseeker.barangay|default:'' }}"
+                 placeholder="e.g. Jaro"
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+        </div>
+        <div>
+          <label class="block text-primary text-xs mb-1">City/Municipality</label>
+          <input type="text" name="city_municipality" value="{{ jobseeker.city_municipality|default:'Iloilo City' }}"
+                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+        </div>
+        <div>
+          <label class="block text-primary text-xs mb-1">Province</label>
+          <input type="text" value="Iloilo" disabled
+                 class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-muted cursor-not-allowed">
+        </div>
+      </div>
+    </div>
 
     <!-- Bio -->
     <div class="bg-white border border-gray-200 rounded-2xl p-5">

@@ -60,6 +60,31 @@
     {% endif %}
   </div>
 
+  {# Search bar — active on both tabs; hidden inputs preserve the current  #}
+  {# tab + sort + status + min_match so hitting Search doesn't reset them. #}
+  <form method="GET" action="/employers/jobs/{{ job.id|hashid }}/candidates/" class="flex items-center gap-2 mb-4">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    {% if sort and sort != 'match' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+    {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+    {% if min_match %}<input type="hidden" name="min_match" value="{{ min_match }}">{% endif %}
+    <div class="relative flex-1">
+      <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+      </svg>
+      <input type="text" name="q" value="{{ search|default:'' }}"
+             placeholder="Search by name or skill..."
+             class="w-full bg-white border border-gray-200 rounded-full pl-9 pr-4 py-2 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
+    </div>
+    <button type="submit"
+            class="bg-teal text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-primary transition border border-teal flex-shrink-0">
+      Search
+    </button>
+    {% if search %}
+    <a href="?tab={{ tab }}{% if sort and sort != 'match' %}&sort={{ sort }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if min_match %}&min_match={{ min_match }}{% endif %}"
+       class="text-sm text-muted hover:text-primary transition flex-shrink-0">Clear</a>
+    {% endif %}
+  </form>
+
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
     {% if tab == 'applicants' and applicants_count %}
     <!-- Status filter chips -->

@@ -142,8 +142,21 @@
               <span class="text-primary font-bold text-sm">{{ c.name|first|upper }}</span>
             {% endif %}
           </div>
-          <div class="min-w-0">
-            <p class="font-bold text-primary text-base leading-tight truncate">{{ c.name }}</p>
+          <div class="min-w-0 flex-1">
+            <p class="font-bold text-primary text-base leading-tight truncate flex items-center gap-1.5 flex-wrap">
+              <span class="truncate">{{ c.name }}</span>
+              {# Verification pill sits inline with the name so admins can #}
+              {# triage at a glance without scanning past the type chip. #}
+              {% if c.verification_status == 'pending' %}
+              <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30 flex-shrink-0">Pending</span>
+              {% elif c.verification_status == 'verified' %}
+              <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-teal/15 text-teal border border-teal/30 flex-shrink-0">Verified</span>
+              {% elif c.verification_status == 'denied' %}
+              <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200 flex-shrink-0">Denied</span>
+              {% else %}
+              <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-gray-100 text-muted border border-gray-200 flex-shrink-0">Unverified</span>
+              {% endif %}
+            </p>
             <p class="text-muted text-xs italic">Joined {{ c.created_at|date:"M j Y" }}</p>
           </div>
         </div>
@@ -152,13 +165,6 @@
           <span class="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-taupe/20 text-primary border border-taupe/30">
             {{ c.get_type_of_company_display|default:"—" }}
           </span>
-          {% if c.verification_status == 'pending' %}
-          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30">Pending</span>
-          {% elif c.verification_status == 'verified' %}
-          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-teal/15 text-teal border border-teal/30">Verified</span>
-          {% elif c.verification_status == 'denied' %}
-          <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Denied</span>
-          {% endif %}
           {% with rep=c.representatives.first %}
           {% if rep and not rep.user.is_active %}
           <span class="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Disabled</span>
