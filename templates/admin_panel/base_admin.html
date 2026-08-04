@@ -69,7 +69,7 @@
           {# Dot only fires when the attention queue grew since the admin's #}
           {# last visit — see the session-baseline logic in _admin_context. #}
           {% if show_attention_dot %}
-          <span id="admin-notif-dot" class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full"></span>
+          <span id="admin-notif-dot" class="absolute top-1 right-1 w-3 h-3 bg-amber rounded-full ring-2 ring-white"></span>
           {% endif %}
         </button>
         <div id="admin-notif-dropdown" class="absolute right-0 top-11 bg-surface rounded-2xl shadow-xl w-[340px] max-h-[480px] z-50 border border-taupe/30 hidden overflow-hidden flex-col">
@@ -296,9 +296,30 @@ document.addEventListener('click', function() {
   document.getElementById('admin-notif-dropdown').classList.add('hidden');
   document.getElementById('admin-avatar-dropdown').classList.add('hidden');
 });
+
+// ── Toast poller (admin) ─────────────────────────────────────────────
+// Polls the same feed the bell renders (pending companies + personal-info
+// requests + pending IDs + new reports). New items fire a top-right toast
+// via window.renderNotifToasts — deduped against localStorage so a still-
+// pending item doesn't re-toast on every 15-second tick.
+function fetchAdminNotifications() {
+  fetch('/admin-panel/api/notifications/', {
+    credentials: 'same-origin',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+  })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      if (!d) return;
+      if (window.renderNotifToasts) window.renderNotifToasts(d.notifications || []);
+    })
+    .catch(function() {});
+}
+fetchAdminNotifications();
+setInterval(fetchAdminNotifications, 15000);
 </script>
 
 {% include "partials/_confirm_modal.html" %}
+{% include "base/_notification_toasts.html" %}
 
 {% block admin_scripts %}{% endblock %}
 {% endblock %}

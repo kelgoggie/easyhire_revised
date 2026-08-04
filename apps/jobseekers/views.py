@@ -102,17 +102,13 @@ def job_apply(request, job_id):
         app.save(update_fields=['message'])
 
     # Notify every company representative when a new application comes in
-    # (no notification on subsequent re-submits — only on create).
+    # (no notification on subsequent re-submits — only on create). The
+    # helper consolidates multiple applicants into one grouped row so
+    # employers see "X and 2 others applied to your job post" instead of
+    # a stack of individual toasts.
     if created:
-        from apps.notifications.models import Notification
-        for rep in job.company.representatives.select_related('user').all():
-            Notification.objects.create(
-                recipient=rep.user,
-                notif_type=Notification.NEW_APPLICATION,
-                company=job.company,
-                jobseeker=profile,
-                job=job,
-            )
+        from apps.notifications.utils import notify_new_application
+        notify_new_application(job, profile)
 
     return redirect('/applications/')
 

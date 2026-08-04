@@ -48,6 +48,12 @@
         <li><a href="#lab-searched" class="nav-pill" data-key="lab-searched">Preferred Jobs</a></li>
         <li><a href="#lab-demand" class="nav-pill" data-key="lab-demand">In Demand Jobs</a></li>
         <li><a href="#lab-hard" class="nav-pill" data-key="lab-hard">Hard to Fill Jobs</a></li>
+        {# Comparison line charts folded into Labor & Employment — they    #}
+        {# describe the same domain (applications, hires, external hires)  #}
+        {# so a separate sidebar section was redundant.                    #}
+        <li><a href="#cmp-apps-hired" class="nav-pill" data-key="cmp-apps-hired">Applications vs Hired</a></li>
+        <li><a href="#cmp-jobs-apps"  class="nav-pill" data-key="cmp-jobs-apps">New Jobs vs Applications</a></li>
+        <li><a href="#cmp-eh-ext"     class="nav-pill" data-key="cmp-eh-ext">Hired via EasyHire vs Externally</a></li>
       </ul>
 
       <p class="text-sm font-bold text-primary mb-1">
@@ -74,14 +80,6 @@
         <li><a href="#emp-location" class="nav-pill" data-key="emp-location">Location</a></li>
       </ul>
 
-      <p class="text-sm font-bold text-primary mb-1 mt-4">
-        <strong>Comparisons</strong>
-      </p>
-      <ul class="space-y-0.5 text-sm">
-        <li><a href="#cmp-apps-hired" class="nav-pill" data-key="cmp-apps-hired">Applications vs Hired</a></li>
-        <li><a href="#cmp-jobs-apps"  class="nav-pill" data-key="cmp-jobs-apps">New Jobs vs Applications</a></li>
-        <li><a href="#cmp-eh-ext"     class="nav-pill" data-key="cmp-eh-ext">Hired via EasyHire vs Externally</a></li>
-      </ul>
     </nav>
 
     <!-- RIGHT: panel area -->
@@ -311,7 +309,7 @@
       <div data-panel="cmp-eh-ext" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Hired via EasyHire vs Externally</h2>
         <p class="text-muted text-xs italic mb-4">
-          Snapshot of total hires in {{ selected_year }}. External hires are stored as a running counter per job posting, not timestamped events — so this comparison shows year-to-date totals rather than a per-month line.
+          Hires via EasyHire vs hires the employer recorded from outside sources (walk-ins, referrals, other boards), per month in {{ selected_year }}. External hires don't carry per-hire timestamps, so they're attributed to the month the job was posted — the shape of the curve is accurate; the exact month may drift by a few weeks for late entries.
         </p>
         <div class="chart-box flex-1"><canvas id="chart-cmp-eh-ext"></canvas></div>
         <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
@@ -402,8 +400,7 @@ const D = {
                unit:   'day' },
   hired:      {{ hired_monthly|safe }},
   newJobs:    {{ new_jobs_monthly|safe }},
-  ehVsExt:    { labels: ['Hired via EasyHire', 'Hired externally'],
-                data:   [{{ hired_this_year }}, {{ external_hires_this_year }}] },
+  extHired:   {{ external_hires_monthly|safe }},
 };
 
 // ── Chart.js defaults — KEY to preventing infinite scroll ────────────
@@ -709,8 +706,10 @@ function init(key) {
                              { label: 'New Jobs Posted', data: D.newJobs, color: '#E8A838' },
                              { label: 'Applications',    data: D.apps,    color: '#5BA3A0' },
                            ]); break;
-    case 'cmp-eh-ext':     charts[key] = comparisonBar('chart-cmp-eh-ext',
-                             D.ehVsExt.labels, D.ehVsExt.data, ['#2D4A3E', '#E8A838']); break;
+    case 'cmp-eh-ext':     charts[key] = monthlyMultiLine('chart-cmp-eh-ext', [
+                             { label: 'Hired via EasyHire', data: D.hired,    color: '#2D4A3E' },
+                             { label: 'Hired externally',   data: D.extHired, color: '#E8A838' },
+                           ]); break;
   }
 }
 

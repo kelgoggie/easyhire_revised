@@ -87,6 +87,53 @@
     </div>
   </section>
 
+  <!-- ── Pending ID Verifications ──────────────────────────────── -->
+  {# Jobseekers who uploaded a government ID to earn the PESO Verified   #}
+  {# badge and are waiting on an admin decision. Clicking a row jumps to #}
+  {# their settings page where the Approve / Deny buttons live.          #}
+  <section class="mb-10">
+    <div class="flex items-baseline gap-2 mb-1">
+      <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <h2 class="text-xl text-primary"><span class="font-bold">Pending</span> ID Verifications</h2>
+    </div>
+    <p class="text-muted text-xs mb-3">
+      Jobseekers awaiting PESO Verified badge approval.
+      <a href="/admin-panel/jobseekers/?tab=all" class="underline hover:text-primary transition">View all Jobseekers.</a>
+    </p>
+
+    <div class="border border-taupe/40 rounded-2xl overflow-hidden">
+      {% if pending_id_verifications %}
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left border-b border-taupe/30">
+            <th class="px-5 py-3 text-xs font-bold text-primary">Jobseeker</th>
+            <th class="px-4 py-3 text-xs font-bold text-primary">Email</th>
+            <th class="px-4 py-3 text-xs font-bold text-primary">Submitted</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for js in pending_id_verifications %}
+          <tr class="border-b border-taupe/20 last:border-0 hover:bg-surface/40 transition cursor-pointer"
+              onclick="window.location='/admin-panel/jobseekers/{{ js.id|hashid }}/settings/'">
+            <td class="px-5 py-3 font-bold text-primary">{{ js.first_name }} {{ js.last_name }}</td>
+            <td class="px-4 py-3 text-muted italic">{{ js.user.email }}</td>
+            <td class="px-4 py-3 text-muted italic">
+              {% if js.id_submitted_at %}{{ js.id_submitted_at|date:"M j, Y g:i A" }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <span class="text-muted italic">Review →</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-muted text-xs text-center py-8">No jobseekers awaiting ID verification.</p>
+      {% endif %}
+    </div>
+  </section>
+
   <!-- ── User Reports ──────────────────────────────────────────── -->
   <section class="mb-10">
     <div class="flex items-baseline gap-2 mb-1">

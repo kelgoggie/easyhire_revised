@@ -11,7 +11,8 @@
 {% if items %}
 <div class="bg-white border border-taupe/20 rounded-2xl overflow-hidden">
   {% for item in items %}
-  <div class="border-b border-taupe/15 last:border-0">
+  {# Row background tinted teal-5 when unread, matching the bell dropdown. #}
+  <div class="border-b border-taupe/15 last:border-0{% if item.is_unread %} bg-teal/5{% endif %}">
     <div class="flex items-start gap-3 px-4 sm:px-5 py-2.5 hover:bg-surface/40 transition">
       <!-- Kind icon -->
       <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
@@ -77,6 +78,10 @@
           <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
         </button>
       </div>
+      {% endif %}
+      {# Unread dot — same teal indicator used in the bell dropdown. #}
+      {% if item.is_unread %}
+      <span class="mt-2 flex-shrink-0 w-2 h-2 rounded-full bg-teal" title="Unread"></span>
       {% endif %}
     </div>
 

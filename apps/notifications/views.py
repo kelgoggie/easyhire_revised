@@ -18,18 +18,27 @@ def _relative_time(dt):
 
 @login_required
 def notifications_api(request):
+    # Bell now shows a rolling history — most recent 20 notifications
+    # regardless of read state — so users can revisit what they've seen.
+    # The `is_read` flag is passed through per item so the template can
+    # render a small dot only on unread ones. Toast dedup on the client
+    # still fires only for genuinely-new (never-seen) IDs via localStorage.
     notifs = Notification.objects.filter(
-        recipient=request.user, is_read=False
-    ).select_related('company', 'jobseeker', 'job')[:20]
+        recipient=request.user
+    ).select_related('company', 'jobseeker', 'job').order_by('-created_at')[:20]
 
     data = []
+    unread_count = 0
     for n in notifs:
+        if not n.is_read:
+            unread_count += 1
         item = {
             # Encoded so the front-end fetch hits the <hashid:notif_id> URL
             # pattern correctly. Passing the raw int silently 404s.
             'id': _hashid(n.id),
             'type': n.notif_type,
             'created_at': _relative_time(n.created_at),
+            'is_read': n.is_read,
             'actor': '',
             'verb': '',
             'quoted': '',
@@ -78,10 +87,16 @@ def notifications_api(request):
             item['meta']  = ''
             item['url']   = '/settings/'
         elif n.notif_type == Notification.NEW_APPLICATION:
-            actor_name = (f'{n.jobseeker.first_name} {n.jobseeker.last_name}'
-                          if n.jobseeker else 'Someone')
+            # `liker_preview` carries the grouped label ("X and 2 others")
+            # when set by notify_new_application. Falls back to the latest
+            # applicant's name for legacy rows created before the group
+            # helper landed.
+            actor_name = (n.liker_preview
+                          or (f'{n.jobseeker.first_name} {n.jobseeker.last_name}'
+                              if n.jobseeker else 'Someone'))
             item['actor'] = actor_name
-            item['verb']  = 'applied to your job post.'
+            job_title = n.job.title if n.job else 'your job post'
+            item['verb']  = f'applied to {job_title}.' if (n.liker_count or 1) == 1 else f'applied to your job post: {job_title}'
             item['icon']  = 'briefcase'
             item['url']   = (f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=applicants'
                              if n.job else '/employers/jobs/')
@@ -148,6 +163,15 @@ def notifications_api(request):
             item['quoted'] = n.admin_message or ''
             item['icon']   = 'briefcase'
             item['url']    = '/inbox/'
+        elif n.notif_type == Notification.NEW_ANNOUNCEMENT:
+            # PESO admin broadcast. Subject line lives in liker_preview; the
+            # full body sits in the recipient's Inbox row alongside older
+            # announcements. Click sends them straight to Inbox.
+            item['actor']  = 'PESO Iloilo City'
+            item['verb']   = f'sent an announcement: {n.liker_preview or ""}'.strip()
+            item['icon']   = 'sparkle'
+            item['meta']   = ''
+            item['url']    = '/inbox/'
         elif n.notif_type == Notification.INVITED_TO_APPLY:
             # Lightweight nudge — no inbox row, no email. Verb reads as
             # "{Company} invited you to apply for {Job Title}." and the
@@ -160,7 +184,11 @@ def notifications_api(request):
             item['url']  = f'/jobs/view/{_hashid(n.job.id)}/' if n.job else '/jobs/'
         data.append(item)
 
-    return JsonResponse({'notifications': data, 'count': len(data)})
+    return JsonResponse({
+        'notifications': data,
+        'count':         len(data),
+        'unread_count':  unread_count,
+    })
 
 
 @login_required

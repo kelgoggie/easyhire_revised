@@ -128,18 +128,21 @@ def _generate_temp_password(length=12):
 def _admin_context(request):
     """Shared context for every admin page — sidebar counts + notification feed.
 
-    Notifications fire on three things (per spec):
+    Notifications fire on four things (per spec):
       1. Pending company verification
       2. Pending personal-info change requests
       3. New user reports
+      4. Pending jobseeker ID verifications (PESO Verified badge submissions)
     """
     from apps.employers.models import Company
-    from apps.jobseekers.models import PersonalInfoChangeRequest
+    from apps.jobseekers.models import PersonalInfoChangeRequest, JobseekerProfile
     from .models import UserReport
 
     pending_companies = Company.objects.filter(verification_status=Company.PENDING).count()
     pending_jobseekers = PersonalInfoChangeRequest.objects.filter(
         status=PersonalInfoChangeRequest.STATUS_PENDING).count()
+    pending_ids = JobseekerProfile.objects.filter(
+        id_verification_status=JobseekerProfile.ID_PENDING).count()
     open_reports = UserReport.objects.filter(status=UserReport.STATUS_OPEN).count()
 
     # ── Bell-dot debounce ─────────────────────────────────────────
@@ -155,7 +158,7 @@ def _admin_context(request):
     #     bumps to current so a plain reload clears it.
     #   - current < baseline (admin resolved items): silently bump
     #     baseline down so a subsequent new item still fires the dot.
-    attention_total = pending_companies + pending_jobseekers + open_reports
+    attention_total = pending_companies + pending_jobseekers + pending_ids + open_reports
     session = request.session
     if 'admin_attention_seen' not in session:
         session['admin_attention_seen'] = attention_total
@@ -186,6 +189,20 @@ def _admin_context(request):
             'when':  _relative(r.submitted_at),
             'url':   f'/admin-panel/jobseekers/{_hashid(r.profile.id)}/',
             'at':    r.submitted_at,
+        })
+    # Pending PESO Verified badge submissions — a jobseeker uploaded a
+    # government ID and is awaiting the admin's approve/deny decision.
+    for js in (JobseekerProfile.objects
+               .filter(id_verification_status=JobseekerProfile.ID_PENDING)
+               .order_by('-id_submitted_at')[:5]):
+        submitted_at = js.id_submitted_at or js.created_at
+        feed.append({
+            'icon':  'user',
+            'actor': f'{js.first_name} {js.last_name}',
+            'verb':  'submitted an ID for PESO Verified review.',
+            'when':  _relative(submitted_at),
+            'url':   f'/admin-panel/jobseekers/{_hashid(js.id)}/settings/',
+            'at':    submitted_at,
         })
     for ur in (UserReport.objects
                .filter(status=UserReport.STATUS_OPEN)
@@ -227,6 +244,7 @@ def _admin_context(request):
     return {
         'pending_companies':     pending_companies,
         'pending_jobseekers':    pending_jobseekers,
+        'pending_ids':           pending_ids,
         'open_reports':          open_reports,
         'admin_notifications':   feed[:10],
         # attention_count is still passed for the dropdown copy / counts,
@@ -240,6 +258,40 @@ def _admin_context(request):
         # their ctx.update(...) after calling _admin_context.
         'active_nav':            _resolve_active_nav(request.path),
     }
+
+
+@staff_required
+def admin_notifications_api(request):
+    """JSON feed for the admin toast poller. Reshapes the same feed the bell
+    renders into the {id, actor, verb, meta, icon, url} shape the shared
+    _notification_toasts.html partial expects. Stable IDs on each item let
+    the client-side localStorage dedupe reliably (a company that's still
+    pending on the next poll shouldn't fire a duplicate toast)."""
+    ctx = _admin_context(request)
+    out = []
+    for item in ctx.get('admin_notifications', []) or []:
+        # `admin_notifications` items come from four DB queries — the URL
+        # already encodes the underlying object, so we derive a stable id
+        # by hashing that URL. Same underlying row → same id across polls.
+        url = item.get('url') or '#'
+        stable_id = 'adm:' + str(abs(hash(url)))
+        icon_kind = item.get('icon') or ''
+        # Toast partial's fallback icon set has heart/sparkle/briefcase —
+        # map the admin-side kinds onto those so slices don't miss.
+        icon = {
+            'company': 'briefcase',
+            'user':    'sparkle',
+            'flag':    'heart',
+        }.get(icon_kind, 'heart')
+        out.append({
+            'id':         stable_id,
+            'actor':      item.get('actor') or '',
+            'verb':       item.get('verb') or '',
+            'meta':       item.get('when') or '',
+            'icon':       icon,
+            'url':        url,
+        })
+    return JsonResponse({'notifications': out})
 
 
 @staff_required
@@ -263,6 +315,13 @@ def dashboard(request):
         .select_related('reported_jobseeker', 'reported_company', 'filed_by')
         .order_by('-created_at')[:5]
     )
+    from apps.jobseekers.models import JobseekerProfile
+    pending_id_verifications = (
+        JobseekerProfile.objects
+        .filter(id_verification_status=JobseekerProfile.ID_PENDING)
+        .select_related('user')
+        .order_by('-id_submitted_at')[:5]
+    )
 
     weights = get_weights()
     ctx = _admin_context(request)
@@ -271,8 +330,9 @@ def dashboard(request):
         'jobseeker_count':   User.objects.filter(user_type=User.JOBSEEKER).count(),
         'employer_count':    User.objects.filter(user_type=User.EMPLOYER).count(),
         'job_count':         JobPosting.objects.count(),
-        'pending_approvals': pending_approvals,
-        'recent_reports':    recent_reports,
+        'pending_approvals':         pending_approvals,
+        'recent_reports':            recent_reports,
+        'pending_id_verifications':  pending_id_verifications,
         'algorithm_weights': {
             'skills':         round(weights[0] * 100),
             'education':      round(weights[1] * 100),
@@ -2490,6 +2550,30 @@ def announcements(request):
                 target_model='AdminAnnouncement', target_id=ann.id,
                 notes=f'Sent announcement to {ann.get_audience_display()}: {subject[:80]}',
             )
+            # Fan out a bell/toast notification to every user in the target
+            # audience. The inbox row is already covered by the announcement
+            # row itself, but without this fan-out, users only see the new
+            # announcement the next time they open Inbox — no toast pop-up.
+            # Bulk-create keeps this cheap even at hundreds of recipients.
+            from apps.notifications.models import Notification
+            from apps.accounts.models import User
+            recipients_qs = User.objects.filter(is_active=True)
+            if ann.audience == AdminAnnouncement.AUDIENCE_JOBSEEKERS:
+                recipients_qs = recipients_qs.filter(user_type=User.JOBSEEKER)
+            elif ann.audience == AdminAnnouncement.AUDIENCE_EMPLOYERS:
+                recipients_qs = recipients_qs.filter(user_type=User.EMPLOYER)
+            else:  # AUDIENCE_ALL — jobseekers + employers (skip staff)
+                recipients_qs = recipients_qs.filter(
+                    user_type__in=[User.JOBSEEKER, User.EMPLOYER]
+                )
+            Notification.objects.bulk_create([
+                Notification(
+                    recipient=u,
+                    notif_type=Notification.NEW_ANNOUNCEMENT,
+                    liker_preview=(subject[:200] or 'Announcement'),
+                )
+                for u in recipients_qs.only('id')
+            ])
             saved = True
 
     recent = AdminAnnouncement.objects.select_related('sender').all()

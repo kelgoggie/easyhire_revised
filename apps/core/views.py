@@ -316,9 +316,31 @@ def inbox(request):
     items.sort(key=lambda x: x['timestamp'], reverse=(sort == 'latest'))
     total_items = len(items)
 
+    # Per-row "unread" flag: an item is unread if it arrived AFTER the user's
+    # last login (or after the session's `inbox_last_seen_at` — which we bump
+    # on inbox render below, so a second visit within the same session doesn't
+    # keep marking already-seen rows as unread).
+    from django.utils import timezone as _tz
+    last_seen_iso = request.session.get('inbox_last_seen_at')
+    if last_seen_iso:
+        try:
+            from datetime import datetime
+            last_seen_at = datetime.fromisoformat(last_seen_iso)
+        except (TypeError, ValueError):
+            last_seen_at = user.last_login
+    else:
+        last_seen_at = user.last_login
+    for it in items:
+        ts = it.get('timestamp')
+        it['is_unread'] = bool(last_seen_at and ts and ts > last_seen_at)
+
     # Snapshot BEFORE filtering so the sidebar dot tracks "anything new at all",
     # not "anything new in the currently selected filter".
     request.session['inbox_seen_count'] = total_items
+    # Bump the last-seen timestamp so per-row unread dots clear on next visit.
+    # We do it AFTER computing is_unread above so the current render still
+    # shows the dots — they'll clear on the next inbox load.
+    request.session['inbox_last_seen_at'] = _tz.now().isoformat()
 
     # ── Text search ────────────────────────────────────────────────
     # Substring match (case-insensitive) across the text a user is likely

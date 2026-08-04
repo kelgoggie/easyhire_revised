@@ -98,7 +98,73 @@ def notify_jobseeker_liked_job(jobseeker, job):
     refresh_jobseeker_liked_job_notification(job)
 
 
-def notify_high_match_jobseekers(job, threshold=80):
+def notify_new_application(job, jobseeker):
+    """Fire a grouped 'X and N others applied to your job post' notification
+    to every rep of the job's company. Mirrors the pattern used for
+    JOBSEEKERS_LIKED_JOB — one unread row per rep per job, with liker_count
+    and liker_preview updated as more applicants come in.
+
+    Called from the apply endpoint on Application create. Idempotent:
+    calling again for the same (job, jobseeker) is a no-op because the
+    Application row's uniqueness is enforced upstream.
+    """
+    from .models import Notification
+    from apps.jobs.models import Application
+
+    reps = list(job.company.representatives.select_related('user'))
+    if not reps:
+        return
+
+    apps_qs = (Application.objects.filter(job=job)
+               .select_related('jobseeker').order_by('-created_at'))
+    apps = list(apps_qs)
+    count = len(apps)
+    if count == 0:
+        return
+
+    def _full_name(p):
+        return f"{p.first_name} {p.last_name}".strip() or p.first_name or 'Someone'
+
+    latest = _full_name(apps[0].jobseeker)
+    if count == 1:
+        preview = latest
+    elif count == 2:
+        preview = f"{latest} and {_full_name(apps[1].jobseeker)}"
+    else:
+        others = count - 1
+        preview = f"{latest} and {others} other{'s' if others != 1 else ''}"
+
+    for rep in reps:
+        existing = Notification.objects.filter(
+            recipient=rep.user,
+            notif_type=Notification.NEW_APPLICATION,
+            job=job,
+            is_read=False,
+        ).first()
+        if existing:
+            existing.liker_count = count
+            existing.liker_preview = preview
+            # Bump created_at so the (freshly-updated) notification jumps
+            # back to the top of the bell feed and re-toasts.
+            from django.utils import timezone
+            existing.created_at = timezone.now()
+            existing.jobseeker = jobseeker  # latest applicant
+            existing.save(update_fields=[
+                'liker_count', 'liker_preview', 'created_at', 'jobseeker',
+            ])
+        else:
+            Notification.objects.create(
+                recipient=rep.user,
+                notif_type=Notification.NEW_APPLICATION,
+                company=job.company,
+                jobseeker=jobseeker,
+                job=job,
+                liker_count=count,
+                liker_preview=preview,
+            )
+
+
+
     """When a new job is posted, notify every jobseeker whose match score
     against it clears `threshold` (default 80). Uses the existing MATCH
     notification type since the semantic is the same — a strong match

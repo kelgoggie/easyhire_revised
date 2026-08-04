@@ -126,10 +126,13 @@ def get_analytics_context(request):
     placements_all_time   = Application.objects.filter(status='accepted').count()
     hired_all_time        = Application.objects.filter(status='hired').count()
 
-    # External-hire totals for the EasyHire-vs-External comparison. The
-    # field is a running counter without per-month history, so we can only
-    # show YTD (jobs posted this year) and all-time snapshots — not a
-    # per-month line like the other comparisons.
+    # External-hire totals + per-month series for the EasyHire-vs-External
+    # comparison line. The field is a running counter with no per-hire
+    # timestamp, so we attribute each job's external-hire count to the
+    # month the job was posted — a defensible approximation for the trend
+    # line (a job's hires generally happen in the same month or the month
+    # after posting). Not exact if an employer records external hires
+    # months later, but close enough for the shape of the curve.
     from django.db.models import Sum
     external_hires_this_year = (
         JobPosting.objects
@@ -139,6 +142,18 @@ def get_analytics_context(request):
     external_hires_all_time = (
         JobPosting.objects.aggregate(total=Sum('externally_hired_count'))['total']
     ) or 0
+
+    def external_hires_monthly_for_year(year):
+        rows = (JobPosting.objects
+                .filter(created_at__year=year)
+                .annotate(month=TruncMonth('created_at'))
+                .values('month')
+                .annotate(total=Sum('externally_hired_count'))
+                .order_by('month'))
+        by_month = {r['month'].month: (r['total'] or 0) for r in rows}
+        return [by_month.get(m, 0) for m in range(1, 13)]
+
+    external_hires_monthly = external_hires_monthly_for_year(selected_year)
 
     # Years that actually have data (for the dropdown)
     js_year_rows = JobseekerProfile.objects.dates('created_at', 'year', order='DESC')
@@ -483,6 +498,7 @@ def get_analytics_context(request):
         'new_jobs_this_year':     new_jobs_this_year,
         'external_hires_this_year': external_hires_this_year,
         'external_hires_all_time':  external_hires_all_time,
+        'external_hires_monthly':   external_hires_monthly,
     }
 
 
@@ -549,12 +565,13 @@ def analytics_csv(request):
     # ── Monthly time series (12 months + total) ──────────────────
     section(f'Monthly Time Series ({year})')
     w.writerow(['Series', *MONTHS, 'Total'])
-    monthly_row('New Jobseekers',   ctx['new_jobseekers_monthly'])
-    monthly_row('New Employers',    ctx['new_employers_monthly'])
-    monthly_row('New Jobs Posted',  ctx['new_jobs_monthly'])
-    monthly_row('Applications',     ctx['applications_monthly'])
-    monthly_row('Placements',       ctx['placements_monthly'])
-    monthly_row('Hired',            ctx['hired_monthly'])
+    monthly_row('New Jobseekers',    ctx['new_jobseekers_monthly'])
+    monthly_row('New Employers',     ctx['new_employers_monthly'])
+    monthly_row('New Jobs Posted',   ctx['new_jobs_monthly'])
+    monthly_row('Applications',      ctx['applications_monthly'])
+    monthly_row('Placements',        ctx['placements_monthly'])
+    monthly_row('Hired',             ctx['hired_monthly'])
+    monthly_row('Hired externally',  ctx['external_hires_monthly'])
 
     # ── Headline totals ──────────────────────────────────────────
     section('Headline Totals')
@@ -602,8 +619,10 @@ def analytics_csv(request):
 
     section('Jobseekers by Sector')
     w.writerow(['Sector', 'Count'])
-    for row in ctx.get('sector_data', []):
-        w.writerow([row['label'], row['count']])
+    # `sector_data` is a Sector queryset with an annotated `count` — attribute
+    # access, not dict-style. (Chart template hits it via `x.label` too.)
+    for row in ctx.get('sector_data', []) or []:
+        w.writerow([getattr(row, 'label', ''), getattr(row, 'count', 0)])
 
     # ── Company demographics ─────────────────────────────────────
     section('Companies by Business Type')

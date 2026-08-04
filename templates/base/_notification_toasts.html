@@ -72,10 +72,24 @@
 (function() {
   const STORAGE_KEY   = 'easyhire_seen_notif_ids';
   const MAX_TRACKED   = 200;   // trim localStorage to this many ids
-  const MAX_PER_POLL  = 3;     // never spam more than 3 new toasts at once
-  const DISMISS_MS    = 10000; // fade out after 10s
+  const MAX_PER_POLL  = 3;     // never spawn more than 3 new toasts at once
+  const MAX_VISIBLE   = 3;     // never show more than 3 toasts on screen —
+                               // a 4th arrival dismisses the oldest first
+  const DISMISS_MS    = 5000;  // fade out after 5s
   const container = document.getElementById('notif-toasts');
   if (!container) return;
+
+  function enforceStackCap() {
+    // If the container is over MAX_VISIBLE, remove the oldest (topmost —
+    // it appears first in the DOM) until we're back at the cap. Skips
+    // toasts already animating out.
+    const live = Array.from(container.querySelectorAll('.notif-toast:not(.leaving)'));
+    let excess = live.length - MAX_VISIBLE;
+    for (let i = 0; excess > 0 && i < live.length; i++) {
+      dismiss(live[i]);
+      excess -= 1;
+    }
+  }
 
   function loadSeen() {
     try {
@@ -170,9 +184,11 @@
     }
     const fresh = notifs.filter(n => !seen.has(n.id));
     if (!fresh.length) return;
-    // Cap the burst so a big batch doesn't cover the viewport.
+    // Cap the burst so a big batch doesn't cover the viewport, then enforce
+    // the visible-stack cap so a 4th arrival pushes the oldest out.
     fresh.slice(0, MAX_PER_POLL).forEach(n => {
       container.appendChild(buildToast(n));
+      enforceStackCap();
     });
     // Track every fresh ID (even ones we didn't render) so they don't
     // resurface on the next poll.
