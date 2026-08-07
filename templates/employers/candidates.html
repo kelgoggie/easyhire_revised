@@ -240,19 +240,6 @@
           </p>
         </div>
         <div class="flex items-center gap-1.5 flex-shrink-0">
-          {% if tab == 'recommended' and seeker_active and not item.application_id %}
-          {# Invite to Apply — lands on the candidate profile and auto-opens #}
-          {# the Contact modal in "invite" mode so the employer can edit +   #}
-          {# send without extra clicks.                                      #}
-          <a href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}&from=recommended&invite=1"
-             onclick="event.stopPropagation();"
-             title="Invite {{ item.profile.first_name }} to apply"
-             class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-amber/15 text-muted hover:text-amber transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-          </a>
-          {% endif %}
           {% with to_email=item.profile.contact_email|default:item.profile.user.email %}
           {% if to_email %}
           <a href="https://mail.google.com/mail/?view=cm&fs=1&to={{ to_email|urlencode }}&su={{ 'Regarding your EasyHire application — '|add:company.name|urlencode }}"
@@ -298,6 +285,27 @@
         {% endwith %}
       </div>
 
+      {# Invite to Apply — same lightweight flow as the job_detail carousel: #}
+      {# one AJAX POST, bell notification, and the button flips to          #}
+      {# "Invitation Sent". Only shown on the Recommended tab, on active    #}
+      {# jobseekers who haven't already applied to this job.                #}
+      {% if tab == 'recommended' and seeker_active and not item.application_id %}
+        {% if item.profile.id in invited_ids %}
+        <button type="button" disabled
+                class="block w-full text-center bg-teal/10 border border-teal/30 text-teal text-xs font-semibold py-2 rounded-full cursor-default mt-auto">
+          ✓ Invitation Sent
+        </button>
+        {% else %}
+        <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/invite/{{ item.profile.id|hashid }}/" class="invite-form mt-auto" data-jobseeker-name="{{ item.profile.first_name }}">
+          {% csrf_token %}
+          <button type="submit"
+                  class="block w-full text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2 rounded-full hover:bg-taupe/30 transition">
+            Invite to Apply
+          </button>
+        </form>
+        {% endif %}
+      {% endif %}
+
     </div>
     {% endwith %}
     {% endfor %}
@@ -330,6 +338,69 @@
 
 </div>
 
+<script>
+// Invite to Apply — mirrors job_detail.html so both surfaces share the
+// same behavior: confirm, AJAX post, then swap the button in-place for a
+// "Invitation Sent" pill without reloading. The card's onclick guard
+// (`event.target.closest('a, button, form') return`) already prevents
+// the underlying card link from firing when the button is clicked.
+(function() {
+  function getCsrfCookie() {
+    const v = '; ' + document.cookie, p = v.split('; csrftoken=');
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+  function replaceWithInvitedBadge(formEl) {
+    const badge = document.createElement('button');
+    badge.type = 'button';
+    badge.disabled = true;
+    badge.className = 'block w-full text-center bg-teal/10 border border-teal/30 text-teal text-xs font-semibold py-2 rounded-full cursor-default mt-auto';
+    badge.innerHTML = '✓ Invitation Sent';
+    formEl.replaceWith(badge);
+  }
+  document.querySelectorAll('form.invite-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = form.dataset.jobseekerName || 'this candidate';
+      const submitBtn = form.querySelector('button[type="submit"]');
+      function fire() {
+        if (submitBtn) submitBtn.disabled = true;
+        fetch(form.action, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfCookie() || '',
+          },
+          body: new FormData(form),
+        }).then(function(r) { return r.json().then(function(d) { return [r.ok, d]; }); })
+          .then(function(pair) {
+            const [ok, d] = pair;
+            if (ok && d.ok) {
+              replaceWithInvitedBadge(form);
+            } else {
+              if (submitBtn) submitBtn.disabled = false;
+              alert((d && d.error) || 'Could not send invitation. Please try again.');
+            }
+          })
+          .catch(function() {
+            if (submitBtn) submitBtn.disabled = false;
+            alert('Network error — invitation not sent.');
+          });
+      }
+      if (window.confirmAction) {
+        window.confirmAction({
+          title: 'Invite ' + name + ' to apply?',
+          body:  name + ' will get a notification pointing them to this job post. They can then choose whether to apply.',
+          ctaLabel: 'Yes, send invitation',
+          ctaClass: 'bg-amber hover:bg-amber/90',
+          onConfirm: fire,
+        });
+      } else {
+        fire();
+      }
+    });
+  });
+})();
+</script>
 
 {% endblock %}
 {% endwith %}

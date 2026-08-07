@@ -1355,6 +1355,7 @@ watchAllEntries();
       ensureUnlocked();
       setIfEmpty('contact_email', data.email);
       setIfEmpty('phone', data.phone);
+      setIfEmpty('street_barangay', data.address);
       setIfEmpty('bio', data.bio);
       applySkills(data.skills);
       applyEducation(data.education);

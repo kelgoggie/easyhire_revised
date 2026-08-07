@@ -874,6 +874,17 @@ def candidates(request, job_id):
         company=company, job=job
     ).values_list('jobseeker_id', flat=True))
 
+    # Jobseekers this company has already invited to THIS job. Sourced from
+    # the shared INVITED_TO_APPLY notification store so the button on this
+    # page and the one on job_detail.html's carousel agree on state.
+    from apps.notifications.models import Notification
+    invited_ids = set(
+        Notification.objects.filter(
+            notif_type=Notification.INVITED_TO_APPLY,
+            company=company, job=job,
+        ).values_list('jobseeker_id', flat=True)
+    )
+
     # Counts for tab labels
     applicants_count = Application.objects.filter(job=job).count()
     liked_by_count = JobInteraction.objects.filter(
@@ -975,6 +986,7 @@ def candidates(request, job_id):
         'job': job,
         'ranked': list(page.object_list),
         'liked_ids': liked_ids,
+        'invited_ids': invited_ids,
         'liked_by_count': liked_by_count,
         'applicants_count': applicants_count,
         'tab': tab,
@@ -1442,6 +1454,11 @@ def candidate_contact(request, jobseeker_id):
     # "invite" is a UI-only shorthand for a REQUIREMENTS-shaped message —
     # different preset copy on the frontend, but stored as a plain contact.
     # Avoids a schema migration for what's effectively different boilerplate.
+    # We keep the original UI intent in `ui_kind` because we need it below to
+    # (a) enforce that invites are job-scoped and (b) dedupe against the
+    # INVITED_TO_APPLY notification store so the invite-carousel guard on
+    # job_detail.html and this modal share one source of truth.
+    ui_kind = kind
     if kind == 'invite':
         kind = EmployerContact.KIND_REQUIREMENTS
     if kind not in (EmployerContact.KIND_REQUIREMENTS, EmployerContact.KIND_INTERVIEW):
@@ -1454,6 +1471,23 @@ def candidate_contact(request, jobseeker_id):
     job = None
     if job_id_raw:
         job = JobPosting.objects.filter(id=job_id_raw, company=company).first()
+
+    # Invite-to-apply guardrails: needs a specific job (otherwise "invited to
+    # apply for what?"), and can't be sent twice for the same (jobseeker, job).
+    if ui_kind == 'invite':
+        if not job:
+            messages.error(request, 'Pick a job to invite them to.')
+            return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
+        already_invited = Notification.objects.filter(
+            notif_type=Notification.INVITED_TO_APPLY,
+            company=company, jobseeker=jobseeker, job=job,
+        ).exists()
+        if already_invited:
+            messages.info(
+                request,
+                f'You\'ve already invited {jobseeker.first_name} to apply for {job.title}.',
+            )
+            return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
 
     interview_at = None
     if kind == EmployerContact.KIND_INTERVIEW and interview_at_raw:
@@ -1482,7 +1516,9 @@ def candidate_contact(request, jobseeker_id):
 
     # In-app notification for the jobseeker.
     if jobseeker.user:
-        kind_label = 'job requirements' if kind == EmployerContact.KIND_REQUIREMENTS else 'interview details'
+        kind_label = 'an invitation to apply' if ui_kind == 'invite' else (
+            'job requirements' if kind == EmployerContact.KIND_REQUIREMENTS else 'interview details'
+        )
         Notification.objects.create(
             recipient=jobseeker.user,
             notif_type=Notification.EMPLOYER_CONTACTED,
@@ -1492,6 +1528,20 @@ def candidate_contact(request, jobseeker_id):
             liker_preview=kind_label,
             admin_message=subject,
         )
+        # Also plant an INVITED_TO_APPLY marker for invites. This is the
+        # shared idempotency store — same one job_detail.html's carousel
+        # checks — so a follow-up click from either surface is a no-op.
+        # We keep it minimal (no admin_message body) since the visible
+        # bell item is the EMPLOYER_CONTACTED one above; this row is
+        # here for the dedupe check, not for rendering.
+        if ui_kind == 'invite':
+            Notification.objects.create(
+                recipient=jobseeker.user,
+                notif_type=Notification.INVITED_TO_APPLY,
+                company=company, jobseeker=jobseeker, job=job,
+                liker_preview=job.title,
+                is_read=True,  # silent marker — don't inflate unread count
+            )
 
     messages.success(request, f'Sent to {jobseeker.first_name}\'s EasyHire inbox.')
     # Bounce back to wherever the employer came from — job detail, candidate

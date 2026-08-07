@@ -150,6 +150,41 @@ SECTION_HEADERS = {
 }
 
 
+# Match an "Address: ..." style prefix on a line.
+_ADDRESS_PREFIX_RE = re.compile(
+    r'^\s*(?:home\s+)?(?:address|location|residence|based\s+in|located\s+in)\s*[:\-–]\s*(.+)$',
+    re.I,
+)
+# Fallback: any line mentioning Iloilo. Filters out sentence-shaped bios
+# that just happen to mention the city ("Grew up in Iloilo City and…").
+_ILOILO_RE = re.compile(r'\biloilo\b', re.I)
+
+
+def _extract_address(text: str) -> str:
+    """Best-effort street-address string. Prefers 'Address:' lines, falls
+    back to short lines mentioning Iloilo. Returns '' if nothing looks
+    address-shaped — we'd rather leave the field blank than fill it with
+    a sentence from the bio."""
+    for line in text.splitlines():
+        m = _ADDRESS_PREFIX_RE.match(line)
+        if m:
+            return m.group(1).strip(' ,;')[:200]
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or len(s) > 120:
+            continue
+        if not _ILOILO_RE.search(s):
+            continue
+        # Skip prose (verbs, ending punctuation other than period-in-abbrev).
+        if _looks_like_description(s):
+            continue
+        # Skip bare emails/phones that happen to sit near "Iloilo".
+        if EMAIL_RE.search(s) or PHONE_RE.search(s):
+            continue
+        return s.strip(' ,;')[:200]
+    return ''
+
+
 # ── File-type detection ───────────────────────────────────────────────
 def _detect_kind(file_bytes: bytes) -> str:
     """Sniff the upload's actual type from its first bytes. Returns
@@ -479,6 +514,7 @@ def parse_resume_text(text: str, known_skills: Optional[list[str]] = None,
         'kind': kind,
         'email': email_match.group(0) if email_match else '',
         'phone': re.sub(r'[\s\-]', '', phone_match.group(0)) if phone_match else '',
+        'address': _extract_address(text),
         'bio': summary,
         'skills': skills,
         'education': education,
