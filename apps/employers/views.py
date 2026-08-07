@@ -689,10 +689,15 @@ def job_close(request, job_id):
 def job_mark_external_hires(request, job_id):
     """Record how many people were hired for this job outside the platform.
 
-    Informational only — doesn't decrement `slots` or auto-close the job;
-    the employer keeps using the existing Close Job action when the posting
-    is fully filled. Sends JSON when called via AJAX so the modal can
-    update the button label in place; falls back to a redirect otherwise.
+    External hires occupy real slots on the posting — same treatment as
+    platform hires (which decrement `slots` in the hire flow). So every
+    change here delta-adjusts `slots` alongside `externally_hired_count`:
+        delta = new_external - old_external
+        slots -= delta   (delta > 0 uses new slots; delta < 0 frees them)
+
+    Rejects any update that would push `slots` below 0. Sends JSON when
+    called via AJAX so the modal can update the button label in place;
+    falls back to a redirect otherwise.
     """
     from django.http import JsonResponse
     profile = request.user.employer_profile
@@ -703,19 +708,44 @@ def job_mark_external_hires(request, job_id):
 
     raw = (request.POST.get('count') or '').strip()
     try:
-        count = int(raw)
+        new_count = int(raw)
     except (TypeError, ValueError):
-        count = -1
-    if count < 0:
+        new_count = -1
+    if new_count < 0:
         if is_ajax:
             return JsonResponse({'ok': False, 'error': 'Enter a whole number 0 or greater.'}, status=400)
         return redirect(f'/employers/jobs/{_hashid(job.id)}/')
 
-    job.externally_hired_count = count
-    job.save(update_fields=['externally_hired_count'])
+    old_count = int(job.externally_hired_count or 0)
+    remaining_slots = int(job.slots or 0)
+    delta = new_count - old_count
+
+    # Overflow guard: can't record more external hires than there are open
+    # slots. remaining_slots already reflects the current external count
+    # (each prior save decremented slots), so the check is simply
+    # `delta <= remaining_slots`.
+    if delta > remaining_slots:
+        max_allowed = old_count + remaining_slots
+        msg = (
+            f"Can't record {new_count} external hires — this job only has "
+            f"{remaining_slots} slot{'' if remaining_slots == 1 else 's'} left "
+            f"(max you can set is {max_allowed}). Reopen a closed slot or "
+            f"increase the job's slot count first."
+        )
+        if is_ajax:
+            return JsonResponse({'ok': False, 'error': msg}, status=400)
+        return redirect(f'/employers/jobs/{_hashid(job.id)}/')
+
+    job.externally_hired_count = new_count
+    job.slots = remaining_slots - delta  # delta may be negative → frees a slot
+    job.save(update_fields=['externally_hired_count', 'slots'])
 
     if is_ajax:
-        return JsonResponse({'ok': True, 'count': count})
+        return JsonResponse({
+            'ok': True,
+            'count': new_count,
+            'slots_remaining': job.slots,
+        })
     return redirect(f'/employers/jobs/{_hashid(job.id)}/')
 
 

@@ -143,6 +143,7 @@
                       data-job-hashid="{{ job.id|hashid }}"
                       data-job-title="{{ job.title }}"
                       data-current-count="{{ job.externally_hired_count|default:0 }}"
+                      data-slots-remaining="{{ job.slots|default:0 }}"
                       class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">
                 Mark hired externally
               </button>
@@ -240,7 +241,7 @@
   <div class="absolute inset-0 bg-black/40" data-backdrop></div>
   <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
     <p class="text-primary font-bold text-base mb-1">Mark hired externally</p>
-    <p class="text-muted text-xs mb-4">Record how many people you hired for <strong id="jl-external-job-title"></strong> outside EasyHire (walk-ins, referrals, other job boards). This is informational — it doesn't close the job or change your slot count.</p>
+    <p class="text-muted text-xs mb-4">Record how many people you hired for <strong id="jl-external-job-title"></strong> outside EasyHire (walk-ins, referrals, other job boards). External hires occupy real slots — max you can record for this job is <strong id="jl-external-max">0</strong>.</p>
     <form id="jl-external-form" method="POST" action="">
       {% csrf_token %}
       <label for="jl-external-input" class="block text-primary text-xs font-medium mb-1">Number hired externally</label>
@@ -291,16 +292,24 @@ document.addEventListener('click', function(e) {
   function open() { modal.classList.remove('hidden'); modal.classList.add('flex'); setTimeout(() => { input.focus(); input.select(); }, 30); }
   function close() { modal.classList.add('hidden'); modal.classList.remove('flex'); }
 
+  const maxEl = document.getElementById('jl-external-max');
+
   // Wire every dropdown trigger to populate the shared modal.
   document.querySelectorAll('[data-open-external-hires]').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       const hashid = btn.getAttribute('data-job-hashid');
       const title  = btn.getAttribute('data-job-title')  || '';
-      const count  = btn.getAttribute('data-current-count') || '0';
+      const count  = parseInt(btn.getAttribute('data-current-count') || '0', 10);
+      // slots-remaining already reflects prior external hires (each save
+      // decremented it), so max we can set is remaining + already-recorded.
+      const remaining = parseInt(btn.getAttribute('data-slots-remaining') || '0', 10);
+      const maxVal    = remaining + count;
       form.action = '/employers/jobs/' + hashid + '/external-hires/';
       titleEl.textContent = title;
-      input.value = count;
+      input.value = String(count);
+      input.setAttribute('max', String(maxVal));
+      if (maxEl) maxEl.textContent = String(maxVal);
       errorEl.classList.add('hidden');
       // Hide the dropdown that owns this trigger so it doesn't linger over the modal.
       const dropdown = btn.closest('.absolute');
@@ -328,12 +337,18 @@ document.addEventListener('click', function(e) {
       const [ok, d] = pair;
       if (ok && d.ok) {
         close();
-        // Update the data-current-count on any trigger pointing at this job
-        // so a second click prefills with the new value instead of the stale one.
+        // Update the data-current-count AND data-slots-remaining on any
+        // trigger pointing at this job so a second click prefills with
+        // the new value AND enforces the new max correctly.
         const jobHashid = form.action.match(/\/jobs\/([^/]+)\//);
         if (jobHashid) {
           document.querySelectorAll('[data-open-external-hires][data-job-hashid="' + jobHashid[1] + '"]')
-            .forEach(function(b) { b.setAttribute('data-current-count', d.count); });
+            .forEach(function(b) {
+              b.setAttribute('data-current-count', d.count);
+              if (typeof d.slots_remaining === 'number') {
+                b.setAttribute('data-slots-remaining', d.slots_remaining);
+              }
+            });
         }
       } else {
         errorEl.textContent = (d && d.error) || 'Could not save. Try again.';

@@ -212,26 +212,21 @@ def confirm_hire(request, app_id):
 
 @login_required
 def parse_resume_pdf(request):
-    """Accept an uploaded PDF, extract structured fields, return JSON for the
-    resume form to pre-fill. Skill matching uses the existing Skill catalog."""
+    """Extract résumé fields for the resume form. Accepts either:
+
+      * ``resume_pdf`` (file upload) — server does the extraction. Supports
+        PDF via pdfplumber; images/scanned PDFs need Tesseract on the host.
+      * ``resume_text`` (already-extracted plain text) — used by the
+        browser-side OCR flow (tesseract.js) so image parsing works even
+        on hosts where the Tesseract binary isn't installed (e.g. Render's
+        Native Python runtime).
+
+    One of the two must be present. Skill matching uses the existing catalog
+    in both branches."""
     if request.method != 'POST' or not request.user.is_jobseeker:
         return JsonResponse({'ok': False, 'error': 'Bad request'}, status=400)
 
-    upload = request.FILES.get('resume_pdf')
-    if not upload:
-        return JsonResponse({'ok': False, 'error': 'No file provided'}, status=400)
-    if upload.size > 10 * 1024 * 1024:
-        return JsonResponse({'ok': False, 'error': 'File must be under 10 MB'}, status=400)
-
-    name = upload.name.lower()
-    allowed_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.heic', '.heif')
-    if not name.endswith(allowed_ext):
-        return JsonResponse({
-            'ok': False,
-            'error': 'Upload a PDF or a photo (JPG, PNG, or HEIC) of your résumé.',
-        }, status=400)
-
-    from apps.jobseekers.resume_parser import parse_resume
+    from apps.jobseekers.resume_parser import parse_resume, parse_resume_text
     from apps.jobseekers.skill_vocab import COMMON_SKILLS
     # Union the hand-curated starter vocab (common PH job skills — office,
     # trades, healthcare, tech, etc.) with whatever jobseekers have already
@@ -245,6 +240,38 @@ def parse_resume_pdf(request):
             seen.add(low)
             known_skills.append(name.strip())
     known_skills = known_skills[:2500]
+
+    # ── Text-first branch (browser-side OCR) ──────────────────────
+    resume_text = (request.POST.get('resume_text') or '').strip()
+    if resume_text:
+        if len(resume_text) > 200_000:
+            return JsonResponse({'ok': False, 'error': 'Extracted text too large.'}, status=400)
+        try:
+            result = parse_resume_text(resume_text, known_skills=known_skills, kind='image')
+        except Exception as e:
+            print(f'[resume_parser] text-branch {type(e).__name__}: {e}')
+            return JsonResponse({
+                'ok': False,
+                'error': "We couldn't parse that text. Try again or fill in the form manually.",
+            }, status=400)
+        if not result.get('ok'):
+            return JsonResponse(result, status=400)
+        return JsonResponse(result)
+
+    # ── File branch (existing server-side parse path) ─────────────
+    upload = request.FILES.get('resume_pdf')
+    if not upload:
+        return JsonResponse({'ok': False, 'error': 'No file provided'}, status=400)
+    if upload.size > 10 * 1024 * 1024:
+        return JsonResponse({'ok': False, 'error': 'File must be under 10 MB'}, status=400)
+
+    name = upload.name.lower()
+    allowed_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.heic', '.heif')
+    if not name.endswith(allowed_ext):
+        return JsonResponse({
+            'ok': False,
+            'error': 'Upload a PDF or a photo (JPG, PNG, or HEIC) of your résumé.',
+        }, status=400)
 
     try:
         result = parse_resume(upload.read(), known_skills=known_skills)

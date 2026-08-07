@@ -242,14 +242,30 @@ def _extract_text(file_bytes: bytes, kind: str) -> tuple[str, Optional[str]]:
             if ocr_text and len(ocr_text) > len(text):
                 return ocr_text, None
             if not text:
+                if not _tesseract_ok():
+                    return '', (
+                        "This PDF looks like a scanned image and OCR isn't "
+                        "set up on this server yet — the Tesseract engine "
+                        "isn't installed. Try a text-based PDF instead, or "
+                        "type your details into the form manually."
+                    )
                 return '', (
-                    "This PDF looks like a scanned image, and OCR isn't "
-                    "available on this server. Try uploading a text-based "
-                    "PDF, or paste your details into the form manually."
+                    "Couldn't read text from this scanned PDF. Try a "
+                    "clearer scan, a text-based PDF, or type it in manually."
                 )
         return text, None
 
     if kind == 'image':
+        # Distinguish "OCR isn't available on this server" from "OCR ran
+        # but the photo was too fuzzy to read". Both used to surface the
+        # same "couldn't read enough text" line, which sent users chasing
+        # a photo-quality problem when the real issue was server config.
+        if not _tesseract_ok():
+            return '', (
+                "Image OCR isn't set up on this server yet — the Tesseract "
+                "engine isn't installed. Upload a PDF instead, or ask the "
+                "PESO admin to enable OCR."
+            )
         ocr_text = _ocr_image(file_bytes)
         if not ocr_text or len(ocr_text.strip()) < 40:
             return '', (
@@ -431,19 +447,20 @@ def _extract_experiences(section_text: str) -> list[dict]:
     return entries[:6]
 
 
-# ── Public entry point ────────────────────────────────────────────────
-def parse_resume(file_bytes: bytes, known_skills: Optional[list[str]] = None) -> dict:
-    """Parse a resume upload and return form-ready fields.
+# ── Public entry points ───────────────────────────────────────────────
+def parse_resume_text(text: str, known_skills: Optional[list[str]] = None,
+                     kind: str = 'text') -> dict:
+    """Parse résumé text that's already been extracted (e.g. by browser-side
+    OCR via tesseract.js). Skips file sniffing and server-side OCR — the
+    caller is responsible for producing usable text.
 
     Returns ``{'ok': False, 'error': '...'}`` on any handled failure, or
     ``{'ok': True, ...fields...}`` on success.
     """
-    kind = _detect_kind(file_bytes)
-    text, error = _extract_text(file_bytes, kind)
-    if error:
-        return {'ok': False, 'error': error}
-    if not text:
-        return {'ok': False, 'error': "Couldn't read any text from this file. Try a different upload or fill in fields manually."}
+    text = (text or '').strip()
+    if len(text) < 40:
+        return {'ok': False, 'error':
+            "Couldn't read enough text. Try a sharper photo or upload a PDF."}
 
     sections = _split_sections(text)
 
@@ -459,7 +476,7 @@ def parse_resume(file_bytes: bytes, known_skills: Optional[list[str]] = None) ->
 
     return {
         'ok': True,
-        'kind': kind,                         # surfaces in JSON so the client can confirm
+        'kind': kind,
         'email': email_match.group(0) if email_match else '',
         'phone': re.sub(r'[\s\-]', '', phone_match.group(0)) if phone_match else '',
         'bio': summary,
@@ -468,3 +485,18 @@ def parse_resume(file_bytes: bytes, known_skills: Optional[list[str]] = None) ->
         'experiences': experiences,
         'raw_chars': len(text),
     }
+
+
+def parse_resume(file_bytes: bytes, known_skills: Optional[list[str]] = None) -> dict:
+    """Parse a resume upload and return form-ready fields.
+
+    Returns ``{'ok': False, 'error': '...'}`` on any handled failure, or
+    ``{'ok': True, ...fields...}`` on success.
+    """
+    kind = _detect_kind(file_bytes)
+    text, error = _extract_text(file_bytes, kind)
+    if error:
+        return {'ok': False, 'error': error}
+    if not text:
+        return {'ok': False, 'error': "Couldn't read any text from this file. Try a different upload or fill in fields manually."}
+    return parse_resume_text(text, known_skills=known_skills, kind=kind)

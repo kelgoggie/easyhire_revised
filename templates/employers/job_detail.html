@@ -23,8 +23,8 @@
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-2">
     <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">{{ job.title }}</h1>
     <div class="flex items-center gap-2 flex-shrink-0 sm:pt-2 flex-wrap">
-      <span class="inline-flex items-center bg-gray-100 text-muted text-xs font-semibold px-3 py-1.5 rounded-full">
-        {{ job.slots }} slot{{ job.slots|pluralize }} open
+      <span id="slots-chip" class="inline-flex items-center bg-gray-100 text-muted text-xs font-semibold px-3 py-1.5 rounded-full">
+        <span id="slots-chip-count">{{ job.slots }}</span>&nbsp;<span id="slots-chip-noun">slot{{ job.slots|pluralize }}</span>&nbsp;open
       </span>
       {# Read-only chip that surfaces the current external-hires count so   #}
       {# the employer sees at a glance what they've already recorded. Hidden #}
@@ -213,13 +213,17 @@
   <div class="absolute inset-0 bg-black/40" data-backdrop></div>
   <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
     <p class="text-primary font-bold text-base mb-1">Mark hired externally</p>
-    <p class="text-muted text-xs mb-4">Record how many people you hired for <strong>{{ job.title }}</strong> outside EasyHire (walk-ins, referrals, other job boards). This is informational — it doesn't close the job or change your slot count.</p>
+    {% with current=job.externally_hired_count|default:0 %}
+    {% with max_val=current|add:job.slots %}
+    <p class="text-muted text-xs mb-4">Record how many people you hired for <strong>{{ job.title }}</strong> outside EasyHire (walk-ins, referrals, other job boards). External hires occupy real slots — max you can record is <strong>{{ max_val }}</strong> ({{ job.slots }} open slot{{ job.slots|pluralize }} + {{ current }} already external).</p>
     <form id="external-hires-form" method="POST" action="/employers/jobs/{{ job.id|hashid }}/external-hires/">
       {% csrf_token %}
       <label for="external-hires-input" class="block text-primary text-xs font-medium mb-1">Number hired externally</label>
-      <input type="number" name="count" id="external-hires-input" min="0" step="1" value="{{ job.externally_hired_count|default:0 }}"
+      <input type="number" name="count" id="external-hires-input" min="0" step="1" max="{{ max_val }}" value="{{ current }}"
              class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
       <p id="external-hires-error" class="hidden text-red-500 text-xs mt-2"></p>
+    {% endwith %}
+    {% endwith %}
       <div class="flex justify-end gap-3 mt-5">
         <button type="button" id="external-hires-cancel"
                 class="bg-gray-100 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition">Cancel</button>
@@ -337,6 +341,14 @@ document.querySelectorAll('form.invite-form').forEach(function(form) {
         chipN.textContent = d.count;
         if (d.count > 0) chip.classList.remove('hidden');
         else             chip.classList.add('hidden');
+        // Reflect the freshly-computed remaining slots in the header chip
+        // so the employer sees the effect without a page reload.
+        if (typeof d.slots_remaining === 'number') {
+          const sc = document.getElementById('slots-chip-count');
+          const sn = document.getElementById('slots-chip-noun');
+          if (sc) sc.textContent = d.slots_remaining;
+          if (sn) sn.textContent = 'slot' + (d.slots_remaining === 1 ? '' : 's');
+        }
         close();
       } else {
         errorEl.textContent = (d && d.error) || 'Could not save. Try again.';

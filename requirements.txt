@@ -20,6 +20,7 @@ sentence-transformers>=2.5    # Semantic similarity for skill matching
 
 # PDF parsing (resume upload)
 pdfplumber>=0.10              # Extract text/tables from PDFs
+# Image OCR runs in the browser (tesseract.js) — no server-side OCR needed.
 
 # Forms & validation
 django-crispy-forms>=2.1

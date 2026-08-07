@@ -1291,19 +1291,63 @@ watchAllEntries();
     if (typeof initAutocompletes === 'function') setTimeout(initAutocompletes, 50);
   }
 
-  input.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { setError('File must be under 10 MB.'); return; }
+  // ── File-type routing ────────────────────────────────────────────
+  // PDFs go to the server (pdfplumber handles them fast + reliably).
+  // Images run OCR in the BROWSER via tesseract.js because Render's
+  // Native Python runtime can't install the Tesseract binary. We POST
+  // the extracted text back to the same endpoint (which accepts either
+  // a file OR a `resume_text` field).
+  //
+  // HEIC/HEIF (iPhone default) can't be decoded by tesseract.js
+  // directly. Rather than pulling in heic2any (~200KB), we tell users
+  // to change their iPhone camera to "Most Compatible" (JPG) or upload
+  // a PDF — both work today.
+  function fileKind(file) {
+    const name = (file.name || '').toLowerCase();
+    if (name.endsWith('.pdf')) return 'pdf';
+    if (name.endsWith('.heic') || name.endsWith('.heif')) return 'heic';
+    if (/\.(jpg|jpeg|png)$/i.test(name)) return 'image';
+    // Fallback on MIME type if the extension is unusual.
+    const mt = (file.type || '').toLowerCase();
+    if (mt === 'application/pdf') return 'pdf';
+    if (mt === 'image/heic' || mt === 'image/heif') return 'heic';
+    if (mt.startsWith('image/')) return 'image';
+    return 'unknown';
+  }
 
-    const fd = new FormData();
-    fd.append('resume_pdf', file);
+  // Lazy-load tesseract.js from CDN the first time an image is picked.
+  // Everything is inlined into `window.Tesseract` once loaded.
+  let tesseractPromise = null;
+  function loadTesseract() {
+    if (tesseractPromise) return tesseractPromise;
+    tesseractPromise = new Promise(function(resolve, reject) {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      s.async = true;
+      s.onload  = () => resolve(window.Tesseract);
+      s.onerror = () => reject(new Error('OCR library failed to load'));
+      document.head.appendChild(s);
+    });
+    return tesseractPromise;
+  }
 
-    setBusy();
-    fetch('/resume/parse-pdf/', {
+  function ocrImageInBrowser(file, onProgress) {
+    return loadTesseract().then(function(Tesseract) {
+      return Tesseract.recognize(file, 'eng', {
+        logger: function(m) {
+          if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+            onProgress(Math.round(m.progress * 100));
+          }
+        },
+      }).then(function(res) { return (res && res.data && res.data.text) || ''; });
+    });
+  }
+
+  function sendResult(payload, filename) {
+    return fetch('/resume/parse-pdf/', {
       method: 'POST',
       headers: { 'X-CSRFToken': getCsrf() },
-      body: fd,
+      body: payload,
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -1315,9 +1359,59 @@ watchAllEntries();
       applySkills(data.skills);
       applyEducation(data.education);
       applyExperiences(data.experiences);
-      setDone(file.name);
+      setDone(filename);
     })
     .catch(function() { setError('Upload failed. Please try again.'); });
+  }
+
+  input.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError('File must be under 10 MB.'); return; }
+
+    const kind = fileKind(file);
+
+    if (kind === 'heic') {
+      setError('iPhone HEIC photos aren\'t supported for browser OCR yet. Change your camera to "Most Compatible" (JPG) in Settings, or upload a PDF.');
+      // Reset the input so picking the same file again re-triggers change.
+      input.value = '';
+      return;
+    }
+
+    if (kind === 'unknown') {
+      setError('Please upload a PDF or a photo (JPG or PNG).');
+      input.value = '';
+      return;
+    }
+
+    setBusy();
+
+    if (kind === 'pdf') {
+      const fd = new FormData();
+      fd.append('resume_pdf', file);
+      sendResult(fd, file.name).finally(function() { input.value = ''; });
+      return;
+    }
+
+    // kind === 'image' → browser OCR
+    textEl.innerHTML = '<span class="text-primary font-semibold">Reading photo… loading OCR (first time only)</span>';
+    ocrImageInBrowser(file, function(pct) {
+      textEl.innerHTML = '<span class="text-primary font-semibold">Reading photo… ' + pct + '%</span>';
+    })
+    .then(function(text) {
+      if (!text || text.trim().length < 40) {
+        setError('Couldn\'t read enough text from this photo. Try a sharper, well-lit shot — or upload a PDF.');
+        input.value = '';
+        return;
+      }
+      const fd = new FormData();
+      fd.append('resume_text', text);
+      return sendResult(fd, file.name);
+    })
+    .catch(function(err) {
+      setError((err && err.message) || 'Photo OCR failed. Try a PDF instead.');
+    })
+    .finally(function() { input.value = ''; });
   });
 })();
 
