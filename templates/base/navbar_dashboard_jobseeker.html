@@ -1,35 +1,38 @@
 {% load static %}
-<nav class="fixed top-0 left-0 right-0 z-50 bg-surface px-8 py-3 flex items-center justify-between shadow-md">
+{# Same responsive treatment as the employer navbar — three flex sections   #}
+{# (logo / nav icons / actions) tighten on mobile so they fit a 360px      #}
+{# viewport. Desktop styling unchanged.                                      #}
+<nav class="fixed top-0 left-0 right-0 z-50 bg-surface px-3 sm:px-6 md:px-8 py-3 flex items-center justify-between gap-2 shadow-md">
 
     <!-- Left: Logo -->
-    <a href="/dashboard/" class="flex items-center gap-2">
-        <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-9 h-9">
-        <span class="font-bold text-xl">
+    <a href="/dashboard/" class="flex items-center gap-2 min-w-0">
+        <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0">
+        <span class="font-bold text-base sm:text-xl truncate">
             <span class="text-primary">Easy</span><span class="text-teal">Hire</span><span class="text-primary">.</span>
         </span>
     </a>
 
     <!-- Center: Nav Icons -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
         <a href="/dashboard/"
-           class="w-11 h-11 flex items-center justify-center rounded-xl transition bg-primary
+           class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl transition bg-primary
                   {% if active == 'home' %}ring-2 ring-offset-1 ring-primary{% endif %}">
             <img src="{% static 'images/icons/icon_home.svg' %}" class="w-5 h-5 brightness-0 invert">
         </a>
         <a href="/resume/"
-           class="w-11 h-11 flex items-center justify-center rounded-xl transition
+           class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl transition
                   {% if active == 'resume' %}ring-2 ring-offset-1 ring-primary{% else %}hover:bg-taupe/30{% endif %}">
             <img src="{% static 'images/icons/icon_resume.svg' %}"
                  class="w-5 h-5 {% if active == 'resume' %}brightness-0 saturate-0{% endif %}">
         </a>
         <a href="/jobs/for-you/"
-           class="w-11 h-11 flex items-center justify-center rounded-xl transition
+           class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl transition
                   {% if active == 'jobs' %}ring-2 ring-offset-1 ring-primary{% else %}hover:bg-taupe/30{% endif %}">
             <img src="{% static 'images/icons/icon_jobs.svg' %}"
                  class="w-5 h-5 {% if active == 'jobs' %}brightness-0 saturate-0{% endif %}">
         </a>
         <a href="/analytics/"
-           class="w-11 h-11 flex items-center justify-center rounded-xl transition
+           class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl transition
                   {% if active == 'analytics' %}ring-2 ring-offset-1 ring-primary{% else %}hover:bg-taupe/30{% endif %}">
             <img src="{% static 'images/icons/icon_analytics.svg' %}"
                  class="w-5 h-5 {% if active == 'analytics' %}brightness-0 saturate-0{% endif %}">
@@ -37,7 +40,7 @@
     </div>
 
     <!-- Right: Bell, Messages, Avatar -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
 
         <!-- Notifications Bell -->
         {# Split feed — inbox-shaped notifications (applications, employer  #}
@@ -45,14 +48,14 @@
         {# mail icon below; everything else stays on the bell.              #}
         <div class="relative" id="notif-container">
             <button id="notif-btn"
-                    class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-taupe/30 transition relative">
+                    class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-taupe/30 transition relative">
                 <img src="{% static 'images/icons/icon_bell.svg' %}" class="w-5 h-5">
                 <span id="notif-dot" class="absolute top-1 right-1 w-3 h-3 bg-amber rounded-full ring-2 ring-white hidden"></span>
             </button>
 
             <!-- Dropdown -->
             <div id="notif-dropdown"
-                 class="absolute right-0 top-12 bg-surface rounded-2xl shadow-xl w-[340px] z-50 border border-taupe/30 hidden overflow-hidden flex flex-col">
+                 class="absolute right-0 top-12 bg-surface rounded-2xl shadow-xl w-[340px] max-w-[calc(100vw-1rem)] z-50 border border-taupe/30 hidden overflow-hidden flex flex-col">
                 <div class="px-5 pt-4 pb-2 flex items-center justify-between">
                     <p class="font-bold text-primary text-sm">Notifications</p>
                     <button onclick="markAllRead()" class="text-muted text-[11px] hover:text-primary transition">Mark all as read</button>
@@ -68,17 +71,26 @@
         <!-- Messages / Mail dropdown -->
         <div class="relative" id="mail-container">
             <button id="mail-btn"
-                    class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-taupe/30 transition relative">
+                    class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-taupe/30 transition relative">
                 <img src="{% static 'images/icons/icon_messages.svg' %}" class="w-5 h-5">
                 <span id="mail-dot" class="absolute top-1 right-1 w-3 h-3 bg-amber rounded-full ring-2 ring-white hidden"></span>
             </button>
 
             <div id="mail-dropdown"
-                 class="absolute right-0 top-12 bg-surface rounded-2xl shadow-xl w-[340px] z-50 border border-taupe/30 hidden overflow-hidden flex flex-col">
-                <div class="px-5 pt-4 pb-2 flex items-center justify-between">
+                 class="absolute right-0 top-12 bg-surface rounded-2xl shadow-xl w-[340px] max-w-[calc(100vw-1rem)] z-50 border border-taupe/30 hidden overflow-hidden flex flex-col">
+                <div class="px-5 pt-4 pb-2">
                     <p class="font-bold text-primary text-sm">Messages</p>
-                    <a href="/inbox/" class="text-teal text-[11px] font-semibold hover:underline">Open Inbox</a>
                 </div>
+                {# Open Inbox pinned as its own top-row action button —      #}
+                {# takes the reader straight to the full inbox from the top #}
+                {# of the popover, no scrolling required.                    #}
+                <a href="/inbox/"
+                   class="mx-5 my-2 inline-flex items-center justify-center gap-2 bg-primary text-white text-xs font-semibold px-4 py-2 rounded-full hover:bg-teal transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    Open Inbox
+                </a>
                 <div class="mx-5 border-b border-taupe/40"></div>
                 <div id="mail-list" class="overflow-y-auto max-h-96 py-2">
                     <p class="text-muted text-xs text-center py-8">No new messages</p>
@@ -88,7 +100,7 @@
 
         <!-- Profile Avatar + More -->
         <div class="relative" id="more-menu-container">
-            <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm cursor-pointer">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm cursor-pointer">
                 <img src="{% static 'images/icons/icon_profile.svg' %}" class="w-5 h-5">
             </div>
             <button id="more-menu-btn"
@@ -96,7 +108,7 @@
                 <img src="{% static 'images/icons/icon_more.svg' %}" class="w-3 h-3">
             </button>
             <div id="more-menu-dropdown"
-                 class="absolute right-0 top-12 bg-white rounded-2xl shadow-lg py-2 w-52 z-50 border border-taupe/20 hidden">
+                 class="absolute right-0 top-12 bg-white rounded-2xl shadow-lg py-2 w-52 max-w-[calc(100vw-1rem)] z-50 border border-taupe/20 hidden">
                 <div class="px-4 py-2 mb-1 border-b border-taupe/20">
                     <p class="font-semibold text-primary text-sm">
                         {{ request.user.jobseeker_profile.first_name }} {{ request.user.jobseeker_profile.last_name }}

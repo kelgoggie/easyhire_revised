@@ -69,11 +69,11 @@
     {% csrf_token %}
 
     <!-- ── Page header ─────────────────────────────────────────── -->
-    <div class="flex items-center justify-between pt-8 pb-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pt-6 sm:pt-8 pb-4 gap-3">
       <div class="flex items-center gap-3">
-        <h1 class="text-3xl font-extrabold text-primary">Your Résumé</h1>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-primary">Your Résumé</h1>
       </div>
-      <label id="pdf-upload-label" class="flex items-center gap-2 bg-surface border border-taupe/30 rounded-xl px-4 py-2 cursor-pointer hover:bg-taupe/10 transition">
+      <label id="pdf-upload-label" class="flex items-center gap-2 bg-surface border border-taupe/30 rounded-xl px-4 py-2 cursor-pointer hover:bg-taupe/10 transition w-full sm:w-auto">
         <svg id="pdf-upload-icon" class="w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
         </svg>
@@ -92,15 +92,15 @@
     {# and arm the beforeunload guard. Reverted from the "always editable" #}
     {# design — unlocked-by-default was too easy to trip into accidental   #}
     {# changes on mobile scroll.                                           #}
-    <div class="flex items-center justify-between pb-3 gap-3">
-      <h2 class="text-3xl sm:text-4xl text-primary leading-tight">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-3">
+      <h2 class="text-2xl sm:text-4xl text-primary leading-tight">
         {{ profile.first_name }}
         {% if profile.middle_name %} {{ profile.middle_name|first }}.{% endif %}
         <strong>{{ profile.last_name }}</strong>
         {% if profile.suffix %} {{ profile.suffix }}{% endif %}
       </h2>
       <button type="button" id="edit-resume-btn"
-              class="bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition shadow-sm flex-shrink-0 inline-flex items-center gap-2">
+              class="bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition shadow-sm flex-shrink-0 inline-flex items-center justify-center gap-2 w-full sm:w-auto">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
         </svg>
