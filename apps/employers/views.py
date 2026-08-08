@@ -763,7 +763,7 @@ def job_mark_external_hires(request, job_id):
 
 @employer_required
 def job_detail(request, job_id):
-    from apps.matching.engine import get_ranked_jobseekers
+    from apps.matching.engine import get_ranked_jobseekers, compute_match_score
     from apps.jobs.models import Application
     from apps.employers.models import EmployerContact
 
@@ -775,6 +775,28 @@ def job_detail(request, job_id):
     applicant_ids = set(Application.objects.filter(job=job).values_list('jobseeker_id', flat=True))
     ranked = get_ranked_jobseekers(job)
     ranked = [r for r in ranked if r['profile'].id not in applicant_ids][:8]
+
+    # Actual applicants for THIS job. Newest first, capped at 8 to match
+    # the Recommended carousel's card count. Rendered on the job detail
+    # page above Recommended so the employer sees who has ACTUALLY applied
+    # before who they COULD invite.
+    applicants = []
+    apps_qs = (Application.objects
+               .filter(job=job)
+               .select_related('jobseeker', 'jobseeker__user')
+               .order_by('-created_at')[:8])
+    for app in apps_qs:
+        try:
+            s = compute_match_score(job, app.jobseeker)
+            score_total = s.get('total', 0)
+        except Exception:
+            score_total = 0
+        applicants.append({
+            'profile': app.jobseeker,
+            'score': score_total,
+            'application_id': app.id,
+            'application_status': app.status,
+        })
 
     # Jobseekers who have already been invited to apply for this job.
     # Sourced from the INVITED_TO_APPLY notification rows (invite_to_apply
@@ -793,6 +815,7 @@ def job_detail(request, job_id):
         'company': company,
         'job': job,
         'ranked': ranked,
+        'applicants': applicants,
         'invited_ids': invited_ids,
         'applicants_count': len(applicant_ids),
         'unread_notifications': False,

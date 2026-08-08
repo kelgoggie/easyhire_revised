@@ -353,14 +353,36 @@
     </div>
 
     <!-- Submit -->
+    {# Confirmation gate: same shared modal used elsewhere for destructive #}
+    {# / high-impact actions. Keeps a stray click from publishing a job or #}
+    {# pushing edits live before the employer means to.                    #}
     <div class="flex justify-center">
-      <button type="submit"
+      <button type="button" id="job-form-submit"
               class="bg-amber text-white font-semibold px-20 py-3 rounded-full hover:bg-amber/90 transition text-sm">
         {% if action == 'Create' %}Create Job{% else %}Confirm &amp; Save Changes{% endif %}
       </button>
     </div>
 
   </form>
+  <script>
+  (function() {
+    const submitBtn = document.getElementById('job-form-submit');
+    const form      = document.getElementById('job-form');
+    if (!submitBtn || !form || typeof window.confirmAction !== 'function') return;
+    const isCreate = {% if action == 'Create' %}true{% else %}false{% endif %};
+    submitBtn.addEventListener('click', function() {
+      window.confirmAction({
+        title: isCreate ? 'Post this job now?' : 'Save these changes?',
+        body:  isCreate
+          ? 'The job will appear on the public jobs page (or to registered EasyHire users only, depending on your Visibility choice) as soon as you confirm.'
+          : 'Your edits go live for jobseekers immediately. Applicants who\'ve already been scored against the old requirements will keep their previous match scores until the next recompute.',
+        ctaLabel: isCreate ? 'Yes, post job' : 'Yes, save changes',
+        ctaClass: 'bg-amber hover:bg-amber/90',
+        onConfirm: function() { form.submit(); },
+      });
+    });
+  })();
+  </script>
 </div>
 
 {# â”€â”€ Cancel confirmation modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}

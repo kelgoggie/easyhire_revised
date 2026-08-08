@@ -255,6 +255,39 @@
           {% endwith %}
           {% match_badge item.score %}
           <span class="text-primary font-extrabold text-sm leading-none">{{ item.score }}%</span>
+          {# Card-level menu — Applicants tab only. View Profile always,   #}
+          {# Proceed only when the application is still in a reviewable    #}
+          {# state (pending / viewed). Uses <details>/summary so no extra  #}
+          {# JS is needed to toggle the popover; a document-click closer   #}
+          {# lower in the file handles stray-open menus.                    #}
+          {% if item.application_id and seeker_active %}
+          <details class="relative applicant-card-menu" onclick="event.stopPropagation();">
+            <summary class="list-none cursor-pointer w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-primary transition" title="More">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
+            </summary>
+            <div class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-xs">
+              <a href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}"
+                 class="flex items-center gap-2 px-3 py-2 text-primary hover:bg-surface transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                View Jobseeker Profile
+              </a>
+              {% if item.application_status == 'pending' or item.application_status == 'viewed' %}
+              <button type="button"
+                      data-card-proceed="{{ item.application_id|hashid }}"
+                      data-applicant-name="{{ item.profile.first_name }}"
+                      class="w-full text-left flex items-center gap-2 px-3 py-2 text-teal hover:bg-teal/10 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                Proceed
+              </button>
+              {% else %}
+              <span class="flex items-center gap-2 px-3 py-2 text-muted/60 italic cursor-not-allowed" title="Application is no longer in review.">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                Proceed
+              </span>
+              {% endif %}
+            </div>
+          </details>
+          {% endif %}
         </div>
       </div>
 
@@ -264,20 +297,20 @@
       {# card the tags should reflect what the candidate brings.           #}
       <div class="flex flex-wrap gap-1 mb-3 flex-1">
         {% for edu in item.profile.educations.all|slice:":1" %}
-        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-[10px] px-2 py-0.5 rounded-full border border-teal/20 truncate max-w-full">
+        <span class="inline-flex items-center gap-0.5 bg-teal/10 text-teal text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-teal/20 truncate max-w-full">
           <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
           <span class="truncate">{{ edu.course_degree|default:edu.get_level_display|truncatechars:22 }}</span>
         </span>
         {% endfor %}
         {% for skill in item.profile.skills.all|slice:":3" %}
-        <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full border border-green-200 truncate max-w-full">
+        <span class="inline-flex items-center gap-0.5 bg-green-50 text-green-600 text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-green-200 truncate max-w-full">
           <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
           <span class="truncate">{{ skill.name|truncatechars:16 }}</span>
         </span>
         {% endfor %}
         {% with certs=item.profile.certifications.all %}
         {% if certs %}
-        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full border border-gray-200 truncate max-w-full">
+        <span class="inline-flex items-center gap-0.5 bg-gray-100 text-gray-500 text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-gray-200 truncate max-w-full">
           <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
           <span class="truncate">{{ certs.0.name|truncatechars:14 }}</span>
         </span>
@@ -398,6 +431,66 @@
         fire();
       }
     });
+  });
+
+  // ── Applicant card menu (three-dots) ───────────────────────────
+  // Close any open <details> menu when clicking outside — <details> would
+  // otherwise stay open until the user clicks the summary again.
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('details.applicant-card-menu[open]').forEach(function(d) {
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+  });
+
+  // ── Proceed action from the card menu ──────────────────────────
+  // AJAX POST to the same lifecycle endpoint the candidate detail page
+  // uses. On success we reload the current list so the status labels
+  // (Pending → In Progress) update alongside the tab counts.
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-card-proceed]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const appId = btn.dataset.cardProceed;
+    const name  = btn.dataset.applicantName || 'this applicant';
+    function fire() {
+      btn.disabled = true;
+      const fd = new FormData();
+      fd.append('action', 'accept');
+      fetch('/employers/applications/' + appId + '/status/', {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCsrfCookie() || '',
+        },
+        body: fd,
+      })
+      .then(function(r) { return r.json().then(function(d){ return [r.ok, d]; }); })
+      .then(function(pair) {
+        const [ok, d] = pair;
+        if (ok && d.ok) {
+          window.location.reload();
+        } else {
+          btn.disabled = false;
+          alert((d && d.error) || 'Could not proceed. Please try again.');
+        }
+      })
+      .catch(function() {
+        btn.disabled = false;
+        alert('Network error — please try again.');
+      });
+    }
+    if (window.confirmAction) {
+      window.confirmAction({
+        title: 'Proceed with ' + name + '’s application?',
+        body:  name + ' will move to In Progress and you’ll be able to send them Requirements or an Interview schedule.',
+        ctaLabel: 'Yes, proceed',
+        ctaClass: 'bg-teal hover:bg-teal/90',
+        onConfirm: fire,
+      });
+    } else if (confirm('Proceed with ' + name + '’s application?')) {
+      fire();
+    }
   });
 })();
 </script>
