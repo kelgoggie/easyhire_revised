@@ -38,6 +38,11 @@
     <div class="flex items-center gap-2">
 
         <!-- Notifications Bell -->
+        {# Split feed: application arrivals, employer messages, admin       #}
+        {# announcements, and Invited-to-Apply live on the mail icon.       #}
+        {# Everything else (matches, likes, hire flow, status changes)     #}
+        {# stays on the bell. Both dropdowns render off the same           #}
+        {# /api/notifications/ poll — client filters by `bucket`.           #}
         <div class="relative" id="notif-container">
             <button id="notif-btn"
                     class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition relative">
@@ -47,26 +52,40 @@
 
             <!-- Dropdown -->
             <div id="notif-dropdown"
-                 class="absolute right-0 top-12 bg-surface rounded-2xl shadow-xl w-[340px] max-h-[480px] z-50 border border-taupe/30 hidden overflow-hidden flex flex-col">
+                 class="absolute right-0 top-12 bg-surface rounded-2xl shadow-xl w-[340px] z-50 border border-taupe/30 hidden overflow-hidden flex flex-col">
                 <div class="px-5 pt-4 pb-2 flex items-center justify-between">
                     <p class="font-bold text-primary text-sm">Notifications</p>
                     <button onclick="markAllRead()" class="text-muted text-[11px] hover:text-primary transition">Mark all as read</button>
                 </div>
                 <div class="mx-5 border-b border-taupe/40"></div>
-                <div id="notif-list" class="overflow-y-auto py-2">
+                {# max-h-96 caps the visible list at ~6 rows (each row ~64px) #}
+                {# before the inner container starts scrolling.               #}
+                <div id="notif-list" class="overflow-y-auto max-h-96 py-2">
                     <p class="text-muted text-xs text-center py-8">No new notifications</p>
                 </div>
             </div>
         </div>
 
-        <!-- Messages/Inbox -->
-        <a href="/inbox/"
-           class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition relative">
-            <img src="{% static 'images/icons/icon_messages.svg' %}" class="w-5 h-5 brightness-0 invert">
-            {% if unread_messages %}
-            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber rounded-full"></span>
-            {% endif %}
-        </a>
+        <!-- Messages / Mail dropdown -->
+        <div class="relative" id="mail-container">
+            <button id="mail-btn"
+                    class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition relative">
+                <img src="{% static 'images/icons/icon_messages.svg' %}" class="w-5 h-5 brightness-0 invert">
+                <span id="mail-dot" class="absolute top-1 right-1 w-3 h-3 bg-amber rounded-full ring-2 ring-white hidden"></span>
+            </button>
+
+            <div id="mail-dropdown"
+                 class="absolute right-0 top-12 bg-surface rounded-2xl shadow-xl w-[340px] z-50 border border-taupe/30 hidden overflow-hidden flex flex-col">
+                <div class="px-5 pt-4 pb-2 flex items-center justify-between">
+                    <p class="font-bold text-primary text-sm">Messages</p>
+                    <a href="/inbox/" class="text-teal text-[11px] font-semibold hover:underline">Open Inbox</a>
+                </div>
+                <div class="mx-5 border-b border-taupe/40"></div>
+                <div id="mail-list" class="overflow-y-auto max-h-96 py-2">
+                    <p class="text-muted text-xs text-center py-8">No new messages</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Avatar + dropdown -->
         <div class="relative" id="employer-menu-container">
@@ -111,20 +130,31 @@
         employerMenuDropdown.classList.toggle('hidden');
     });
 
-    // ── Notification bell ──────────────────────────────────────────
+    // ── Notification bell + Mail dropdown ──────────────────────────
     const notifBtn = document.getElementById('notif-btn');
     const notifDropdown = document.getElementById('notif-dropdown');
     const notifDot = document.getElementById('notif-dot');
     const notifList = document.getElementById('notif-list');
+    const mailBtn = document.getElementById('mail-btn');
+    const mailDropdown = document.getElementById('mail-dropdown');
+    const mailDot = document.getElementById('mail-dot');
+    const mailList = document.getElementById('mail-list');
 
     notifBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         notifDropdown.classList.toggle('hidden');
+        mailDropdown.classList.add('hidden');  // only one open at a time
+    });
+    mailBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        mailDropdown.classList.toggle('hidden');
+        notifDropdown.classList.add('hidden');
     });
 
     document.addEventListener('click', function() {
         employerMenuDropdown.classList.add('hidden');
         notifDropdown.classList.add('hidden');
+        mailDropdown.classList.add('hidden');
     });
 
     const NOTIF_ICONS = {
@@ -137,42 +167,52 @@
         return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
-    function renderNotifications(notifications) {
+    function rowHtml(n) {
+        const icon   = NOTIF_ICONS[n.icon] || NOTIF_ICONS.heart;
+        const actor  = escapeHtml(n.actor);
+        const verb   = escapeHtml(n.verb);
+        const quoted = n.quoted ? `<p class="text-sm text-primary italic mt-0.5">&ldquo;${escapeHtml(n.quoted)}&rdquo;</p>` : '';
+        const meta   = n.meta ? ` <span class="text-muted">|</span> <span class="font-semibold text-muted">${escapeHtml(n.meta)}</span>` : '';
+        return `
+            <a href="${n.url}" onclick="markRead('${n.id}')"
+               class="flex items-start gap-3 px-5 py-2.5 hover:bg-white/40 transition">
+                <span class="w-9 h-9 rounded-full bg-taupe/40 flex items-center justify-center flex-shrink-0 text-primary mt-0.5">
+                    ${icon}
+                </span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-primary leading-snug">
+                        <span class="font-bold">${actor}</span> ${verb}
+                    </p>
+                    ${quoted}
+                    <p class="text-[11px] text-muted italic mt-0.5">${escapeHtml(n.created_at)}${meta}</p>
+                </div>
+            </a>
+        `;
+    }
+
+    function renderIntoList(listEl, dotEl, notifications, emptyLabel) {
         if (!notifications.length) {
-            notifList.innerHTML = '<p class="text-muted text-xs text-center py-8">No new notifications</p>';
-            notifDot.classList.add('hidden');
+            listEl.innerHTML = `<p class="text-muted text-xs text-center py-8">${emptyLabel}</p>`;
+            dotEl.classList.add('hidden');
             return;
         }
-
-        notifDot.classList.remove('hidden');
-        notifList.innerHTML = notifications.map(n => {
-            const icon   = NOTIF_ICONS[n.icon] || NOTIF_ICONS.heart;
-            const actor  = escapeHtml(n.actor);
-            const verb   = escapeHtml(n.verb);
-            const quoted = n.quoted ? `<p class="text-sm text-primary italic mt-0.5">&ldquo;${escapeHtml(n.quoted)}&rdquo;</p>` : '';
-            const meta   = n.meta ? ` <span class="text-muted">|</span> <span class="font-semibold text-muted">${escapeHtml(n.meta)}</span>` : '';
-            return `
-                <a href="${n.url}" onclick="markRead(${n.id})"
-                   class="flex items-start gap-3 px-5 py-2.5 hover:bg-white/40 transition">
-                    <span class="w-9 h-9 rounded-full bg-taupe/40 flex items-center justify-center flex-shrink-0 text-primary mt-0.5">
-                        ${icon}
-                    </span>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm text-primary leading-snug">
-                            <span class="font-bold">${actor}</span> ${verb}
-                        </p>
-                        ${quoted}
-                        <p class="text-[11px] text-muted italic mt-0.5">${escapeHtml(n.created_at)}${meta}</p>
-                    </div>
-                </a>
-            `;
-        }).join('');
+        // Dot lights up only when there's at least one UNREAD row in this
+        // bucket — a full-but-all-read dropdown shouldn't nag.
+        const hasUnread = notifications.some(n => !n.is_read);
+        dotEl.classList.toggle('hidden', !hasUnread);
+        listEl.innerHTML = notifications.map(rowHtml).join('');
     }
 
     function fetchNotifications() {
         fetch('/api/notifications/')
             .then(r => r.json())
-            .then(data => renderNotifications(data.notifications))
+            .then(data => {
+                const all = data.notifications || [];
+                const mail = all.filter(n => n.bucket === 'mail');
+                const bell = all.filter(n => n.bucket !== 'mail');
+                renderIntoList(notifList, notifDot, bell, 'No new notifications');
+                renderIntoList(mailList, mailDot, mail, 'No new messages');
+            })
             .catch(() => {});
     }
 
@@ -183,8 +223,10 @@
     function markAllRead() {
         fetch('/api/notifications/read-all/', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') } })
             .then(() => {
-                notifList.innerHTML = '<p class="text-muted text-xs text-center py-8">No new notifications</p>';
+                // Wipe both dropdowns' unread dots on the next poll cycle.
                 notifDot.classList.add('hidden');
+                mailDot.classList.add('hidden');
+                fetchNotifications();
             });
     }
 

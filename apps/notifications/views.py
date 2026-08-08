@@ -16,27 +16,47 @@ def _relative_time(dt):
     return dt.strftime("%b %d")
 
 
+# Notifications that also land in the user's Inbox (or are otherwise
+# message-shaped: application arrivals, employer messages, admin
+# announcements, invitations to apply) belong in the mail-icon dropdown.
+# Everything else (matches, likes, hire flow, status changes) stays on
+# the bell. Kelly wants Invited-to-Apply on the mail side even though
+# there's no inbox row for it — it reads as a personal message to the
+# jobseeker.
+MAIL_BUCKET_TYPES = {
+    Notification.NEW_APPLICATION,
+    Notification.NEW_ANNOUNCEMENT,
+    Notification.EMPLOYER_CONTACTED,
+    Notification.INVITED_TO_APPLY,
+}
+
+
 @login_required
 def notifications_api(request):
-    # Bell now shows a rolling history — most recent 20 notifications
-    # regardless of read state — so users can revisit what they've seen.
-    # The `is_read` flag is passed through per item so the template can
-    # render a small dot only on unread ones. Toast dedup on the client
-    # still fires only for genuinely-new (never-seen) IDs via localStorage.
+    # Bell + mail dropdown both render off this feed — most recent 20
+    # notifications regardless of read state so users can revisit what
+    # they've seen. Each item ships with a `bucket` field ('mail' or
+    # 'bell') the client uses to split the list into the two icons.
     notifs = Notification.objects.filter(
         recipient=request.user
     ).select_related('company', 'jobseeker', 'job').order_by('-created_at')[:20]
 
     data = []
-    unread_count = 0
+    unread_bell = 0
+    unread_mail = 0
     for n in notifs:
+        bucket = 'mail' if n.notif_type in MAIL_BUCKET_TYPES else 'bell'
         if not n.is_read:
-            unread_count += 1
+            if bucket == 'mail':
+                unread_mail += 1
+            else:
+                unread_bell += 1
         item = {
             # Encoded so the front-end fetch hits the <hashid:notif_id> URL
             # pattern correctly. Passing the raw int silently 404s.
             'id': _hashid(n.id),
             'type': n.notif_type,
+            'bucket': bucket,
             'created_at': _relative_time(n.created_at),
             'is_read': n.is_read,
             'actor': '',
@@ -187,7 +207,11 @@ def notifications_api(request):
     return JsonResponse({
         'notifications': data,
         'count':         len(data),
-        'unread_count':  unread_count,
+        # Legacy total — kept for any client still reading it.
+        'unread_count':  unread_bell + unread_mail,
+        # Split counts for the two dropdowns (bell + mail).
+        'unread_bell':   unread_bell,
+        'unread_mail':   unread_mail,
     })
 
 
