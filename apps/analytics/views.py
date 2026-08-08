@@ -123,16 +123,25 @@ def get_analytics_context(request):
         'unsuccessful': rejected_monthly,
     }
 
-    # Hires vs avg compatibility at time of hire — dual-series line chart.
-    # We don't snapshot the score when a hire happens, so this recomputes
-    # against the CURRENT job requirements. Fine as a shape indicator: if
-    # requirements haven't changed since the hire (they usually haven't
-    # in a thesis-scale dataset), the number matches what the employer
-    # saw at the time. Runs synchronously — hires count is small.
+    # Hires bucketed by compatibility score at time of hire — a system-
+    # wide histogram of "at what match tier are placements actually
+    # happening?" Same tier thresholds the jobseeker-facing match badge
+    # uses (apps/jobseekers/templatetags/match_tags.py) so the vocabulary
+    # lines up across the platform. We recompute against current job
+    # requirements since we don't snapshot the score at hire time —
+    # accurate as long as requirements haven't changed since the hire.
     from apps.matching.engine import compute_match_score as _compute_match_score
     from django.db.models import Q as _Q
-    _hire_score_sum = [0.0] * 12
-    _hire_score_count = [0] * 12
+    # Tier labels & thresholds — ordered lowest → highest for x-axis
+    # left-to-right ("Unmatched" on the left, "Perfect" on the right).
+    _TIER_BUCKETS = [
+        ('Unmatched', 0,  70),
+        ('Decent',    70, 80),
+        ('Good',      80, 90),
+        ('Great',     90, 98),
+        ('Perfect',   98, 101),
+    ]
+    _hires_by_tier = [0] * len(_TIER_BUCKETS)
     _hires_for_year = (
         Application.objects
         .filter(status='hired')
@@ -143,30 +152,20 @@ def get_analytics_context(request):
         .select_related('job', 'jobseeker')
     )
     for _app in _hires_for_year:
-        # Fall back to the application's created_at when hired_at isn't
-        # set (legacy rows pre-dating the field).
-        _when = _app.hired_at or _app.created_at
-        if not _when or not _app.job or not _app.jobseeker:
+        if not _app.job or not _app.jobseeker:
             continue
         try:
             _s = _compute_match_score(_app.job, _app.jobseeker)
-            _pct = round((_s.get('total') or 0) * 100) if _s.get('total', 0) <= 1 else round(_s.get('total') or 0)
+            _raw = _s.get('total') or 0
+            _pct = round(_raw * 100) if _raw <= 1 else round(_raw)
         except Exception:
             continue
-        _m = _when.month - 1
-        if 0 <= _m < 12:
-            _hire_score_sum[_m] += _pct
-            _hire_score_count[_m] += 1
-    # Average per month; 0 in months with no hires so the line stays on
-    # the axis instead of connecting gaps at meaningless points.
-    hire_avg_compat_monthly = [
-        round(_hire_score_sum[i] / _hire_score_count[i]) if _hire_score_count[i] else 0
-        for i in range(12)
-    ]
-    hire_avg_compat_year = (
-        round(sum(_hire_score_sum) / sum(_hire_score_count))
-        if sum(_hire_score_count) else 0
-    )
+        for _i, (_label, _low, _hi) in enumerate(_TIER_BUCKETS):
+            if _low <= _pct < _hi:
+                _hires_by_tier[_i] += 1
+                break
+    hires_by_tier_labels = [label for label, _l, _h in _TIER_BUCKETS]
+    hires_by_tier_counts = _hires_by_tier
 
     # Totals for the chart footers
     jobseekers_this_year = sum(new_jobseekers_monthly)
@@ -567,9 +566,9 @@ def get_analytics_context(request):
         'placements_vs_rejections_monthly': json.dumps(placements_vs_rejections_monthly),
         'placements_year_total':    sum(hired_monthly),
         'rejections_year_total':    sum(rejected_monthly),
-        # Hires vs avg compatibility-at-hire — for the new dual-axis line.
-        'hire_avg_compat_monthly':  hire_avg_compat_monthly,
-        'hire_avg_compat_year':     hire_avg_compat_year,
+        # Hires bucketed by compatibility tier at time of hire.
+        'hires_by_tier_labels': hires_by_tier_labels,
+        'hires_by_tier_counts': hires_by_tier_counts,
     }
 
 

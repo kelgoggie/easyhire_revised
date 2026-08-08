@@ -320,20 +320,19 @@
         </div>
       </div>
 
-      <!-- ── Comparison: Hires vs Avg Compatibility at Hire ────── -->
-      {# Two series on separate axes so both are legible: hire COUNT on   #}
-      {# the left (small integers) and AVG COMPATIBILITY % on the right  #}
-      {# (0-100). Answers the question "are the platform's successful    #}
-      {# placements happening at high-fit levels?"                        #}
+      <!-- ── Hires by Compatibility Tier ────────────────────────── -->
+      {# Bar chart bucketing every hire in {{ selected_year }} by the     #}
+      {# match tier the hired jobseeker landed at (Unmatched → Perfect).  #}
+      {# Same tier vocabulary the jobseeker-facing match badge uses so    #}
+      {# admins and employers read the buckets the same way.               #}
       <div data-panel="cmp-hires-compat" class="analytics-panel hidden flex-1 flex flex-col">
-        <h2 class="text-2xl font-extrabold text-primary mb-1">Hires vs Compatibility at Hire</h2>
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Hires by Compatibility Tier</h2>
         <p class="text-muted text-xs italic mb-4">
-          Monthly hire count against the average match score of each hired jobseeker for the job they were hired into, in {{ selected_year }}. A high compatibility line means the matching engine is finding real fits before the hire; a low line means employers are hiring outside the ranking.
+          System-wide hire count grouped by the match tier of each hired jobseeker for the job they were hired into, in {{ selected_year }}. Bars stacked at the higher tiers mean the matching engine is finding real fits before the hire; heavy weight on the lower tiers means employers are hiring outside the ranking.
         </p>
         <div class="chart-box flex-1"><canvas id="chart-cmp-hires-compat"></canvas></div>
         <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
           <p class="text-sm text-primary">Hires (This Year): <strong>{{ hired_this_year }}</strong></p>
-          <p class="text-sm text-primary">Avg Compatibility at Hire (This Year): <strong>{{ hire_avg_compat_year }}%</strong></p>
         </div>
       </div>
 
@@ -434,7 +433,10 @@ const D = {
   newJobs:    {{ new_jobs_monthly|safe }},
   extHired:   {{ external_hires_monthly|safe }},
   rejected:   {{ rejected_monthly|safe }},
-  hireCompat: {{ hire_avg_compat_monthly|safe }},
+  hiresByTier: {
+    labels: [{% for l in hires_by_tier_labels %}'{{ l|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+    data:   {{ hires_by_tier_counts|safe }},
+  },
 };
 
 // ── Chart.js defaults — KEY to preventing infinite scroll ────────────
@@ -796,10 +798,12 @@ function init(key) {
                              { label: 'Placements',              data: D.hired,    color: '#2D4A3E' },
                              { label: 'Unsuccessful applications', data: D.rejected, color: '#C4453A' },
                            ]); break;
-    case 'cmp-hires-compat': charts[key] = monthlyDualAxisLine('chart-cmp-hires-compat', [
-                             { label: 'Hires',                   data: D.hired,      color: '#2D4A3E' },
-                             { label: 'Avg compatibility at hire (%)', data: D.hireCompat, color: '#E8A838' },
-                           ]); break;
+    case 'cmp-hires-compat': charts[key] = barV(
+                             'chart-cmp-hires-compat',
+                             D.hiresByTier.labels,
+                             D.hiresByTier.data,
+                             '#2D4A3E'
+                           ); break;
   }
 }
 
