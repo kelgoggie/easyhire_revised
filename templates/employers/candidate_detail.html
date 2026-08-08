@@ -47,23 +47,56 @@
       </div>
       {% endif %}
     </div>
-    <div class="flex items-center gap-2 flex-shrink-0 sm:pt-2">
-      {% if prev_id %}
-      <a href="/employers/candidates/{{ prev_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
-         class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
-      {% else %}
-      <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">&lt; Previous</span>
-      {% endif %}
-      {% if next_id %}
-      <a href="/employers/candidates/{{ next_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
-         class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
-      {% else %}
-      <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">Next &gt;</span>
+    <div class="flex flex-col items-end gap-2 flex-shrink-0 sm:pt-2">
+      <div class="flex items-center gap-2">
+        {% if prev_id %}
+        <a href="/employers/candidates/{{ prev_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
+           class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+        {% else %}
+        <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">&lt; Previous</span>
+        {% endif %}
+        {% if next_id %}
+        <a href="/employers/candidates/{{ next_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
+           class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+        {% else %}
+        <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">Next &gt;</span>
+        {% endif %}
+      </div>
+      {# Proceed / Reject repeated up here for reach — same handlers as the  #}
+      {# smaller pair inside the Application card. The `data-mirror` script  #}
+      {# below forwards the click to the primary #app-actions buttons so we  #}
+      {# don't fork the JS. Only shown while the application is actionable   #}
+      {# (pending or viewed) — post-Proceed the primary row swaps to        #}
+      {# Send Job Offer / Cancel Offer, and mirroring those from up top     #}
+      {# would clutter the header.                                           #}
+      {% if application %}
+        {% if application.status == 'pending' or application.status == 'viewed' %}
+        <div class="flex items-center gap-2">
+          <button type="button" data-mirror-action="accept"
+                  class="bg-teal text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-teal/90 transition">
+            Proceed
+          </button>
+          <button type="button" data-mirror-action="reject"
+                  class="bg-white border border-red-300 text-red-500 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-red-50 transition">
+            Reject
+          </button>
+        </div>
+        {% endif %}
       {% endif %}
     </div>
   </div>
   <div class="border-b border-taupe/30 mb-6"></div>
   {% endif %}
+  {# Forwarders for the header-level Proceed / Reject: relay to the       #}
+  {# authoritative #app-actions buttons rendered further down the page.   #}
+  <script>
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-mirror-action]');
+    if (!btn) return;
+    const target = document.querySelector('#app-actions [data-action="' + btn.dataset.mirrorAction + '"]');
+    if (target) target.click();
+  });
+  </script>
 
   {# ── Name + Address + primary actions ──────────────────────────────── #}
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
@@ -158,10 +191,12 @@
       </button>
       {% endif %}
 
-      {# Invite to Apply — only when the jobseeker has NOT already applied #}
-      {# to any of this company's jobs and the employer has open posts to  #}
-      {# invite them to. Opens the Contact modal in "invite" mode.         #}
-      {% if not application and open_jobs %}
+      {# Invite to Apply — hidden when either no application slot is left  #}
+      {# (they've applied already) OR the employer has already sent an     #}
+      {# invitation for every one of their open jobs. Same store as the    #}
+      {# job_detail carousel + candidates list, so a "Sent" state anywhere #}
+      {# in the app suppresses this CTA correctly.                          #}
+      {% if not application and invitable_open_jobs %}
       <button type="button" onclick="openContactModal('invite')"
               class="bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition">
         Invite to Apply
@@ -443,12 +478,19 @@
       {# Invite tab is suppressed once the jobseeker has an application    #}
       {# on file — there's nothing left to invite them to.                 #}
       <div class="px-6 pt-4 flex gap-2 flex-wrap">
-        {% if not application %}
+        {# Suppress the Invite tab when the employer has already invited   #}
+        {# this jobseeker to every open job — nothing left to invite for.  #}
+        {% if not application and invitable_open_jobs %}
         <button type="button" id="tab-invite" onclick="switchKind('invite')"
                 class="flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary">
           Invite to Apply
         </button>
         {% endif %}
+        {# Requirements + Interview only show once the jobseeker has an    #}
+        {# application on file at this company — both flows presume a live #}
+        {# application thread to respond to. Employers use Invite to Apply #}
+        {# first; once the jobseeker applies, these tabs light up.         #}
+        {% if has_any_application %}
         <button type="button" id="tab-requirements" onclick="switchKind('requirements')"
                 class="flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-amber text-white">
           Send Requirements
@@ -457,7 +499,13 @@
                 class="flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary">
           Schedule Interview
         </button>
+        {% endif %}
       </div>
+      {% if not has_any_application %}
+      <p class="px-6 pt-3 text-muted text-[11px] italic">
+        Send Requirements and Schedule Interview become available once {{ jobseeker.first_name }} has applied to one of your jobs.
+      </p>
+      {% endif %}
 
       <div class="px-6 py-4 space-y-3">
         <div>
@@ -465,9 +513,16 @@
           <div class="relative">
             <select name="job_id" id="contact-job"
                     class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+              {# Options for already-invited jobs carry data-invited="1" so #}
+              {# switchKind('invite') below can hide them when the Invite  #}
+              {# tab is active. Requirements/Interview tabs show every job.#}
               <option value="">— Not job-specific —</option>
               {% for j in open_jobs %}
-              <option value="{{ j.id }}" {% if current_job and current_job.id == j.id %}selected{% endif %}>{{ j.title }}</option>
+              <option value="{{ j.id }}"
+                      {% if j.id in invited_job_ids %}data-invited="1"{% endif %}
+                      {% if current_job and current_job.id == j.id %}selected{% endif %}>
+                {{ j.title }}{% if j.id in invited_job_ids %} · invited{% endif %}
+              </option>
               {% endfor %}
             </select>
             <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -621,6 +676,25 @@ function switchKind(kind) {
   const subj = document.getElementById('contact-subject');
   const body = document.getElementById('contact-body');
 
+  // Hide already-invited jobs from the job selector when the Invite tab
+  // is active — an employer can invite each jobseeker to each job at most
+  // once. Requirements / Interview tabs show every open job (those flows
+  // still make sense post-invite). If the currently-selected option is
+  // now hidden, reset to "not job-specific".
+  const jobSel = document.getElementById('contact-job');
+  if (jobSel) {
+    let resetSelect = false;
+    Array.from(jobSel.options).forEach(function(opt) {
+      if (opt.dataset.invited === '1') {
+        const hideIt = (kind === 'invite');
+        opt.hidden = hideIt;
+        opt.disabled = hideIt;
+        if (hideIt && opt.selected) resetSelect = true;
+      }
+    });
+    if (resetSelect) jobSel.value = '';
+  }
+
   const activeCls   = 'flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-amber text-white';
   const inactiveCls = 'flex-1 px-3 py-2 rounded-full text-xs font-semibold transition bg-white border border-gray-200 text-muted hover:text-primary';
 
@@ -680,17 +754,17 @@ ${buildSignature()}`;
       subj.dataset.preset = '1';
     }
     if (!body.value || body.dataset.preset) {
+      // The inbox renders interview messages inside a letter wrapper that
+      // already supplies "Dear <Name>," at the top and "Thank you, / <Sender> /
+      // <Company>" at the bottom (see templates/partials/_inbox_rows.html).
+      // Keep the preset to the MIDDLE of the letter so the jobseeker doesn't
+      // see a doubled greeting + doubled closing block.
       body.value =
-`Hi ${FIRST_NAME},
-
-We'd like to invite you to an interview for the role at ${COMPANY_NAME}.
+`We'd like to invite you to an interview for the role at ${COMPANY_NAME}.
 
 Please confirm by replying to this email whether the proposed date and time work for you, or let us know your availability if they don't.${buildReplyFooter()}
 
-Looking forward to hearing from you.
-
-Thanks,
-${buildSignature()}`;
+Looking forward to hearing from you.`;
       body.dataset.preset = '1';
     }
   }

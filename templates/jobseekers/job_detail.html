@@ -238,17 +238,53 @@
     </div>
   </div>
 
+  <!-- ── Success modal: "Application Sent" ─────────────────────── -->
+  {# Shown after a successful AJAX submit to /jobs/<id>/apply/. Two    #}
+  {# CTAs: jump to Applications, or dismiss and stay on this page.    #}
+  <div id="apply-success-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" data-close-success></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10 text-center">
+      <div class="w-12 h-12 rounded-full bg-teal/15 text-teal mx-auto mb-3 flex items-center justify-center">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <p class="text-primary font-bold text-lg mb-1">Application Sent.</p>
+      <p class="text-muted text-sm mb-6">
+        <span id="apply-success-subtitle">Your application has been submitted.</span>
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <button type="button" data-close-success
+                class="bg-gray-100 text-primary font-semibold px-6 py-2.5 rounded-full hover:bg-gray-200 transition text-sm">
+          Continue Browsing
+        </button>
+        <a href="/applications/"
+                class="bg-amber text-white font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition text-sm inline-flex items-center justify-center">
+          View My Applications
+        </a>
+      </div>
+    </div>
+  </div>
+
   <script>
   (function() {
     const applyBtn      = document.getElementById('open-apply-modal');
     const applyModal    = document.getElementById('apply-modal');
     const confirmModal  = document.getElementById('apply-confirm-modal');
+    const successModal  = document.getElementById('apply-success-modal');
     const openConfirm   = document.getElementById('open-apply-confirm');
     const confirmYes    = document.getElementById('apply-confirm-yes');
     const applyForm     = document.getElementById('apply-form');
+    const successSub    = document.getElementById('apply-success-subtitle');
 
     function show(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
     function hide(m) { m.classList.add('hidden');    m.classList.remove('flex'); }
+    function getCsrf() {
+      const v = '; ' + document.cookie, p = v.split('; csrftoken=');
+      if (p.length === 2) return p.pop().split(';').shift();
+      const tok = applyForm.querySelector('[name="csrfmiddlewaretoken"]');
+      return tok ? tok.value : '';
+    }
 
     applyBtn.addEventListener('click', () => show(applyModal));
     applyModal.querySelectorAll('[data-close-apply]').forEach(el =>
@@ -258,7 +294,48 @@
     confirmModal.querySelectorAll('[data-close-confirm]').forEach(el =>
       el.addEventListener('click', () => hide(confirmModal))
     );
-    confirmYes.addEventListener('click', () => applyForm.submit());
+    successModal.querySelectorAll('[data-close-success]').forEach(el =>
+      el.addEventListener('click', () => hide(successModal))
+    );
+
+    confirmYes.addEventListener('click', function() {
+      // AJAX submit — swaps the redirect for an in-page success modal so
+      // the applications list re-render never gets a chance to blow up
+      // right after a successful apply.
+      confirmYes.disabled = true;
+      confirmYes.textContent = 'Submitting…';
+      fetch(applyForm.action, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCsrf(),
+        },
+        body: new FormData(applyForm),
+      })
+      .then(function(r) { return r.json().then(function(d) { return [r.ok, d]; }); })
+      .then(function(pair) {
+        const [ok, d] = pair;
+        confirmYes.disabled = false;
+        confirmYes.textContent = 'Yes, submit';
+        if (!ok || !d.ok) {
+          alert((d && d.error) || 'Could not submit your application. Please try again.');
+          return;
+        }
+        hide(confirmModal);
+        hide(applyModal);
+        if (successSub) {
+          successSub.textContent = d.created
+            ? `Your application for "${d.job_title}" at ${d.company_name} has been submitted.`
+            : `You've already applied to "${d.job_title}" at ${d.company_name}.`;
+        }
+        show(successModal);
+      })
+      .catch(function() {
+        confirmYes.disabled = false;
+        confirmYes.textContent = 'Yes, submit';
+        alert('Network error — please try again.');
+      });
+    });
   })();
   </script>
   {% endif %}

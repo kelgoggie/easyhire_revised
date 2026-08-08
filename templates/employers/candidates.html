@@ -262,23 +262,23 @@
       {# skills, experience, and certifications. Employers evaluate the    #}
       {# candidate against the job elsewhere via the match badge; on the   #}
       {# card the tags should reflect what the candidate brings.           #}
-      <div class="flex flex-wrap gap-1.5 mb-4 flex-1">
+      <div class="flex flex-wrap gap-1 mb-3 flex-1">
         {% for edu in item.profile.educations.all|slice:":1" %}
-        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20">
-          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
-          <span class="truncate">{{ edu.course_degree|default:edu.get_level_display|truncatechars:24 }}</span>
+        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-[10px] px-2 py-0.5 rounded-full border border-teal/20 truncate max-w-full">
+          <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+          <span class="truncate">{{ edu.course_degree|default:edu.get_level_display|truncatechars:22 }}</span>
         </span>
         {% endfor %}
         {% for skill in item.profile.skills.all|slice:":3" %}
-        <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2.5 py-0.5 rounded-full border border-green-200">
-          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
-          <span class="truncate">{{ skill.name }}</span>
+        <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full border border-green-200 truncate max-w-full">
+          <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+          <span class="truncate">{{ skill.name|truncatechars:16 }}</span>
         </span>
         {% endfor %}
         {% with certs=item.profile.certifications.all %}
         {% if certs %}
-        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs px-2.5 py-0.5 rounded-full border border-gray-200">
-          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full border border-gray-200 truncate max-w-full">
+          <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
           <span class="truncate">{{ certs.0.name|truncatechars:14 }}</span>
         </span>
         {% endif %}

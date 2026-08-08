@@ -9,11 +9,39 @@
             detail_cta_url.
 {% endcomment %}
 {% if items %}
+{# Row-level checkboxes are hidden by default. Clicking Select puts the  #}
+{# inbox into "selection mode": adds .inbox-selecting on the wrapper so  #}
+{# checkboxes appear (CSS below), and the button label flips to Cancel  #}
+{# to exit the mode. Exiting also clears any checked rows.               #}
+<div id="inbox-select-toolbar" class="flex items-center justify-end mb-3">
+  <button type="button" id="inbox-select-toggle"
+          class="inline-flex items-center gap-1.5 text-primary text-xs font-semibold px-3 py-1.5 rounded-full border border-taupe/40 bg-white hover:bg-surface transition">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+    </svg>
+    <span id="inbox-select-toggle-label">Select</span>
+  </button>
+</div>
+<style>
+  /* Checkboxes hidden by default. Toggling .inbox-selecting on the
+     wrapper (id="inbox-selectable") reveals them. */
+  #inbox-selectable:not(.inbox-selecting) .inbox-row-check-wrap { display: none; }
+</style>
+
+<div id="inbox-selectable">
+
 {# Bulk-action bar — appears when at least one row checkbox is ticked.  #}
 {# Ships hidden; JS below toggles visibility + updates the count label. #}
 <div id="inbox-bulk-bar" class="hidden mb-3 flex items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-2xl px-4 py-2.5">
   <p class="text-primary text-xs font-semibold"><span id="inbox-bulk-count">0</span> selected</p>
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-3">
+    <button type="button" id="inbox-bulk-select-all"
+            class="inline-flex items-center gap-1.5 text-muted text-xs font-semibold hover:text-primary transition">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+      </svg>
+      Select all
+    </button>
     <button type="button" id="inbox-bulk-clear"
             class="text-muted text-xs font-semibold hover:text-primary transition">Clear</button>
     <button type="button" id="inbox-bulk-delete"
@@ -31,8 +59,9 @@
        data-source-type="{{ item.source_type }}"
        data-source-id="{{ item.source_id }}">
     <div class="flex items-start gap-3 px-4 sm:px-5 py-2.5 hover:bg-surface/40 transition">
-      <!-- Multi-select checkbox -->
-      <label class="flex-shrink-0 pt-1 cursor-pointer" onclick="event.stopPropagation();">
+      <!-- Multi-select checkbox — hidden until the user enters selection -->
+      <!-- mode via the top-right Select button (see the wrapper CSS above). -->
+      <label class="inbox-row-check-wrap flex-shrink-0 pt-1 cursor-pointer" onclick="event.stopPropagation();">
         <input type="checkbox" class="inbox-row-check accent-teal w-4 h-4 rounded"
                data-key="{{ item.source_type }}:{{ item.source_id }}">
       </label>
@@ -187,6 +216,7 @@
   </div>
   {% endfor %}
 </div>
+</div>{# /inbox-selectable #}
 {% else %}
 <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center">
   <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -291,11 +321,35 @@ function toggleInboxDetail(idx) {
     });
   }
 
+  // ── Selection-mode toggle ──────────────────────────────────────
+  // Checkboxes stay hidden until the user clicks "Select" — mirrors the
+  // Gmail-style flow where you opt INTO multi-select rather than seeing
+  // checkboxes on every row all the time.
+  const selectWrap   = document.getElementById('inbox-selectable');
+  const selectToggle = document.getElementById('inbox-select-toggle');
+  const selectLabel  = document.getElementById('inbox-select-toggle-label');
+  function setSelectionMode(on) {
+    if (!selectWrap) return;
+    selectWrap.classList.toggle('inbox-selecting', on);
+    if (selectLabel) selectLabel.textContent = on ? 'Cancel' : 'Select';
+    if (!on) {
+      // Clear any checked rows + hide the bulk bar when leaving select mode.
+      document.querySelectorAll('.inbox-row-check:checked').forEach(function(cb) { cb.checked = false; });
+      refreshBulkBar();
+    }
+  }
+  if (selectToggle) {
+    selectToggle.addEventListener('click', function() {
+      setSelectionMode(!selectWrap.classList.contains('inbox-selecting'));
+    });
+  }
+
   // ── Multi-select bulk delete ───────────────────────────────────
-  const bulkBar   = document.getElementById('inbox-bulk-bar');
-  const bulkCount = document.getElementById('inbox-bulk-count');
-  const bulkClear = document.getElementById('inbox-bulk-clear');
-  const bulkDel   = document.getElementById('inbox-bulk-delete');
+  const bulkBar    = document.getElementById('inbox-bulk-bar');
+  const bulkCount  = document.getElementById('inbox-bulk-count');
+  const bulkAll    = document.getElementById('inbox-bulk-select-all');
+  const bulkClear  = document.getElementById('inbox-bulk-clear');
+  const bulkDel    = document.getElementById('inbox-bulk-delete');
 
   function checkedBoxes() {
     return Array.from(document.querySelectorAll('.inbox-row-check:checked'));
@@ -310,6 +364,10 @@ function toggleInboxDetail(idx) {
     if (e.target.classList && e.target.classList.contains('inbox-row-check')) {
       refreshBulkBar();
     }
+  });
+  if (bulkAll) bulkAll.addEventListener('click', function() {
+    document.querySelectorAll('.inbox-row-check').forEach(function(cb) { cb.checked = true; });
+    refreshBulkBar();
   });
   if (bulkClear) bulkClear.addEventListener('click', function() {
     checkedBoxes().forEach(function(cb) { cb.checked = false; });

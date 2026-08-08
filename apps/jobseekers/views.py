@@ -77,12 +77,28 @@ def dashboard(request):
 
 @login_required
 def job_apply(request, job_id):
-    """Create an Application for the logged-in jobseeker on the given job."""
+    """Create an Application for the logged-in jobseeker on the given job.
+
+    Two response shapes so the same URL serves both the JS-driven success
+    modal and the old plain-form fallback:
+
+    * AJAX (X-Requested-With: XMLHttpRequest) → JSON.
+      The job detail page's Apply form fetches this and shows the
+      "Application Sent" modal without navigating away.
+    * Plain POST → 302 redirect back to /applications/. Kept as a
+      fallback in case someone hits the endpoint without JS.
+    """
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if request.method != 'POST' or not request.user.is_jobseeker:
+        if is_ajax:
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
         return redirect(f'/jobs/view/{_hashid(job_id)}/')
     try:
         profile = request.user.jobseeker_profile
     except JobseekerProfile.DoesNotExist:
+        if is_ajax:
+            return JsonResponse({'ok': False, 'error': 'Profile missing.'}, status=400)
         return redirect('/register/info/')
 
     from apps.jobs.models import Application
@@ -106,9 +122,29 @@ def job_apply(request, job_id):
     # helper consolidates multiple applicants into one grouped row so
     # employers see "X and 2 others applied to your job post" instead of
     # a stack of individual toasts.
+    #
+    # Wrapped so a notification failure never sinks the apply response —
+    # the Application row is already saved by this point, and losing a
+    # notification is far less bad than surfacing a 500 to the jobseeker
+    # right after they hit "Apply".
     if created:
-        from apps.notifications.utils import notify_new_application
-        notify_new_application(job, profile)
+        try:
+            from apps.notifications.utils import notify_new_application
+            notify_new_application(job, profile)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                'notify_new_application failed for job %s / seeker %s',
+                job.id, profile.id,
+            )
+
+    if is_ajax:
+        return JsonResponse({
+            'ok': True,
+            'created': created,
+            'job_title':    job.title,
+            'company_name': job.company.name if job.company else '',
+        })
 
     from django.contrib import messages
     if created:

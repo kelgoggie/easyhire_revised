@@ -1284,6 +1284,30 @@ def candidate_detail(request, jobseeker_id):
         company=company, status=JobPosting.STATUS_OPEN
     ).order_by('-created_at')
 
+    # Jobs this employer has ALREADY invited this jobseeker to apply for.
+    # Sourced from the shared INVITED_TO_APPLY notification store — same
+    # table the job_detail carousel and candidates-list checks read from,
+    # so a "Sent" flip anywhere in the app reflects here too. The Contact
+    # modal's Invite tab uses this to hide already-invited jobs from the
+    # dropdown; the top-right Invite CTA hides entirely when the employer
+    # has invited them to every open job.
+    from apps.notifications.models import Notification
+    invited_job_ids = set(
+        Notification.objects.filter(
+            notif_type=Notification.INVITED_TO_APPLY,
+            company=company, jobseeker=jobseeker,
+        ).values_list('job_id', flat=True)
+    )
+    invitable_open_jobs = [j for j in open_jobs if j.id not in invited_job_ids]
+
+    # Has this jobseeker applied to ANY of this company's jobs? Gates the
+    # Requirements + Interview tabs in the Contact modal so employers can't
+    # send those messages to someone who hasn't applied yet — the message
+    # copy assumes a live application to respond to.
+    has_any_application = Application.objects.filter(
+        jobseeker=jobseeker, job__company=company,
+    ).exists()
+
     # Past contacts to this candidate from this company (most recent first).
     from apps.employers.models import EmployerContact
     past_contacts = EmployerContact.objects.filter(
@@ -1374,6 +1398,9 @@ def candidate_detail(request, jobseeker_id):
         'is_liked': is_liked,
         'active_hire': active_hire,
         'open_jobs': open_jobs,
+        'invited_job_ids': invited_job_ids,
+        'invitable_open_jobs': invitable_open_jobs,
+        'has_any_application': has_any_application,
         'past_contacts': past_contacts,
         'can_see_badges': jobseeker.can_show_badges_to(company),
         'current_job': current_job,
@@ -1501,6 +1528,24 @@ def candidate_contact(request, jobseeker_id):
             messages.info(
                 request,
                 f'You\'ve already invited {jobseeker.first_name} to apply for {job.title}.',
+            )
+            return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
+    else:
+        # Requirements / Interview: only valid AFTER the jobseeker has
+        # applied to at least one of this company's jobs. Both message
+        # types are follow-ups to a live application; sending them cold
+        # doesn't make sense (and the message copy assumes an application
+        # thread to respond to). Employers use Invite to Apply first.
+        from apps.jobs.models import Application as _App
+        has_application = _App.objects.filter(
+            jobseeker=jobseeker, job__company=company,
+        ).exists()
+        if not has_application:
+            kind_label = 'requirements' if kind == EmployerContact.KIND_REQUIREMENTS else 'interview details'
+            messages.error(
+                request,
+                f'{jobseeker.first_name} hasn\'t applied to any of your jobs yet — '
+                f'send an Invite to Apply first, then follow up with {kind_label} once they apply.',
             )
             return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
 
