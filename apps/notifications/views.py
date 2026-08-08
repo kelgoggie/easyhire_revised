@@ -28,6 +28,10 @@ MAIL_BUCKET_TYPES = {
     Notification.NEW_ANNOUNCEMENT,
     Notification.EMPLOYER_CONTACTED,
     Notification.INVITED_TO_APPLY,
+    # PESO take-down notices carry a reason the employer needs to read,
+    # not just a status ping — the mail dropdown gives them more visual
+    # weight and matches where an announcement-style message belongs.
+    Notification.JOB_DELETED_BY_ADMIN,
 }
 
 
@@ -88,8 +92,12 @@ def notifications_api(request):
             item['icon']  = 'heart'
             item['url']   = f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=liked_by' if n.job else '#'
         elif n.notif_type == Notification.JOB_DELETED_BY_ADMIN:
+            # This notif_type covers admin take-downs — currently that's
+            # the disable flow (admin_job_disable in admin_panel/views).
+            # Wording says "disabled" to match the actual state change:
+            # the job is closed + admin_disabled=True, not deleted.
             item['actor']  = 'PESO Admin'
-            item['verb']   = f'removed your job post "{n.liker_preview or "Untitled"}".'
+            item['verb']   = f'disabled your job post "{n.liker_preview or "Untitled"}".'
             item['quoted'] = n.admin_message or 'No reason provided.'
             item['icon']   = 'briefcase'
             item['meta']   = ''

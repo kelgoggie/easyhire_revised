@@ -34,33 +34,81 @@
         <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 00-2 2v16l7-3 7 3V5a2 2 0 00-2-2z"/></svg>
         <span id="external-hires-chip-count">{{ job.externally_hired_count }}</span>&nbsp;hired externally
       </span>
-      {# View Applicants moves up here so the whole action row lives in the  #}
-      {# top-right. Recommended Jobseekers already shows as its own section  #}
-      {# further down the page, so a separate link would be redundant.      #}
-      <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=applicants"
-         class="inline-flex items-center gap-1.5 bg-teal/10 border border-teal/30 text-teal text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/15 transition">
-        View Applicants ({{ applicants_count|default:0 }})
-      </a>
-      <button type="button" id="external-hires-btn"
-              class="inline-flex items-center gap-1.5 bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        Mark hired externally
-      </button>
-      {# Edit Job routes through the shared confirm modal — cheap safety   #}
-      {# net against accidental clicks, since editing a live posting can  #}
-      {# change what applicants see mid-flow (title, requirements, slots).#}
-      <button type="button"
-              onclick="confirmAction({title:'Edit this job post?',body:'Editing a live job may change the requirements applicants have already been scored against. Save carefully — your changes go live as soon as you hit Save.',ctaLabel:'Yes, edit',ctaClass:'bg-amber hover:bg-amber/90',onConfirm:function(){window.location='/employers/jobs/{{ job.id|hashid }}/edit/';}})"
-              class="inline-flex items-center gap-1.5 bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-        </svg>
-        Edit Job
-      </button>
+      {# Hidden shim: the external-hires modal script binds to           #}
+      {# #external-hires-btn. Keeping the id (button hidden) means the   #}
+      {# new menu item can .click() through it without rewriting the     #}
+      {# modal wiring.                                                   #}
+      <button type="button" id="external-hires-btn" class="hidden"></button>
+
+      {# Three-dots menu consolidates Edit / Close-Open / Delete / Hire   #}
+      {# Externally into one control. The old "View Applicants" button   #}
+      {# is gone — the Applicants carousel further down the page + its   #}
+      {# "View all applicants" link cover that same intent without       #}
+      {# duplicating the CTA up here.                                     #}
+      <details class="relative" onclick="event.stopPropagation();">
+        <summary class="list-none cursor-pointer w-9 h-9 flex items-center justify-center rounded-full border border-taupe/40 bg-white hover:bg-surface transition text-muted hover:text-primary" title="More">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
+        </summary>
+        <div class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-sm">
+          {# Edit Job — same confirm-first flow as before.                #}
+          <button type="button"
+                  onclick="confirmAction({title:'Edit this job post?',body:'Editing a live job may change the requirements applicants have already been scored against. Save carefully — your changes go live as soon as you hit Save.',ctaLabel:'Yes, edit',ctaClass:'bg-amber hover:bg-amber/90',onConfirm:function(){window.location='/employers/jobs/{{ job.id|hashid }}/edit/';}})"
+                  class="w-full text-left block px-4 py-2 text-primary hover:bg-surface">Edit Job</button>
+
+          {# Close / Open toggle — same POST endpoint, form flips based  #}
+          {# on current status. Admin-disabled jobs can't be reopened   #}
+          {# from the employer side (view rejects it), so hide the      #}
+          {# option in that case.                                        #}
+          {% if not job.admin_disabled %}
+          <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/close/" class="block">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="/employers/jobs/{{ job.id|hashid }}/">
+            {% if job.status == 'open' %}
+            <button type="submit" class="w-full text-left block px-4 py-2 text-primary hover:bg-surface">Close Job</button>
+            {% elif job.status == 'closed' %}
+            <button type="submit" class="w-full text-left block px-4 py-2 text-teal hover:bg-teal/10">Reopen Job</button>
+            {% endif %}
+          </form>
+          {% endif %}
+
+          {# Mark hired externally — triggers the existing modal.        #}
+          <button type="button" id="external-hires-btn-menu"
+                  class="w-full text-left block px-4 py-2 text-primary hover:bg-surface">Mark hired externally</button>
+
+          <div class="border-t border-gray-100 my-1"></div>
+
+          {# Delete Job — soft-delete via the existing endpoint; the     #}
+          {# view moves it to Trash (30-day undo window on the jobs     #}
+          {# list). Wrapped in a confirm because it's the destructive   #}
+          {# path.                                                       #}
+          {% if not job.admin_disabled %}
+          <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/delete/" id="delete-job-form" class="block">
+            {% csrf_token %}
+            <button type="button"
+                    onclick="confirmAction({title:'Delete this job post?', body:'The post moves to your Trash tab and stops accepting applications immediately. You can restore it within 30 days.', ctaLabel:'Yes, delete', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('delete-job-form').submit();}});"
+                    class="w-full text-left block px-4 py-2 text-red-500 hover:bg-red-50">Delete Job</button>
+          </form>
+          {% endif %}
+        </div>
+      </details>
     </div>
   </div>
+  <script>
+    // Bridge the menu's "Mark hired externally" item to the same click
+    // handler that opened the standalone button before — the external-hires
+    // modal listens to #external-hires-btn.
+    (function() {
+      const src = document.getElementById('external-hires-btn-menu');
+      const dst = document.getElementById('external-hires-btn');
+      if (src && dst) src.addEventListener('click', function() { dst.click(); });
+      // Close the popover when a menu item is picked.
+      document.addEventListener('click', function(e) {
+        document.querySelectorAll('details[open]').forEach(function(d) {
+          if (!d.contains(e.target)) d.removeAttribute('open');
+        });
+      });
+    })();
+  </script>
   <div class="border-b border-taupe/30 mb-6"></div>
 
   <!-- ── Two-column: Description + Requirements ─────────────────── -->
@@ -145,9 +193,7 @@
         </svg>
         <h2 class="text-xl text-primary"><span class="font-extrabold">Applicants</span> <span class="text-muted text-base font-normal">({{ applicants_count }})</span></h2>
       </div>
-      {% if applicants_count %}
       <a href="/employers/jobs/{{ job.id|hashid }}/candidates/?tab=applicants" class="text-teal text-sm font-semibold hover:underline">View all &rsaquo;</a>
-      {% endif %}
     </div>
     <p class="text-muted text-xs mb-4">People who've actually applied to this posting. Click a card to review the full compatibility breakdown.</p>
 

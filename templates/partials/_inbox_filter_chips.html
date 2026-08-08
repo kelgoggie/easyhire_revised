@@ -8,7 +8,7 @@
     total_items  — overall total
     sort         — 'latest' (default) or 'oldest'; drives the sort dropdown
 {% endcomment %}
-{% if total_items %}
+{% if total_items or deleted_count %}
 {# Chip URLs preserve the sort + search; sort-dropdown URLs preserve the  #}
 {# active kind filter + search. Changing one axis doesn't reset the other.#}
 {% with sort_q="&sort="|add:sort %}
@@ -39,6 +39,13 @@
        class="px-3 py-1 rounded-full text-xs font-semibold transition
               {% if kind_filter == 'requirements' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
       Requirements <span class="opacity-70">{{ kind_counts.requirements }}</span>
+    </a>
+    {# Deleted — rows the user removed from their inbox. Auto-purges       #}
+    {# after 30 days (see the InboxUserState sweep in apps/core/views.py). #}
+    <a href="?kind=deleted{{ sort_q }}{% if search %}&q={{ search|urlencode }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if kind_filter == 'deleted' %}bg-red-500 text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      Deleted <span class="opacity-70">{{ deleted_count }}</span>
     </a>
   </div>
 

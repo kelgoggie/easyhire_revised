@@ -285,7 +285,7 @@ def admin_notifications_api(request):
         icon = {
             'company': 'briefcase',
             'user':    'sparkle',
-            'flag':    'heart',
+            'flag':    'warning',  # user reports — warning triangle, not heart
         }.get(icon_kind, 'heart')
         out.append({
             'id':         stable_id,

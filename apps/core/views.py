@@ -325,17 +325,34 @@ def inbox(request):
     # ── Per-user overlay: dismissed + pinned ───────────────────────────
     # One query fetches every state row for this user; we map by
     # (source_type, source_id) so item lookup is O(1). Rows the user has
-    # dismissed are dropped completely; pinned rows are tagged and float
-    # above the timestamp sort.
+    # dismissed are dropped completely (or shown alone on the Deleted
+    # tab); pinned rows are tagged and float above the timestamp sort.
     from apps.core.models import InboxUserState
+    from datetime import timedelta as _timedelta
+    from django.utils import timezone as _tz2
+    # Auto-purge: delete dismissed rows older than 30 days on every inbox
+    # render. Cheap (one indexed DELETE) and runs on the user's own visit
+    # so no cron/management-command is needed for the 30-day sweep.
+    InboxUserState.objects.filter(
+        user=user, is_dismissed=True,
+        updated_at__lt=_tz2.now() - _timedelta(days=30),
+    ).delete()
     state_rows = InboxUserState.objects.filter(user=user).values(
         'source_type', 'source_id', 'is_dismissed', 'is_pinned',
     )
     state_map = {(r['source_type'], r['source_id']): r for r in state_rows}
     def _state_key(it): return (it.get('source_type', ''), it.get('source_id', 0))
-    items = [it for it in items if not state_map.get(_state_key(it), {}).get('is_dismissed')]
+    # Deleted-tab support: ?kind=deleted flips the filter so we render ONLY
+    # dismissed rows (up to 30 days back, per the purge above). All other
+    # filters exclude dismissed rows as before.
+    _show_deleted = (request.GET.get('kind') or '').strip().lower() == 'deleted'
+    if _show_deleted:
+        items = [it for it in items if state_map.get(_state_key(it), {}).get('is_dismissed')]
+    else:
+        items = [it for it in items if not state_map.get(_state_key(it), {}).get('is_dismissed')]
     for it in items:
-        it['is_pinned'] = bool(state_map.get(_state_key(it), {}).get('is_pinned'))
+        it['is_pinned']    = bool(state_map.get(_state_key(it), {}).get('is_pinned'))
+        it['is_dismissed'] = bool(state_map.get(_state_key(it), {}).get('is_dismissed'))
 
     # Sort: user-selectable via ?sort=latest|oldest. Default is latest
     # first, which matches the pre-sort-control behavior. Pinned rows
@@ -408,10 +425,19 @@ def inbox(request):
     # "how many of each kind match my search", not the pre-search totals.
     kind_counts = {key: sum(1 for it in items if it['kind'] in members)
                    for key, members in KIND_GROUPS.items()}
+    # Deleted count comes straight from the state table (independent of the
+    # normal item list, which excludes dismissed rows on the default tab).
+    deleted_count = InboxUserState.objects.filter(
+        user=user, is_dismissed=True,
+    ).count()
 
     kind_filter = (request.GET.get('kind') or '').strip().lower()
     if kind_filter in KIND_GROUPS:
         items = [it for it in items if it['kind'] in KIND_GROUPS[kind_filter]]
+    elif kind_filter == 'deleted':
+        # No further sub-filtering — items already contains only dismissed
+        # rows via the _show_deleted branch above.
+        pass
     else:
         kind_filter = ''  # normalize unknown values to "All"
 
@@ -429,6 +455,7 @@ def inbox(request):
         'qs_base': querystring_without(request, 'page'),
         'kind_filter': kind_filter,
         'kind_counts': kind_counts,
+        'deleted_count': deleted_count,
         'total_items': filtered_total,
         'sort': sort,
         'search': search,
@@ -473,6 +500,21 @@ def inbox_dismiss(request):
     if st not in _VALID_SOURCES or not sid.isdigit():
         return JsonResponse({'ok': False, 'error': 'Bad source'}, status=400)
     _upsert_inbox_state(request.user, st, sid, is_dismissed=True)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def inbox_restore(request):
+    """Undo a previous dismiss — used by the Restore action on the
+    Deleted tab. Clears the is_dismissed flag on the user's state row so
+    the item reappears in the normal inbox on next load."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+    st = (request.POST.get('source_type') or '').strip().lower()
+    sid = (request.POST.get('source_id') or '').strip()
+    if st not in _VALID_SOURCES or not sid.isdigit():
+        return JsonResponse({'ok': False, 'error': 'Bad source'}, status=400)
+    _upsert_inbox_state(request.user, st, sid, is_dismissed=False)
     return JsonResponse({'ok': True})
 
 

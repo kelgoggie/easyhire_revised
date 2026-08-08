@@ -51,7 +51,21 @@
   </div>
 </div>
 
-<div class="bg-white border border-taupe/20 rounded-2xl overflow-hidden">
+{# `overflow-hidden` removed — it was clipping the last row's three-dots #}
+{# popover at the container's bottom edge. Rounded corners still render  #}
+{# fine with just the border + child dividers.                            #}
+<style>
+  /* Flip the three-dots popover UPWARD on the last two rows so it can't
+     drop below the page edge. On earlier rows the default `mt-1` drop-
+     down is fine. Targets the .inbox-menu <details>'s inner absolute div. */
+  [data-inbox-row]:nth-last-child(-n+2) .inbox-menu > div {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+  }
+</style>
+<div class="bg-white border border-taupe/20 rounded-2xl">
   {% for item in items %}
   {# Row background tinted teal-5 when unread, matching the bell dropdown. #}
   <div class="border-b border-taupe/15 last:border-0{% if item.is_unread %} bg-teal/5{% endif %}"
@@ -148,11 +162,19 @@
             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
             <span>{% if item.is_pinned %}Unpin{% else %}Pin{% endif %}</span>
           </button>
+          {% if item.is_dismissed %}
+          <button type="button" data-inbox-action="restore"
+                  class="w-full text-left px-3 py-2 text-teal hover:bg-teal/10 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v6h6M20 20v-6h-6M20 8A8 8 0 006.34 6.34M4 16a8 8 0 0013.66 1.66"/></svg>
+            <span>Restore</span>
+          </button>
+          {% else %}
           <button type="button" data-inbox-action="delete"
                   class="w-full text-left px-3 py-2 text-red-500 hover:bg-red-50 flex items-center gap-2">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
             <span>Delete</span>
           </button>
+          {% endif %}
           {% if item.report_target_type %}
           <button type="button" data-inbox-action="report"
                   data-report-target-type="{{ item.report_target_type }}"
@@ -292,13 +314,26 @@ function toggleInboxDetail(idx) {
       if (window.confirmAction) {
         window.confirmAction({
           title: 'Delete this message from your inbox?',
-          body: 'It stays visible for the other party. This only removes it from your inbox.',
+          body: 'It stays visible for the other party. This only removes it from your inbox — you can restore it from the Deleted tab within 30 days.',
           ctaLabel: 'Delete', ctaClass: 'bg-red-500 hover:bg-red-600',
           onConfirm: function() { dismissRow(row, st, sid); },
         });
       } else if (confirm('Delete this message from your inbox?')) {
         dismissRow(row, st, sid);
       }
+    } else if (action === 'restore') {
+      const fd = new FormData();
+      fd.append('source_type', st); fd.append('source_id', sid);
+      postForm('/inbox/restore/', fd).then(function(d) {
+        if (d && d.ok) {
+          row.style.transition = 'opacity 180ms ease';
+          row.style.opacity = '0';
+          setTimeout(function() { row.remove(); refreshBulkBar(); }, 200);
+          toast('Restored to your inbox.', 'success');
+        } else {
+          toast('Could not restore. Try again.', 'error');
+        }
+      });
     } else if (action === 'report') {
       if (typeof window.openReportModal === 'function') {
         window.openReportModal({

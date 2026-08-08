@@ -123,6 +123,51 @@ def get_analytics_context(request):
         'unsuccessful': rejected_monthly,
     }
 
+    # Hires vs avg compatibility at time of hire — dual-series line chart.
+    # We don't snapshot the score when a hire happens, so this recomputes
+    # against the CURRENT job requirements. Fine as a shape indicator: if
+    # requirements haven't changed since the hire (they usually haven't
+    # in a thesis-scale dataset), the number matches what the employer
+    # saw at the time. Runs synchronously — hires count is small.
+    from apps.matching.engine import compute_match_score as _compute_match_score
+    from django.db.models import Q as _Q
+    _hire_score_sum = [0.0] * 12
+    _hire_score_count = [0] * 12
+    _hires_for_year = (
+        Application.objects
+        .filter(status='hired')
+        .filter(
+            _Q(hired_at__year=selected_year) |
+            (_Q(hired_at__isnull=True) & _Q(created_at__year=selected_year))
+        )
+        .select_related('job', 'jobseeker')
+    )
+    for _app in _hires_for_year:
+        # Fall back to the application's created_at when hired_at isn't
+        # set (legacy rows pre-dating the field).
+        _when = _app.hired_at or _app.created_at
+        if not _when or not _app.job or not _app.jobseeker:
+            continue
+        try:
+            _s = _compute_match_score(_app.job, _app.jobseeker)
+            _pct = round((_s.get('total') or 0) * 100) if _s.get('total', 0) <= 1 else round(_s.get('total') or 0)
+        except Exception:
+            continue
+        _m = _when.month - 1
+        if 0 <= _m < 12:
+            _hire_score_sum[_m] += _pct
+            _hire_score_count[_m] += 1
+    # Average per month; 0 in months with no hires so the line stays on
+    # the axis instead of connecting gaps at meaningless points.
+    hire_avg_compat_monthly = [
+        round(_hire_score_sum[i] / _hire_score_count[i]) if _hire_score_count[i] else 0
+        for i in range(12)
+    ]
+    hire_avg_compat_year = (
+        round(sum(_hire_score_sum) / sum(_hire_score_count))
+        if sum(_hire_score_count) else 0
+    )
+
     # Totals for the chart footers
     jobseekers_this_year = sum(new_jobseekers_monthly)
     employers_this_year  = sum(new_employers_monthly)
@@ -522,6 +567,9 @@ def get_analytics_context(request):
         'placements_vs_rejections_monthly': json.dumps(placements_vs_rejections_monthly),
         'placements_year_total':    sum(hired_monthly),
         'rejections_year_total':    sum(rejected_monthly),
+        # Hires vs avg compatibility-at-hire — for the new dual-axis line.
+        'hire_avg_compat_monthly':  hire_avg_compat_monthly,
+        'hire_avg_compat_year':     hire_avg_compat_year,
     }
 
 

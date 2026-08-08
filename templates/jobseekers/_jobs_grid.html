@@ -69,9 +69,10 @@
       </div>
     </div>
 
-    <!-- Bottom: bookmark + View Job -->
+    {# View Job button removed — the whole card is a link, so a separate #}
+     {# button was redundant. Bookmark stays as its own quick action.     #}
     <div class="px-4 pb-4 pt-1">
-      <div class="flex justify-end mb-2">
+      <div class="flex justify-end">
         <button type="button" title="{% if item.job.id in liked_ids %}Remove bookmark{% else %}Bookmark{% endif %} this job"
                 class="like-btn w-6 h-6 flex items-center justify-center transition {% if item.job.id in liked_ids %}text-amber{% else %}text-gray-300 hover:text-amber{% endif %}"
                 onclick="event.preventDefault(); event.stopPropagation(); toggleLike('{{ item.job.id|hashid }}', this)">
@@ -81,9 +82,6 @@
           </svg>
         </button>
       </div>
-      <span class="block w-full text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full">
-        View Job
-      </span>
     </div>
 
   </a>

@@ -10,6 +10,7 @@ urlpatterns = [
     path('help/', views.help_view, name='help'),
     path('inbox/', views.inbox, name='inbox'),
     path('inbox/dismiss/', views.inbox_dismiss, name='inbox_dismiss'),
+    path('inbox/restore/', views.inbox_restore, name='inbox_restore'),
     path('inbox/pin/', views.inbox_pin, name='inbox_pin'),
     path('inbox/bulk-dismiss/', views.inbox_bulk_dismiss, name='inbox_bulk_dismiss'),
 ]
