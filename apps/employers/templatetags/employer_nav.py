@@ -61,6 +61,11 @@ def _resolve_from_referer(request):
         return None, None
     if path.rstrip('/') == request.path.rstrip('/'):
         return None, None
+    # Same reason as in admin_nav: after saving an edit, the referer is the
+    # edit page, and we don't want the Back button to bounce the user right
+    # back into it. Fall through to the caller's default in that case.
+    if path.rstrip('/').endswith('/edit'):
+        return None, None
     subpath = path[len('/employers/'):]
     label = _label_for(subpath)
     url = path

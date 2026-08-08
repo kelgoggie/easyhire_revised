@@ -81,6 +81,13 @@ def _resolve_from_referer(request):
     # a "Back to <same page>" link.
     if path.rstrip('/') == request.path.rstrip('/'):
         return None, None
+    # Ignore *edit* pages as referers. After saving an edit form the view
+    # redirects the admin to the detail page, and the browser's Referer is
+    # the edit form's URL — so the Back button on the detail page would
+    # send them right back into the edit form. Fall through to the caller's
+    # sensible default (usually the list / parent page) instead.
+    if path.rstrip('/').endswith('/edit'):
+        return None, None
     # Analytics lives at /analytics/ but staff see it in the admin shell —
     # `path.startswith('/admin-panel/')` above already filters that out. If
     # you later want /analytics/ to count as an admin page, extend the

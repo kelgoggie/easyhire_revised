@@ -111,6 +111,8 @@ def inbox(request):
                 'report_target_type': '',
                 'report_target_id': None,
                 'report_label': '',
+                'source_type': 'application',
+                'source_id': app.id,
             })
 
         # Employer contacts received (requirements + interview schedules).
@@ -161,6 +163,8 @@ def inbox(request):
                 'report_target_type': 'contact',
                 'report_target_id': contact.id,
                 'report_label': f'Re: {contact.subject}',
+                'source_type': 'contact',
+                'source_id': contact.id,
             })
 
         # Admin announcements targeting jobseekers (or all)
@@ -178,6 +182,8 @@ def inbox(request):
                 'report_target_type': '',
                 'report_target_id': None,
                 'report_label': '',
+                'source_type': 'announcement',
+                'source_id': ann.id,
             })
 
         template = 'jobseekers/inbox.html'
@@ -219,6 +225,8 @@ def inbox(request):
                 'report_target_type': 'jobseeker' if (app.jobseeker and seeker_active) else '',
                 'report_target_id': app.jobseeker.id if (app.jobseeker and seeker_active) else None,
                 'report_label': f'Re: application to {job_title}',
+                'source_type': 'application',
+                'source_id': app.id,
             })
 
         # Contacts the company has sent
@@ -262,6 +270,8 @@ def inbox(request):
                 'report_target_type': '',
                 'report_target_id': None,
                 'report_label': '',
+                'source_type': 'contact',
+                'source_id': contact.id,
             })
 
         # Admin announcements targeting employers (or all)
@@ -279,6 +289,8 @@ def inbox(request):
                 'report_target_type': '',
                 'report_target_id': None,
                 'report_label': '',
+                'source_type': 'announcement',
+                'source_id': ann.id,
             })
 
         # Account verification updates (verified / denied) — surfaced here
@@ -300,6 +312,8 @@ def inbox(request):
                 'report_target_type': '',
                 'report_target_id': None,
                 'report_label': '',
+                'source_type': 'verification',
+                'source_id': n.id,
             })
 
         template = 'employers/inbox.html'
@@ -308,12 +322,32 @@ def inbox(request):
         # Staff users — kick them to the admin panel where they compose announcements.
         return redirect('/admin-panel/announcements/')
 
+    # ── Per-user overlay: dismissed + pinned ───────────────────────────
+    # One query fetches every state row for this user; we map by
+    # (source_type, source_id) so item lookup is O(1). Rows the user has
+    # dismissed are dropped completely; pinned rows are tagged and float
+    # above the timestamp sort.
+    from apps.core.models import InboxUserState
+    state_rows = InboxUserState.objects.filter(user=user).values(
+        'source_type', 'source_id', 'is_dismissed', 'is_pinned',
+    )
+    state_map = {(r['source_type'], r['source_id']): r for r in state_rows}
+    def _state_key(it): return (it.get('source_type', ''), it.get('source_id', 0))
+    items = [it for it in items if not state_map.get(_state_key(it), {}).get('is_dismissed')]
+    for it in items:
+        it['is_pinned'] = bool(state_map.get(_state_key(it), {}).get('is_pinned'))
+
     # Sort: user-selectable via ?sort=latest|oldest. Default is latest
-    # first, which matches the pre-sort-control behavior.
+    # first, which matches the pre-sort-control behavior. Pinned rows
+    # always float to the top regardless of sort direction so the user
+    # can find them without scrolling.
     sort = (request.GET.get('sort') or 'latest').strip().lower()
     if sort not in {'latest', 'oldest'}:
         sort = 'latest'
-    items.sort(key=lambda x: x['timestamp'], reverse=(sort == 'latest'))
+    items.sort(key=lambda x: (
+        0 if x.get('is_pinned') else 1,
+        (-x['timestamp'].timestamp()) if sort == 'latest' else x['timestamp'].timestamp(),
+    ))
     total_items = len(items)
 
     # Per-row "unread" flag: an item is unread if it arrived AFTER the user's
@@ -401,6 +435,88 @@ def inbox(request):
         'unread_notifications': False,
         'unread_messages': False,
     })
+
+
+# ── Inbox row actions ─────────────────────────────────────────────
+# Dismiss / pin / bulk-dismiss share one model (InboxUserState) so the
+# three-dots menu and multi-select bar write to a single table. Views
+# accept (source_type, source_id) pairs; the caller is responsible for
+# sending the correct pair from the row's data attributes.
+_VALID_SOURCES = {'application', 'contact', 'announcement', 'verification'}
+
+
+def _upsert_inbox_state(user, source_type, source_id, **fields):
+    """Get-or-create the state row and update the passed booleans."""
+    from apps.core.models import InboxUserState
+    state, _ = InboxUserState.objects.get_or_create(
+        user=user, source_type=source_type, source_id=int(source_id),
+    )
+    updates = []
+    for k, v in fields.items():
+        if getattr(state, k) != v:
+            setattr(state, k, v)
+            updates.append(k)
+    if updates:
+        state.save(update_fields=updates + ['updated_at'])
+    return state
+
+
+@login_required
+def inbox_dismiss(request):
+    """Hide a single inbox row from THIS user's inbox. The underlying
+    Application / EmployerContact / AdminAnnouncement is untouched — the
+    other party still sees their own copy."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+    st = (request.POST.get('source_type') or '').strip().lower()
+    sid = (request.POST.get('source_id') or '').strip()
+    if st not in _VALID_SOURCES or not sid.isdigit():
+        return JsonResponse({'ok': False, 'error': 'Bad source'}, status=400)
+    _upsert_inbox_state(request.user, st, sid, is_dismissed=True)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def inbox_pin(request):
+    """Toggle pin on a single inbox row. Pinned rows float above the
+    timestamp sort in the user's own inbox only."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+    st = (request.POST.get('source_type') or '').strip().lower()
+    sid = (request.POST.get('source_id') or '').strip()
+    if st not in _VALID_SOURCES or not sid.isdigit():
+        return JsonResponse({'ok': False, 'error': 'Bad source'}, status=400)
+    from apps.core.models import InboxUserState
+    existing = InboxUserState.objects.filter(
+        user=request.user, source_type=st, source_id=int(sid),
+    ).first()
+    new_pinned = not (existing and existing.is_pinned)
+    _upsert_inbox_state(request.user, st, sid, is_pinned=new_pinned)
+    return JsonResponse({'ok': True, 'is_pinned': new_pinned})
+
+
+@login_required
+def inbox_bulk_dismiss(request):
+    """Dismiss many rows at once. Expects a POST body with repeated
+    `keys` values shaped 'source_type:source_id' (form-encoded, one per
+    checked row). Silently skips invalid pairs so a partially-bad batch
+    still succeeds on the good rows."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+    raw_keys = request.POST.getlist('keys')
+    from apps.core.models import InboxUserState
+    dismissed = 0
+    for raw in raw_keys:
+        try:
+            st, _, sid = raw.partition(':')
+            st = (st or '').strip().lower()
+            if st not in _VALID_SOURCES or not sid.isdigit():
+                continue
+            _upsert_inbox_state(request.user, st, sid, is_dismissed=True)
+            dismissed += 1
+        except Exception:
+            continue
+    return JsonResponse({'ok': True, 'dismissed': dismissed})
 
 
 def _dedupe_locations(rows):

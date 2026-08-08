@@ -187,10 +187,51 @@ function addCert() {
   watchEntry(div);
   renderCarousel('cert-container');
   initAutocompletes();
+  refreshAddBtn('cert');
+}
+
+// â”€â”€ Add-Entry gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Disable the Add button until the FRONT (most recently added) row of the
+// carousel has its key fields populated. Prevents the employer from
+// stacking empty template rows when building requirements.
+const ADD_BTN_RULES = {
+  edu:  { containerId: 'edu-container',  slideClass: 'edu-row',  btnId: 'add-edu-btn',  required: ['edu_level', 'edu_course'] },
+  cert: { containerId: 'cert-container', slideClass: 'cert-row', btnId: 'add-cert-btn', required: ['cert_name'] },
+};
+function refreshAddBtn(type) {
+  const cfg = ADD_BTN_RULES[type];
+  if (!cfg) return;
+  const btn = document.getElementById(cfg.btnId);
+  const container = document.getElementById(cfg.containerId);
+  if (!btn || !container) return;
+  const front = container.querySelector('.' + cfg.slideClass);
+  if (!front) { btn.disabled = false; btn.title = ''; return; }
+  const missing = cfg.required.some(function(name) {
+    const el = front.querySelector('[name="' + name + '"]');
+    return !el || !(el.value || '').trim();
+  });
+  btn.disabled = missing;
+  btn.title = missing ? 'Fill in this entry first.' : '';
+}
+function refreshAllAddBtns() { Object.keys(ADD_BTN_RULES).forEach(refreshAddBtn); }
+['input', 'change'].forEach(function(evt) {
+  document.addEventListener(evt, function(e) {
+    const row = e.target.closest('.edu-row, .cert-row');
+    if (!row) return;
+    if (row.classList.contains('edu-row')) refreshAddBtn('edu');
+    else if (row.classList.contains('cert-row')) refreshAddBtn('cert');
+  });
+});
+
+// Also hook the education addEdu clone path so the button re-evaluates.
+const _origAddEdu = window.addEdu;
+if (typeof _origAddEdu === 'function') {
+  window.addEdu = function() { _origAddEdu.apply(this, arguments); refreshAddBtn('edu'); };
 }
 
 // Initialise X-visibility for every existing entry on first paint
 watchAllEntries();
+refreshAllAddBtns();
 
 // Seed carousel state on load â€” first slide active, hide the rest.
 renderCarousel('edu-container');
@@ -201,7 +242,13 @@ function initAutocompletes() {
   const ac = window.createAutocomplete;
   if (!ac) return;
   document.querySelectorAll('input[name="title"]'                ).forEach(el => ac(el, '/api/autocomplete/positions/'));
-  document.querySelectorAll('input[name="edu_course"]'           ).forEach(el => ac(el, '/api/autocomplete/degrees/'));
+  document.querySelectorAll('input[name="edu_course"]'           ).forEach(el => ac(el, '/api/autocomplete/degrees/', function(input) {
+    // Filter suggestions by the sibling Educational Level so employers
+    // requiring "High School" don't see BS/AB/TESDA suggestions, etc.
+    const row = input.closest('.edu-row');
+    const level = row ? (row.querySelector('[name="edu_level"]') || {}).value : '';
+    return { level: level || '' };
+  }));
   document.querySelectorAll('input[name="cert_name"]'            ).forEach(el => ac(el, '/api/autocomplete/certifications/'));
   document.querySelectorAll('input[name="cert_org"]'             ).forEach(el => ac(el, '/api/autocomplete/institutions/'));
   document.querySelectorAll('input[name="exp_preferred_position"]').forEach(el => ac(el, '/api/autocomplete/positions/'));

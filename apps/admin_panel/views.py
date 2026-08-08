@@ -635,26 +635,28 @@ def jobseeker_detail(request, pk):
                       .filter(profile=jobseeker, status=PersonalInfoChangeRequest.STATUS_PENDING)
                       .order_by('-submitted_at').first())
 
-    # Top compatible jobs across the platform (excludes jobs they already applied to).
+    # Top compatible jobs across the platform (excludes jobs they already
+    # applied to). Runs even for incomplete profiles — an admin looking at
+    # a half-filled profile still wants a sense of what's out there;
+    # compute_match_score handles empty skill/edu/exp lists gracefully.
     ranked_jobs = []
-    if jobseeker.profile_complete:
-        from apps.matching.engine import compute_match_score
-        already_applied = set(
-            Application.objects.filter(jobseeker=jobseeker).values_list('job_id', flat=True)
-        )
-        scored = []
-        for job in (JobPosting.objects
-                    .filter(status=JobPosting.STATUS_OPEN)
-                    .exclude(id__in=already_applied)
-                    .select_related('company', 'experience_requirement')
-                    .prefetch_related('skill_requirements', 'education_requirements')):
-            try:
-                s = compute_match_score(job, jobseeker)
-                scored.append({'job': job, 'score': s.get('total', 0)})
-            except Exception:
-                continue
-        scored.sort(key=lambda x: -x['score'])
-        ranked_jobs = scored
+    from apps.matching.engine import compute_match_score
+    already_applied = set(
+        Application.objects.filter(jobseeker=jobseeker).values_list('job_id', flat=True)
+    )
+    scored = []
+    for job in (JobPosting.objects
+                .filter(status=JobPosting.STATUS_OPEN)
+                .exclude(id__in=already_applied)
+                .select_related('company', 'experience_requirement')
+                .prefetch_related('skill_requirements', 'education_requirements')):
+        try:
+            s = compute_match_score(job, jobseeker)
+            scored.append({'job': job, 'score': s.get('total', 0)})
+        except Exception:
+            continue
+    scored.sort(key=lambda x: -x['score'])
+    ranked_jobs = scored
 
     jobs_page = paginate(request, ranked_jobs, per_page=8, page_param='jobs_page')
 
@@ -1447,6 +1449,17 @@ def company_settings(request, pk):
         for doc_type in required_docs
     ]
 
+    # Everyone the company has hired through EasyHire — Applications the
+    # company marked as hired. Renders as the "Employees on EasyHire" list
+    # so admins can see the platform's contribution to this company's team.
+    from apps.jobs.models import Application as _App
+    hired_apps = (
+        _App.objects
+        .filter(job__company=company, status=_App.STATUS_HIRED)
+        .select_related('jobseeker', 'job')
+        .order_by('-hired_at', '-created_at')
+    )
+
     ctx = _admin_context(request)
     ctx.update({
         'company':            company,
@@ -1456,6 +1469,7 @@ def company_settings(request, pk):
         'checklist':          checklist,
         'uploaded_count':     sum(1 for item in checklist if item['uploaded']),
         'generated_password': generated_password,
+        'hired_apps':         hired_apps,
         # Status-picker options for the verification form.
         # 'unverified' is the initial state before the company uploads any
         # docs — admins have no reason to *set* a company back to it (the
@@ -2575,6 +2589,19 @@ def announcements(request):
                 for u in recipients_qs.only('id')
             ])
             saved = True
+            # Human-friendly audience label for the success toast. The DB
+            # value is 'all' / 'jobseekers' / 'employers' — reword to match
+            # how PESO admins describe the group when they hit Send.
+            audience_label = {
+                AdminAnnouncement.AUDIENCE_ALL: 'everyone',
+                AdminAnnouncement.AUDIENCE_JOBSEEKERS: 'all jobseekers',
+                AdminAnnouncement.AUDIENCE_EMPLOYERS: 'all employers',
+            }.get(ann.audience, ann.get_audience_display())
+            from django.contrib import messages as _flash
+            _flash.success(
+                request,
+                f'Success! Your announcement was sent out to {audience_label}.',
+            )
 
     recent = AdminAnnouncement.objects.select_related('sender').all()
     page = paginate(request, recent, per_page=10)
@@ -2806,7 +2833,8 @@ def admin_jobs_list(request):
     sort   = (request.GET.get('sort') or 'newest').strip()
 
     qs = (JobPosting.objects
-          .select_related('company')
+          .select_related('company', 'experience_requirement')
+          .prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
           .annotate(applicants_count=Count('applications', distinct=True)))
 
     if search:

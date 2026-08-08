@@ -1,9 +1,14 @@
 {% comment %}
 Shared autocomplete widget. Usage from any page:
   window.createAutocomplete(inputEl, '/api/autocomplete/<endpoint>/');
+  window.createAutocomplete(inputEl, '/api/autocomplete/<endpoint>/', function(el) {
+    // Return an object of extra query params — re-read on every keystroke,
+    // so linked fields (e.g. edu_level → edu_course) always send current state.
+    return { level: el.closest('.education-row')?.querySelector('[name="edu_level"]')?.value };
+  });
 {% endcomment %}
 <script>
-window.createAutocomplete = function(inputEl, endpoint) {
+window.createAutocomplete = function(inputEl, endpoint, getExtraParams) {
   if (!inputEl || inputEl.dataset.autocomplete) return;
   inputEl.dataset.autocomplete = 'true';
   const wrapper = document.createElement('div');
@@ -19,7 +24,14 @@ window.createAutocomplete = function(inputEl, endpoint) {
     const q = this.value.trim();
     if (q.length < 1) { dropdown.classList.add('hidden'); return; }
     timer = setTimeout(function() {
-      fetch(endpoint + '?q=' + encodeURIComponent(q))
+      let url = endpoint + '?q=' + encodeURIComponent(q);
+      if (typeof getExtraParams === 'function') {
+        const extra = getExtraParams(inputEl) || {};
+        for (const [k, v] of Object.entries(extra)) {
+          if (v) url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
+        }
+      }
+      fetch(url)
         .then(function(r){ return r.json(); })
         .then(function(results) {
           dropdown.innerHTML = '';

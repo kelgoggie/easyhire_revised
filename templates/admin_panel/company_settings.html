@@ -33,27 +33,39 @@
         {% if rep %} · Representative: {{ rep.first_name }} {{ rep.last_name }} ({{ rep.user.email }}){% endif %}
       </p>
     </div>
-    {% if rep %}
     <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
-      <form method="POST" id="disable-rep-form">
+      {# Edit / Save buttons for the Company Info form, promoted to the    #}
+      {# header row (aligned with Disable). Buttons live outside the form  #}
+      {# and reach it via the HTML5 `form` attribute so they can sit up    #}
+      {# here instead of at the bottom of the card.                         #}
+      <button type="button" id="company-edit-btn"
+              class="bg-surface border border-taupe/50 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">
+        Edit
+      </button>
+      <button type="submit" form="company-form" id="company-save-btn"
+              class="hidden bg-amber text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-amber/90 transition">
+        Save Changes
+      </button>
+      {% if rep %}
+      <form method="POST" id="disable-rep-form" class="inline">
         {% csrf_token %}
         {% if rep.user.is_active %}
         <input type="hidden" name="form" value="disable">
         <button type="button"
                 onclick="confirmAction({title:'Disable this company profile?', body:'The company will no longer be able to log in. Their job posts stay on record. You can re-enable later.', ctaLabel:'Yes, disable', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('disable-rep-form').submit();}})"
-                class="bg-white border border-red-300 text-red-500 text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-50 transition">
+                class="bg-white border border-red-300 text-red-500 text-sm font-semibold px-5 py-2 rounded-full hover:bg-red-50 transition">
           Disable Company Profile
         </button>
         {% else %}
         <input type="hidden" name="form" value="enable">
         <button type="submit"
-                class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">
+                class="bg-teal text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-teal/90 transition">
           Re-enable Company Profile
         </button>
         {% endif %}
       </form>
+      {% endif %}
     </div>
-    {% endif %}
   </div>
 
   {% if saved_section == 'company' %}
@@ -194,12 +206,6 @@
         </div>
       </div>
       <div>
-        <label class="block text-primary text-xs mb-1">Company Size</label>
-        <input type="text" name="company_size" value="{{ company.company_size|default:'' }}"
-               placeholder="e.g. 50-100 employees" disabled
-               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
-      </div>
-      <div>
         <label class="block text-primary text-xs mb-1">Company Email</label>
         <input type="email" name="company_email" value="{{ company.company_email }}" required disabled
                class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
@@ -244,16 +250,9 @@
                 class="company-field w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition resize-none disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">{{ company.description }}</textarea>
     </div>
 
-    <div class="flex justify-end">
-      <button type="button" id="company-edit-btn"
-              class="bg-surface border border-taupe/50 text-primary text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-taupe/30 transition">
-        Edit
-      </button>
-      <button type="submit" id="company-save-btn"
-              class="hidden bg-amber text-white text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-amber/90 transition">
-        Save Changes
-      </button>
-    </div>
+    {# Edit / Save buttons for this form moved up next to Disable Company #}
+    {# Profile — see the header row at the top of this page. Buttons     #}
+    {# still reach this form via the HTML5 form="company-form" attribute. #}
   </form>
 
   <script>
@@ -407,11 +406,43 @@
 
       <div class="flex justify-end">
         <button type="submit"
-                class="bg-amber text-white text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-amber/90 transition">
+                class="bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition">
           Save Verification Status
         </button>
       </div>
     </form>
+  </div>
+
+  {# ── Employees on EasyHire ────────────────────────────────────── #}
+  {# Everyone this company has hired through the platform, sourced   #}
+  {# from Applications marked STATUS_HIRED. Shows the platform's     #}
+  {# contribution to the company's team.                              #}
+  <div class="bg-white border border-taupe/40 rounded-2xl p-5 mt-6">
+    <div class="flex items-baseline justify-between gap-3 mb-4">
+      <p class="text-primary font-bold text-base">Employees on EasyHire</p>
+      <p class="text-muted text-xs italic">{{ hired_apps|length }} hired via the platform</p>
+    </div>
+
+    {% if hired_apps %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% for app in hired_apps %}
+      <a href="/admin-panel/jobseekers/{{ app.jobseeker.id|hashid }}/"
+         class="block bg-surface/40 border border-gray-200 rounded-xl p-3 hover:border-teal/30 hover:bg-white transition">
+        <p class="font-bold text-primary text-sm leading-tight truncate">
+          {{ app.jobseeker.first_name }} {{ app.jobseeker.last_name }}
+        </p>
+        <p class="text-muted text-xs truncate">{{ app.job.title|default:"(job removed)" }}</p>
+        <p class="text-muted text-[11px] italic mt-1">
+          Hired {{ app.hired_at|default:app.created_at|date:"M j, Y" }}
+        </p>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted text-xs italic text-center py-4">
+      This company hasn't hired anyone through EasyHire yet.
+    </p>
+    {% endif %}
   </div>
 
 </div>

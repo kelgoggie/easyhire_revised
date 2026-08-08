@@ -99,6 +99,38 @@
       <p class="text-muted text-xs italic mb-1 truncate">{{ job.company.name }}</p>
       <p class="text-muted text-xs italic mb-3 truncate">{{ job.location_display|default:"—"|truncatechars:48 }}</p>
 
+      {# Requirement tags — same palette as the jobseeker-facing job cards  #}
+      {# so admins reading a listing see the shape of the ask (education,   #}
+      {# top skills, experience, certifications) at a glance.               #}
+      <div class="flex flex-wrap gap-1.5 mb-3">
+        {% if job.education_requirement %}
+        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-[10px] px-2 py-0.5 rounded-full border border-teal/20 truncate max-w-full">
+          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+          <span class="truncate">{{ job.education_requirement.get_level_display|truncatechars:22 }}</span>
+        </span>
+        {% endif %}
+        {% for skill in job.skill_requirements.all|slice:":3" %}
+        <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full border border-green-200 truncate max-w-full">
+          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+          <span class="truncate">{{ skill.name|truncatechars:16 }}</span>
+        </span>
+        {% endfor %}
+        {% if job.experience_requirement %}
+        <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-400 text-[10px] px-2 py-0.5 rounded-full border border-purple-200 truncate max-w-full">
+          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span class="truncate">{{ job.experience_requirement.display_experience|truncatechars:22 }}</span>
+        </span>
+        {% endif %}
+        {% with certs=job.certification_requirements.all %}
+        {% if certs %}
+        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full border border-gray-200 truncate max-w-full">
+          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <span class="truncate">{{ certs.0.name|truncatechars:16 }}</span>
+        </span>
+        {% endif %}
+        {% endwith %}
+      </div>
+
       <!-- Applicants + posted date -->
       <div class="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
         <span class="text-primary font-semibold">{{ job.applicants_count }} applicant{{ job.applicants_count|pluralize }}</span>

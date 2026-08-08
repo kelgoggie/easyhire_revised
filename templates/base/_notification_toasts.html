@@ -171,6 +171,36 @@
   // Public entry: called from each dashboard base's fetchNotifications()
   // success handler with the full list of currently-unread notifications
   // the bell just received. We only toast IDs we haven't shown before.
+  // Public entry: fire a one-off toast from anywhere — used to surface
+  // Django `messages` framework flashes (success/info/error after form
+  // submits). Doesn't dedupe against localStorage; every call renders.
+  window.showToast = function(text, opts) {
+    opts = opts || {};
+    const el = document.createElement('div');
+    el.className = 'notif-toast';
+    // Kind → icon slug. success uses sparkle; info the briefcase;
+    // error/warning fall back to heart. Callers rarely need to override.
+    const iconSlug = opts.icon || (
+      opts.kind === 'success' ? 'sparkle' :
+      opts.kind === 'error'   ? 'heart'   :
+      'briefcase'
+    );
+    el.innerHTML =
+      '<span class="notif-toast-icon">' + iconFor(iconSlug) + '</span>' +
+      '<div class="notif-toast-body">' +
+        '<p class="notif-toast-title">' + escapeText(text) + '</p>' +
+      '</div>' +
+      '<button type="button" class="notif-toast-close" aria-label="Dismiss">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>' +
+        '</svg>' +
+      '</button>';
+    el.querySelector('.notif-toast-close').addEventListener('click', function() { dismiss(el); });
+    container.appendChild(el);
+    enforceStackCap();
+    setTimeout(function() { dismiss(el); }, DISMISS_MS);
+  };
+
   window.renderNotifToasts = function(notifs) {
     if (!Array.isArray(notifs) || !notifs.length) return;
     const seen = new Set(loadSeen());
@@ -196,4 +226,42 @@
     saveSeen(Array.from(seen));
   };
 })();
+
+{# Server-emitted flash messages (Django messages framework). These are  #}
+{# things like "Success! Your job application for X at Y was sent." that #}
+{# get set on the request during POST handlers and surface on the next   #}
+{# rendered page. We funnel them through the same toast UI as bell       #}
+{# notifications so users have a single consistent feedback surface.     #}
+{% if messages %}
+<script>
+(function() {
+  const flashes = [
+    {% for message in messages %}
+      { text: "{{ message.message|escapejs }}", kind: "{{ message.tags|escapejs }}" }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
+  // Suppress allauth's default login/logout chatter. These fire on every
+  // sign-in, which reads as "the same notification pops up every time I
+  // log in" — users don't need a toast to confirm they signed in.
+  const SUPPRESSED = [
+    /successfully signed in/i,
+    /successfully signed out/i,
+    /you have signed out/i,
+    /you are now signed in as/i,
+    /confirmation e[- ]?mail sent/i,
+  ];
+  function fire() {
+    if (typeof window.showToast !== 'function') return;
+    flashes.forEach(function(m) {
+      if (SUPPRESSED.some(function(rx) { return rx.test(m.text); })) return;
+      window.showToast(m.text, { kind: m.kind });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fire);
+  } else {
+    fire();
+  }
+})();
 </script>
+{% endif %}

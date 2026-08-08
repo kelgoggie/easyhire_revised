@@ -111,6 +111,17 @@ def get_analytics_context(request):
     new_jobs_monthly = monthly_counts_for_year(
         JobPosting.objects.filter(deleted_at__isnull=True), selected_year
     )
+    # Placements vs. unsuccessful applications — the second one is any
+    # rejected application in the selected year. Rendered together as a
+    # two-series line chart in the analytics dashboard so admins can see
+    # the shape of successful-vs-unsuccessful applications over time.
+    rejected_monthly = monthly_counts_for_year(
+        Application.objects.filter(status='rejected'), selected_year
+    )
+    placements_vs_rejections_monthly = {
+        'placements': hired_monthly,
+        'unsuccessful': rejected_monthly,
+    }
 
     # Totals for the chart footers
     jobseekers_this_year = sum(new_jobseekers_monthly)
@@ -191,14 +202,20 @@ def get_analytics_context(request):
     # etc. collapse into one row. Titles are the labor-market signal — an
     # employer analyst cares "which ROLES take longest to fill", not which
     # specific posts. Company identity is intentionally dropped.
-    hard_to_fill = [job for job in all_jobs.select_related('company') if job.is_hard_to_fill]
+    # Prefetch the requirement rows so is_in_demand / is_hard_to_fill can
+    # inspect them without triggering per-job queries.
+    prefetched_jobs = list(
+        all_jobs.select_related('company', 'experience_requirement')
+        .prefetch_related('education_requirements', 'certification_requirements')
+        .annotate(interaction_count=Count('jobseeker_interactions'))
+    )
+    hard_to_fill = [job for job in prefetched_jobs if job.is_hard_to_fill]
     hard_to_fill_count = len(hard_to_fill)
 
     from django.utils import timezone as _tz
-    in_demand_open = list(
-        JobPosting.objects.filter(status='open', deleted_at__isnull=True)
-        .annotate(interaction_count=Count('jobseeker_interactions'))
-    )
+    # In Demand pool follows PESO's definition on the model: entry-level
+    # education requirement + ≤6 months experience (or none).
+    in_demand_open = [job for job in prefetched_jobs if job.is_in_demand]
 
     def _norm_title(title):
         return ' '.join((title or '').strip().split()).lower()
@@ -208,15 +225,17 @@ def get_analytics_context(request):
     demand_groups = {}
     for j in in_demand_open:
         key = _norm_title(j.title)
-        if not key or not j.interaction_count:
+        if not key:
             continue
         g = demand_groups.setdefault(key, {
             'display': j.title.strip(), 'total_interactions': 0, 'post_count': 0,
         })
-        g['total_interactions'] += j.interaction_count
+        g['total_interactions'] += (j.interaction_count or 0)
         g['post_count'] += 1
     in_demand_top = sorted(
-        demand_groups.values(), key=lambda g: g['total_interactions'], reverse=True,
+        demand_groups.values(),
+        key=lambda g: (g['total_interactions'], g['post_count']),
+        reverse=True,
     )[:10]
     for g in in_demand_top:
         g['avg_interactions'] = round(g['total_interactions'] / g['post_count'], 1) if g['post_count'] else 0
@@ -499,6 +518,10 @@ def get_analytics_context(request):
         'external_hires_this_year': external_hires_this_year,
         'external_hires_all_time':  external_hires_all_time,
         'external_hires_monthly':   external_hires_monthly,
+        'rejected_monthly':         rejected_monthly,
+        'placements_vs_rejections_monthly': json.dumps(placements_vs_rejections_monthly),
+        'placements_year_total':    sum(hired_monthly),
+        'rejections_year_total':    sum(rejected_monthly),
     }
 
 

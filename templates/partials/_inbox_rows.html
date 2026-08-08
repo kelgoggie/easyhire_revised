@@ -9,11 +9,33 @@
             detail_cta_url.
 {% endcomment %}
 {% if items %}
+{# Bulk-action bar — appears when at least one row checkbox is ticked.  #}
+{# Ships hidden; JS below toggles visibility + updates the count label. #}
+<div id="inbox-bulk-bar" class="hidden mb-3 flex items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-2xl px-4 py-2.5">
+  <p class="text-primary text-xs font-semibold"><span id="inbox-bulk-count">0</span> selected</p>
+  <div class="flex items-center gap-2">
+    <button type="button" id="inbox-bulk-clear"
+            class="text-muted text-xs font-semibold hover:text-primary transition">Clear</button>
+    <button type="button" id="inbox-bulk-delete"
+            class="bg-red-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-600 transition">
+      Delete selected
+    </button>
+  </div>
+</div>
+
 <div class="bg-white border border-taupe/20 rounded-2xl overflow-hidden">
   {% for item in items %}
   {# Row background tinted teal-5 when unread, matching the bell dropdown. #}
-  <div class="border-b border-taupe/15 last:border-0{% if item.is_unread %} bg-teal/5{% endif %}">
+  <div class="border-b border-taupe/15 last:border-0{% if item.is_unread %} bg-teal/5{% endif %}"
+       data-inbox-row
+       data-source-type="{{ item.source_type }}"
+       data-source-id="{{ item.source_id }}">
     <div class="flex items-start gap-3 px-4 sm:px-5 py-2.5 hover:bg-surface/40 transition">
+      <!-- Multi-select checkbox -->
+      <label class="flex-shrink-0 pt-1 cursor-pointer" onclick="event.stopPropagation();">
+        <input type="checkbox" class="inbox-row-check accent-teal w-4 h-4 rounded"
+               data-key="{{ item.source_type }}:{{ item.source_id }}">
+      </label>
       <!-- Kind icon -->
       <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
         {% if item.kind == 'announcement' %}bg-amber/15 text-amber
@@ -70,15 +92,43 @@
         </button>
       </div>
 
-      <!-- Report menu -->
-      {% if item.report_target_type %}
-      <div class="relative flex-shrink-0">
-        <button type="button" onclick="event.stopPropagation(); window.openReportModal({targetType:'{{ item.report_target_type }}', targetId:{{ item.report_target_id }}, contextLabel:'{{ item.report_label|escapejs }}'});"
-                class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-red-500 transition" title="Report">
-          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
-        </button>
-      </div>
+      {# Pin indicator — shown when this row is server-side pinned by user. #}
+      {% if item.is_pinned %}
+      <span class="mt-1 flex-shrink-0 text-amber" title="Pinned">
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
+      </span>
       {% endif %}
+      {# Three-dots menu — Pin/Unpin, Delete, and (if reportable) Report. #}
+      {# Uses a details/summary popover so no external JS is needed for   #}
+      {# open/close; a document-level click handler in the script block   #}
+      {# below closes stray-open menus when the user clicks elsewhere.    #}
+      <details class="relative flex-shrink-0 inbox-menu" onclick="event.stopPropagation();">
+        <summary class="list-none cursor-pointer w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-primary transition" title="More">
+          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
+        </summary>
+        <div class="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-xs">
+          <button type="button" data-inbox-action="pin"
+                  class="w-full text-left px-3 py-2 text-primary hover:bg-surface flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
+            <span>{% if item.is_pinned %}Unpin{% else %}Pin{% endif %}</span>
+          </button>
+          <button type="button" data-inbox-action="delete"
+                  class="w-full text-left px-3 py-2 text-red-500 hover:bg-red-50 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+            <span>Delete</span>
+          </button>
+          {% if item.report_target_type %}
+          <button type="button" data-inbox-action="report"
+                  data-report-target-type="{{ item.report_target_type }}"
+                  data-report-target-id="{{ item.report_target_id }}"
+                  data-report-label="{{ item.report_label|escape }}"
+                  class="w-full text-left px-3 py-2 text-primary hover:bg-surface flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z"/></svg>
+            <span>Report</span>
+          </button>
+          {% endif %}
+        </div>
+      </details>
       {# Unread dot — same teal indicator used in the bell dropdown. #}
       {% if item.is_unread %}
       <span class="mt-2 flex-shrink-0 w-2 h-2 rounded-full bg-teal" title="Unread"></span>
@@ -157,4 +207,143 @@ function toggleInboxDetail(idx) {
   const el = document.getElementById('inbox-detail-' + idx);
   if (el) el.classList.toggle('hidden');
 }
+
+// ── Row-level menu actions (pin / delete / report) ───────────────
+(function() {
+  function csrf() {
+    const v = '; ' + document.cookie, p = v.split('; csrftoken=');
+    if (p.length === 2) return p.pop().split(';').shift();
+    return '';
+  }
+  function postForm(url, formData) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' },
+      body: formData,
+    }).then(function(r) { return r.json().catch(function(){ return {}; }); });
+  }
+  function toast(msg, kind) {
+    if (typeof window.showToast === 'function') window.showToast(msg, { kind: kind || 'info' });
+  }
+  function rowFor(el) { return el.closest('[data-inbox-row]'); }
+
+  // Close any open three-dots menu when clicking outside it. <details>
+  // otherwise stays open forever which reads as a bug.
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('details.inbox-menu[open]').forEach(function(d) {
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+  });
+
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-inbox-action]');
+    if (!btn) return;
+    const row = rowFor(btn);
+    if (!row) return;
+    const action = btn.dataset.inboxAction;
+    const st = row.dataset.sourceType;
+    const sid = row.dataset.sourceId;
+    if (action === 'pin') {
+      const fd = new FormData();
+      fd.append('source_type', st); fd.append('source_id', sid);
+      postForm('/inbox/pin/', fd).then(function(d) {
+        toast(d && d.is_pinned ? 'Pinned.' : 'Unpinned.', 'success');
+        // Reload so the sort order refreshes to reflect the new pin state.
+        setTimeout(function() { window.location.reload(); }, 400);
+      });
+    } else if (action === 'delete') {
+      if (window.confirmAction) {
+        window.confirmAction({
+          title: 'Delete this message from your inbox?',
+          body: 'It stays visible for the other party. This only removes it from your inbox.',
+          ctaLabel: 'Delete', ctaClass: 'bg-red-500 hover:bg-red-600',
+          onConfirm: function() { dismissRow(row, st, sid); },
+        });
+      } else if (confirm('Delete this message from your inbox?')) {
+        dismissRow(row, st, sid);
+      }
+    } else if (action === 'report') {
+      if (typeof window.openReportModal === 'function') {
+        window.openReportModal({
+          targetType: btn.dataset.reportTargetType,
+          targetId: parseInt(btn.dataset.reportTargetId, 10),
+          contextLabel: btn.dataset.reportLabel || '',
+        });
+      }
+    }
+    // Close the menu after any action.
+    const details = btn.closest('details.inbox-menu');
+    if (details) details.removeAttribute('open');
+  });
+
+  function dismissRow(row, st, sid) {
+    const fd = new FormData();
+    fd.append('source_type', st); fd.append('source_id', sid);
+    postForm('/inbox/dismiss/', fd).then(function(d) {
+      if (d && d.ok) {
+        row.style.transition = 'opacity 180ms ease';
+        row.style.opacity = '0';
+        setTimeout(function() { row.remove(); refreshBulkBar(); }, 200);
+        toast('Removed from your inbox.', 'success');
+      } else {
+        toast('Could not delete. Try again.', 'error');
+      }
+    });
+  }
+
+  // ── Multi-select bulk delete ───────────────────────────────────
+  const bulkBar   = document.getElementById('inbox-bulk-bar');
+  const bulkCount = document.getElementById('inbox-bulk-count');
+  const bulkClear = document.getElementById('inbox-bulk-clear');
+  const bulkDel   = document.getElementById('inbox-bulk-delete');
+
+  function checkedBoxes() {
+    return Array.from(document.querySelectorAll('.inbox-row-check:checked'));
+  }
+  function refreshBulkBar() {
+    const n = checkedBoxes().length;
+    if (!bulkBar) return;
+    bulkCount.textContent = String(n);
+    bulkBar.classList.toggle('hidden', n === 0);
+  }
+  document.addEventListener('change', function(e) {
+    if (e.target.classList && e.target.classList.contains('inbox-row-check')) {
+      refreshBulkBar();
+    }
+  });
+  if (bulkClear) bulkClear.addEventListener('click', function() {
+    checkedBoxes().forEach(function(cb) { cb.checked = false; });
+    refreshBulkBar();
+  });
+  if (bulkDel) bulkDel.addEventListener('click', function() {
+    const boxes = checkedBoxes();
+    if (!boxes.length) return;
+    function fire() {
+      const fd = new FormData();
+      boxes.forEach(function(cb) { fd.append('keys', cb.dataset.key); });
+      postForm('/inbox/bulk-dismiss/', fd).then(function(d) {
+        if (d && d.ok) {
+          boxes.forEach(function(cb) {
+            const row = cb.closest('[data-inbox-row]');
+            if (row) row.remove();
+          });
+          refreshBulkBar();
+          toast('Deleted ' + (d.dismissed || boxes.length) + ' from your inbox.', 'success');
+        } else {
+          toast('Could not delete. Try again.', 'error');
+        }
+      });
+    }
+    if (window.confirmAction) {
+      window.confirmAction({
+        title: 'Delete ' + boxes.length + ' messages from your inbox?',
+        body: 'They stay visible for the other party. This only removes them from your inbox.',
+        ctaLabel: 'Delete', ctaClass: 'bg-red-500 hover:bg-red-600',
+        onConfirm: fire,
+      });
+    } else if (confirm('Delete ' + boxes.length + ' messages?')) {
+      fire();
+    }
+  });
+})();
 </script>

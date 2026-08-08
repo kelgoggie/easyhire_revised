@@ -412,21 +412,61 @@ def score_experience(job, profile):
         return 0.0
 
 
+# Credit given when a required skill's name shows up in a jobseeker skill's
+# DESCRIPTION but not in any name (e.g. seeker lists "Photoshop" with
+# description "also handles basic Illustrator work" and the job requires
+# Illustrator). Weaker signal than a name match — partial credit.
+SKILL_DESCRIPTION_CREDIT = 0.5
+
+
+def _skill_match_strength(req_name: str, seeker_skills):
+    """Return the strongest match strength for a required skill against a
+    list of the seeker's (name, description) pairs.
+
+    - 1.0 → any seeker skill NAME fuzzy-matches the requirement.
+    - SKILL_DESCRIPTION_CREDIT → no name match, but the requirement is
+      mentioned in some description (fuzzy token_set_ratio ≥ threshold).
+    - 0.0 → no evidence at all.
+    """
+    if not req_name or not seeker_skills:
+        return 0.0
+    for name, _ in seeker_skills:
+        if fuzzy_match(req_name, name):
+            return 1.0
+    # Description fallback. Use token_set_ratio because descriptions are
+    # sentence-shaped ("2 years using Adobe Illustrator on print ads") —
+    # substring/whole-word doesn't cut it. Same fuzzy threshold as names
+    # so the bar for a description hit is comparable.
+    req_l = req_name.lower()
+    for _, desc in seeker_skills:
+        if not desc:
+            continue
+        if fuzz.token_set_ratio(req_l, desc.lower()) >= FUZZY_THRESHOLD:
+            return SKILL_DESCRIPTION_CREDIT
+    return 0.0
+
+
+def _seeker_skill_pairs(profile):
+    """(name, description) tuples for every skill the profile has. One
+    query, reused across name/description scoring so we don't re-hit the DB."""
+    return [(s.name, s.description or '') for s in Skill.objects.filter(profile=profile)]
+
+
 def score_skills(job, profile):
     required_skills = job.skill_requirements.filter(is_required=True)
-    jobseeker_skills = [s.name for s in Skill.objects.filter(profile=profile)]
+    seeker_pairs = _seeker_skill_pairs(profile)
 
-    if not jobseeker_skills:
+    if not seeker_pairs:
         return 0.0
 
     if required_skills.exists():
-        matched_required = 0
-        for req_skill in required_skills:
-            for js_skill in jobseeker_skills:
-                if fuzzy_match(req_skill.name, js_skill):
-                    matched_required += 1
-                    break
-        required_score = matched_required / required_skills.count()
+        # Sum of per-requirement strengths (each in [0,1]) divided by the
+        # requirement count → same 0-1 range as before, but description
+        # hits now nudge the score above 0.
+        total_strength = sum(
+            _skill_match_strength(rs.name, seeker_pairs) for rs in required_skills
+        )
+        required_score = total_strength / required_skills.count()
     else:
         required_score = 1.0
 
@@ -509,10 +549,14 @@ def compute_match_score(job, profile):
 
     # ── Counts for tooltip display ──
     required_skills = job.skill_requirements.filter(is_required=True)
-    jobseeker_skills = [s.name for s in Skill.objects.filter(profile=profile)]
+    seeker_pairs = _seeker_skill_pairs(profile)
+    jobseeker_skills = [name for name, _ in seeker_pairs]
+    # A skill counts as "matched" for the tooltip's "X of Y" line if we
+    # found ANY evidence — name match or description mention. Keeping the
+    # count boolean here so the UI copy stays readable.
     matched_skills = sum(
         1 for rs in required_skills
-        if any(fuzzy_match(rs.name, js) for js in jobseeker_skills)
+        if _skill_match_strength(rs.name, seeker_pairs) > 0
     )
 
     required_certs = job.certification_requirements.filter(is_required=True)
@@ -554,7 +598,7 @@ def compute_match_score(job, profile):
     # employers only see must-haves.
     skill_items = [
         {'name': rs.name,
-         'met': any(fuzzy_match(rs.name, js) for js in jobseeker_skills)}
+         'met': _skill_match_strength(rs.name, seeker_pairs) > 0}
         for rs in required_skills
     ]
     cert_items = [

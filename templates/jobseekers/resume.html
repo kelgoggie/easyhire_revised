@@ -296,8 +296,9 @@
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </button>
               </div>
-              <button type="button" onclick="addRow('education')"
-                      class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
+              <button type="button" id="add-education-btn" onclick="addRow('education')"
+                      class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      data-add-type="education">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Add Entry
               </button>
@@ -418,8 +419,9 @@
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </button>
               </div>
-              <button type="button" onclick="addRow('certification')"
-                      class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
+              <button type="button" id="add-certification-btn" onclick="addRow('certification')"
+                      class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      data-add-type="certification">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Add Entry
               </button>
@@ -539,8 +541,9 @@
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
               </button>
             </div>
-            <button type="button" onclick="addRow('experience')"
-                    class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition">
+            <button type="button" id="add-experience-btn" onclick="addRow('experience')"
+                    class="add-remove-btn inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    data-add-type="experience">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               Add Entry
             </button>
@@ -1086,7 +1089,14 @@ function addRow(type) {
     const clone = template.cloneNode(true);
     delete clone.dataset.watched;
     clone.classList.remove('hidden');
-    clone.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => { el.value = ''; if (el.type === 'checkbox') el.checked = false; });
+    clone.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => {
+        el.value = '';
+        if (el.type === 'checkbox') el.checked = false;
+        // Clear the widget-init flag so initAutocompletes() re-wires this
+        // input. cloneNode copies data-autocomplete, so without this the
+        // widget's guard trips and cloned fields silently have no dropdown.
+        delete el.dataset.autocomplete;
+    });
     container.insertBefore(clone, container.firstElementChild);
     // Active flag: only the new (front) slide is active.
     Array.from(container.querySelectorAll('.carousel-slide')).forEach((s, i) => {
@@ -1095,7 +1105,47 @@ function addRow(type) {
     watchEntry(clone);
     renderCarousel(cfg.containerId);
     setTimeout(initAutocompletes, 50);
+    refreshAddBtn(type);
 }
+
+// ── Add-Entry gate ─────────────────────────────────────────────
+// Disables an "Add Entry" button until the FRONT slide (the most
+// recently added row) has its key fields populated. Keeps the user
+// from stacking a pile of empty template rows.
+const ADD_BTN_RULES = {
+    education:     { containerId: 'education-container',     slideClass: 'education-row', btnId: 'add-education-btn',     required: ['edu_level', 'edu_course'] },
+    certification: { containerId: 'certification-container', slideClass: 'cert-row',      btnId: 'add-certification-btn', required: ['cert_name'] },
+    experience:    { containerId: 'experience-container',    slideClass: 'exp-row',       btnId: 'add-experience-btn',    required: ['exp_position', 'exp_company'] },
+};
+function refreshAddBtn(type) {
+    const cfg = ADD_BTN_RULES[type];
+    if (!cfg) return;
+    const btn = document.getElementById(cfg.btnId);
+    const container = document.getElementById(cfg.containerId);
+    if (!btn || !container) return;
+    const front = container.querySelector('.' + cfg.slideClass);
+    if (!front) { btn.disabled = false; btn.title = ''; return; }
+    const missing = cfg.required.some(function(name) {
+        const el = front.querySelector('[name="' + name + '"]');
+        return !el || !(el.value || '').trim();
+    });
+    btn.disabled = missing;
+    btn.title = missing ? 'Fill in this entry first.' : '';
+}
+function refreshAllAddBtns() {
+    Object.keys(ADD_BTN_RULES).forEach(refreshAddBtn);
+}
+// Delegated listener — one handler covers all three containers, including
+// dynamically-added rows.
+['input', 'change'].forEach(function(evt) {
+    document.addEventListener(evt, function(e) {
+        const row = e.target.closest('.education-row, .cert-row, .exp-row');
+        if (!row) return;
+        if (row.classList.contains('education-row')) refreshAddBtn('education');
+        else if (row.classList.contains('cert-row')) refreshAddBtn('certification');
+        else if (row.classList.contains('exp-row')) refreshAddBtn('experience');
+    });
+});
 
 // ── "Present" checkbox for experience ───────────────────────────
 document.addEventListener('change', function(e) {
@@ -1158,7 +1208,13 @@ function initAutocompletes() {
     document.querySelectorAll('input[name="skill_name"]'    ).forEach(el => ac(el, '/api/autocomplete/skills/'));
     document.querySelectorAll('input[name="exp_position"]'  ).forEach(el => ac(el, '/api/autocomplete/positions/'));
     document.querySelectorAll('input[name="exp_company"]'   ).forEach(el => ac(el, '/api/autocomplete/companies/'));
-    document.querySelectorAll('input[name="edu_course"]'    ).forEach(el => ac(el, '/api/autocomplete/degrees/'));
+    document.querySelectorAll('input[name="edu_course"]'    ).forEach(el => ac(el, '/api/autocomplete/degrees/', function(input) {
+      // Suggestions align with the sibling Educational Level so picking
+      // "Elementary" doesn't offer BS/AB/TESDA entries, etc.
+      const row = input.closest('.education-row');
+      const level = row ? (row.querySelector('[name="edu_level"]') || {}).value : '';
+      return { level: level || '' };
+    }));
     document.querySelectorAll('input[name="edu_institution"]').forEach(el => ac(el, '/api/autocomplete/institutions/'));
     document.querySelectorAll('input[name="cert_name"]'     ).forEach(el => ac(el, '/api/autocomplete/certifications/'));
 }
@@ -1166,6 +1222,10 @@ initAutocompletes();
 
 // Initialise X-visibility for every existing entry on first paint
 watchAllEntries();
+
+// Set the initial disabled/enabled state of every Add Entry button so a
+// blank front slide starts out with its button greyed out.
+refreshAllAddBtns();
 
 // ── Resume PDF upload + auto-fill ───────────────────────────────────
 (function() {

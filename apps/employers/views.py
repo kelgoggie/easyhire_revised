@@ -393,6 +393,9 @@ def job_create(request):
 
     if request.method == 'POST':
         # Core job
+        vis = (request.POST.get('visibility') or '').strip()
+        if vis not in {JobPosting.VISIBILITY_PUBLIC, JobPosting.VISIBILITY_MEMBERS}:
+            vis = JobPosting.VISIBILITY_PUBLIC
         job = JobPosting.objects.create(
             company=company,
             title=request.POST.get('title', ''),
@@ -407,6 +410,7 @@ def job_create(request):
             salary_min=request.POST.get('salary_min') or None,
             salary_max=request.POST.get('salary_max') or None,
             status=request.POST.get('status', 'open'),
+            visibility=vis,
         )
 
         # Education requirements (may be multiple)
@@ -547,6 +551,9 @@ def job_edit(request, job_id):
         job.salary_min = request.POST.get('salary_min') or None
         job.salary_max = request.POST.get('salary_max') or None
         job.status = request.POST.get('status', 'open')
+        _vis = (request.POST.get('visibility') or '').strip()
+        if _vis in {JobPosting.VISIBILITY_PUBLIC, JobPosting.VISIBILITY_MEMBERS}:
+            job.visibility = _vis
         job.save()
 
         # Education (may be multiple)
@@ -836,9 +843,12 @@ def invite_to_apply(request, job_id, jobseeker_id):
         return JsonResponse({'ok': True, 'already': already})
 
     if already:
-        flash.info(request, f'{jobseeker.first_name} has already been invited.')
+        flash.info(request, f'{jobseeker.first_name} has already been invited to apply as {job.title}.')
     else:
-        flash.success(request, f'Invitation sent to {jobseeker.first_name}.')
+        flash.success(
+            request,
+            f'Success! {jobseeker.first_name} {jobseeker.last_name} has received your Invitation to Apply as {job.title}.',
+        )
     return redirect(f'/employers/jobs/{_hashid(job_id)}/')
 
 
@@ -1543,7 +1553,13 @@ def candidate_contact(request, jobseeker_id):
                 is_read=True,  # silent marker — don't inflate unread count
             )
 
-    messages.success(request, f'Sent to {jobseeker.first_name}\'s EasyHire inbox.')
+    if ui_kind == 'invite' and job:
+        messages.success(
+            request,
+            f'Success! {jobseeker.first_name} {jobseeker.last_name} has received your Invitation to Apply as {job.title}.',
+        )
+    else:
+        messages.success(request, f'Sent to {jobseeker.first_name}\'s EasyHire inbox.')
     # Bounce back to wherever the employer came from — job detail, candidate
     # list, inbox, etc. Falls back to the candidate profile when the caller
     # didn't provide a next hint. Same-origin check: only accept paths that

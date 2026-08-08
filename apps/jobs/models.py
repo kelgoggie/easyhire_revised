@@ -23,6 +23,16 @@ class JobPosting(models.Model):
         (STATUS_DRAFT, "Draft"),
     ]
 
+    # Who can see this posting.
+    # - 'public'  → anyone (including anonymous visitors on marketing pages)
+    # - 'members' → registered EasyHire users only; anon users get 404
+    VISIBILITY_PUBLIC  = "public"
+    VISIBILITY_MEMBERS = "members"
+    VISIBILITY_CHOICES = [
+        (VISIBILITY_PUBLIC,  "Public"),
+        (VISIBILITY_MEMBERS, "Registered EasyHire Only"),
+    ]
+
     company = models.ForeignKey(
         "employers.Company", on_delete=models.CASCADE, related_name="job_postings"
     )
@@ -83,6 +93,14 @@ class JobPosting(models.Model):
     # action when the posting is fully filled.
     externally_hired_count = models.PositiveIntegerField(default=0)
 
+    # Public vs members-only. Enforced in the two PublicJob* views by
+    # excluding 'members' rows for anon visitors — logged-in users see
+    # everything.
+    visibility = models.CharField(
+        max_length=10, choices=VISIBILITY_CHOICES, default=VISIBILITY_PUBLIC,
+        help_text="Public jobs appear on the marketing site; members-only jobs are hidden from anonymous visitors.",
+    )
+
     class Meta:
         db_table = "job_postings"
         ordering = ["-created_at"]
@@ -110,20 +128,59 @@ class JobPosting(models.Model):
         remaining = (self.deleted_at + timedelta(days=30)) - timezone.now()
         return max(0, remaining.days)
 
+    # PESO's classification of licensed / regulated professions. Any of
+    # these surfacing in a job title marks it as hard-to-fill for the
+    # labor-market analytics view — these roles need PRC-licensed hires
+    # so the applicant pool is inherently narrower.
+    _LICENSED_PROFESSION_KEYWORDS = (
+        'nurse', 'teacher', 'engineer', 'architect', 'doctor', 'lawyer',
+        'pharmacist', 'accountant', 'midwife', 'physician', 'dentist',
+        'optometrist', 'veterinarian', 'psychologist', 'radiologic',
+        'physical therapist', 'occupational therapist',
+        'medical technologist', 'med tech', 'criminologist',
+        'social worker', 'surveyor', 'geologist', 'attorney',
+    )
+    # Certification names that signal a license/board-exam requirement.
+    _LICENSE_CERT_KEYWORDS = ('prc', 'license', 'licence', 'board exam', 'let', ' cpa', ' rn ')
+
     @property
     def is_hard_to_fill(self):
-        """Used by analytics: open for 30+ days with fewer than 3 applicants."""
-        from django.utils import timezone
-        from datetime import timedelta
-        age = timezone.now() - self.created_at
-        applicant_count = self.jobseeker_interactions.filter(
-            interaction_type="liked"
-        ).count()
-        return (
-            self.status == self.STATUS_OPEN
-            and age > timedelta(days=30)
-            and applicant_count < 3
-        )
+        """PESO definition: jobs requiring high qualifications with
+        licenses (registered nurse, teacher, engineer, etc.). Detected
+        from the title's profession or from a license-shaped certification
+        requirement — either signal alone is enough."""
+        title = ' ' + (self.title or '').lower() + ' '
+        if any(prof in title for prof in self._LICENSED_PROFESSION_KEYWORDS):
+            return True
+        try:
+            for cert in self.certification_requirements.all():
+                n = ' ' + (cert.name or '').lower() + ' '
+                if any(k in n for k in self._LICENSE_CERT_KEYWORDS):
+                    return True
+        except Exception:
+            pass
+        return False
+
+    @property
+    def is_in_demand(self):
+        """PESO definition: entry-level jobs (elementary / JHS / SHS
+        education) that ask for 0-6 months of experience or none. These
+        have the widest applicant pool and the shortest fill time — the
+        "in demand" bucket in analytics.
+
+        A job with NO stated education requirement still counts as in-demand
+        as long as its experience ask is entry-level, since the effective
+        floor is the same (anyone can apply)."""
+        edu = self.education_requirement
+        if edu and edu.level not in ('elementary', 'junior_high', 'senior_high'):
+            return False
+        try:
+            exp = self.experience_requirement
+            if exp and exp.months_required and exp.months_required > 6:
+                return False
+        except Exception:
+            pass
+        return True
 
     @property
     def education_requirement(self):

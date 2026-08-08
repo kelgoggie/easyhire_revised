@@ -175,32 +175,35 @@
         {% endif %}
         {% endwith %}
 
-        {# Skills (top 3). #}
-        {% with sks=js.skills.all %}
-        {% if sks %}
+        {# Skills (top 3) + certification hint — matches the shape used on the #}
+        {# employer's own candidate cards. Minority-sector chips deliberately  #}
+        {# omitted from this list view; they surface on the jobseeker detail   #}
+        {# page for admins who need them.                                      #}
         <div class="flex flex-wrap gap-1 mb-2">
-          {% for sk in sks|slice:":3" %}
+          {% for sk in js.skills.all|slice:":3" %}
           <span class="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200 truncate max-w-full">
             {{ sk.name|truncatechars:18 }}
           </span>
           {% endfor %}
-          {% if sks|length > 3 %}
-          <span class="text-[10px] text-muted self-center">+{{ sks|length|add:"-3" }} more</span>
+          {% with sk_count=js.skills.all|length %}
+          {% if sk_count > 3 %}
+          <span class="text-[10px] text-muted self-center">+{{ sk_count|add:"-3" }} more</span>
           {% endif %}
-        </div>
-        {% endif %}
-        {% endwith %}
-
-        {# Sectors. #}
-        <div class="flex flex-wrap gap-1.5 mt-1">
-          {% for sector in js.sectors.all|slice:":3" %}
-          <span class="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full bg-taupe/20 text-primary border border-taupe/30">
-            {{ sector.label|truncatechars:18 }}
+          {% endwith %}
+          {% with certs=js.certifications.all %}
+          {% if certs %}
+          <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200 truncate max-w-full">
+            <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <span class="truncate">{{ certs.0.name|truncatechars:14 }}</span>
           </span>
-          {% empty %}
-          <span class="text-muted text-[10px] italic">No sectors</span>
-          {% endfor %}
+          {% endif %}
+          {% endwith %}
         </div>
+
+        {# Bio hint — short preview if the jobseeker's "About me" is set. #}
+        {% if js.bio %}
+        <p class="text-muted text-[11px] italic leading-snug line-clamp-2">{{ js.bio|truncatechars:100 }}</p>
+        {% endif %}
 
       </a>
 

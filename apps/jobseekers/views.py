@@ -110,6 +110,17 @@ def job_apply(request, job_id):
         from apps.notifications.utils import notify_new_application
         notify_new_application(job, profile)
 
+    from django.contrib import messages
+    if created:
+        messages.success(
+            request,
+            f"Success! Your job application for '{job.title}' at '{job.company.name}' was sent.",
+        )
+    else:
+        messages.info(
+            request,
+            f"You've already applied to '{job.title}' at '{job.company.name}'.",
+        )
     return redirect('/applications/')
 
 
@@ -1740,10 +1751,63 @@ def autocomplete_positions(request):
     return _autocomplete_response(query, db_positions, STATIC_POSITIONS, cache_key='positions', semantic=False)
 
 
+def _classify_degree_levels(name: str) -> set[str]:
+    """Which educational-level codes does a degree/strand/cert suggestion
+    fit under? Some entries fit multiple levels — TESDA NC certs sit in
+    both 'vocational' and 'associate' bins because employers/jobseekers
+    tag them differently in practice.
+
+    Keep this in sync with the <select name="edu_level"> options in
+    jobseekers/resume.html and employers/_job_form_body.html.
+    """
+    n = (name or '').strip()
+    low = n.lower()
+
+    if 'elementary graduate' in low:
+        return {'elementary'}
+    if low == 'high school graduate':
+        return {'junior_high'}
+    if 'senior high' in low or low in {'abm', 'humss', 'stem', 'gas', 'tvl'}:
+        return {'senior_high'}
+
+    # TESDA / NC-graded vocational certs. "NC I/II/III/IV" is the giveaway;
+    # Trainers Methodology also lives here.
+    if any(m in n for m in (' NC I', ' NC II', ' NC III', ' NC IV',
+                            'Trainers Methodology')) or low.startswith('tesda'):
+        return {'vocational', 'associate'}
+
+    if n.startswith('Master ') or n.startswith('Master of'):
+        return {'master'}
+
+    if n.startswith('Doctor of Philosophy') or 'ph.d' in low or 'phd' in low:
+        return {'doctorate'}
+    # Professional doctorates (MD, DDS, JD, DVM, DO). Users file these
+    # under either the highest bachelor-tier program they finished or
+    # under "doctorate" — offer both bins.
+    if n.startswith('Doctor of ') or n == 'Juris Doctor':
+        return {'bachelor', 'doctorate'}
+
+    if (n.startswith('BS ') or n.startswith('AB ') or n.startswith('Bachelor')):
+        return {'bachelor'}
+
+    # Unclassified — put it in the bachelor bin so nothing silently
+    # vanishes if the STATIC_DEGREES list grows an entry we forgot.
+    return {'bachelor'}
+
+
 def autocomplete_degrees(request):
     query = request.GET.get('q', '').strip()
+    level = (request.GET.get('level') or '').strip().lower()
+    valid_levels = {'elementary', 'junior_high', 'senior_high', 'vocational',
+                    'associate', 'bachelor', 'master', 'doctorate'}
+    if level and level in valid_levels:
+        pool = [d for d in STATIC_DEGREES if level in _classify_degree_levels(d)]
+        cache_key = f'degrees:{level}'
+    else:
+        pool = STATIC_DEGREES
+        cache_key = 'degrees'
     # Degrees: static only (canonical PH degree list is comprehensive)
-    return _autocomplete_response(query, [], STATIC_DEGREES, cache_key='degrees', semantic=False)
+    return _autocomplete_response(query, [], pool, cache_key=cache_key, semantic=False)
 
 
 def autocomplete_certifications(request):

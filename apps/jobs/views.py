@@ -24,6 +24,10 @@ class PublicJobListView(View):
             'certification_requirements',
             'education_requirements',
         )
+        # Members-only postings are hidden from anonymous visitors on the
+        # marketing page. Signed-in users see everything.
+        if not request.user.is_authenticated:
+            jobs = jobs.exclude(visibility=JobPosting.VISIBILITY_MEMBERS)
 
         # Filters
         search = request.GET.get('q', '').strip()
@@ -55,26 +59,27 @@ class PublicJobDetailView(View):
     template_name = 'public/job_detail.html'
 
     def get(self, request, pk):
-        all_jobs = list(JobPosting.objects.filter(
-            status=JobPosting.STATUS_OPEN,
-            deleted_at__isnull=True,
-            admin_disabled=False,
-        ).order_by('-created_at').values_list('id', flat=True))
-
-        job = get_object_or_404(
-            JobPosting.objects.select_related(
-                'company',
-                'experience_requirement',
-            ).prefetch_related(
-                'skill_requirements',
-                'certification_requirements',
-                'education_requirements',
-            ),
-            pk=pk,
+        # Anonymous visitors can only prev/next through Public postings —
+        # if their current page happened to be a members-only job (via a
+        # stale link) the 404 below handles it.
+        base_qs = JobPosting.objects.filter(
             status=JobPosting.STATUS_OPEN,
             deleted_at__isnull=True,
             admin_disabled=False,
         )
+        if not request.user.is_authenticated:
+            base_qs = base_qs.exclude(visibility=JobPosting.VISIBILITY_MEMBERS)
+        all_jobs = list(base_qs.order_by('-created_at').values_list('id', flat=True))
+
+        detail_qs = base_qs.select_related(
+            'company',
+            'experience_requirement',
+        ).prefetch_related(
+            'skill_requirements',
+            'certification_requirements',
+            'education_requirements',
+        )
+        job = get_object_or_404(detail_qs, pk=pk)
 
         # Prev/next
         try:

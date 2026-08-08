@@ -54,6 +54,7 @@
         <li><a href="#cmp-apps-hired" class="nav-pill" data-key="cmp-apps-hired">Applications vs Hired</a></li>
         <li><a href="#cmp-jobs-apps"  class="nav-pill" data-key="cmp-jobs-apps">New Jobs vs Applications</a></li>
         <li><a href="#cmp-eh-ext"     class="nav-pill" data-key="cmp-eh-ext">Hired via EasyHire vs Externally</a></li>
+        <li><a href="#cmp-place-rej"  class="nav-pill" data-key="cmp-place-rej">Placements vs Unsuccessful Applications</a></li>
       </ul>
 
       <p class="text-sm font-bold text-primary mb-1">
@@ -305,6 +306,19 @@
         </div>
       </div>
 
+      <!-- ── Comparison: Placements vs Unsuccessful Applications ── -->
+      <div data-panel="cmp-place-rej" class="analytics-panel hidden flex-1 flex flex-col">
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Placements vs Unsuccessful Applications</h2>
+        <p class="text-muted text-xs italic mb-4">
+          Applications that reached the terminal Hired state (placements) vs applications that were rejected, per month in {{ selected_year }}. A high rejection curve relative to placements can flag a mismatch between what jobseekers are applying to and what employers actually hire.
+        </p>
+        <div class="chart-box flex-1"><canvas id="chart-cmp-place-rej"></canvas></div>
+        <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
+          <p class="text-sm text-primary">Placements (This Year): <strong>{{ placements_year_total }}</strong></p>
+          <p class="text-sm text-primary">Unsuccessful Applications (This Year): <strong>{{ rejections_year_total }}</strong></p>
+        </div>
+      </div>
+
       <!-- ── Comparison: Hired via EasyHire vs Externally ───────── -->
       <div data-panel="cmp-eh-ext" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Hired via EasyHire vs Externally</h2>
@@ -401,6 +415,7 @@ const D = {
   hired:      {{ hired_monthly|safe }},
   newJobs:    {{ new_jobs_monthly|safe }},
   extHired:   {{ external_hires_monthly|safe }},
+  rejected:   {{ rejected_monthly|safe }},
 };
 
 // ── Chart.js defaults — KEY to preventing infinite scroll ────────────
@@ -709,6 +724,10 @@ function init(key) {
     case 'cmp-eh-ext':     charts[key] = monthlyMultiLine('chart-cmp-eh-ext', [
                              { label: 'Hired via EasyHire', data: D.hired,    color: '#2D4A3E' },
                              { label: 'Hired externally',   data: D.extHired, color: '#E8A838' },
+                           ]); break;
+    case 'cmp-place-rej':  charts[key] = monthlyMultiLine('chart-cmp-place-rej', [
+                             { label: 'Placements',              data: D.hired,    color: '#2D4A3E' },
+                             { label: 'Unsuccessful applications', data: D.rejected, color: '#C4453A' },
                            ]); break;
   }
 }
