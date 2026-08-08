@@ -77,6 +77,7 @@ function addEdu() {
   const container = document.getElementById('edu-container');
   const template = container.querySelector('.edu-row');
   if (!template) return;
+  if (!_gateOk(template, ADD_BTN_RULES.edu.required)) return;
   const clone = template.cloneNode(true);
   delete clone.dataset.watched;
   clone.classList.remove('hidden');
@@ -169,6 +170,8 @@ skillInput.addEventListener('blur', function() {
 // â”€â”€ Add Certification entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function addCert() {
   const container = document.getElementById('cert-container');
+  const template = container.querySelector('.cert-row');
+  if (template && !_gateOk(template, ADD_BTN_RULES.cert.required)) return;
   const div = document.createElement('div');
   div.className = 'cert-row carousel-slide relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2';
   div.innerHTML = `
@@ -187,51 +190,33 @@ function addCert() {
   watchEntry(div);
   renderCarousel('cert-container');
   initAutocompletes();
-  refreshAddBtn('cert');
 }
 
 // â”€â”€ Add-Entry gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Disable the Add button until the FRONT (most recently added) row of the
-// carousel has its key fields populated. Prevents the employer from
-// stacking empty template rows when building requirements.
+// Check the FRONT row's required fields BEFORE cloning a new row, and
+// toast a friendly nudge if the user hasn't filled it in yet. We check
+// on click rather than disabling the button so it never reads as broken.
 const ADD_BTN_RULES = {
-  edu:  { containerId: 'edu-container',  slideClass: 'edu-row',  btnId: 'add-edu-btn',  required: ['edu_level', 'edu_course'] },
-  cert: { containerId: 'cert-container', slideClass: 'cert-row', btnId: 'add-cert-btn', required: ['cert_name'] },
+  edu:  { required: ['edu_level', 'edu_course'] },
+  cert: { required: ['cert_name'] },
 };
-function refreshAddBtn(type) {
-  const cfg = ADD_BTN_RULES[type];
-  if (!cfg) return;
-  const btn = document.getElementById(cfg.btnId);
-  const container = document.getElementById(cfg.containerId);
-  if (!btn || !container) return;
-  const front = container.querySelector('.' + cfg.slideClass);
-  if (!front) { btn.disabled = false; btn.title = ''; return; }
-  const missing = cfg.required.some(function(name) {
-    const el = front.querySelector('[name="' + name + '"]');
+function _gateOk(row, requiredFields) {
+  const missing = (requiredFields || []).some(function(name) {
+    const el = row.querySelector('[name="' + name + '"]');
     return !el || !(el.value || '').trim();
   });
-  btn.disabled = missing;
-  btn.title = missing ? 'Fill in this entry first.' : '';
-}
-function refreshAllAddBtns() { Object.keys(ADD_BTN_RULES).forEach(refreshAddBtn); }
-['input', 'change'].forEach(function(evt) {
-  document.addEventListener(evt, function(e) {
-    const row = e.target.closest('.edu-row, .cert-row');
-    if (!row) return;
-    if (row.classList.contains('edu-row')) refreshAddBtn('edu');
-    else if (row.classList.contains('cert-row')) refreshAddBtn('cert');
-  });
-});
-
-// Also hook the education addEdu clone path so the button re-evaluates.
-const _origAddEdu = window.addEdu;
-if (typeof _origAddEdu === 'function') {
-  window.addEdu = function() { _origAddEdu.apply(this, arguments); refreshAddBtn('edu'); };
+  if (!missing) return true;
+  const msg = 'Fill in the current entry before adding another.';
+  if (typeof window.showToast === 'function') {
+    window.showToast(msg, { kind: 'info' });
+  } else {
+    alert(msg);
+  }
+  return false;
 }
 
 // Initialise X-visibility for every existing entry on first paint
 watchAllEntries();
-refreshAllAddBtns();
 
 // Seed carousel state on load â€” first slide active, hide the rest.
 renderCarousel('edu-container');

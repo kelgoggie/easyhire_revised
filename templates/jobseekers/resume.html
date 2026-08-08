@@ -1086,6 +1086,26 @@ function addRow(type) {
     const container = document.getElementById(cfg.containerId);
     const template = container.querySelector('.' + cfg.slideClass);
     if (!template) return;
+    // Gate: require the FRONT (most recently added / initial) slide's key
+    // fields before appending another blank one — keeps users from stacking
+    // empty template rows. We check on click instead of disabling the button
+    // so it never reads as "broken"; toast explains the block if it hits.
+    const gate = ADD_BTN_RULES[type];
+    if (gate && template) {
+        const missing = gate.required.some(function(name) {
+            const el = template.querySelector('[name="' + name + '"]');
+            return !el || !(el.value || '').trim();
+        });
+        if (missing) {
+            const msg = 'Fill in the current entry before adding another.';
+            if (typeof window.showToast === 'function') {
+                window.showToast(msg, { kind: 'info' });
+            } else {
+                alert(msg);
+            }
+            return;
+        }
+    }
     const clone = template.cloneNode(true);
     delete clone.dataset.watched;
     clone.classList.remove('hidden');
@@ -1105,47 +1125,15 @@ function addRow(type) {
     watchEntry(clone);
     renderCarousel(cfg.containerId);
     setTimeout(initAutocompletes, 50);
-    refreshAddBtn(type);
 }
 
-// ── Add-Entry gate ─────────────────────────────────────────────
-// Disables an "Add Entry" button until the FRONT slide (the most
-// recently added row) has its key fields populated. Keeps the user
-// from stacking a pile of empty template rows.
+// Required-field map for the Add-Entry click guard in addRow() above.
+// Kept as data (not behavior) so a future rule change is one edit here.
 const ADD_BTN_RULES = {
-    education:     { containerId: 'education-container',     slideClass: 'education-row', btnId: 'add-education-btn',     required: ['edu_level', 'edu_course'] },
-    certification: { containerId: 'certification-container', slideClass: 'cert-row',      btnId: 'add-certification-btn', required: ['cert_name'] },
-    experience:    { containerId: 'experience-container',    slideClass: 'exp-row',       btnId: 'add-experience-btn',    required: ['exp_position', 'exp_company'] },
+    education:     { required: ['edu_level', 'edu_course'] },
+    certification: { required: ['cert_name'] },
+    experience:    { required: ['exp_position', 'exp_company'] },
 };
-function refreshAddBtn(type) {
-    const cfg = ADD_BTN_RULES[type];
-    if (!cfg) return;
-    const btn = document.getElementById(cfg.btnId);
-    const container = document.getElementById(cfg.containerId);
-    if (!btn || !container) return;
-    const front = container.querySelector('.' + cfg.slideClass);
-    if (!front) { btn.disabled = false; btn.title = ''; return; }
-    const missing = cfg.required.some(function(name) {
-        const el = front.querySelector('[name="' + name + '"]');
-        return !el || !(el.value || '').trim();
-    });
-    btn.disabled = missing;
-    btn.title = missing ? 'Fill in this entry first.' : '';
-}
-function refreshAllAddBtns() {
-    Object.keys(ADD_BTN_RULES).forEach(refreshAddBtn);
-}
-// Delegated listener — one handler covers all three containers, including
-// dynamically-added rows.
-['input', 'change'].forEach(function(evt) {
-    document.addEventListener(evt, function(e) {
-        const row = e.target.closest('.education-row, .cert-row, .exp-row');
-        if (!row) return;
-        if (row.classList.contains('education-row')) refreshAddBtn('education');
-        else if (row.classList.contains('cert-row')) refreshAddBtn('certification');
-        else if (row.classList.contains('exp-row')) refreshAddBtn('experience');
-    });
-});
 
 // ── "Present" checkbox for experience ───────────────────────────
 document.addEventListener('change', function(e) {
@@ -1222,10 +1210,6 @@ initAutocompletes();
 
 // Initialise X-visibility for every existing entry on first paint
 watchAllEntries();
-
-// Set the initial disabled/enabled state of every Add Entry button so a
-// blank front slide starts out with its button greyed out.
-refreshAllAddBtns();
 
 // ── Resume PDF upload + auto-fill ───────────────────────────────────
 (function() {
