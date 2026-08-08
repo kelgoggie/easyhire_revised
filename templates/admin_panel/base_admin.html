@@ -109,8 +109,11 @@
       </div>
       <!-- Avatar + dot menu -->
       <div class="relative ml-1" id="admin-avatar-container">
-        <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-          {{ request.user.email|first|upper }}
+        {# PESO admins share one identity in-app — use the PESO logo as the  #}
+        {# avatar instead of the first letter of the email, so the header    #}
+        {# reads as "PESO" rather than as an individual staffer.             #}
+        <div class="w-9 h-9 rounded-full bg-white border border-taupe/40 flex items-center justify-center overflow-hidden">
+          <img src="{% static 'images/peso_logo.png' %}" alt="PESO" class="w-full h-full object-contain">
         </div>
         <button id="admin-more-btn" type="button" title="More"
                 class="absolute -bottom-1 -right-1 w-4 h-4 bg-white rounded-full shadow border border-gray-200 flex items-center justify-center hover:bg-surface transition">
