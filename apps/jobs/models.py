@@ -273,6 +273,13 @@ class JobExperienceRequirement(models.Model):
 
     @property
     def display_experience(self):
+        """Duration + field qualifier, ready for a single-line tag.
+        Examples:
+          "No experience required"
+          "6 months — any field"
+          "6 months — Legal Secretary"
+          "2 years — Legal Secretary or Paralegal (+2 more)"
+        """
         if self.months_required == 0:
             return "No experience required"
         years = self.months_required // 12
@@ -282,7 +289,45 @@ class JobExperienceRequirement(models.Model):
             parts.append(f"{years} year{'s' if years != 1 else ''}")
         if months:
             parts.append(f"{months} month{'s' if months != 1 else ''}")
-        return ", ".join(parts)
+        duration = ", ".join(parts)
+        qualifier = self.experience_field_display
+        return f"{duration} — {qualifier}" if qualifier else duration
+
+    def preferred_positions_list(self):
+        """Split the comma-separated `preferred_position` string into a
+        clean list. Employers can list multiple acceptable prior roles
+        (e.g. "Legal Secretary, Paralegal, Executive Assistant") and a
+        jobseeker with experience in ANY of them qualifies."""
+        raw = (self.preferred_position or '').strip()
+        if not raw:
+            return []
+        seen, out = set(), []
+        for part in raw.split(','):
+            p = part.strip()
+            key = p.lower()
+            if p and key not in seen:
+                seen.add(key)
+                out.append(p)
+        return out
+
+    @property
+    def experience_field_display(self):
+        """Short qualifier for the experience tag: 'any field', a single
+        position name, or 'X or Y' / 'X or Y (+N more)' for multiples.
+        Returns '' when no experience is required — the caller can then
+        skip the qualifier entirely."""
+        if self.months_required == 0:
+            return ''
+        if self.any_experience_accepted:
+            return 'any field'
+        positions = self.preferred_positions_list()
+        if not positions:
+            return 'any field'
+        if len(positions) == 1:
+            return positions[0]
+        if len(positions) == 2:
+            return f'{positions[0]} or {positions[1]}'
+        return f'{positions[0]} or {positions[1]} (+{len(positions) - 2} more)'
 
 
 class Application(models.Model):

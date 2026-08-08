@@ -183,34 +183,13 @@
             <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
           </svg>
         </button>
-        <div id="company-menu-{{ c.id }}" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-52 py-1">
+        <div id="company-menu-{{ c.id }}" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-48 py-1">
+          {# Single-action menu — Deactivate / Reactivate still live on the  #}
+          {# company settings page itself; the popover here is a fast jump.  #}
           <a href="/admin-panel/companies/{{ c.id|hashid }}/settings/"
              class="block px-4 py-2 text-sm text-primary hover:bg-surface">
-            Open settings
+            Account Settings
           </a>
-          {% with rep=c.representatives.first %}
-          {% if rep %}
-            {% if rep.user.is_active %}
-              {% if rep.user_id != request.user.id %}
-              <button type="button"
-                      onclick="event.preventDefault(); event.stopPropagation(); confirmDisableCompany('{{ c.id|hashid }}', '{{ c.name|escapejs }}')"
-                      class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">
-                Deactivate company
-              </button>
-              {% else %}
-              <span class="block px-4 py-2 text-sm text-muted italic">Can't disable yourself</span>
-              {% endif %}
-            {% else %}
-              <button type="button"
-                      onclick="event.preventDefault(); event.stopPropagation(); confirmEnableCompany('{{ c.id|hashid }}', '{{ c.name|escapejs }}')"
-                      class="block w-full text-left px-4 py-2 text-sm text-teal hover:bg-teal/10">
-                Reactivate company
-              </button>
-            {% endif %}
-          {% else %}
-          <span class="block px-4 py-2 text-sm text-muted italic">No representative on file</span>
-          {% endif %}
-          {% endwith %}
         </div>
       </div>
     </div>

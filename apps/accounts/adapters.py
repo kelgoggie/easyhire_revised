@@ -108,3 +108,48 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def is_auto_signup_allowed(self, request, sociallogin):
         return True
+
+    def pre_social_login(self, request, sociallogin):
+        """Block OAuth sign-in when the Google account's email is already
+        used by a local account of a DIFFERENT type. One email = one
+        account role on EasyHire, and this guard makes the OAuth path
+        honour that just like the email/password signup flows do.
+
+        The check fires only when there's a role mismatch — a jobseeker
+        signing in with Google to their own jobseeker account still
+        auto-connects normally (SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT).
+        """
+        from allauth.exceptions import ImmediateHttpResponse
+        from django.contrib.auth import get_user_model
+        from django.shortcuts import redirect
+        from django.contrib import messages
+        User = get_user_model()
+
+        email = (sociallogin.user.email or '').strip().lower()
+        if not email:
+            return
+        existing = User.objects.filter(email__iexact=email).first()
+        if not existing:
+            return
+        intent = (request.session.get('oauth_intent') or '').strip().lower() if request else ''
+        desired_type = User.EMPLOYER if intent == 'employer' else User.JOBSEEKER
+        if existing.user_type == desired_type:
+            return  # normal auto-connect path — same-role reconnection is fine
+
+        # Staff accounts always own the email; if a staff email tries to
+        # sign in via a jobseeker / employer OAuth page, kick them to the
+        # admin login instead.
+        if existing.is_staff:
+            messages.error(request, 'This email belongs to a PESO admin account. Use the admin sign-in page.')
+            raise ImmediateHttpResponse(redirect('/admin-panel/login/'))
+
+        # Cross-role collision — surface a flash and send the user to the
+        # login page that MATCHES the account they already own.
+        owner = 'Jobseeker' if existing.user_type == User.JOBSEEKER else 'Employer'
+        target = '/login/' if existing.user_type == User.JOBSEEKER else '/employers/login/'
+        messages.error(
+            request,
+            f'This email is already registered as a {owner}. '
+            f'Sign in with your {owner.lower()} account, or use a different email to register.',
+        )
+        raise ImmediateHttpResponse(redirect(target))

@@ -80,8 +80,21 @@ class RegisterStep1JobseekerView(View):
             errors['password'] = 'Passwords do not match.'
         if not consented:
             errors['consent'] = 'You must agree to the terms to continue.'
-        if User.objects.filter(email=email).exists():
-            errors['email'] = 'An account with this email already exists.'
+        # Duplicate-email check: EasyHire allows exactly one account per
+        # email address across the whole platform. Surface the owning
+        # account type so the user knows which login flow to use rather
+        # than getting a generic "already exists" that reads like a bug.
+        existing = User.objects.filter(email__iexact=email).first()
+        if existing:
+            if existing.user_type == User.EMPLOYER:
+                errors['email'] = (
+                    'This email is already registered as an Employer. '
+                    'Sign in with your employer account, or use a different email.'
+                )
+            elif existing.user_type == User.JOBSEEKER:
+                errors['email'] = 'You already have a jobseeker account with this email. Sign in instead.'
+            else:
+                errors['email'] = 'An account with this email already exists.'
 
         if errors:
             return render(request, self.template_name, {'errors': errors, 'email': email})
@@ -286,8 +299,20 @@ class EmployerRegisterStep1View(View):
             errors['password'] = 'Passwords do not match.'
         if len(password) < 8:
             errors['password'] = 'Password must be at least 8 characters.'
-        if User.objects.filter(email=email).exists():
-            errors['email'] = 'An account with this email already exists.'
+        # Same cross-type collision guard as the jobseeker signup — one
+        # account per email, and the message tells the user which side
+        # already owns it.
+        existing = User.objects.filter(email__iexact=email).first()
+        if existing:
+            if existing.user_type == User.JOBSEEKER:
+                errors['email'] = (
+                    'This email is already registered as a Jobseeker. '
+                    'Sign in with your jobseeker account, or use a different email.'
+                )
+            elif existing.user_type == User.EMPLOYER:
+                errors['email'] = 'You already have an employer account with this email. Sign in instead.'
+            else:
+                errors['email'] = 'An account with this email already exists.'
 
         if errors:
             return render(request, self.template_name, {

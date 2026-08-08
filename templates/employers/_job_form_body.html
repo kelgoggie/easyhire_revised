@@ -275,18 +275,41 @@
               </div>
             </div>
             <div>
-              <label class="block text-xs text-muted mb-1">Job Title / Industry</label>
-              <input type="text" name="exp_preferred_position"
-                     value="{{ job.experience_requirement.preferred_position|default:'' }}"
-                     placeholder="e.g. Executive Assistant, Management"
-                     class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+              <label class="block text-xs text-muted mb-1">Job Titles / Industries <span class="text-muted/70">(experience in any counts)</span></label>
+              <input type="text" id="exp-position-input" placeholder="e.g. Legal Secretary, Paralegal"
+                     class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition mb-2">
+              <p class="text-[10px] text-muted mb-2">Enter or comma adds a chip. Prior experience in any listed role qualifies.</p>
+              {# Chip list — each chip carries a hidden `exp_preferred_position`   #}
+              {# input that the backend reads via getlist() and comma-joins into  #}
+              {# the single stored field.                                          #}
+              <div id="exp-position-chips" class="flex flex-wrap gap-1.5">
+                {% with prev=job.experience_requirement.preferred_position|default:'' %}
+                {% if prev %}
+                  {% for part in prev|cut:", "|slice:":0" %}{% endfor %}
+                  {# Split the comma-joined string into chips. Django's built-in    #}
+                  {# `split` filter doesn't exist, so we use `.split(',')` via the  #}
+                  {# for-loop over a `split_positions` context helper if provided,  #}
+                  {# else fall back to a single chip with the raw value.            #}
+                  {% for p in job.experience_requirement.preferred_positions_list %}
+                  <span class="exp-position-chip relative inline-flex items-center gap-1 bg-purple-50 text-purple-500 text-xs pl-3 pr-5 py-1 rounded-full border border-purple-200">
+                    {{ p }}
+                    <button type="button" onclick="this.parentElement.remove()" title="Remove"
+                            class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
+                      <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    <input type="hidden" name="exp_preferred_position" value="{{ p }}">
+                  </span>
+                  {% endfor %}
+                {% endif %}
+                {% endwith %}
+              </div>
             </div>
           </div>
           <label class="inline-flex items-center gap-2 text-xs text-primary cursor-pointer">
             <input type="checkbox" name="any_experience_accepted"
                    {% if job.experience_requirement.any_experience_accepted or not job %}checked{% endif %}
                    class="accent-teal w-4 h-4">
-            Any Experience accepted
+            Accept experience from any field
           </label>
         </div>
       </div>

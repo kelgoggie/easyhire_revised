@@ -167,6 +167,38 @@ skillInput.addEventListener('blur', function() {
   if (this.value.trim()) { addSkillChip(this.value); this.value = ''; }
 });
 
+// â”€â”€ Experience preferred-position chip input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Employers can list multiple prior roles that count for this posting.
+// Each chip carries a hidden <input name="exp_preferred_position"> so the
+// backend can read them via getlist() and comma-join into the single
+// stored field on JobExperienceRequirement.preferred_position.
+const expPosInput = document.getElementById('exp-position-input');
+const expPosChips = document.getElementById('exp-position-chips');
+function addExpPositionChip(name) {
+  if (!expPosChips) return;
+  name = name.trim();
+  if (!name) return;
+  const existing = Array.from(expPosChips.querySelectorAll('input[name="exp_preferred_position"]'))
+                        .map(i => i.value.toLowerCase());
+  if (existing.includes(name.toLowerCase())) return;
+  const span = document.createElement('span');
+  span.className = 'exp-position-chip relative inline-flex items-center gap-1 bg-purple-50 text-purple-500 text-xs pl-3 pr-5 py-1 rounded-full border border-purple-200';
+  span.innerHTML = `${name}<button type="button" onclick="this.parentElement.remove()" title="Remove" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg></button><input type="hidden" name="exp_preferred_position" value="${name}">`;
+  expPosChips.appendChild(span);
+}
+if (expPosInput) {
+  expPosInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addExpPositionChip(this.value.replace(/,$/, ''));
+      this.value = '';
+    }
+  });
+  expPosInput.addEventListener('blur', function() {
+    if (this.value.trim()) { addExpPositionChip(this.value); this.value = ''; }
+  });
+}
+
 // â”€â”€ Add Certification entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function addCert() {
   const container = document.getElementById('cert-container');

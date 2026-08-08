@@ -447,12 +447,16 @@ def job_create(request):
         # Experience
         months = request.POST.get('exp_months')
         if months:
+            # `exp_preferred_position` is submitted as one hidden input per
+            # chip in the typer above the field. Join them into the single
+            # comma-separated CharField that JobExperienceRequirement stores.
+            positions = [p.strip() for p in request.POST.getlist('exp_preferred_position') if p.strip()]
             JobExperienceRequirement.objects.create(
                 job=job,
                 months_required=months,
                 description=request.POST.get('exp_description', ''),
                 any_experience_accepted='any_experience_accepted' in request.POST,
-                preferred_position=request.POST.get('exp_preferred_position', ''),
+                preferred_position=', '.join(positions),
             )
 
         # Notify every jobseeker whose match score against this newly-
@@ -590,12 +594,13 @@ def job_edit(request, job_id):
         JobExperienceRequirement.objects.filter(job=job).delete()
         months = request.POST.get('exp_months')
         if months:
+            positions = [p.strip() for p in request.POST.getlist('exp_preferred_position') if p.strip()]
             JobExperienceRequirement.objects.create(
                 job=job,
                 months_required=months,
                 description=request.POST.get('exp_description', ''),
                 any_experience_accepted='any_experience_accepted' in request.POST,
-                preferred_position=request.POST.get('exp_preferred_position', ''),
+                preferred_position=', '.join(positions),
             )
 
         # Admin edits return to the admin job detail; employer edits go to

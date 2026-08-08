@@ -393,13 +393,18 @@ def score_experience(job, profile):
 
     duration_score = min(1.0, total_months / required_months) if required_months > 0 else 1.0
 
-    if req.any_experience_accepted or not req.preferred_position.strip():
+    required_positions = req.preferred_positions_list()
+    if req.any_experience_accepted or not required_positions:
         return round(duration_score, 2)
 
     jobseeker_positions = [exp.position for exp in experiences if exp.position]
+    # Employers can list multiple acceptable prior roles; a jobseeker with
+    # experience in ANY of them qualifies. Fuzzy match on both axes so
+    # spelling variants ("Sec." vs "Secretary") still hit.
     position_matched = any(
-        fuzzy_match(req.preferred_position, pos)
-        for pos in jobseeker_positions
+        fuzzy_match(req_pos, seeker_pos)
+        for req_pos in required_positions
+        for seeker_pos in jobseeker_positions
     )
 
     if duration_score >= 1.0 and position_matched:
