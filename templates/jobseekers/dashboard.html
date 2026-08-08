@@ -206,7 +206,12 @@
       </svg>
       <h2 class="text-xl text-primary"><span class="font-extrabold">Companies</span> You Follow</h2>
     </div>
-    <p class="text-muted text-xs mb-4">Recent Job Posts from companies you follow.</p>
+    {# The Browse link stays visible even when the jobseeker already        #}
+    {# follows companies — they can always add more, and the empty-state    #}
+    {# below is only reached when the followed list is truly empty.         #}
+    <p class="text-muted text-xs mb-4">
+      Recent Job Posts from companies you follow. <a href="/companies/" class="text-teal hover:underline font-semibold">Browse companies &rsaquo;</a>
+    </p>
 
     {% if followed_jobs %}
     {# Client-side pagination — the whole list is rendered but only 9 tiles #}
