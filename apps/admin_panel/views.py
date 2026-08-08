@@ -267,14 +267,18 @@ def admin_notifications_api(request):
     _notification_toasts.html partial expects. Stable IDs on each item let
     the client-side localStorage dedupe reliably (a company that's still
     pending on the next poll shouldn't fire a duplicate toast)."""
+    import hashlib
     ctx = _admin_context(request)
     out = []
     for item in ctx.get('admin_notifications', []) or []:
-        # `admin_notifications` items come from four DB queries — the URL
-        # already encodes the underlying object, so we derive a stable id
-        # by hashing that URL. Same underlying row → same id across polls.
+        # Derive a stable id from the URL — same underlying row → same id
+        # across polls, workers, and restarts. Python's built-in hash() is
+        # randomised per-process (PYTHONHASHSEED), so multi-worker deploys
+        # were handing out a different id from each gunicorn worker and
+        # the client's localStorage dedup treated every poll as new.
+        # md5 is deterministic and the collision risk on <10 URLs is nil.
         url = item.get('url') or '#'
-        stable_id = 'adm:' + str(abs(hash(url)))
+        stable_id = 'adm:' + hashlib.md5(url.encode('utf-8')).hexdigest()[:16]
         icon_kind = item.get('icon') or ''
         # Toast partial's fallback icon set has heart/sparkle/briefcase —
         # map the admin-side kinds onto those so slices don't miss.
@@ -1250,11 +1254,22 @@ def company_detail(request, pk):
     rep = company.representatives.first()
     prev_id, next_id = _surrounding_company_ids(pk)
 
+    # Employees on EasyHire — same list previously rendered on the
+    # settings page. Kelly asked to promote it to the profile so it's
+    # visible at a glance rather than tucked behind Account Settings.
+    hired_apps = (
+        Application.objects
+        .filter(job__company=company, status=Application.STATUS_HIRED)
+        .select_related('jobseeker', 'job')
+        .order_by('-hired_at', '-created_at')
+    )
+
     ctx = _admin_context(request)
     ctx.update({
         'company':       company,
         'rep':           rep,
         'jobs':          jobs,
+        'hired_apps':    hired_apps,
         'prev_id':       prev_id,
         'next_id':       next_id,
         'reasons':       JOB_DELETION_REASONS,

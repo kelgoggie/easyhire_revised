@@ -665,8 +665,11 @@ function pie(canvasId, labels, data, colors, unit) {
     }] },
     options: {
       // Extra layout padding gives the outside data labels + legend room
-      // to breathe without being clipped by the canvas edge.
-      layout: { padding: { top: 12, bottom: 12, left: 12, right: 24 } },
+      // to breathe without being clipped by the canvas edge. The outside
+      // labels sit at `outerRadius + 14px` (see AlwaysOnDataLabels plugin
+      // above) plus half of the 11px text height — anything under ~26px
+      // top/bottom reserve clips slices that land near 12 or 6 o'clock.
+      layout: { padding: { top: 32, bottom: 32, left: 20, right: 24 } },
       plugins: {
         legend: { position: 'right', labels: { boxWidth: 12, padding: 10 } },
         tooltip: {

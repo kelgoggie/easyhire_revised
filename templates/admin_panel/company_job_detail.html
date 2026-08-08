@@ -399,34 +399,56 @@
     {% if ranked %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {% for item in ranked %}
-      <a href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/match/{{ item.profile.id|hashid }}/"
-         class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
+      {# Card is a clickable <div> (not <a>) so the three-dots <details>   #}
+      {# menu can nest inside without breaking HTML. onclick guard skips    #}
+      {# navigation when the click originated in the menu.                  #}
+      <div class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col cursor-pointer"
+           data-href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/match/{{ item.profile.id|hashid }}/"
+           onclick="if (event.target.closest('a, button, form, details, summary')) return; window.location=this.dataset.href;">
 
         <div class="flex items-start justify-between gap-2 mb-3">
           <div class="min-w-0 flex-1">
             <p class="font-bold text-primary text-base leading-tight">{{ item.profile.first_name }} {{ item.profile.last_name }}{% include "partials/_verified_badge.html" with verified=item.profile.is_id_verified label="PESO Verified" %}</p>
-            <p class="text-muted text-xs italic truncate">{{ item.profile.barangay|default:item.profile.city_municipality }}</p>
           </div>
-          <span class="text-primary text-sm font-extrabold flex-shrink-0">{{ item.score }}%</span>
+          <div class="flex items-center gap-1 flex-shrink-0">
+            <span class="text-primary text-sm font-extrabold">{{ item.score }}%</span>
+            <details class="relative" onclick="event.stopPropagation();">
+              <summary class="list-none cursor-pointer w-6 h-6 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-primary transition" title="More">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
+              </summary>
+              <div class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-xs">
+                <a href="/admin-panel/jobseekers/{{ item.profile.id|hashid }}/settings/"
+                   class="block px-3 py-2 text-primary hover:bg-surface">Open Settings</a>
+                <a href="/admin-panel/jobseekers/{{ item.profile.id|hashid }}/edit-resume/"
+                   class="block px-3 py-2 text-primary hover:bg-surface">Edit Résumé</a>
+                {% if item.profile.user.is_active %}
+                <form method="POST" action="/admin-panel/jobseekers/{{ item.profile.id|hashid }}/settings/" class="block js-inline-deactivate">
+                  {% csrf_token %}
+                  <input type="hidden" name="form" value="disable">
+                  <button type="button" data-deactivate-name="{{ item.profile.first_name|escapejs }}"
+                          class="w-full text-left block px-3 py-2 text-red-500 hover:bg-red-50">Deactivate Account</button>
+                </form>
+                {% endif %}
+              </div>
+            </details>
+          </div>
         </div>
 
-        {# Tag padding tightened — was text-xs px-2.5 (fat), now text-[10px]  #}
-        {# px-2 for a compact card look that fits more chips per row without #}
-        {# wrapping every entry.                                             #}
+        {# Tag padding — hugs the text (leading-tight + tiny vertical py). #}
         <div class="flex flex-wrap gap-1 flex-1">
           {% for edu in item.profile.educations.all|slice:":1" %}
-          <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-[10px] px-2 py-0.5 rounded-full border border-teal/20 max-w-full">
-            <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+          <span class="inline-flex items-center gap-0.5 bg-teal/10 text-teal text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-teal/20 max-w-full">
+            <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
             <span class="truncate">{{ edu.course_degree|default:edu.get_level_display|truncatechars:20 }}</span>
           </span>
           {% endfor %}
           {% for skill in item.profile.skills.all|slice:":3" %}
-          <span class="inline-flex items-center bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full border border-green-200 max-w-full">
+          <span class="inline-flex items-center bg-green-50 text-green-600 text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-green-200 max-w-full">
             <span class="truncate">{{ skill.name|truncatechars:18 }}</span>
           </span>
           {% endfor %}
         </div>
-      </a>
+      </div>
       {% endfor %}
     </div>
 
@@ -444,4 +466,35 @@
   </section>
 
 </div>
+
+<script>
+(function() {
+  // Close any open <details> card menu when clicking outside.
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('details[open]').forEach(function(d) {
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+  });
+  // Deactivate buttons inside the Top Matches card menus — wrap the form
+  // submit in the shared confirm modal.
+  document.querySelectorAll('form.js-inline-deactivate button[data-deactivate-name]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const form = btn.closest('form');
+      const name = btn.dataset.deactivateName || 'this account';
+      if (typeof window.confirmAction === 'function') {
+        window.confirmAction({
+          title: 'Deactivate ' + name + '’s account?',
+          body:  'The jobseeker will no longer be able to log in. Their applications and résumé stay on record. You can re-enable later.',
+          ctaLabel: 'Yes, deactivate',
+          ctaClass: 'bg-red-500 hover:bg-red-600',
+          onConfirm: function() { form.submit(); },
+        });
+      } else if (confirm('Deactivate ' + name + '?')) {
+        form.submit();
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}

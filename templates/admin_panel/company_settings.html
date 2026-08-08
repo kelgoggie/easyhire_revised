@@ -413,37 +413,8 @@
     </form>
   </div>
 
-  {# ── Employees on EasyHire ────────────────────────────────────── #}
-  {# Everyone this company has hired through the platform, sourced   #}
-  {# from Applications marked STATUS_HIRED. Shows the platform's     #}
-  {# contribution to the company's team.                              #}
-  <div class="bg-white border border-taupe/40 rounded-2xl p-5 mt-6">
-    <div class="flex items-baseline justify-between gap-3 mb-4">
-      <p class="text-primary font-bold text-base">Employees on EasyHire</p>
-      <p class="text-muted text-xs italic">{{ hired_apps|length }} hired via the platform</p>
-    </div>
-
-    {% if hired_apps %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {% for app in hired_apps %}
-      <a href="/admin-panel/jobseekers/{{ app.jobseeker.id|hashid }}/"
-         class="block bg-surface/40 border border-gray-200 rounded-xl p-3 hover:border-teal/30 hover:bg-white transition">
-        <p class="font-bold text-primary text-sm leading-tight truncate">
-          {{ app.jobseeker.first_name }} {{ app.jobseeker.last_name }}
-        </p>
-        <p class="text-muted text-xs truncate">{{ app.job.title|default:"(job removed)" }}</p>
-        <p class="text-muted text-[11px] italic mt-1">
-          Hired {{ app.hired_at|default:app.created_at|date:"M j, Y" }}
-        </p>
-      </a>
-      {% endfor %}
-    </div>
-    {% else %}
-    <p class="text-muted text-xs italic text-center py-4">
-      This company hasn't hired anyone through EasyHire yet.
-    </p>
-    {% endif %}
-  </div>
+  {# Employees on EasyHire lives on the Company Profile page now — see  #}
+  {# templates/admin_panel/company_detail.html.                           #}
 
 </div>
 {% endblock %}

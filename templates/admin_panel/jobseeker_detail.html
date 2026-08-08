@@ -43,32 +43,43 @@
   <!-- Identity row -->
   <div class="flex items-start justify-between gap-4 mb-6">
     <div>
-      <h2 class="text-3xl sm:text-4xl font-extrabold text-primary mb-1 leading-tight">{{ jobseeker.first_name }} {{ jobseeker.last_name }}{% if jobseeker.suffix %}, {{ jobseeker.suffix }}{% endif %}</h2>
-      <p class="text-muted text-sm">
-        {% if jobseeker.house_unit %}{{ jobseeker.house_unit }}, {% endif %}{{ jobseeker.street_barangay|default:"—" }}{% if jobseeker.barangay %}, {{ jobseeker.barangay }}{% endif %}, {{ jobseeker.city_municipality }}
-      </p>
-      <p class="text-muted text-sm">
-        {{ jobseeker.user.email }}{% if jobseeker.phone %} | +63 {{ jobseeker.phone|slice:"1:" }}{% endif %}
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-primary leading-tight inline-flex items-center gap-2 flex-wrap">
+        {{ jobseeker.first_name }} {{ jobseeker.last_name }}{% if jobseeker.suffix %}, {{ jobseeker.suffix }}{% endif %}
         {% if not jobseeker.user.is_active %}
-        <span class="ml-2 text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full">Disabled</span>
+        <span class="text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full align-middle">Disabled</span>
         {% endif %}
-      </p>
+      </h2>
     </div>
-    <div class="flex flex-col items-end gap-1.5 text-sm">
-      <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/settings/"
-         class="text-primary hover:text-teal transition inline-flex items-center gap-1">
-        Account Settings
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-        </svg>
-      </a>
-      <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/edit-resume/"
-         class="text-primary hover:text-teal transition inline-flex items-center gap-1">
-        Edit Résumé
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-        </svg>
-      </a>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      {# Three-dots menu — Open Settings + Edit Résumé + Deactivate.        #}
+      {# Deactivate posts to the settings endpoint's disable form so the   #}
+      {# server-side path is shared with the settings page's own button.   #}
+      <details class="relative" onclick="event.stopPropagation();">
+        <summary class="list-none cursor-pointer w-9 h-9 flex items-center justify-center rounded-full border border-taupe/40 bg-white hover:bg-surface transition text-muted hover:text-primary" title="More">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
+        </summary>
+        <div class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-sm">
+          <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/settings/"
+             class="block px-4 py-2 text-primary hover:bg-surface">Open Settings</a>
+          <a href="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/edit-resume/"
+             class="block px-4 py-2 text-primary hover:bg-surface">Edit Résumé</a>
+          {% if jobseeker.user.is_active %}
+          <form method="POST" action="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/settings/" id="deactivate-jobseeker-form" class="block">
+            {% csrf_token %}
+            <input type="hidden" name="form" value="disable">
+            <button type="button"
+                    onclick="confirmAction({title:'Deactivate this account?', body:'The jobseeker will no longer be able to log in. Their applications and résumé stay on record. You can re-enable later.', ctaLabel:'Yes, deactivate', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('deactivate-jobseeker-form').submit();}});"
+                    class="w-full text-left block px-4 py-2 text-red-500 hover:bg-red-50">Deactivate Account</button>
+          </form>
+          {% else %}
+          <form method="POST" action="/admin-panel/jobseekers/{{ jobseeker.id|hashid }}/settings/" class="block">
+            {% csrf_token %}
+            <input type="hidden" name="form" value="enable">
+            <button type="submit" class="w-full text-left block px-4 py-2 text-teal hover:bg-teal/10">Reactivate Account</button>
+          </form>
+          {% endif %}
+        </div>
+      </details>
     </div>
   </div>
 
@@ -256,27 +267,57 @@
     {% if jobs_ranked %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {% for item in jobs_ranked %}
-      <a href="/admin-panel/companies/{{ item.job.company.id|hashid }}/jobs/{{ item.job.id|hashid }}/match/{{ jobseeker.id|hashid }}/?from=jobseeker"
-         class="bg-white border border-gray-200 rounded-xl p-4 hover:border-teal/30 hover:shadow-sm transition flex flex-col">
+      {# Card is a clickable <div> (not <a>) so the three-dots <details>   #}
+      {# menu can nest inside without breaking HTML. onclick guard skips    #}
+      {# navigation when the click originated in the menu.                  #}
+      <div class="bg-white border border-gray-200 rounded-xl p-4 hover:border-teal/30 hover:shadow-sm transition flex flex-col cursor-pointer"
+           data-href="/admin-panel/companies/{{ item.job.company.id|hashid }}/jobs/{{ item.job.id|hashid }}/match/{{ jobseeker.id|hashid }}/?from=jobseeker"
+           onclick="if (event.target.closest('a, button, form, details, summary')) return; window.location=this.dataset.href;">
         <div class="flex items-start justify-between gap-2 mb-2">
           <div class="min-w-0 flex-1">
             <p class="font-bold text-primary text-sm leading-tight truncate">{{ item.job.title }}</p>
             <p class="text-muted text-xs truncate">{{ item.job.company.name }}</p>
           </div>
-          <span class="text-primary text-sm font-extrabold flex-shrink-0">{{ item.score }}%</span>
+          <div class="flex items-center gap-1 flex-shrink-0">
+            <span class="text-primary text-sm font-extrabold">{{ item.score }}%</span>
+            {# Three-dots menu — Edit Job / Disable Job / View Applicants / #}
+            {# View Recommended Jobseekers.                                  #}
+            <details class="relative" onclick="event.stopPropagation();">
+              <summary class="list-none cursor-pointer w-6 h-6 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-primary transition" title="More">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
+              </summary>
+              <div class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-xs">
+                <a href="/admin-panel/jobs/{{ item.job.id|hashid }}/edit/"
+                   class="block px-3 py-2 text-primary hover:bg-surface">Edit Job</a>
+                <a href="/admin-panel/companies/{{ item.job.company.id|hashid }}/jobs/{{ item.job.id|hashid }}/?tab=applicants"
+                   class="block px-3 py-2 text-primary hover:bg-surface">View Applicants</a>
+                <a href="/admin-panel/companies/{{ item.job.company.id|hashid }}/jobs/{{ item.job.id|hashid }}/#top-matches"
+                   class="block px-3 py-2 text-primary hover:bg-surface">View Recommended Jobseekers</a>
+                {% if not item.job.admin_disabled %}
+                {# Disable Job needs a reason — links to the company job    #}
+                {# detail page where the existing modal collects it before  #}
+                {# firing the disable POST.                                  #}
+                <a href="/admin-panel/companies/{{ item.job.company.id|hashid }}/jobs/{{ item.job.id|hashid }}/#disable-job"
+                   class="block px-3 py-2 text-red-500 hover:bg-red-50">Disable Job</a>
+                {% else %}
+                <span class="block px-3 py-2 text-muted/60 italic cursor-not-allowed" title="Already disabled by admin.">Disable Job</span>
+                {% endif %}
+              </div>
+            </details>
+          </div>
         </div>
         <p class="text-muted text-xs italic truncate">{{ item.job.location_display|truncatechars:30 }}</p>
         {% if item.job.education_requirement or item.job.skill_requirements.exists %}
         <div class="flex flex-wrap gap-1 mt-2">
           {% if item.job.education_requirement %}
-          <span class="inline-flex items-center bg-teal/10 text-teal text-[10px] px-2 py-0.5 rounded-full border border-teal/20 truncate max-w-full">{{ item.job.education_requirement.get_level_display|truncatechars:20 }}</span>
+          <span class="inline-flex items-center bg-teal/10 text-teal text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-teal/20 truncate max-w-full">{{ item.job.education_requirement.get_level_display|truncatechars:20 }}</span>
           {% endif %}
           {% for skill in item.job.skill_requirements.all|slice:":2" %}
-          <span class="inline-flex items-center bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full border border-green-200 truncate max-w-full">{{ skill.name|truncatechars:18 }}</span>
+          <span class="inline-flex items-center bg-green-50 text-green-600 text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-green-200 truncate max-w-full">{{ skill.name|truncatechars:18 }}</span>
           {% endfor %}
         </div>
         {% endif %}
-      </a>
+      </div>
       {% endfor %}
     </div>
 

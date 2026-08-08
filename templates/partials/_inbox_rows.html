@@ -131,7 +131,14 @@
       {# Uses a details/summary popover so no external JS is needed for   #}
       {# open/close; a document-level click handler in the script block   #}
       {# below closes stray-open menus when the user clicks elsewhere.    #}
-      <details class="relative flex-shrink-0 inbox-menu" onclick="event.stopPropagation();">
+      {# NOTE: no `onclick="event.stopPropagation()"` on the <details>       #}
+      {# wrapper — that would kill the delegated document-level click        #}
+      {# handlers below (Pin/Delete/Report), which is why those buttons     #}
+      {# silently did nothing before. Nothing on the row above needs to be  #}
+      {# protected from menu clicks: the whole-row expand target is a       #}
+      {# scoped <button>, not the row div, so a click on the menu can't    #}
+      {# accidentally toggle the detail panel.                              #}
+      <details class="relative flex-shrink-0 inbox-menu">
         <summary class="list-none cursor-pointer w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-primary transition" title="More">
           <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
         </summary>
