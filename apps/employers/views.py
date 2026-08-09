@@ -348,18 +348,24 @@ def job_list(request):
 
     # Non-deleted queryset drives the All/Open/Closed pills. Deleted rows
     # get their own tab + count and never mix into the other buckets.
+    # Employer-deleted (Trash) and PESO-deleted rows are tallied separately
+    # so the two flows have distinct tabs — different UX (Trash restorable
+    # for 30 days; admin-deleted permanent + carries PESO's reason).
     live = base.filter(deleted_at__isnull=True)
-    all_count     = live.count()
-    open_count    = live.filter(status=JobPosting.STATUS_OPEN).count()
-    closed_count  = live.filter(status=JobPosting.STATUS_CLOSED).count()
-    deleted_count = base.filter(deleted_at__isnull=False).count()
+    all_count           = live.count()
+    open_count          = live.filter(status=JobPosting.STATUS_OPEN).count()
+    closed_count        = live.filter(status=JobPosting.STATUS_CLOSED).count()
+    deleted_count       = base.filter(deleted_at__isnull=False, admin_deleted=False).count()
+    admin_deleted_count = base.filter(admin_deleted=True).count()
 
     if status_filter == 'open':
         jobs = live.filter(status=JobPosting.STATUS_OPEN)
     elif status_filter == 'closed':
         jobs = live.filter(status=JobPosting.STATUS_CLOSED)
     elif status_filter == 'deleted':
-        jobs = base.filter(deleted_at__isnull=False)
+        jobs = base.filter(deleted_at__isnull=False, admin_deleted=False)
+    elif status_filter == 'admin_deleted':
+        jobs = base.filter(admin_deleted=True)
     else:
         jobs = live
         status_filter = ''  # normalize any junk value back to "All"
@@ -377,10 +383,11 @@ def job_list(request):
         'query': query,
         'status_filter': status_filter,
         'sort': sort,
-        'all_count':     all_count,
-        'open_count':    open_count,
-        'closed_count':  closed_count,
-        'deleted_count': deleted_count,
+        'all_count':           all_count,
+        'open_count':          open_count,
+        'closed_count':        closed_count,
+        'deleted_count':       deleted_count,
+        'admin_deleted_count': admin_deleted_count,
         'unread_notifications': False,
         'unread_messages': False,
     })

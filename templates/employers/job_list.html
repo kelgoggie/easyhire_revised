@@ -55,6 +55,12 @@
          class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status_filter == 'deleted' %}bg-red-500 text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
         Deleted <span class="opacity-70">({{ deleted_count }})</span>
       </a>
+      {% if admin_deleted_count %}
+      <a href="?status=admin_deleted{{ qtail }}"
+         class="px-4 py-1.5 rounded-full text-xs font-semibold transition {% if status_filter == 'admin_deleted' %}bg-red-500 text-white{% else %}bg-white text-muted border border-red-200 text-red-500 hover:bg-red-50{% endif %}">
+        Deleted by Admin <span class="opacity-70">({{ admin_deleted_count }})</span>
+      </a>
+      {% endif %}
     </div>
 
     <div class="relative" id="sort-dropdown-wrapper">
@@ -232,15 +238,17 @@
       {% elif status_filter == 'open' %}No open jobs.
       {% elif status_filter == 'closed' %}No closed jobs yet.
       {% elif status_filter == 'deleted' %}Trash is empty.
+      {% elif status_filter == 'admin_deleted' %}No jobs have been deleted by PESO.
       {% else %}You haven't posted any jobs yet.{% endif %}
     </p>
     <p class="text-muted text-xs mb-4">
       {% if query %}Try a different search term.
       {% elif status_filter == 'closed' %}Jobs you close appear here — they stop receiving applicants but stay on record.
       {% elif status_filter == 'deleted' %}Jobs you move to Trash appear here for 30 days. Restore them any time before they're auto-purged.
+      {% elif status_filter == 'admin_deleted' %}When PESO Iloilo City removes one of your posts, it lands here as a permanent record with their reason attached.
       {% else %}Create your first job post to start receiving applicants.{% endif %}
     </p>
-    {% if not query and status_filter != 'closed' and status_filter != 'deleted' %}
+    {% if not query and status_filter != 'closed' and status_filter != 'deleted' and status_filter != 'admin_deleted' %}
     <a href="/employers/jobs/create/" class="inline-block bg-amber text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-amber/90 transition">
       + Create New Job
     </a>

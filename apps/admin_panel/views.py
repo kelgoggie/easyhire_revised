@@ -2957,7 +2957,14 @@ def admin_jobs_list(request):
         qs = qs.filter(Q(title__icontains=search) |
                        Q(company__name__icontains=search))
 
-    if status in {'open', 'closed', 'draft', 'admin_disabled'}:
+    # Filtering routing. Live tabs (all/open/closed/draft/admin_disabled)
+    # exclude soft-deleted rows; the Deleted tab surfaces them explicitly.
+    # Previously the default queryset didn't exclude deleted_at, so PESO-
+    # removed rows leaked back into Open/Closed after a refresh.
+    if status == 'deleted':
+        qs = qs.filter(deleted_at__isnull=False)
+    elif status in {'open', 'closed', 'draft', 'admin_disabled'}:
+        qs = qs.filter(deleted_at__isnull=True)
         if status == 'admin_disabled':
             qs = qs.filter(admin_disabled=True)
         elif status == 'closed':
@@ -2965,6 +2972,9 @@ def admin_jobs_list(request):
             qs = qs.filter(status='closed', admin_disabled=False)
         else:
             qs = qs.filter(status=status)
+    else:
+        # All-tab (no status param): hide soft-deleted rows.
+        qs = qs.filter(deleted_at__isnull=True)
 
     if sort == 'oldest':
         qs = qs.order_by('created_at')
@@ -2974,18 +2984,22 @@ def admin_jobs_list(request):
         qs = qs.order_by('-created_at')
 
     # Per-status counts for the filter chips (count over the search-filtered
-    # queryset so totals stay meaningful as you search).
+    # queryset so totals stay meaningful as you search). "All" now counts
+    # only live rows for consistency with the filter behavior; deleted rows
+    # get their own badge on the Deleted chip.
     base_for_counts = JobPosting.objects.all()
     if search:
         base_for_counts = base_for_counts.filter(
             Q(title__icontains=search) | Q(company__name__icontains=search)
         )
+    live_for_counts = base_for_counts.filter(deleted_at__isnull=True)
     status_counts = {
-        'all':            base_for_counts.count(),
-        'open':           base_for_counts.filter(status='open').count(),
-        'closed':         base_for_counts.filter(status='closed', admin_disabled=False).count(),
-        'draft':          base_for_counts.filter(status='draft').count(),
-        'admin_disabled': base_for_counts.filter(admin_disabled=True).count(),
+        'all':            live_for_counts.count(),
+        'open':           live_for_counts.filter(status='open').count(),
+        'closed':         live_for_counts.filter(status='closed', admin_disabled=False).count(),
+        'draft':          live_for_counts.filter(status='draft').count(),
+        'admin_disabled': live_for_counts.filter(admin_disabled=True).count(),
+        'deleted':        base_for_counts.filter(deleted_at__isnull=False).count(),
     }
 
     from django.core.paginator import Paginator
