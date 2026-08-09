@@ -546,6 +546,7 @@ def company_public(request, pk):
     """Jobseeker-facing read-only company profile (mirrors employer-side layout)."""
     from django.db.models import Count, Q as DjQ
     from apps.employers.models import Company
+    from apps.jobseekers.models import JobInteraction
     company = get_object_or_404(Company, pk=pk)
 
     jobs = (
@@ -569,13 +570,38 @@ def company_public(request, pk):
     )
     followers_count = company.followers.count() if hasattr(company, 'followers') else 0
 
+    # Build the ranked-job dicts the template shares with the Jobs For You
+    # partial (`_jobs_grid.html` uses `item.job` + `item.score`). Match
+    # score requires a complete résumé; anonymous / incomplete jobseekers
+    # get `score=None`, which the template then just doesn't render.
+    profile = None
     is_following = False
-    rep_phone = ''
+    liked_ids = set()
+    hidden_ids = set()
     try:
-        if request.user.is_jobseeker:
-            is_following = request.user.jobseeker_profile.followed_companies.filter(pk=company.pk).exists()
+        if request.user.is_authenticated and request.user.is_jobseeker:
+            profile = request.user.jobseeker_profile
+            is_following = profile.followed_companies.filter(pk=company.pk).exists()
+            liked_ids = set(JobInteraction.objects.filter(
+                jobseeker=profile, interaction_type='liked',
+            ).values_list('job_id', flat=True))
+            hidden_ids = set(JobInteraction.objects.filter(
+                jobseeker=profile, interaction_type='hidden',
+            ).values_list('job_id', flat=True))
     except Exception:
         pass
+
+    ranked_jobs = []
+    if profile and profile.profile_complete:
+        from apps.matching.engine import compute_match_score
+        for job in jobs:
+            score_data = compute_match_score(job, profile)
+            ranked_jobs.append({'job': job, 'score': score_data['total']})
+    else:
+        for job in jobs:
+            ranked_jobs.append({'job': job, 'score': None})
+
+    rep_phone = ''
     rep = company.representatives.first()
     if rep:
         rep_phone = getattr(rep, 'phone', '') or ''
@@ -583,6 +609,9 @@ def company_public(request, pk):
     return render(request, 'jobseekers/company_public.html', {
         'company': company,
         'jobs': jobs,
+        'ranked_jobs': ranked_jobs,
+        'liked_ids': liked_ids,
+        'hidden_ids': hidden_ids,
         'followers_count': followers_count,
         'is_following': is_following,
         'rep_phone': rep_phone,

@@ -70,70 +70,12 @@
     </div>
 
     <!-- ── Open job posts ────────────────────────────────────────── -->
-    {% if jobs %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-      {% for job in jobs %}
-      <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
-
-        <div class="flex items-start justify-between mb-3">
-          <div class="min-w-0 pr-3">
-            <p class="font-bold text-primary text-base leading-tight mb-0.5">
-              <a href="/jobs/view/{{ job.id|hashid }}/" class="hover:text-teal transition">{{ job.title }}</a>
-            </p>
-            <p class="text-primary text-xs italic mb-0.5">{{ job.location_display|truncatechars:40 }}</p>
-            <p class="text-muted text-xs italic mb-1">Posted on {{ job.created_at|date:"F j, Y" }}</p>
-            <p class="text-muted text-xs flex items-center gap-1">
-              <svg class="w-3 h-3 text-amber" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17 3H7a2 2 0 00-2 2v16l7-3 7 3V5a2 2 0 00-2-2z"/>
-              </svg>
-              Bookmarked by {{ job.liked_by_count|default:0 }} jobseeker{{ job.liked_by_count|pluralize }}
-            </p>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-1.5 mb-3">
-          {% if job.education_requirement %}
-          <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20">
-            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
-            <span class="truncate">{{ job.education_requirement.get_level_display }}</span>
-          </span>
-          {% endif %}
-          {% for skill in job.skill_requirements.all|slice:":3" %}
-          <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2.5 py-0.5 rounded-full border border-green-200">
-            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
-            {{ skill.name }}
-          </span>
-          {% endfor %}
-          {% if job.experience_requirement %}
-          <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2.5 py-0.5 rounded-full border border-purple-200">
-            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            <span class="truncate">{{ job.experience_requirement.display_experience }}</span>
-          </span>
-          {% endif %}
-          {% with certs=job.certification_requirements.all %}
-          {% if certs %}
-          <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs px-2.5 py-0.5 rounded-full border border-gray-200">
-            <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            {{ certs.0.name|truncatechars:18 }}
-          </span>
-          {% endif %}
-          {% endwith %}
-        </div>
-
-        <div class="bg-surface/60 border border-gray-100 rounded-xl px-3 py-2.5 mb-4 flex-1">
-          <p class="text-muted text-xs leading-relaxed line-clamp-4">{{ job.description|truncatechars:280 }}</p>
-        </div>
-
-        <div class="flex items-center justify-between gap-3">
-          <a href="/jobs/view/{{ job.id|hashid }}/"
-             class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
-            View Job
-          </a>
-        </div>
-
-      </div>
-      {% endfor %}
-    </div>
+    {# Reuses the shared Jobs For You card partial so a jobseeker seeing   #}
+    {# a company's open posts gets the same clickable-card + match-badge  #}
+    {# + bookmark-toggle affordances as the recommendations grid. Empty   #}
+    {# state below the partial covers "no open jobs".                      #}
+    {% if ranked_jobs %}
+      {% include "jobseekers/_jobs_grid.html" %}
     {% else %}
     <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
       <p class="text-primary font-semibold text-sm mb-1">No open job posts.</p>
@@ -183,5 +125,58 @@
     }).catch(function(){ btn.disabled = false; });
   });
 })();
+
+// ── Bookmark / hide toggles for the job cards ──────────────────────────
+// The shared _jobs_grid.html partial calls toggleLike(jobId, btn) and
+// toggleHide(jobId, btn) on the bookmark / hide buttons. Recommended
+// Jobs owns richer versions that also do tab-aware card removal; the
+// company profile has no tab state, so we ship these slimmer visual-
+// only toggles that just repaint the icon based on the server response.
+function _getCsrf() {
+  const v = '; ' + document.cookie, p = v.split('; csrftoken=');
+  if (p.length === 2) return p.pop().split(';').shift();
+  return '';
+}
+function toggleLike(jobId, btn) {
+  btn.disabled = true;
+  fetch('/jobs/' + jobId + '/save/', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': _getCsrf() },
+  }).then(function(r){ return r.json(); }).then(function(data){
+    btn.disabled = false;
+    const svg = btn.querySelector('svg');
+    if (data.liked) {
+      btn.classList.remove('text-gray-300', 'hover:text-amber');
+      btn.classList.add('text-amber');
+      svg.setAttribute('fill', 'currentColor');
+      svg.removeAttribute('stroke');
+      svg.removeAttribute('stroke-width');
+    } else {
+      btn.classList.add('text-gray-300', 'hover:text-amber');
+      btn.classList.remove('text-amber');
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke', 'currentColor');
+      svg.setAttribute('stroke-width', '2');
+    }
+  }).catch(function(){ btn.disabled = false; });
+}
+function toggleHide(jobId, btn) {
+  btn.disabled = true;
+  fetch('/jobs/' + jobId + '/hide/', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': _getCsrf() },
+  }).then(function(r){ return r.json(); }).then(function(data){
+    btn.disabled = false;
+    if (data.hidden) {
+      btn.classList.remove('text-gray-300', 'hover:text-red-400');
+      btn.classList.add('text-primary');
+      btn.title = 'Unhide this job';
+    } else {
+      btn.classList.add('text-gray-300', 'hover:text-red-400');
+      btn.classList.remove('text-primary');
+      btn.title = 'Hide this job';
+    }
+  }).catch(function(){ btn.disabled = false; });
+}
 </script>
 {% endblock %}

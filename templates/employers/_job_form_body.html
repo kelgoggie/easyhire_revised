@@ -368,18 +368,28 @@
   (function() {
     const submitBtn = document.getElementById('job-form-submit');
     const form      = document.getElementById('job-form');
-    if (!submitBtn || !form || typeof window.confirmAction !== 'function') return;
+    if (!submitBtn || !form) return;
+    // NOTE: confirmAction is defined by _confirm_modal.html, which the
+    // dashboard bases include AFTER page_content. Don't guard here at
+    // bind time — check inside the click handler so the modal is ready
+    // by then, and fall back to native confirm() if it never loads.
     const isCreate = {% if action == 'Create' %}true{% else %}false{% endif %};
     submitBtn.addEventListener('click', function() {
-      window.confirmAction({
-        title: isCreate ? 'Post this job now?' : 'Save these changes?',
-        body:  isCreate
-          ? 'The job will appear on the public jobs page (or to registered EasyHire users only, depending on your Visibility choice) as soon as you confirm.'
-          : 'Your edits go live for jobseekers immediately. Applicants who\'ve already been scored against the old requirements will keep their previous match scores until the next recompute.',
-        ctaLabel: isCreate ? 'Yes, post job' : 'Yes, save changes',
-        ctaClass: 'bg-amber hover:bg-amber/90',
-        onConfirm: function() { form.submit(); },
-      });
+      const title = isCreate ? 'Post this job now?' : 'Save these changes?';
+      const body  = isCreate
+        ? 'The job will appear on the public jobs page (or to registered EasyHire users only, depending on your Visibility choice) as soon as you confirm.'
+        : 'Your edits go live for jobseekers immediately. Applicants who\'ve already been scored against the old requirements will keep their previous match scores until the next recompute.';
+      if (typeof window.confirmAction === 'function') {
+        window.confirmAction({
+          title: title,
+          body:  body,
+          ctaLabel: isCreate ? 'Yes, post job' : 'Yes, save changes',
+          ctaClass: 'bg-amber hover:bg-amber/90',
+          onConfirm: function() { form.submit(); },
+        });
+      } else if (confirm(title + '\n\n' + body)) {
+        form.submit();
+      }
     });
   })();
   </script>
