@@ -361,17 +361,20 @@ def get_analytics_context(request):
         barangay_data.append({'barangay': 'Other', 'count': _district_counter['Other']})
 
     # ── Age groups ────────────────────────────────────────────────
+    # Registration min-age is 18, so we don't render a <18 bucket. The
+    # top bucket flips at 60 to line up with the Senior Citizen sector
+    # threshold in _recompute_auto_sectors (apps/jobseekers/views.py).
     today = date.today()
-    age_buckets = {'<18': 0, '18-24': 0, '25-34': 0, '35-44': 0, '45-54': 0, '55-64': 0, '65+': 0}
+    age_buckets = {'18-24': 0, '25-34': 0, '35-44': 0, '45-54': 0, '55-59': 0, '60+': 0}
     for dob in JobseekerProfile.objects.exclude(date_of_birth__isnull=True).values_list('date_of_birth', flat=True):
         age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-        if age < 18:        age_buckets['<18'] += 1
+        if age < 18:        continue  # shouldn't happen post-18-min-age, but skip if seeded data leaks
         elif age < 25:      age_buckets['18-24'] += 1
         elif age < 35:      age_buckets['25-34'] += 1
         elif age < 45:      age_buckets['35-44'] += 1
         elif age < 55:      age_buckets['45-54'] += 1
-        elif age < 65:      age_buckets['55-64'] += 1
-        else:               age_buckets['65+'] += 1
+        elif age < 60:      age_buckets['55-59'] += 1
+        else:               age_buckets['60+'] += 1
     age_groups = [{'label': k, 'count': v} for k, v in age_buckets.items()]
 
     # ── Employer demographics ─────────────────────────────────────

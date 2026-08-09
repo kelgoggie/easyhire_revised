@@ -271,16 +271,20 @@ fetch('/api/barangays/' + ILOILO_CITY_CODE + '/')
     }
   });
 
-iloiloBarangaySelect.addEventListener('change', function() {
-  document.getElementById('iloilo_barangay_name').value =
-    this.options[this.selectedIndex].text;
-});
-
-document.querySelector('form').addEventListener('submit', function() {
-  const sel = document.getElementById('iloilo_barangay');
-  document.getElementById('iloilo_barangay_name').value =
-    sel.options[sel.selectedIndex].text;
-});
+// Only copy the display text into the hidden name field when a real
+// barangay is selected — otherwise the "Select Barangay..." placeholder
+// leaks into Company.iloilo_barangay_name and shows up on public pages.
+function _syncIloiloBarangayName() {
+  const sel = iloiloBarangaySelect;
+  const nameEl = document.getElementById('iloilo_barangay_name');
+  if (sel.value) {
+    nameEl.value = sel.options[sel.selectedIndex].text;
+  } else {
+    nameEl.value = '';
+  }
+}
+iloiloBarangaySelect.addEventListener('change', _syncIloiloBarangayName);
+document.querySelector('form').addEventListener('submit', _syncIloiloBarangayName);
 
 // ── "Same as Iloilo branch address" sync ──────────────────────────────
 (function() {

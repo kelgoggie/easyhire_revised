@@ -213,7 +213,7 @@
          data-applicant-id="{{ item.profile.id|hashid }}"
          data-applied-at="{% if item.applied_at %}{{ item.applied_at|date:'F j, Y' }}{% endif %}"
          {% if seeker_active %}data-href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}{% if tab == 'recommended' %}&from=recommended{% endif %}"
-         onclick="if (event.target.closest('a, button, form')) return; window.location=this.dataset.href;"{% endif %}>
+         onclick="if (event.target.closest('a, button, form, details, .applicant-card-menu')) return; window.location=this.dataset.href;"{% endif %}>
 
       <!-- Top row: name + match smiley -->
       <div class="flex items-start justify-between gap-2 mb-3">
@@ -261,7 +261,11 @@
           {# JS is needed to toggle the popover; a document-click closer   #}
           {# lower in the file handles stray-open menus.                    #}
           {% if item.application_id and seeker_active %}
-          <details class="relative applicant-card-menu" onclick="event.stopPropagation();">
+          {# The card-onclick swallows navigation for `details` matches (see #}
+          {# the closest() list above), so we don't need stopPropagation on  #}
+          {# this element — and MUST NOT add it, or the document-level       #}
+          {# delegated Proceed / Reject handlers below stop firing.           #}
+          <details class="relative applicant-card-menu">
             <summary class="list-none cursor-pointer w-7 h-7 flex items-center justify-center rounded-full hover:bg-primary/8 text-muted hover:text-primary transition" title="More">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
             </summary>
@@ -279,10 +283,21 @@
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 Proceed
               </button>
+              <button type="button"
+                      data-card-reject="{{ item.application_id|hashid }}"
+                      data-applicant-name="{{ item.profile.first_name }}"
+                      class="w-full text-left flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-50 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                Reject
+              </button>
               {% else %}
               <span class="flex items-center gap-2 px-3 py-2 text-muted/60 italic cursor-not-allowed" title="Application is no longer in review.">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 Proceed
+              </span>
+              <span class="flex items-center gap-2 px-3 py-2 text-muted/60 italic cursor-not-allowed" title="Application is no longer in review.">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                Reject
               </span>
               {% endif %}
             </div>
@@ -295,7 +310,10 @@
       {# skills, experience, and certifications. Employers evaluate the    #}
       {# candidate against the job elsewhere via the match badge; on the   #}
       {# card the tags should reflect what the candidate brings.           #}
-      <div class="flex flex-wrap gap-1 mb-3 flex-1">
+      {# `items-start` + `content-start` prevent flex from vertically       #}
+      {# stretching short single-row tag sets — without them the flex-1    #}
+      {# container inflates the row height and pills look "fat".            #}
+      <div class="flex flex-wrap items-start content-start gap-1 mb-3 flex-1">
         {% for edu in item.profile.educations.all|slice:":1" %}
         <span class="inline-flex items-center gap-0.5 bg-teal/10 text-teal text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-teal/20 truncate max-w-full">
           <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
@@ -489,6 +507,57 @@
         onConfirm: fire,
       });
     } else if (confirm('Proceed with ' + name + '’s application?')) {
+      fire();
+    }
+  });
+
+  // ── Reject action from the card menu ───────────────────────────
+  // Same shape as the Proceed handler — POST to the lifecycle endpoint
+  // with action=reject then reload so the tab counts + status labels
+  // update. Guarded by a confirmation because it's destructive.
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-card-reject]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const appId = btn.dataset.cardReject;
+    const name  = btn.dataset.applicantName || 'this applicant';
+    function fire() {
+      btn.disabled = true;
+      const fd = new FormData();
+      fd.append('action', 'reject');
+      fetch('/employers/applications/' + appId + '/status/', {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCsrfCookie() || '',
+        },
+        body: fd,
+      })
+      .then(function(r) { return r.json().then(function(d){ return [r.ok, d]; }); })
+      .then(function(pair) {
+        const [ok, d] = pair;
+        if (ok && d.ok) {
+          window.location.reload();
+        } else {
+          btn.disabled = false;
+          alert((d && d.error) || 'Could not reject. Please try again.');
+        }
+      })
+      .catch(function() {
+        btn.disabled = false;
+        alert('Network error — please try again.');
+      });
+    }
+    if (window.confirmAction) {
+      window.confirmAction({
+        title: 'Reject ' + name + '’s application?',
+        body:  name + ' will be notified their application was declined. This cannot be undone from the card.',
+        ctaLabel: 'Yes, reject',
+        ctaClass: 'bg-red-500 hover:bg-red-600',
+        onConfirm: fire,
+      });
+    } else if (confirm('Reject ' + name + '’s application?')) {
       fire();
     }
   });

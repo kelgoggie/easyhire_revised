@@ -34,56 +34,58 @@
   {% endif %}
 
   {% if current_job %}
-  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+  {# Top row: job title on the left, Previous/Next pager on the right. #}
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
     <div class="min-w-0">
       <p class="text-muted text-xs uppercase tracking-wide font-semibold">
         {% if application %}Applied for{% else %}Considering for{% endif %}
       </p>
       <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary leading-tight">{{ current_job.title }}</h1>
+    </div>
+    <div class="flex items-center gap-2 flex-shrink-0 sm:pt-2">
+      {% if prev_id %}
+      <a href="/employers/candidates/{{ prev_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
+         class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+      {% else %}
+      <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">&lt; Previous</span>
+      {% endif %}
+      {% if next_id %}
+      <a href="/employers/candidates/{{ next_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
+         class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+      {% else %}
+      <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">Next &gt;</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Second row: match tag on the LEFT, Proceed / Reject on the RIGHT       #}
+  {# (aligned to the match tag, per the header design). Proceed / Reject    #}
+  {# use `data-mirror-action` to forward to the primary #app-actions        #}
+  {# buttons further down the page — same handlers, one source of truth.    #}
+  {# Only shown while the application is actionable (pending / viewed).     #}
+  <div class="mt-2 mb-2 flex items-center justify-between gap-3 flex-wrap">
+    <div>
       {% if match_score %}
-      <div class="mt-2 flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 flex-wrap">
         {% match_badge match_score.total %}
         <span class="text-primary font-extrabold text-lg leading-none">{{ match_score.total }}%</span>
       </div>
       {% endif %}
     </div>
-    <div class="flex flex-col items-end gap-2 flex-shrink-0 sm:pt-2">
+    {% if application %}
+      {% if application.status == 'pending' or application.status == 'viewed' %}
       <div class="flex items-center gap-2">
-        {% if prev_id %}
-        <a href="/employers/candidates/{{ prev_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
-           class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
-        {% else %}
-        <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">&lt; Previous</span>
-        {% endif %}
-        {% if next_id %}
-        <a href="/employers/candidates/{{ next_id|hashid }}/?job={{ current_job.id|hashid }}{% if from_tab == 'recommended' %}&from=recommended{% endif %}"
-           class="bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
-        {% else %}
-        <span class="bg-surface border border-taupe/40 text-muted/50 text-xs font-semibold px-4 py-1.5 rounded-full cursor-not-allowed">Next &gt;</span>
-        {% endif %}
+        <button type="button" data-mirror-action="accept"
+                class="bg-teal text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-teal/90 transition">
+          Proceed
+        </button>
+        <button type="button" data-mirror-action="reject"
+                class="bg-white border border-red-300 text-red-500 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-red-50 transition">
+          Reject
+        </button>
       </div>
-      {# Proceed / Reject repeated up here for reach — same handlers as the  #}
-      {# smaller pair inside the Application card. The `data-mirror` script  #}
-      {# below forwards the click to the primary #app-actions buttons so we  #}
-      {# don't fork the JS. Only shown while the application is actionable   #}
-      {# (pending or viewed) — post-Proceed the primary row swaps to        #}
-      {# Send Job Offer / Cancel Offer, and mirroring those from up top     #}
-      {# would clutter the header.                                           #}
-      {% if application %}
-        {% if application.status == 'pending' or application.status == 'viewed' %}
-        <div class="flex items-center gap-2">
-          <button type="button" data-mirror-action="accept"
-                  class="bg-teal text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-teal/90 transition">
-            Proceed
-          </button>
-          <button type="button" data-mirror-action="reject"
-                  class="bg-white border border-red-300 text-red-500 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-red-50 transition">
-            Reject
-          </button>
-        </div>
-        {% endif %}
       {% endif %}
-    </div>
+    {% endif %}
   </div>
   <div class="border-b border-taupe/30 mb-6"></div>
   {% endif %}

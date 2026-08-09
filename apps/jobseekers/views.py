@@ -740,6 +740,7 @@ def applications(request):
 
     sort = request.GET.get('sort', 'recent')
     search = request.GET.get('q', '').strip()
+    status_filter = (request.GET.get('status') or '').strip().lower()
 
     qs = Application.objects.filter(jobseeker=profile).select_related(
         'job', 'job__company', 'job__experience_requirement'
@@ -749,6 +750,35 @@ def applications(request):
         qs = qs.filter(
             Q(job__title__icontains=search) | Q(job__company__name__icontains=search)
         )
+
+    # Per-status counts for the tab badges. Computed BEFORE the status
+    # filter so each tab shows the total for its bucket regardless of the
+    # currently selected tab. `pending` and `viewed` are collapsed into a
+    # single "Pending" tab because that's how the badge on each card also
+    # renders them to the jobseeker.
+    from django.db.models import Count as _Count
+    _raw_counts = dict(qs.values_list('status').annotate(n=_Count('id')))
+    status_counts = {
+        'pending':      _raw_counts.get('pending', 0) + _raw_counts.get('viewed', 0),
+        'accepted':     _raw_counts.get('accepted', 0),
+        'hire_pending': _raw_counts.get('hire_pending', 0),
+        'hired':        _raw_counts.get('hired', 0),
+        'rejected':     _raw_counts.get('rejected', 0),
+    }
+    total_count = sum(status_counts.values())
+
+    # Filter by status if one was picked from the tabs.
+    STATUS_GROUPS = {
+        'pending':      ['pending', 'viewed'],
+        'accepted':     ['accepted'],
+        'hire_pending': ['hire_pending'],
+        'hired':        ['hired'],
+        'rejected':     ['rejected'],
+    }
+    if status_filter in STATUS_GROUPS:
+        qs = qs.filter(status__in=STATUS_GROUPS[status_filter])
+    else:
+        status_filter = ''  # normalize unknown values to "All"
 
     if sort == 'oldest':
         qs = qs.order_by('created_at')
@@ -776,6 +806,9 @@ def applications(request):
         'items': list(page.object_list),
         'sort': sort,
         'search': search,
+        'status_filter': status_filter,
+        'status_counts': status_counts,
+        'total_count': total_count,
         'page': page,
         'qs_base': querystring_without(request, 'page'),
         'unread_notifications': False,

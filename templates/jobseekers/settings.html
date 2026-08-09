@@ -67,7 +67,7 @@
       <div>
         <label class="block text-primary text-xs mb-1">Birthday</label>
         <div class="relative">
-          <input type="text" name="date_of_birth" data-datepicker="date" data-min-age="15" data-display-format="long" disabled
+          <input type="text" name="date_of_birth" data-datepicker="date" data-min-age="18" data-display-format="long" disabled
                  value="{% if display.date_of_birth %}{{ display.date_of_birth|date:'F j, Y' }}{% endif %}"
                  placeholder="Select date" readonly autocomplete="off"
                  class="personal-field w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">

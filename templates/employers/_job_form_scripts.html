@@ -292,12 +292,22 @@ fetch('/api/barangays/' + ILOILO_CITY_CODE + '/')
       document.getElementById('job_barangay_name').value = barangaySelect.options[barangaySelect.selectedIndex].text;
     }
   });
-barangaySelect.addEventListener('change', function() {
-  document.getElementById('job_barangay_name').value = this.options[this.selectedIndex].text;
-});
-document.getElementById('job-form').addEventListener('submit', function() {
+// Only copy the display text into the hidden name field when a real
+// barangay is selected. Otherwise the placeholder ("Select Barangay...")
+// gets saved verbatim into JobPosting.barangay_name and shows up in the
+// public Location line.
+function _syncBarangayName() {
   const sel = barangaySelect;
-  document.getElementById('job_barangay_name').value = sel.options[sel.selectedIndex].text;
+  const nameEl = document.getElementById('job_barangay_name');
+  if (sel.value) {
+    nameEl.value = sel.options[sel.selectedIndex].text;
+  } else {
+    nameEl.value = '';
+  }
+}
+barangaySelect.addEventListener('change', _syncBarangayName);
+document.getElementById('job-form').addEventListener('submit', function() {
+  _syncBarangayName();
   window.__jobFormSubmitting = true;  // suppress cancel-dirty guard when navigating away via Save
 });
 

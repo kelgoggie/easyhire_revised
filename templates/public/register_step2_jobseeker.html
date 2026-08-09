@@ -105,7 +105,7 @@
                             <label class="block text-primary text-xs font-medium mb-1">Date of Birth*</label>
                             <div class="relative">
                                 <input type="text" name="date_of_birth" id="date_of_birth"
-                                       data-datepicker="date" data-min-age="15"
+                                       data-datepicker="date" data-min-age="18"
                                        placeholder="Select Date of Birth" required autocomplete="off" readonly
                                        class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer">
                                 <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,7 +356,7 @@ document.getElementById('reg-form').addEventListener('submit', function(e) {
         const minAge = new Date(today.getFullYear()-15, today.getMonth(), today.getDate());
         if (dob > minAge) {
             const err = document.getElementById('dob_error');
-            err.textContent = 'You must be at least 15 years old to register.';
+            err.textContent = 'You must be at least 18 years old to register.';
             err.classList.remove('hidden');
             stop = true;
         }

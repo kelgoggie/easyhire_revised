@@ -73,8 +73,8 @@
                class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
-        <label class="block text-primary text-xs mb-1">Phone</label>
-        <input type="text" name="phone" value="{{ profile.phone|default:'' }}" disabled
+        <label class="block text-primary text-xs mb-1">Phone <span class="text-red-500">*</span></label>
+        <input type="text" name="phone" value="{{ profile.phone|default:'' }}" required disabled
                class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
     </div>
@@ -86,8 +86,8 @@
                class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
-        <label class="block text-primary text-xs mb-1">Contact Email <span class="text-muted italic">— where jobseekers reach you</span></label>
-        <input type="email" name="rep_contact_email" value="{{ profile.email|default:'' }}" disabled
+        <label class="block text-primary text-xs mb-1">Contact Email <span class="text-red-500">*</span> <span class="text-muted italic">— where jobseekers reach you</span></label>
+        <input type="email" name="rep_contact_email" value="{{ profile.email|default:'' }}" required disabled
                class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
     </div>

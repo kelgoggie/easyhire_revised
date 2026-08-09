@@ -30,14 +30,14 @@
       <p class="text-sm font-bold text-primary mb-3">Contact &amp; Address</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
-          <label class="block text-primary text-xs mb-1">Contact Email</label>
-          <input type="email" name="contact_email" value="{{ jobseeker.contact_email|default:'' }}"
+          <label class="block text-primary text-xs mb-1">Contact Email <span class="text-red-500">*</span></label>
+          <input type="email" name="contact_email" value="{{ jobseeker.contact_email|default:'' }}" required
                  placeholder="{{ jobseeker.user.email }}"
                  class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
         </div>
         <div>
-          <label class="block text-primary text-xs mb-1">Contact Number</label>
-          <input type="tel" name="phone" value="{{ jobseeker.phone|default:'' }}"
+          <label class="block text-primary text-xs mb-1">Contact Number <span class="text-red-500">*</span></label>
+          <input type="tel" name="phone" value="{{ jobseeker.phone|default:'' }}" required
                  placeholder="e.g. +63 909 XXXX XXX"
                  class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
         </div>
@@ -50,22 +50,22 @@
                  class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
         </div>
         <div>
-          <label class="block text-primary text-xs mb-1">Street</label>
-          <input type="text" name="street_barangay" value="{{ jobseeker.street_barangay|default:'' }}"
+          <label class="block text-primary text-xs mb-1">Street <span class="text-red-500">*</span></label>
+          <input type="text" name="street_barangay" value="{{ jobseeker.street_barangay|default:'' }}" required
                  placeholder="e.g. Iznart St."
                  class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
         </div>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
-          <label class="block text-primary text-xs mb-1">Barangay</label>
-          <input type="text" name="barangay" value="{{ jobseeker.barangay|default:'' }}"
+          <label class="block text-primary text-xs mb-1">Barangay <span class="text-red-500">*</span></label>
+          <input type="text" name="barangay" value="{{ jobseeker.barangay|default:'' }}" required
                  placeholder="e.g. Jaro"
                  class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
         </div>
         <div>
-          <label class="block text-primary text-xs mb-1">City/Municipality</label>
-          <input type="text" name="city_municipality" value="{{ jobseeker.city_municipality|default:'Iloilo City' }}"
+          <label class="block text-primary text-xs mb-1">City/Municipality <span class="text-red-500">*</span></label>
+          <input type="text" name="city_municipality" value="{{ jobseeker.city_municipality|default:'Iloilo City' }}" required
                  class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
         </div>
         <div>

@@ -133,14 +133,14 @@
               <p class="text-sm font-bold text-primary mb-2">Contact Information</p>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-xs text-muted mb-1">Contact Number</label>
-                  <input type="tel" name="phone" id="field-phone"
+                  <label class="block text-xs text-muted mb-1">Contact Number <span class="text-red-500">*</span></label>
+                  <input type="tel" name="phone" id="field-phone" required
                          value="{{ profile.phone|default:'' }}" placeholder="e.g. +63 909 XXXX XXX"
                          class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
                 </div>
                 <div>
-                  <label class="block text-xs text-muted mb-1">Email Address</label>
-                  <input type="email" name="contact_email" id="field-email"
+                  <label class="block text-xs text-muted mb-1">Email Address <span class="text-red-500">*</span></label>
+                  <input type="email" name="contact_email" id="field-email" required
                          value="{{ profile.contact_email|default:request.user.email }}" placeholder="yourname@gmail.com"
                          class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
                 </div>
@@ -159,16 +159,16 @@
                        class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
               </div>
               <div>
-                <label class="block text-xs text-muted mb-1">Street</label>
-                <input type="text" name="street_barangay" id="field-street"
+                <label class="block text-xs text-muted mb-1">Street <span class="text-red-500">*</span></label>
+                <input type="text" name="street_barangay" id="field-street" required
                        value="{{ profile.street_barangay|default:'' }}" placeholder="e.g. Iznart St., Luna St."
                        class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
               </div>
             </div>
             <div class="mb-2">
-              <label class="block text-xs text-muted mb-1">Barangay</label>
+              <label class="block text-xs text-muted mb-1">Barangay <span class="text-red-500">*</span></label>
               <div class="relative">
-                <select name="barangay" id="resume_barangay"
+                <select name="barangay" id="resume_barangay" required
                         class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition appearance-none">
                   <option value="">Select Barangay...</option>
                 </select>
@@ -176,9 +176,9 @@
               </div>
             </div>
             <div class="mb-2">
-              <label class="block text-xs text-muted mb-1">City/Municipality</label>
+              <label class="block text-xs text-muted mb-1">City/Municipality <span class="text-red-500">*</span></label>
               <div class="relative">
-                <select name="city_municipality" id="resume_city"
+                <select name="city_municipality" id="resume_city" required
                         class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition appearance-none">
                   <option value="">Select City/Municipality...</option>
                 </select>

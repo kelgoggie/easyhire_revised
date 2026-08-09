@@ -52,10 +52,10 @@
         {# describe the same domain (applications, hires, external hires)  #}
         {# so a separate sidebar section was redundant.                    #}
         <li><a href="#cmp-apps-hired" class="nav-pill" data-key="cmp-apps-hired">Applications vs Hired</a></li>
-        <li><a href="#cmp-jobs-apps"  class="nav-pill" data-key="cmp-jobs-apps">New Jobs vs Applications</a></li>
+        <li><a href="#cmp-jobs-apps"  class="nav-pill" data-key="cmp-jobs-apps">New Jobs and Applications</a></li>
         <li><a href="#cmp-eh-ext"     class="nav-pill" data-key="cmp-eh-ext">Hired via EasyHire vs Externally</a></li>
-        <li><a href="#cmp-place-rej"  class="nav-pill" data-key="cmp-place-rej">Placements vs Unsuccessful Applications</a></li>
-        <li><a href="#cmp-hires-compat" class="nav-pill" data-key="cmp-hires-compat">Hires vs Compatibility at Hire</a></li>
+        <li><a href="#cmp-place-rej"  class="nav-pill" data-key="cmp-place-rej">Application Status Ratio</a></li>
+        <li><a href="#cmp-hires-compat" class="nav-pill" data-key="cmp-hires-compat">Hires by Compatibility</a></li>
       </ul>
 
       <p class="text-sm font-bold text-primary mb-1">
@@ -222,30 +222,20 @@
       <!-- ── Labor: Preferred Jobs ────────────────────────────── -->
       <div data-panel="lab-searched" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Preferred Jobs</h2>
-        <p class="text-muted text-xs italic mb-4">Job titles jobseekers marked as preferences on their résumé (Recommend Jobs Related to).</p>
+        <p class="text-muted text-xs italic mb-4">Job titles jobseekers marked as preferences on their résumé</p>
         <div class="chart-box flex-1"><canvas id="chart-lab-searched"></canvas></div>
       </div>
 
       <!-- ── Labor: In Demand Jobs (pie) ──────────────────────── -->
       <div data-panel="lab-demand" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">In Demand Jobs</h2>
-        <p class="text-muted text-xs italic mb-4">Top 10 job titles ranked by total jobseeker interactions across all currently-open postings. Multiple posts of the same role are aggregated.</p>
+        <p class="text-muted text-xs italic mb-4">Jobs with minimal requirements.</p>
         {% if in_demand_chart %}
         <div class="chart-box flex-1"><canvas id="chart-lab-demand"></canvas></div>
         <div class="mt-3 text-xs">
-          <div class="grid grid-cols-12 gap-2 pb-1 border-b border-taupe/30 font-semibold text-muted uppercase text-[10px] tracking-wide">
-            <div class="col-span-6">Job Title</div>
-            <div class="col-span-2 text-right">Posts</div>
-            <div class="col-span-2 text-right">Total</div>
-            <div class="col-span-2 text-right">Avg / Post</div>
-          </div>
+          <div class="pb-1 border-b border-taupe/30 font-semibold text-muted uppercase text-[10px] tracking-wide">Job Title</div>
           {% for g in in_demand_top %}
-          <div class="grid grid-cols-12 gap-2 py-1.5 border-b border-taupe/10 text-primary">
-            <div class="col-span-6 truncate">{{ g.display }}</div>
-            <div class="col-span-2 text-right">{{ g.post_count }}</div>
-            <div class="col-span-2 text-right">{{ g.total_interactions }}</div>
-            <div class="col-span-2 text-right">{{ g.avg_interactions }}</div>
-          </div>
+          <div class="py-1.5 border-b border-taupe/10 text-primary truncate">{{ g.display }}</div>
           {% endfor %}
         </div>
         {% else %}
@@ -256,21 +246,13 @@
       <!-- ── Labor: Hard to Fill Jobs (pie) ───────────────────── -->
       <div data-panel="lab-hard" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Hard to Fill Jobs</h2>
-        <p class="text-muted text-xs italic mb-4">Posts open 30+ days with fewer than 3 applicants. Top 10 job titles ranked by average days open; multiple posts of the same role are aggregated.</p>
+        <p class="text-muted text-xs italic mb-4">Posts with higher barriers to entry.</p>
         {% if hard_to_fill_chart %}
         <div class="chart-box flex-1"><canvas id="chart-lab-hard"></canvas></div>
         <div class="mt-3 text-xs">
-          <div class="grid grid-cols-12 gap-2 pb-1 border-b border-taupe/30 font-semibold text-muted uppercase text-[10px] tracking-wide">
-            <div class="col-span-6">Job Title</div>
-            <div class="col-span-3 text-right">Stuck Posts</div>
-            <div class="col-span-3 text-right">Avg Days Open</div>
-          </div>
+          <div class="pb-1 border-b border-taupe/30 font-semibold text-muted uppercase text-[10px] tracking-wide">Job Title</div>
           {% for g in hard_to_fill_top %}
-          <div class="grid grid-cols-12 gap-2 py-1.5 border-b border-taupe/10 text-primary">
-            <div class="col-span-6 truncate">{{ g.display }}</div>
-            <div class="col-span-3 text-right">{{ g.post_count }}</div>
-            <div class="col-span-3 text-right">{{ g.avg_days }}</div>
-          </div>
+          <div class="py-1.5 border-b border-taupe/10 text-primary truncate">{{ g.display }}</div>
           {% endfor %}
         </div>
         {% else %}
@@ -297,8 +279,7 @@
       <div data-panel="cmp-jobs-apps" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">New Jobs vs Applications</h2>
         <p class="text-muted text-xs italic mb-4">
-          New job postings vs applications submitted, per month in {{ selected_year }}.
-          When applications outpace new jobs, jobseekers are chasing a shrinking pool — a signal PESO can use to attract more employers.
+          New jobs vs applications submitted per month in {{ selected_year }}
         </p>
         <div class="chart-box flex-1"><canvas id="chart-cmp-jobs-apps"></canvas></div>
         <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
@@ -309,9 +290,9 @@
 
       <!-- ── Comparison: Placements vs Unsuccessful Applications ── -->
       <div data-panel="cmp-place-rej" class="analytics-panel hidden flex-1 flex flex-col">
-        <h2 class="text-2xl font-extrabold text-primary mb-1">Placements vs Unsuccessful Applications</h2>
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Application Success Ratio</h2>
         <p class="text-muted text-xs italic mb-4">
-          Applications that reached the terminal Hired state (placements) vs applications that were rejected, per month in {{ selected_year }}. A high rejection curve relative to placements can flag a mismatch between what jobseekers are applying to and what employers actually hire.
+          Applications that were accepted (hired) and applications that were not selected.
         </p>
         <div class="chart-box flex-1"><canvas id="chart-cmp-place-rej"></canvas></div>
         <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
@@ -326,9 +307,9 @@
       {# Same tier vocabulary the jobseeker-facing match badge uses so    #}
       {# admins and employers read the buckets the same way.               #}
       <div data-panel="cmp-hires-compat" class="analytics-panel hidden flex-1 flex flex-col">
-        <h2 class="text-2xl font-extrabold text-primary mb-1">Hires by Compatibility Tier</h2>
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Hires by Compatibility</h2>
         <p class="text-muted text-xs italic mb-4">
-          System-wide hire count grouped by the match tier of each hired jobseeker for the job they were hired into, in {{ selected_year }}. Bars stacked at the higher tiers mean the matching engine is finding real fits before the hire; heavy weight on the lower tiers means employers are hiring outside the ranking.
+          Number of successful hires based on compatibility score.
         </p>
         <div class="chart-box flex-1"><canvas id="chart-cmp-hires-compat"></canvas></div>
         <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
@@ -338,9 +319,9 @@
 
       <!-- ── Comparison: Hired via EasyHire vs Externally ───────── -->
       <div data-panel="cmp-eh-ext" class="analytics-panel hidden flex-1 flex flex-col">
-        <h2 class="text-2xl font-extrabold text-primary mb-1">Hired via EasyHire vs Externally</h2>
+        <h2 class="text-2xl font-extrabold text-primary mb-1">Internal and External Placements</h2>
         <p class="text-muted text-xs italic mb-4">
-          Hires via EasyHire vs hires the employer recorded from outside sources (walk-ins, referrals, other boards), per month in {{ selected_year }}. External hires don't carry per-hire timestamps, so they're attributed to the month the job was posted — the shape of the curve is accurate; the exact month may drift by a few weeks for late entries.
+          Job placements made on EasyHire vs placements recorded by the employer from referrals, job fairs, etc.
         </p>
         <div class="chart-box flex-1"><canvas id="chart-cmp-eh-ext"></canvas></div>
         <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
@@ -421,7 +402,7 @@ const D = {
                data:   [{% for x in jobs_by_industry %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
   jobLoc:    { labels: [{% for x in jobs_by_location %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                data:   [{% for x in jobs_by_location %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
-  searched:  { labels: [{% for x in jobs_of_interest %}'{{ x.query|capfirst|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+  searched:  { labels: [{% for x in jobs_of_interest %}'{{ x.query|title|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                data:   [{% for x in jobs_of_interest %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
   demand:    { labels: [{% for x in in_demand_chart %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                data:   [{% for x in in_demand_chart %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}],

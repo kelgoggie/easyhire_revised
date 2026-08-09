@@ -217,9 +217,9 @@
       </div>
     </div>
 
-    <p class="text-sm font-bold text-primary mb-2">Main Branch Address</p>
+    <p class="text-sm font-bold text-primary mb-2">Main Branch Address <span class="text-red-500">*</span></p>
     <div class="mb-4">
-      <input type="text" name="main_branch_address" value="{{ company.main_branch_address }}" disabled
+      <input type="text" name="main_branch_address" value="{{ company.main_branch_address }}" required disabled
              placeholder="Free-text branch address (used for non-Iloilo / overseas)"
              class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
     </div>
@@ -232,14 +232,14 @@
                class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
-        <label class="block text-primary text-xs mb-1">Street</label>
-        <input type="text" name="iloilo_street" value="{{ company.iloilo_street|default:'' }}" disabled
+        <label class="block text-primary text-xs mb-1">Street <span class="text-red-500">*</span></label>
+        <input type="text" name="iloilo_street" value="{{ company.iloilo_street|default:'' }}" required disabled
                class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
-        <label class="block text-primary text-xs mb-1">Barangay</label>
+        <label class="block text-primary text-xs mb-1">Barangay <span class="text-red-500">*</span></label>
         <input type="text" name="iloilo_barangay_name" value="{{ company.iloilo_barangay_name|default:'' }}"
-               placeholder="e.g. Jaro" disabled
+               placeholder="e.g. Jaro" required disabled
                class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
     </div>
