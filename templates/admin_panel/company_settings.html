@@ -6,8 +6,13 @@
 {% block admin_content %}
 <div class="py-8">
 
+  {# Fallback is the Companies list, not the company detail — this page  #}
+  {# is typically reached from the list's three-dots menu, and after a   #}
+  {# self-referral save the smart_back tag ignores the referer and falls #}
+  {# back here. Keeping the fallback on the list keeps "Back to          #}
+  {# Companies" stable across a save/reload cycle.                        #}
   {% with cid=company.id|hashid %}
-  {% with fallback_url="/admin-panel/companies/"|add:cid|add:"/" fallback_label="Back to "|add:company.name %}
+  {% with fallback_url="/admin-panel/companies/" fallback_label="Back to Companies" %}
   {% smart_back fallback_url fallback_label as back %}
   <a href="{{ back.url }}"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
@@ -466,7 +471,8 @@
     </div>
 
     <!-- Status change form -->
-    <form method="POST" class="bg-white border border-gray-200 rounded-2xl p-5">
+    <form method="POST" id="verification-status-form" class="bg-white border border-gray-200 rounded-2xl p-5"
+          data-initial-status="{{ company.verification_status }}">
       {% csrf_token %}
       <input type="hidden" name="form" value="verification">
       <p class="text-sm font-bold text-primary mb-1">Set Verification Status</p>
@@ -478,7 +484,7 @@
         <div>
           <label class="block text-primary text-xs mb-1">Status</label>
           <div class="relative">
-            <select name="verification_status"
+            <select name="verification_status" id="verification-status-select"
                     class="w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
               {% for code, label in verification_choices %}
               <option value="{{ code }}" {% if company.verification_status == code %}selected{% endif %}>{{ label }}</option>
@@ -495,20 +501,49 @@
             {% endif %}
           </p>
         </div>
-        <div>
-          <label class="block text-primary text-xs mb-1">Rejection Note <span class="text-muted">(only shown for "Verification Denied")</span></label>
+        {# Rejection note only surfaces when Denied is selected — hidden       #}
+        {# otherwise so the field doesn't sit as an ambiguous free-text box    #}
+        {# next to a Verified/Pending status. Pre-existing note text is kept   #}
+        {# in the textarea so switching back to Denied restores what the       #}
+        {# admin had.                                                           #}
+        <div id="verification-reason-wrap" class="hidden">
+          <label class="block text-primary text-xs mb-1">Reason for Denial</label>
           <textarea name="rejection_note" rows="3" placeholder="e.g. Mayor's permit expired on Mar 2025 — please upload a current copy."
                     class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ company.rejection_note }}</textarea>
         </div>
       </div>
 
       <div class="flex justify-end">
-        <button type="submit"
-                class="bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition">
+        <button type="submit" id="verification-status-save" disabled
+                class="bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition disabled:bg-gray-200 disabled:text-muted disabled:cursor-not-allowed">
           Save Verification Status
         </button>
       </div>
     </form>
+
+    <script>
+    (function() {
+      const form   = document.getElementById('verification-status-form');
+      const sel    = document.getElementById('verification-status-select');
+      const save   = document.getElementById('verification-status-save');
+      const reason = document.getElementById('verification-reason-wrap');
+      if (!form || !sel || !save || !reason) return;
+
+      const initial = form.dataset.initialStatus || '';
+
+      function refresh() {
+        // Save enables only when the picked status differs from what's on
+        // record — avoids saving a no-op (and firing an audit log entry
+        // + notification pipeline) when the admin just opened the form.
+        save.disabled = (sel.value === initial);
+        // Reason field is Denied-only so the label + textarea don't sit
+        // as ambiguous chrome next to a Verified / Pending status.
+        reason.classList.toggle('hidden', sel.value !== 'verification_denied');
+      }
+      sel.addEventListener('change', refresh);
+      refresh();
+    })();
+    </script>
   </div>
 
   {# Employees on EasyHire lives on the Company Profile page now — see  #}

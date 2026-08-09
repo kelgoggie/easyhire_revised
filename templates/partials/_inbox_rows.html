@@ -216,8 +216,14 @@
     <!-- Expandable detail panel -->
     <div id="inbox-detail-{{ forloop.counter0 }}" class="hidden px-4 sm:px-6 pb-4 pl-16">
       {% if item.detail_interview_at %}
-
-                <div class="my-5">
+        {# Interview messages render as a formal letter: schedule block at   #}
+        {# the top so the jobseeker sees the when/where at a glance, then    #}
+        {# the body, then a thank-you + sender line. `detail_interview_kind` #}
+        {# decides the label on the location line (Venue / Link / Phone).   #}
+        {# Sender name falls back to just the company when the User row is  #}
+        {# gone.                                                              #}
+        <div class="text-primary text-sm leading-relaxed">
+          <div class="mb-5">
             <p class="text-lg sm:text-xl font-extrabold text-primary mb-2">Interview Schedule</p>
             <p><strong>Date:</strong> {{ item.detail_interview_at|date:"F j, Y" }}</p>
             <p><strong>Time:</strong> {{ item.detail_interview_at|date:"g:i A" }}</p>
@@ -231,29 +237,13 @@
               {% endif %}
             {% endif %}
           </div>
-        {# Interview messages render as a formal letter: Dear / body /       #}
-        {# schedule block / thank-you. `detail_interview_kind` decides the   #}
-        {# label on the location line (Venue / Link / Phone Number). Sender  #}
-        {# name falls back to just the company when the User row is gone.    #}
-        <div class="text-primary text-sm leading-relaxed">
+
           <p class="whitespace-pre-line mb-4">{{ item.detail_body }}</p>
 
-          <div class="my-5">
-            <p class="text-lg sm:text-xl font-extrabold text-primary mb-2">Interview Schedule</p>
-            <p><strong>Date:</strong> {{ item.detail_interview_at|date:"F j, Y" }}</p>
-            <p><strong>Time:</strong> {{ item.detail_interview_at|date:"g:i A" }}</p>
-            {% if item.detail_interview_value %}
-              {% if item.detail_interview_kind == 'online' %}
-              <p><strong>Link:</strong> {{ item.detail_interview_value }}</p>
-              {% elif item.detail_interview_kind == 'phone' %}
-              <p><strong>Phone Number:</strong> {{ item.detail_interview_value }}</p>
-              {% else %}
-              <p><strong>Venue:</strong> {{ item.detail_interview_value }}</p>
-              {% endif %}
-            {% endif %}
-          </div>
-
-
+          <p class="mt-4">Thank you,</p>
+          {% if item.detail_sender_name %}
+          <p>{{ item.detail_sender_name }}</p>
+          {% endif %}
           {% if item.detail_company %}
           <p class="text-muted">{{ item.detail_company }}</p>
           {% endif %}

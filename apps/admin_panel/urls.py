@@ -32,6 +32,7 @@ urlpatterns = [
     path('admin-panel/companies/<hashid:pk>/job-posts/',                       views.company_job_posts,               name='company_job_posts'),
     path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/',             views.company_job_detail,              name='company_job_detail'),
     path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/matches/',     views.company_job_all_matches,         name='company_job_all_matches'),
+    path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/applicants/',  views.company_job_all_applicants,      name='company_job_all_applicants'),
     path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/match/<hashid:jobseeker_id>/', views.job_match_detail,    name='job_match_detail'),
     path('admin-panel/companies/<hashid:pk>/jobs/<hashid:job_id>/delete/',      views.company_delete_job,              name='company_delete_job'),
 

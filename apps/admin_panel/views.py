@@ -741,6 +741,90 @@ def company_job_posts(request, pk):
 
 
 @staff_required
+def company_job_all_applicants(request, pk, job_id):
+    """Full-page applicants grid for a specific job — the 'View all'
+    destination from the Applicants section on company_job_detail. Same
+    layout as company_job_all_matches so the two grids read as siblings.
+    Adds a status-chip filter (Pending / In Progress / Hire Offered /
+    Hired / Rejected) because applicant lifecycle matters more than raw
+    match tier here.
+    """
+    from apps.jobs.models import JobPosting, Application
+    from apps.matching.engine import compute_match_score
+    from apps.core.pagination import paginate, querystring_without
+
+    company = get_object_or_404(Company, pk=pk)
+    job = get_object_or_404(JobPosting.objects.select_related('company'), pk=job_id, company=company)
+
+    apps_qs = (Application.objects.filter(job=job)
+               .select_related('jobseeker', 'jobseeker__user')
+               .order_by('-created_at'))
+
+    search = (request.GET.get('q') or '').strip()
+    status_filter = (request.GET.get('status') or '').strip().lower()
+
+    # Build the ranked-shape rows (with match score) that the template
+    # partial expects; compute upfront so status filtering doesn't repeat
+    # the scoring pass.
+    applicants = []
+    for app in apps_qs:
+        try:
+            score = compute_match_score(job, app.jobseeker)['total']
+        except Exception:
+            score = None
+        applicants.append({'app': app, 'score': score})
+
+    if search:
+        needle = search.lower()
+        applicants = [
+            a for a in applicants
+            if needle in (a['app'].jobseeker.first_name or '').lower()
+            or needle in (a['app'].jobseeker.last_name or '').lower()
+        ]
+
+    # Status chip counts computed BEFORE the filter so the badges stay
+    # accurate as you flip tabs. Pending + Viewed collapse to a single
+    # "Pending" bucket to mirror how the jobseeker card badge labels them.
+    from collections import Counter as _Counter
+    _raw = _Counter(a['app'].status for a in applicants)
+    status_counts = {
+        'pending':      _raw.get('pending', 0) + _raw.get('viewed', 0),
+        'accepted':     _raw.get('accepted', 0),
+        'hire_pending': _raw.get('hire_pending', 0),
+        'hired':        _raw.get('hired', 0),
+        'rejected':     _raw.get('rejected', 0),
+    }
+    STATUS_GROUPS = {
+        'pending':      {'pending', 'viewed'},
+        'accepted':     {'accepted'},
+        'hire_pending': {'hire_pending'},
+        'hired':        {'hired'},
+        'rejected':     {'rejected'},
+    }
+    if status_filter in STATUS_GROUPS:
+        applicants = [a for a in applicants if a['app'].status in STATUS_GROUPS[status_filter]]
+    else:
+        status_filter = ''
+
+    page = paginate(request, applicants, per_page=12)
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'active_nav':    'companies',
+        'company':       company,
+        'job':           job,
+        'applicants':    list(page.object_list),
+        'page':          page,
+        'qs_base':       querystring_without(request, 'page'),
+        'search':        search,
+        'status_filter': status_filter,
+        'status_counts': status_counts,
+        'total':         sum(status_counts.values()),
+    })
+    return render(request, 'admin_panel/company_job_all_applicants.html', ctx)
+
+
+@staff_required
 def company_job_all_matches(request, pk, job_id):
     """Full-page ranked-jobseeker grid for a specific job — the 'View all'
     destination from the Top Matches section on company_job_detail. Same
@@ -1697,16 +1781,23 @@ def company_job_detail(request, pk, job_id):
     came_from_jobs = request.GET.get('from') == 'jobs'
 
     ctx = _admin_context(request)
+    # The detail page shows just a preview slab of applicants (mirrors the
+    # Top Matches preview above), with a "View all" link that opens the
+    # dedicated all-applicants page. Cap matches the matches_page size so
+    # both preview rows have a consistent visual weight.
+    applicants_preview = applicants[:8]
+
     ctx.update({
-        'active_nav':       'jobs' if came_from_jobs else 'companies',
-        'came_from_jobs':   came_from_jobs,
-        'company':          company,
-        'job':              job,
-        'ranked':           list(matches_page.object_list),
-        'matches_page':     matches_page,
-        'matches_qs_base':  querystring_without(request, 'matches_page'),
-        'applicants':       applicants,
-        'applicants_count': len(applicants),
+        'active_nav':         'jobs' if came_from_jobs else 'companies',
+        'came_from_jobs':     came_from_jobs,
+        'company':            company,
+        'job':                job,
+        'ranked':             list(matches_page.object_list),
+        'matches_page':       matches_page,
+        'matches_qs_base':    querystring_without(request, 'matches_page'),
+        'applicants':         applicants,
+        'applicants_preview': applicants_preview,
+        'applicants_count':   len(applicants),
         # Reason choices for the Delete modal (the take-down endpoint
         # company_delete_job expects one of these codes).
         'reasons':          JOB_DELETION_REASONS,

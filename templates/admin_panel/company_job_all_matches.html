@@ -65,15 +65,18 @@
         </div>
         <span class="text-primary text-sm font-extrabold flex-shrink-0">{{ item.score }}%</span>
       </div>
-      <div class="flex flex-wrap gap-1 flex-1">
+      {# items-start + content-start keep pills at their intrinsic size —  #}
+      {# without them the flex-1 container inflates single-row tag sets   #}
+      {# and pills read as "fat" (RV Mae Obrero-style card, per report). #}
+      <div class="flex flex-wrap items-start content-start gap-1 flex-1">
         {% for edu in item.profile.educations.all|slice:":1" %}
-        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-[10px] px-2 py-0.5 rounded-full border border-teal/20 max-w-full">
+        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-teal/20 max-w-full">
           <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
           <span class="truncate">{{ edu.course_degree|default:edu.get_level_display|truncatechars:20 }}</span>
         </span>
         {% endfor %}
         {% for skill in item.profile.skills.all|slice:":3" %}
-        <span class="inline-flex items-center bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full border border-green-200 max-w-full">
+        <span class="inline-flex items-center bg-green-50 text-green-600 text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-green-200 max-w-full">
           <span class="truncate">{{ skill.name|truncatechars:18 }}</span>
         </span>
         {% endfor %}

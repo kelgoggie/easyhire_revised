@@ -1,0 +1,157 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load static admin_nav %}
+{% block title %}All Applicants — {{ job.title }} — EasyHire Admin{% endblock %}
+
+{% with active_nav="companies" %}
+{% block admin_content %}
+<div class="py-8">
+
+  {% with cid=company.id|hashid jid=job.id|hashid %}
+  {% with fallback_url="/admin-panel/companies/"|add:cid|add:"/jobs/"|add:jid|add:"/" fallback_label="Back to "|add:job.title %}
+  {% smart_back fallback_url fallback_label as back %}
+  <a href="{{ back.url }}" class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    {{ back.label }}
+  </a>
+  {% endwith %}
+  {% endwith %}
+
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+    <div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-primary leading-tight">Applicants</h1>
+      <p class="text-muted text-sm mt-0.5">
+        People who applied to
+        <a href="/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/" class="text-primary font-semibold hover:text-teal transition">{{ job.title }}</a>
+        at
+        <a href="/admin-panel/companies/{{ company.id|hashid }}/" class="text-primary font-semibold hover:text-teal transition">{{ company.name }}</a>
+        · {{ total }} total.
+      </p>
+    </div>
+    <form method="GET" action="" class="w-full sm:w-auto sm:max-w-md sm:flex-1">
+      {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+      <div class="relative">
+        <input type="text" name="q" value="{{ search|default:'' }}" placeholder="Search by name..."
+               class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition shadow-sm">
+        <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+          </svg>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {# Status chips — same collapsing rules as the jobseeker Applications  #}
+  {# page (pending + viewed → "Pending"), so the vocabulary matches what #}
+  {# the applicant sees on their side.                                    #}
+  {% with search_q="&q="|add:search|urlencode %}
+  <div class="flex items-center gap-1.5 mb-6 flex-wrap">
+    <span class="text-muted text-xs mr-1">Show:</span>
+    <a href="?{% if search %}q={{ search|urlencode }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if not status_filter %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      All <span class="opacity-70">{{ total }}</span>
+    </a>
+    <a href="?status=pending{% if search %}{{ search_q }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if status_filter == 'pending' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      Pending <span class="opacity-70">{{ status_counts.pending }}</span>
+    </a>
+    <a href="?status=accepted{% if search %}{{ search_q }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if status_filter == 'accepted' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      In Progress <span class="opacity-70">{{ status_counts.accepted }}</span>
+    </a>
+    <a href="?status=hire_pending{% if search %}{{ search_q }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if status_filter == 'hire_pending' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      Hire Offered <span class="opacity-70">{{ status_counts.hire_pending }}</span>
+    </a>
+    <a href="?status=hired{% if search %}{{ search_q }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if status_filter == 'hired' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      Hired <span class="opacity-70">{{ status_counts.hired }}</span>
+    </a>
+    <a href="?status=rejected{% if search %}{{ search_q }}{% endif %}"
+       class="px-3 py-1 rounded-full text-xs font-semibold transition
+              {% if status_filter == 'rejected' %}bg-primary text-white{% else %}bg-white text-muted border border-gray-200 hover:text-primary{% endif %}">
+      Rejected <span class="opacity-70">{{ status_counts.rejected }}</span>
+    </a>
+  </div>
+  {% endwith %}
+
+  {% if applicants %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for item in applicants %}
+    <a href="/admin-panel/jobseekers/{{ item.app.jobseeker.id|hashid }}/applications/{{ item.app.id|hashid }}/"
+       class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-primary text-base leading-tight">{{ item.app.jobseeker.first_name }} {{ item.app.jobseeker.last_name }}{% include "partials/_verified_badge.html" with verified=item.app.jobseeker.is_id_verified label="PESO Verified" %}</p>
+          <p class="text-muted text-xs italic truncate">{{ item.app.jobseeker.barangay|default:item.app.jobseeker.city_municipality }}</p>
+          <p class="text-muted text-[11px] mt-0.5">Applied {{ item.app.created_at|date:"M j, Y" }}</p>
+        </div>
+        {% if item.score is not None %}
+        <span class="text-primary text-sm font-extrabold flex-shrink-0">{{ item.score }}%</span>
+        {% endif %}
+      </div>
+
+      {# Status pill uses the same palette as the jobseeker's own       #}
+      {# Applications page badge — a hire is teal-filled, in-progress a #}
+      {# soft teal, rejected muted, pending amber. `viewed` collapses   #}
+      {# into Pending here (matches the "Show" chip grouping above).    #}
+      <div class="mb-3">
+        <span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full
+          {% if item.app.status == 'hired' %}bg-teal text-white
+          {% elif item.app.status == 'hire_pending' %}bg-amber/15 text-amber border border-amber/30
+          {% elif item.app.status == 'accepted' %}bg-teal/15 text-teal border border-teal/30
+          {% elif item.app.status == 'rejected' %}bg-red-50 text-red-500 border border-red-200
+          {% else %}bg-gray-100 text-muted border border-gray-200{% endif %}">
+          {% if item.app.status == 'hired' %}Hired
+          {% elif item.app.status == 'hire_pending' %}Hire Offered
+          {% elif item.app.status == 'accepted' %}In Progress
+          {% elif item.app.status == 'rejected' %}Rejected
+          {% else %}Pending{% endif %}
+        </span>
+      </div>
+
+      {# items-start + content-start on the tag flex wrap prevents the  #}
+      {# single-row tag sets from vertically stretching and rendering   #}
+      {# as fat pills — same fix as the employer candidates grid.       #}
+      <div class="flex flex-wrap items-start content-start gap-1 flex-1">
+        {% for edu in item.app.jobseeker.educations.all|slice:":1" %}
+        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-teal/20 max-w-full">
+          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+          <span class="truncate">{{ edu.course_degree|default:edu.get_level_display|truncatechars:20 }}</span>
+        </span>
+        {% endfor %}
+        {% for skill in item.app.jobseeker.skills.all|slice:":3" %}
+        <span class="inline-flex items-center bg-green-50 text-green-600 text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-green-200 max-w-full">
+          <span class="truncate">{{ skill.name|truncatechars:18 }}</span>
+        </span>
+        {% endfor %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if page.paginator.num_pages > 1 %}
+  {% with page=page qs_base=qs_base page_param="page" %}
+  {% include "partials/_pagination.html" %}
+  {% endwith %}
+  {% endif %}
+  {% else %}
+  <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+    <p class="text-muted text-sm">
+      {% if search %}No applicants found for &ldquo;{{ search }}&rdquo;.
+      {% elif status_filter %}No applicants in this status.
+      {% else %}Nobody has applied to this job yet.{% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+{% endwith %}

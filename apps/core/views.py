@@ -94,8 +94,16 @@ def inbox(request):
             job_title = app.job.title if app.job else '(removed)'
             company_name = app.job.company.name if (app.job and app.job.company) else '(removed)'
             job_closed = bool(app.job and app.job.status == 'closed')
-            job_link = (f'/jobs/view/{_hashid(app.job.id)}/'
-                        if app.job and not job_closed else '')
+            # Link only when the job is still viewable to jobseekers —
+            # /jobs/view/<hashid>/ filters on status=open AND not deleted
+            # AND not admin_disabled, so anything else 404s. Guard here
+            # so the inbox doesn't dish out dead links.
+            job_viewable = bool(
+                app.job and app.job.status == 'open'
+                and not app.job.deleted_at
+                and not app.job.admin_disabled
+            )
+            job_link = f'/jobs/view/{_hashid(app.job.id)}/' if job_viewable else ''
             items.append({
                 'kind': 'application_sent',
                 'actor': 'You',
@@ -128,9 +136,15 @@ def inbox(request):
             sender_job_url      = ''
             if contact.job:
                 sender_job_title = contact.job.title
-                # Closed jobs still have a public detail page; deleted jobs
-                # come through here as None (SET_NULL) and just won't link.
-                sender_job_url = f'/jobs/view/{_hashid(contact.job.id)}/'
+                # Only link when the job is still viewable to jobseekers —
+                # /jobs/view/<hashid>/ filters on status=open + not deleted
+                # + not admin_disabled, so anything else 404s. The title
+                # still renders as plain text when the link is suppressed
+                # so the inbox row keeps its context.
+                if (contact.job.status == 'open'
+                        and not contact.job.deleted_at
+                        and not contact.job.admin_disabled):
+                    sender_job_url = f'/jobs/view/{_hashid(contact.job.id)}/'
             verb = (f'sent you {"interview details" if contact.kind == EmployerContact.KIND_INTERVIEW else "job requirements"}.')
             interview_kind, interview_value = _parse_interview_location(contact.interview_location)
             items.append({
@@ -349,13 +363,19 @@ def inbox(request):
     # above). All other filters exclude dismissed rows as before. Permanent
     # rows are hidden from BOTH tabs — they're gone from the user's view.
     _show_deleted = (request.GET.get('kind') or '').strip().lower() == 'deleted'
+    # Keep a snapshot of the ACTIVE (non-dismissed) items regardless of
+    # which tab is on. The kind chip counts (All / Announcements /
+    # Applications / Interviews / Requirements) filter within the active
+    # inbox, so their badges must always reflect active counts — not the
+    # deleted-only slice we'd get on the Deleted tab.
+    active_items = [it for it in items
+                    if not state_map.get(_state_key(it), {}).get('is_dismissed')]
     if _show_deleted:
         items = [it for it in items
                  if state_map.get(_state_key(it), {}).get('is_dismissed')
                  and not state_map.get(_state_key(it), {}).get('is_permanent')]
     else:
-        items = [it for it in items
-                 if not state_map.get(_state_key(it), {}).get('is_dismissed')]
+        items = active_items
     for it in items:
         it['is_pinned']    = bool(state_map.get(_state_key(it), {}).get('is_pinned'))
         it['is_dismissed'] = bool(state_map.get(_state_key(it), {}).get('is_dismissed'))
@@ -407,19 +427,23 @@ def inbox(request):
     # ── Text search ────────────────────────────────────────────────
     # Substring match (case-insensitive) across the text a user is likely
     # to remember from an inbox row: actor / verb / context / detail body
-    # and, for jobseeker rows, the linked company + job title.
+    # and, for jobseeker rows, the linked company + job title. Hoisted
+    # out of the `if search:` block so the kind-count code below can
+    # reuse it for the active-inbox count.
     search = (request.GET.get('q') or '').strip()
+    needle = search.lower() if search else ''
+
+    def _matches(it):
+        if not needle:
+            return True
+        haystack = ' '.join(str(it.get(k) or '') for k in (
+            'actor', 'verb', 'context', 'detail_body',
+            'sender_company_name', 'sender_job_title',
+            'detail_company', 'detail_interview_location',
+        ))
+        return needle in haystack.lower()
+
     if search:
-        needle = search.lower()
-
-        def _matches(it):
-            haystack = ' '.join(str(it.get(k) or '') for k in (
-                'actor', 'verb', 'context', 'detail_body',
-                'sender_company_name', 'sender_job_title',
-                'detail_company', 'detail_interview_location',
-            ))
-            return needle in haystack.lower()
-
         items = [it for it in items if _matches(it)]
 
     # ── Kind filter chips ───────────────────────────────────────────
@@ -432,9 +456,15 @@ def inbox(request):
         'interviews':    {'interview'},
         'requirements':  {'requirements'},
     }
-    # Kind counts reflect the search-filtered view so the chip badges show
-    # "how many of each kind match my search", not the pre-search totals.
-    kind_counts = {key: sum(1 for it in items if it['kind'] in members)
+    # Kind chip counts always reflect the ACTIVE inbox so switching to the
+    # Deleted tab doesn't zero out the badges (or, worse, show the deleted
+    # slice's breakdown). Search still narrows the counts because the
+    # chips filter within the search results — but the deleted/active
+    # split is separate from the chip axis.
+    active_for_counts = active_items
+    if search:
+        active_for_counts = [it for it in active_for_counts if _matches(it)]
+    kind_counts = {key: sum(1 for it in active_for_counts if it['kind'] in members)
                    for key, members in KIND_GROUPS.items()}
     # Deleted count comes straight from the state table (independent of the
     # normal item list, which excludes dismissed rows on the default tab).
@@ -453,9 +483,10 @@ def inbox(request):
     else:
         kind_filter = ''  # normalize unknown values to "All"
 
-    # `filtered_total` is the total after search but before the kind chip —
-    # drives the "All (N)" badge.
-    filtered_total = sum(kind_counts.values()) if search else total_items
+    # `filtered_total` drives the "All (N)" badge. Always uses the active
+    # inbox count (matches the chip counts above) so the badge is stable
+    # regardless of which tab is active.
+    filtered_total = sum(kind_counts.values())
 
     page = paginate(request, items, per_page=15)
 
