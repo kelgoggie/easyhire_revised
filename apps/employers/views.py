@@ -659,12 +659,23 @@ def job_delete(request, job_id):
 @employer_verified_required
 def job_restore(request, job_id):
     """Undo a soft-delete. Available while the job is still in the 30-day
-    trash window."""
+    trash window. Refuses to restore a PESO-deleted row — those are
+    permanent from the employer's side (matches the hidden Restore button
+    on job_list.html for admin_deleted=True). A flash tells the employer
+    why the click bounced when they hit the URL directly."""
+    from django.contrib import messages
     profile = request.user.employer_profile
     job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
     if request.method == 'POST' and job.deleted_at:
-        job.deleted_at = None
-        job.save(update_fields=['deleted_at'])
+        if job.admin_deleted:
+            messages.error(
+                request,
+                'This job was deleted by PESO Admin and cannot be restored. '
+                'Check your inbox for the reason.',
+            )
+        else:
+            job.deleted_at = None
+            job.save(update_fields=['deleted_at'])
     return redirect('/employers/jobs/?status=deleted')
 
 

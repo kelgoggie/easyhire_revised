@@ -94,8 +94,18 @@
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V4a1 1 0 011-1h6a1 1 0 011 1v3"/>
         </svg>
+        {% if job.admin_deleted %}
+        <span>Deleted by PESO &middot; cannot be restored</span>
+        {% else %}
         <span>Auto-deletes in {{ job.days_until_purge }} day{{ job.days_until_purge|pluralize }}</span>
+        {% endif %}
       </div>
+      {% if job.admin_deleted and job.admin_deleted_reason %}
+      <div class="mb-3 bg-white/60 border border-red-200/50 rounded-lg px-3 py-2 text-xs text-primary">
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">PESO's reason</p>
+        <p class="whitespace-pre-line">{{ job.admin_deleted_reason }}</p>
+      </div>
+      {% endif %}
       {% endif %}
 
       <!-- Top row: title block + settings menu -->
@@ -131,10 +141,17 @@
           </button>
           <div class="hidden absolute right-0 top-7 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-44 py-1">
             {% if job.deleted_at %}
+              {% if job.admin_deleted %}
+              {# PESO-deleted rows show only as a read-only record — no    #}
+              {# Restore action, since the takedown is permanent from the  #}
+              {# employer's side.                                           #}
+              <p class="px-4 py-2 text-xs text-muted italic">No actions available.</p>
+              {% else %}
               <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/restore/">
                 {% csrf_token %}
                 <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-teal hover:bg-teal/5">Restore</button>
               </form>
+              {% endif %}
             {% else %}
               <a href="/employers/jobs/{{ job.id|hashid }}/edit/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">Edit Job</a>
               <a href="/employers/jobs/{{ job.id|hashid }}/candidates/" class="block px-4 py-2 text-sm text-primary hover:bg-surface">View Applicants</a>
@@ -145,7 +162,7 @@
                       data-current-count="{{ job.externally_hired_count|default:0 }}"
                       data-slots-remaining="{{ job.slots|default:0 }}"
                       class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">
-                Mark hired externally
+                Mark Hired externally
               </button>
               <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/close/">
                 {% csrf_token %}
@@ -158,8 +175,8 @@
               <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/delete/" id="delete-job-form-jl-{{ job.id|hashid }}">
                 {% csrf_token %}
                 <button type="button"
-                        onclick="confirmAction({title:'Move to Trash?', body:'Applicants still see the job disappear from their feed, and you can restore it any time in the next 30 days. After 30 days PESO purges it permanently.', ctaLabel:'Move to Trash', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('delete-job-form-jl-{{ job.id|hashid }}').submit();}})"
-                        class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Move to Trash</button>
+                        onclick="confirmAction({title:'Delete?', body:'Applicants still see the job disappear from their feed, and you can restore it any time in the next 30 days. After 30 days PESO purges it permanently.', ctaLabel:'Move to Trash', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('delete-job-form-jl-{{ job.id|hashid }}').submit();}})"
+                        class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Delete</button>
               </form>
             {% endif %}
           </div>

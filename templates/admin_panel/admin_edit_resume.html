@@ -59,21 +59,85 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label class="block text-primary text-xs mb-1">Barangay <span class="text-red-500">*</span></label>
-          <input type="text" name="barangay" value="{{ jobseeker.barangay|default:'' }}" required
-                 placeholder="e.g. Jaro"
-                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+          <div class="relative">
+            <select name="barangay" id="admin_resume_barangay" required
+                    class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm text-primary focus:outline-none focus:border-teal transition appearance-none">
+              <option value="">Select Barangay...</option>
+            </select>
+            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
         </div>
         <div>
           <label class="block text-primary text-xs mb-1">City/Municipality <span class="text-red-500">*</span></label>
-          <input type="text" name="city_municipality" value="{{ jobseeker.city_municipality|default:'Iloilo City' }}" required
-                 class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+          <div class="relative">
+            <select name="city_municipality" id="admin_resume_city" required
+                    class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm text-primary focus:outline-none focus:border-teal transition appearance-none">
+              <option value="">Select City/Municipality...</option>
+            </select>
+            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
         </div>
         <div>
           <label class="block text-primary text-xs mb-1">Province</label>
           <input type="text" value="Iloilo" disabled
                  class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-muted cursor-not-allowed">
+          <input type="hidden" name="province" value="Iloilo">
+          <input type="hidden" name="province_code" value="063000000">
         </div>
       </div>
+      {# Populates City → Barangay from PSGC. Province is pinned to Iloilo   #}
+      {# so we skip the city→province cascade the jobseeker resume needs.   #}
+      {# On save the backend looks up the picked code and stores the        #}
+      {# display name (see admin_edit_resume view).                          #}
+      <script>
+      (function() {
+        const PROVINCE_CODE = '063000000';
+        const citySel = document.getElementById('admin_resume_city');
+        const bgySel  = document.getElementById('admin_resume_barangay');
+        const savedCityCode = '{{ jobseeker.city_code|default:""|escapejs }}';
+        const savedBgyCode  = '{{ jobseeker.barangay_code|default:""|escapejs }}';
+        const savedCityName = '{{ jobseeker.city_municipality|default:""|escapejs }}';
+        const savedBgyName  = '{{ jobseeker.barangay|default:""|escapejs }}';
+
+        // Load cities under Iloilo province, then chain-load the saved city's
+        // barangays if one is stored.
+        function loadCities() {
+          return fetch('/api/cities/' + PROVINCE_CODE + '/')
+            .then(function(r){ return r.json(); })
+            .then(function(cities) {
+              citySel.innerHTML = '<option value="">Select City/Municipality...</option>';
+              cities.forEach(function(c) {
+                const opt = document.createElement('option');
+                opt.value = c.code;
+                opt.textContent = c.name;
+                if (savedCityCode && c.code === savedCityCode) opt.selected = true;
+                else if (!savedCityCode && savedCityName && c.name === savedCityName) opt.selected = true;
+                citySel.appendChild(opt);
+              });
+            });
+        }
+        function loadBarangays(cityCode) {
+          bgySel.innerHTML = '<option value="">Select Barangay...</option>';
+          if (!cityCode) return Promise.resolve();
+          return fetch('/api/barangays/' + cityCode + '/')
+            .then(function(r){ return r.json(); })
+            .then(function(barangays) {
+              barangays.forEach(function(b) {
+                const opt = document.createElement('option');
+                opt.value = b.code;
+                opt.textContent = b.name;
+                if (savedBgyCode && b.code === savedBgyCode) opt.selected = true;
+                else if (!savedBgyCode && savedBgyName && b.name === savedBgyName) opt.selected = true;
+                bgySel.appendChild(opt);
+              });
+            });
+        }
+
+        citySel.addEventListener('change', function() { loadBarangays(citySel.value); });
+
+        loadCities().then(function() { loadBarangays(citySel.value); });
+      })();
+      </script>
     </div>
 
     <!-- Bio -->

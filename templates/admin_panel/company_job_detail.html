@@ -132,7 +132,12 @@
     <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
       <p class="text-red-500 font-bold text-base mb-1">Delete this job post?</p>
       <p class="text-muted text-sm mb-1">You're about to delete <strong class="text-primary">{{ job.title }}</strong>.</p>
-      <p class="text-muted text-xs mb-4">The company will receive a notification with the reason you provide. <span class="text-red-500">This cannot be undone.</span></p>
+      <p class="text-muted text-xs mb-4">
+        The post moves to Trash and disappears from every jobseeker-facing surface. The
+        company receives a notification with the reason you provide and sees the row in
+        their own Trash — but <span class="text-red-500 font-semibold">they cannot restore it.
+        This cannot be undone.</span>
+      </p>
       <form id="delete-form">
         {% csrf_token %}
         <p class="text-primary text-sm font-semibold mb-2">Reason</p>
@@ -244,6 +249,15 @@
     deleteModal.querySelectorAll('[data-close-delete]').forEach(function(el) {
       el.addEventListener('click', hideDelete);
     });
+    // Auto-open the delete modal when arriving with #delete-job in the URL.
+    // The admin jobs list (/admin-panel/jobs/) three-dots menu links here
+    // with that hash so a single click from the card menu lands the admin
+    // straight on the reason picker instead of a two-step click.
+    if (window.location.hash === '#delete-job') {
+      showDelete();
+      // Strip the hash so a Cancel + reload doesn't reopen the modal.
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
     deleteForm.addEventListener('submit', function(e) {
       e.preventDefault();
       fetch('/admin-panel/companies/{{ company.id|hashid }}/jobs/{{ job.id|hashid }}/delete/', {
@@ -253,8 +267,19 @@
       }).then(function(r){ return r.json().then(function(d){ return [r.ok, d]; }); })
         .then(function(pair) {
           const [ok, d] = pair;
-          if (ok && d.ok) { window.location = '/admin-panel/companies/{{ company.id|hashid }}/'; }
-          else {
+          if (ok && d.ok) {
+            // Route back to wherever the admin came from. ?from=jobs means
+            // they clicked in from the global admin jobs list; anything else
+            // (including no param) → company detail. `replaceState` first so
+            // the browser back button doesn't return them to this (now
+            // soft-deleted) job detail URL.
+            const fromParam = new URLSearchParams(window.location.search).get('from');
+            const target = (fromParam === 'jobs')
+              ? '/admin-panel/jobs/'
+              : '/admin-panel/companies/{{ company.id|hashid }}/';
+            history.replaceState(null, '', target);
+            window.location = target;
+          } else {
             deleteErr.textContent = (d && d.error) || 'Something went wrong.';
             deleteErr.classList.remove('hidden');
           }
@@ -418,7 +443,7 @@
               </summary>
               <div class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-xs">
                 <a href="/admin-panel/jobseekers/{{ item.profile.id|hashid }}/settings/"
-                   class="block px-3 py-2 text-primary hover:bg-surface">Open Settings</a>
+                   class="block px-3 py-2 text-primary hover:bg-surface">Account Settings</a>
                 <a href="/admin-panel/jobseekers/{{ item.profile.id|hashid }}/edit-resume/"
                    class="block px-3 py-2 text-primary hover:bg-surface">Edit Résumé</a>
                 {% if item.profile.user.is_active %}

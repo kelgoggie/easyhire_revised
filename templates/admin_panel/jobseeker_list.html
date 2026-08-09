@@ -229,7 +229,7 @@
         <div id="card-menu-{{ js.id }}" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-48 py-1">
           <a href="/admin-panel/jobseekers/{{ js.id|hashid }}/settings/"
              class="block px-4 py-2 text-sm text-primary hover:bg-surface">
-            Open settings
+            Account Settings
           </a>
           {% if js.user.is_active %}
           {% if js.user_id != request.user.id %}

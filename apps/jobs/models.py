@@ -85,6 +85,13 @@ class JobPosting(models.Model):
     # their .job so historical analytics (monthly applications, hires) stay
     # intact even after the JobPosting itself is gone.
     deleted_at = models.DateTimeField(null=True, blank=True)
+    # Set to True when PESO admin was the party that deleted the row (as
+    # opposed to the employer soft-deleting their own post). Combined with
+    # deleted_at != None, this hides the Restore button in the employer's
+    # Trash tab — the employer sees the row as a permanent record of what
+    # PESO removed, but cannot bring it back.
+    admin_deleted = models.BooleanField(default=False)
+    admin_deleted_reason = models.TextField(blank=True, default='')
 
     # Employers can record hires they made outside EasyHire (walk-ins,
     # referrals, other job boards) so the platform's stats reflect the true

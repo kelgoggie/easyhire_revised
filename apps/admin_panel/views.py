@@ -1717,8 +1717,18 @@ def company_job_detail(request, pk, job_id):
 
 @staff_required
 def company_delete_job(request, pk, job_id):
-    """Delete a job posting and notify the company with the admin's reason."""
+    """Move a job posting to Trash on the employer's behalf. Sets
+    admin_deleted so the row surfaces in the employer's Trash tab as
+    "Deleted by PESO — cannot be restored" (no restore button). The
+    company still gets a notification with the admin's reason.
+
+    We intentionally do NOT hard-delete: the row + its applications stay
+    on record for analytics + audit. The employer sees only a read-only
+    entry in Trash; the 30-day auto-purge is scoped to employer-deleted
+    rows so PESO deletions persist until an admin purges explicitly.
+    """
     from django.http import JsonResponse
+    from django.utils import timezone
     from apps.jobs.models import JobPosting
     from apps.notifications.models import Notification
     from .models import AuditLog
@@ -1736,13 +1746,12 @@ def company_delete_job(request, pk, job_id):
     reason_label = reason_dict[reason_code]
     admin_notes  = (request.POST.get('notes') or '').strip()
 
-    # Snapshot what we need before deletion.
     job_title = job.title
-
-    # Notify every representative of the company.
     full_message = f"Reason: {reason_label}"
     if admin_notes:
         full_message += f". Admin notes: {admin_notes}"
+
+    # Notify every representative of the company.
     for rep in company.representatives.all():
         Notification.objects.create(
             recipient=rep.user,
@@ -1758,7 +1767,16 @@ def company_delete_job(request, pk, job_id):
         notes=f"Deleted job '{job_title}'. {full_message}",
     )
 
-    job.delete()
+    job.deleted_at = timezone.now()
+    job.admin_deleted = True
+    job.admin_deleted_reason = full_message[:1000]
+    # Force the job closed so any lingering references to `status='open'`
+    # (matching, public listings) treat it as inactive alongside the
+    # deleted_at soft-delete.
+    job.status = JobPosting.STATUS_CLOSED
+    job.save(update_fields=[
+        'deleted_at', 'admin_deleted', 'admin_deleted_reason', 'status',
+    ])
     return JsonResponse({'ok': True, 'message': f'Deleted "{job_title}".'})
 
 
@@ -2780,12 +2798,34 @@ def admin_edit_resume(request, pk):
         jobseeker.phone             = (request.POST.get('phone') or '').strip()
         jobseeker.house_unit        = (request.POST.get('house_unit') or '').strip()
         jobseeker.street_barangay   = (request.POST.get('street_barangay') or '').strip()
-        jobseeker.barangay          = (request.POST.get('barangay') or '').strip()
-        jobseeker.city_municipality = (request.POST.get('city_municipality') or 'Iloilo City').strip()
+
+        # The city + barangay fields are now PSGC dropdowns (see the JS in
+        # admin_edit_resume.html). POST carries the PSGC code as the picked
+        # value; look up the display name for the ..._code / display fields
+        # the rest of the site reads. Mirror the jobseeker-side resume view.
+        from apps.core.models import CityMunicipality, Barangay
+        jobseeker.province      = 'Iloilo'
+        jobseeker.province_code = '063000000'
+
+        city_code = (request.POST.get('city_municipality') or '').strip()
+        jobseeker.city_code = city_code
+        try:
+            jobseeker.city_municipality = CityMunicipality.objects.get(code=city_code).name
+        except CityMunicipality.DoesNotExist:
+            jobseeker.city_municipality = 'Iloilo City'
+
+        barangay_code = (request.POST.get('barangay') or '').strip()
+        jobseeker.barangay_code = barangay_code
+        try:
+            jobseeker.barangay = Barangay.objects.get(code=barangay_code).name
+        except Barangay.DoesNotExist:
+            jobseeker.barangay = ''
         jobseeker.save(update_fields=[
             'bio', 'contact_email', 'phone',
             'house_unit', 'street_barangay',
-            'barangay', 'city_municipality',
+            'barangay', 'barangay_code',
+            'city_municipality', 'city_code',
+            'province', 'province_code',
         ])
 
         # Wipe-and-recreate the four list-style sections (same pattern the

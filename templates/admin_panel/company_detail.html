@@ -183,7 +183,12 @@
   <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
     <p class="text-red-500 font-bold text-base mb-1">Delete job post?</p>
     <p class="text-muted text-sm mb-1">You're about to delete <strong id="delete-job-title" class="text-primary"></strong>.</p>
-    <p class="text-muted text-xs mb-4">The company representative will receive a notification with the reason you provide. <span class="text-red-500">This cannot be undone.</span></p>
+    <p class="text-muted text-xs mb-4">
+      The post moves to Trash and disappears from every jobseeker-facing surface. The
+      company representative receives a notification with the reason you provide and sees
+      the row in their own Trash — but <span class="text-red-500 font-semibold">they cannot
+      restore it. This cannot be undone.</span>
+    </p>
 
     <form id="delete-job-form">
       {% csrf_token %}
