@@ -1054,6 +1054,52 @@ def jobseeker_settings(request, pk):
             )
             saved_section = 'id_denied'
 
+        elif form == 'verify_id_status':
+            # Unified status picker — mirrors the company verification form
+            # so the admin UI stays consistent. Dispatches based on the
+            # target status. Reason is only stored when denying (matches
+            # how company rejection_note works).
+            from django.utils import timezone
+            new_status = (request.POST.get('id_verification_status') or '').strip().lower()
+            note = (request.POST.get('id_verification_note') or '').strip()
+            valid = {jobseeker.ID_UNVERIFIED, jobseeker.ID_PENDING,
+                     jobseeker.ID_VERIFIED, jobseeker.ID_DENIED}
+            if new_status not in valid:
+                error = 'Please pick a valid verification status.'
+            else:
+                jobseeker.id_verification_status = new_status
+                if new_status == jobseeker.ID_VERIFIED:
+                    jobseeker.id_verified_at = timezone.now()
+                    jobseeker.id_verified_by = request.user
+                    jobseeker.id_verification_note = ''
+                    saved_section = 'id_verified'
+                    action = AuditLog.ACTION_VERIFY
+                    audit_note = 'Approved ID verification.'
+                elif new_status == jobseeker.ID_DENIED:
+                    jobseeker.id_verification_note = note
+                    saved_section = 'id_denied'
+                    action = AuditLog.ACTION_REJECT
+                    audit_note = f'Denied ID verification. Reason: {note or "(no reason given)"}'
+                else:
+                    # unverified / pending — clear denial context and
+                    # verified-timestamp so downstream reads are honest.
+                    jobseeker.id_verified_at = None
+                    jobseeker.id_verified_by = None
+                    if new_status == jobseeker.ID_UNVERIFIED:
+                        jobseeker.id_verification_note = ''
+                    saved_section = 'id_status_updated'
+                    action = AuditLog.ACTION_EDIT
+                    audit_note = f'Set ID verification status to {new_status}.'
+                jobseeker.save(update_fields=[
+                    'id_verification_status', 'id_verified_at',
+                    'id_verified_by', 'id_verification_note',
+                ])
+                AuditLog.objects.create(
+                    admin=request.user, action=action,
+                    target_model='JobseekerProfile', target_id=jobseeker.id,
+                    notes=audit_note,
+                )
+
     ctx = _admin_context(request)
     ctx.update({
         'jobseeker':          jobseeker,

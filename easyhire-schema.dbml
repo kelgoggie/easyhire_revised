@@ -3,7 +3,14 @@
 // Paste this whole file into https://dbdiagram.io/d — it renders an
 // auto-laid-out ERD you can drag around, and export as PNG or PDF.
 //
-// 41 entities across 10 Django modules · Django 5.1 / PostgreSQL
+// Updated for: jobseeker ID verification, company sector-change
+// approval flow, JobPosting.visibility + externally_hired_count,
+// expanded notification types (INVITED_TO_APPLY, HIRE_OFFERED/
+// ACCEPTED/DECLINED, APPLICATION_UNHIRED, NEW_ANNOUNCEMENT),
+// UserReport.reported_job + reported_contact targets, and the new
+// InboxUserState table (per-user dismiss / pin overlay on inbox rows).
+//
+// Django 5.1 / PostgreSQL
 // -----------------------------------------------------------------
 
 Project easyhire {
@@ -59,6 +66,13 @@ Enum info_change_status {
   rejected
 }
 
+Enum jobseeker_id_verification_status {
+  unverified
+  pending
+  verified
+  denied
+}
+
 Enum job_interaction_type {
   liked
   hidden
@@ -105,6 +119,11 @@ Enum job_status {
   draft
 }
 
+Enum job_visibility {
+  public                 // discoverable on the marketing site
+  members                // registered EasyHire users only
+}
+
 Enum application_status {
   pending
   viewed
@@ -135,10 +154,20 @@ Enum notification_type_activity {
   application_accepted
   application_rejected
   application_hired
+  application_unhired
   employer_contacted
+  invited_to_apply
   hire_offered
   hire_accepted
   hire_declined
+  new_announcement
+}
+
+Enum inbox_source_type {
+  application
+  contact
+  announcement
+  verification
 }
 
 Enum audit_action {
@@ -167,6 +196,8 @@ Enum import_status {
 Enum user_report_account_type {
   jobseeker
   employer
+  job
+  contact
 }
 
 Enum user_report_status {
@@ -243,8 +274,17 @@ Table jobseeker_profiles {
   sector_badge_visibility varchar(20) [not null, default: 'public']
   profile_picture varchar(255)
   bio text
+  // Optional PESO ID-verification workflow — parallels Company.verification_status.
+  // Earns a "PESO Verified" checkmark next to the jobseeker's name.
+  id_document varchar(255)
+  id_verification_status jobseeker_id_verification_status [not null, default: 'unverified']
+  id_submitted_at timestamp
+  id_verified_at timestamp
+  id_verified_by_id integer [ref: > users.id]
+  id_verification_note text
   created_at timestamp [not null]
   updated_at timestamp [not null]
+  Note: 'SET_NULL on id_verified_by_id'
 }
 
 // M2M: JobseekerProfile.sectors <> Sector
@@ -291,6 +331,7 @@ Table jobseeker_skills {
   profile_id integer [ref: > jobseeker_profiles.id, not null]
   name varchar(200) [not null]
   description text
+  Note: 'description feeds into matching — carries partial weight when a required skill name is only mentioned inside this text.'
 }
 
 Table jobseeker_experiences {
@@ -358,6 +399,11 @@ Table companies {
   iloilo_barangay_name varchar(200)
   iloilo_city varchar(100) [not null, default: 'Iloilo City']
   iloilo_province varchar(100) [not null, default: 'Iloilo']
+  // PESO-review flow for the Company's sector badges. An employer edit
+  // stores the desired set on pending_sector_badges + flips the flag;
+  // an admin then approves (promotes to sector_badges) or denies.
+  sectors_change_pending boolean [not null, default: false]
+  sectors_change_requested_at timestamp
   verification_status verification_status [not null, default: 'unverified']
   verified_at timestamp
   verified_by_id integer [ref: > users.id]
@@ -368,8 +414,18 @@ Table companies {
   Note: 'SET_NULL on verified_by_id'
 }
 
-// M2M: Company.sector_badges <> Sector
+// M2M: Company.sector_badges <> Sector (live/approved sectors)
 Table company_sector_badges {
+  id integer [pk, increment]
+  company_id integer [ref: > companies.id, not null]
+  sector_id integer [ref: > sectors.id, not null]
+  Indexes {
+    (company_id, sector_id) [unique]
+  }
+}
+
+// M2M: Company.pending_sector_badges <> Sector (awaiting admin review)
+Table company_pending_sector_badges {
   id integer [pk, increment]
   company_id integer [ref: > companies.id, not null]
   sector_id integer [ref: > sectors.id, not null]
@@ -428,7 +484,7 @@ Table employer_contacts {
   interview_location varchar(200)
   delivered_to_email varchar(254)
   sent_at timestamp [not null]
-  Note: 'SET_NULL on sender_id and job_id'
+  Note: 'SET_NULL on sender_id and job_id · reportable via user_reports.reported_contact_id'
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -456,6 +512,13 @@ Table job_postings {
   search_keywords varchar(500)
   admin_disabled boolean [not null, default: false]
   admin_disabled_reason text
+  // Walk-ins / referrals / off-platform hires the employer records so the
+  // real fulfillment reflects in slots + analytics. Delta-adjusts slots
+  // when the count changes.
+  externally_hired_count integer [not null, default: 0]
+  // Who can see this posting on the public jobs page. `members` hides it
+  // from anonymous visitors — registered users still see everything.
+  visibility job_visibility [not null, default: 'public']
   deleted_at timestamp
   created_at timestamp [not null]
   updated_at timestamp [not null]
@@ -491,6 +554,7 @@ Table job_experience_requirements {
   description text
   any_experience_accepted boolean [not null, default: true]
   preferred_position varchar(200)
+  Note: 'preferred_position is comma-separated — employers list multiple acceptable prior roles, and a jobseeker with experience in ANY of them qualifies.'
 }
 
 Table applications {
@@ -591,6 +655,52 @@ Table activity_notifications {
   liker_count integer [not null, default: 1]
   liker_preview varchar(200)
   admin_message text
+  Note: 'Split at render time between the bell (matches / likes / hire flow) and the mail icon (applications, employer_contacted, invited_to_apply, new_announcement, job_deleted_by_admin). SET_NULL on job_id so job take-downs preserve their notification.'
+}
+
+// ═══════════════════════════════════════════════════════════════
+// core — inbox overlay + PSGC geography
+// ═══════════════════════════════════════════════════════════════
+
+// Per-user overlay on inbox rows sourced from Application /
+// EmployerContact / AdminAnnouncement. The source rows themselves are
+// shared with the other party (or with the whole audience), so we
+// can't delete them when one user hides them from their inbox — this
+// table records their view choices instead. Auto-purges dismissed
+// rows after 30 days on next inbox render.
+Table inbox_user_state {
+  id integer [pk, increment]
+  user_id integer [ref: > users.id, not null]
+  source_type inbox_source_type [not null]
+  source_id integer [not null]
+  is_dismissed boolean [not null, default: false]
+  is_pinned boolean [not null, default: false]
+  updated_at timestamp [not null]
+  Indexes {
+    (user_id, source_type, source_id) [unique]
+    (user_id, is_dismissed)
+    (user_id, is_pinned)
+  }
+}
+
+Table provinces {
+  id integer [pk, increment]
+  code varchar(20) [unique, not null]
+  name varchar(200) [not null]
+}
+
+Table cities_municipalities {
+  id integer [pk, increment]
+  code varchar(20) [unique, not null]
+  name varchar(200) [not null]
+  province_id integer [ref: > provinces.id, not null]
+}
+
+Table barangays {
+  id integer [pk, increment]
+  code varchar(20) [unique, not null]
+  name varchar(200) [not null]
+  city_id integer [ref: > cities_municipalities.id, not null]
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -624,6 +734,10 @@ Table import_batches {
 Table site_settings {
   id integer [pk, note: 'Singleton — always pk=1']
   compatibility_threshold double [not null, default: 80.0]
+  // hard_to_fill_days + hard_to_fill_applicant_threshold are legacy fields
+  // superseded by JobPosting.is_hard_to_fill (title/cert-based per PESO's
+  // redefinition). Kept in the DB for now but the admin UI no longer
+  // exposes them.
   hard_to_fill_days integer [not null, default: 30]
   hard_to_fill_applicant_threshold integer [not null, default: 3]
   max_hide_suggestions integer [not null, default: 5]
@@ -640,17 +754,22 @@ Table site_settings {
   updated_at timestamp [not null]
 }
 
+// Reports admins triage in the User Reports queue. Exactly one of the
+// four reported_* FKs is set — account_type disambiguates.
 Table user_reports {
   id integer [pk, increment]
   reported_jobseeker_id integer [ref: > jobseeker_profiles.id]
   reported_company_id integer [ref: > companies.id]
+  reported_job_id integer [ref: > job_postings.id]
+  reported_contact_id integer [ref: > employer_contacts.id]
   account_type user_report_account_type [not null]
   description text [not null]
   filed_by_id integer [ref: > users.id]
   status user_report_status [not null, default: 'open']
   created_at timestamp [not null]
   reviewed_at timestamp
-  Note: 'Exactly one of reported_jobseeker_id / reported_company_id is set'
+  resolution_note varchar(200)
+  Note: 'CASCADE on the four reported_* FKs so orphaned reports auto-clear.'
 }
 
 Table faqs {
@@ -671,6 +790,7 @@ Table admin_announcements {
   subject varchar(200) [not null]
   body text [not null]
   sent_at timestamp [not null]
+  Note: 'Fans out one activity_notification (type=new_announcement) per user in the target audience on save.'
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -751,30 +871,6 @@ Table location_snapshots {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// core — PSGC geography
-// ═══════════════════════════════════════════════════════════════
-
-Table provinces {
-  id integer [pk, increment]
-  code varchar(20) [unique, not null]
-  name varchar(200) [not null]
-}
-
-Table cities_municipalities {
-  id integer [pk, increment]
-  code varchar(20) [unique, not null]
-  name varchar(200) [not null]
-  province_id integer [ref: > provinces.id, not null]
-}
-
-Table barangays {
-  id integer [pk, increment]
-  code varchar(20) [unique, not null]
-  name varchar(200) [not null]
-  city_id integer [ref: > cities_municipalities.id, not null]
-}
-
-// ═══════════════════════════════════════════════════════════════
 // Visual grouping (dbdiagram.io draws these as coloured clusters)
 // ═══════════════════════════════════════════════════════════════
 
@@ -798,6 +894,7 @@ TableGroup jobseekers {
 TableGroup employers {
   companies
   company_sector_badges
+  company_pending_sector_badges
   employer_profiles
   verification_documents
   candidate_interactions
@@ -847,6 +944,7 @@ TableGroup analytics {
 }
 
 TableGroup core {
+  inbox_user_state
   provinces
   cities_municipalities
   barangays

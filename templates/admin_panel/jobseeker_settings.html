@@ -228,103 +228,108 @@
   </details>
 
   <!-- ── ID Verification Review ────────────────────────────────── -->
+  {# Layout mirrors the company verification block in                      #}
+  {# templates/admin_panel/company_settings.html — a document card at the  #}
+  {# top with a status circle + "View file" / "Not yet uploaded" line,     #}
+  {# then a Set Status form card with a single status picker + optional   #}
+  {# rejection note. Keeps the two admin verification flows visually       #}
+  {# identical instead of the earlier three-button dance.                  #}
   <div class="border-t border-taupe/40 mt-4 pt-8 mb-12">
     <div class="flex items-baseline justify-between gap-3 mb-1 flex-wrap">
-      <h3 class="text-lg font-bold text-primary">ID Verification</h3>
-      {% if jobseeker.id_verification_status == 'verified' %}
-      <span class="inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/10 px-3 py-1 rounded-full">
-        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-        Verified{% if jobseeker.id_verified_at %} · {{ jobseeker.id_verified_at|date:"M j, Y" }}{% endif %}
-      </span>
-      {% elif jobseeker.id_verification_status == 'pending' %}
-      <span class="inline-flex items-center gap-1 text-xs font-semibold text-amber border border-amber/30 bg-amber/10 px-3 py-1 rounded-full">Pending Review</span>
-      {% elif jobseeker.id_verification_status == 'denied' %}
-      <span class="inline-flex items-center gap-1 text-xs font-semibold text-red-500 border border-red-200 bg-red-50 px-3 py-1 rounded-full">Denied</span>
-      {% else %}
-      <span class="inline-flex items-center gap-1 text-xs font-semibold text-muted border border-taupe/40 bg-taupe/10 px-3 py-1 rounded-full">Not Submitted</span>
-      {% endif %}
+      <h3 class="text-lg font-bold text-primary">ID Verification Document</h3>
+      <span class="text-muted text-xs">{% if jobseeker.id_document %}1{% else %}0{% endif %} of 1 uploaded</span>
     </div>
     <p class="text-muted text-xs mb-4">
       Optional PESO-verified badge. Cross-check the uploaded ID against the jobseeker's
       name and birthday above before approving.
     </p>
 
-    <div class="bg-white border border-gray-200 rounded-2xl p-5">
-      {% if jobseeker.id_document %}
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5 items-start">
-        <div class="md:col-span-1">
-          <p class="text-muted text-xs mb-1">Submitted document</p>
-          <a href="{{ jobseeker.id_document.url }}" target="_blank"
-             class="inline-flex items-center gap-2 bg-surface border border-taupe/40 text-primary text-xs font-semibold px-4 py-2 rounded-full hover:bg-taupe/30 transition">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-            </svg>
-            View file
-          </a>
-          {% if jobseeker.id_submitted_at %}
-          <p class="text-muted text-[11px] italic mt-2">Submitted {{ jobseeker.id_submitted_at|date:"M j, Y · g:i A" }}</p>
+    <!-- Document card -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
+      <div class="flex items-center justify-between border border-gray-100 rounded-xl px-4 py-3 gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          {% if jobseeker.id_document %}
+          <div class="w-6 h-6 rounded-full bg-teal/15 border border-teal/40 flex items-center justify-center flex-shrink-0">
+            <svg class="w-3.5 h-3.5 text-teal" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+          </div>
+          {% else %}
+          <div class="w-6 h-6 rounded-full border border-taupe/40 flex-shrink-0"></div>
           {% endif %}
-        </div>
-        <div class="md:col-span-2">
-          <p class="text-muted text-xs mb-1">On-file identity to cross-check</p>
-          <div class="bg-surface/60 border border-taupe/40 rounded-xl px-4 py-3 text-sm">
-            <p class="text-primary font-semibold">
-              {{ jobseeker.first_name }}{% if jobseeker.middle_name %} {{ jobseeker.middle_name }}{% endif %} {{ jobseeker.last_name }}{% if jobseeker.suffix %}, {{ jobseeker.suffix }}{% endif %}
+          <div class="min-w-0">
+            <p class="text-primary text-sm {% if jobseeker.id_document %}font-medium{% endif %}">Government-issued ID</p>
+            {% if jobseeker.id_document %}
+            <p class="text-teal text-xs">
+              Uploaded · <a href="{{ jobseeker.id_document.url }}" target="_blank" class="underline hover:text-primary transition">View file</a>
+              {% if jobseeker.id_submitted_at %}<span class="text-muted">· {{ jobseeker.id_submitted_at|date:"M j, Y" }}</span>{% endif %}
             </p>
-            <p class="text-muted text-xs mt-0.5">
-              Born {% if jobseeker.date_of_birth %}{{ jobseeker.date_of_birth|date:"F j, Y" }}{% else %}<span class="italic">not on file</span>{% endif %}
-              {% if jobseeker.sex %} · {{ jobseeker.get_sex_display }}{% endif %}
-            </p>
+            {% else %}
+            <p class="text-muted text-xs italic">Not yet uploaded</p>
+            {% endif %}
           </div>
         </div>
       </div>
 
-      {% if jobseeker.id_verification_status == 'pending' or jobseeker.id_verification_status == 'denied' %}
-      {# Approve / Deny actions #}
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <form method="POST" id="approve-id-form">
-          {% csrf_token %}
-          <input type="hidden" name="form" value="verify_id_approve">
-          <button type="button"
-                  onclick="confirmAction({title:'Approve ID verification?', body:'This grants {{ jobseeker.first_name|escapejs }} the PESO Verified badge — visible to employers on their profile.', ctaLabel:'Approve', ctaClass:'bg-teal hover:bg-teal/90', onConfirm:function(){document.getElementById('approve-id-form').submit();}})"
-                  class="w-full bg-teal text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-teal/90 transition">
-            Approve — Grant Verified Badge
-          </button>
-        </form>
-        <form method="POST" id="deny-id-form" class="flex flex-col gap-2">
-          {% csrf_token %}
-          <input type="hidden" name="form" value="verify_id_deny">
-          <textarea name="id_verification_note" rows="2"
-                    placeholder="Reason shown to the jobseeker (e.g. ID photo is blurred, please resubmit)"
-                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ jobseeker.id_verification_note }}</textarea>
-          <button type="submit"
-                  class="w-full bg-white border border-red-300 text-red-500 text-sm font-semibold px-6 py-2 rounded-full hover:bg-red-50 transition">
-            Deny — Ask for Resubmission
-          </button>
-        </form>
+      {% if jobseeker.id_document %}
+      <div class="mt-4 pt-4 border-t border-gray-100">
+        <p class="text-muted text-xs mb-1">On-file identity to cross-check</p>
+        <div class="bg-surface/60 border border-taupe/40 rounded-xl px-4 py-3 text-sm">
+          <p class="text-primary font-semibold">
+            {{ jobseeker.first_name }}{% if jobseeker.middle_name %} {{ jobseeker.middle_name }}{% endif %} {{ jobseeker.last_name }}{% if jobseeker.suffix %}, {{ jobseeker.suffix }}{% endif %}
+          </p>
+          <p class="text-muted text-xs mt-0.5">
+            Born {% if jobseeker.date_of_birth %}{{ jobseeker.date_of_birth|date:"F j, Y" }}{% else %}<span class="italic">not on file</span>{% endif %}
+            {% if jobseeker.sex %} · {{ jobseeker.get_sex_display }}{% endif %}
+          </p>
+        </div>
       </div>
-      {% elif jobseeker.id_verification_status == 'verified' %}
-      <div class="border-t border-gray-100 pt-4 flex justify-end">
-        <form method="POST" id="revoke-id-form">
-          {% csrf_token %}
-          <input type="hidden" name="form" value="verify_id_deny">
-          <input type="hidden" name="id_verification_note" value="Verification revoked by PESO admin.">
-          <button type="button"
-                  onclick="confirmAction({title:'Revoke verified status?', body:'The jobseeker\'s PESO Verified badge will be removed. They can resubmit a new ID from their settings.', ctaLabel:'Revoke', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('revoke-id-form').submit();}})"
-                  class="text-red-500 text-xs font-semibold hover:text-red-600 transition">
-            Revoke verified status
-          </button>
-        </form>
-      </div>
-      {% endif %}
-
-      {% else %}
-      <p class="text-muted text-sm italic text-center py-4">
-        This jobseeker hasn't submitted an ID for verification yet.
-      </p>
       {% endif %}
     </div>
+
+    <!-- Status change form -->
+    <form method="POST" class="bg-white border border-gray-200 rounded-2xl p-5">
+      {% csrf_token %}
+      <input type="hidden" name="form" value="verify_id_status">
+      <p class="text-sm font-bold text-primary mb-1">Set Verification Status</p>
+      <p class="text-muted text-xs mb-4">
+        Setting status to <strong class="text-primary">Verified</strong> grants the jobseeker the PESO Verified badge. Choosing <strong class="text-primary">Denied</strong> sends the reason back to the jobseeker so they can re-submit.
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 items-start">
+        <div>
+          <label class="block text-primary text-xs mb-1">Status</label>
+          <div class="relative">
+            <select name="id_verification_status"
+                    class="w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+              <option value="unverified" {% if jobseeker.id_verification_status == 'unverified' %}selected{% endif %}>Unverified</option>
+              <option value="pending"    {% if jobseeker.id_verification_status == 'pending'    %}selected{% endif %}>Pending Review</option>
+              <option value="verified"   {% if jobseeker.id_verification_status == 'verified'   %}selected{% endif %}>Verified</option>
+              <option value="denied"     {% if jobseeker.id_verification_status == 'denied'     %}selected{% endif %}>Denied</option>
+            </select>
+            <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-[11px] text-muted mt-1">
+            Current:
+            {% if jobseeker.id_verification_status == 'verified' %}<span class="text-teal font-semibold">Verified</span>{% if jobseeker.id_verified_at %} · {{ jobseeker.id_verified_at|date:"M j, Y" }}{% endif %}
+            {% elif jobseeker.id_verification_status == 'pending' %}<span class="text-amber font-semibold">Pending Review</span>
+            {% elif jobseeker.id_verification_status == 'denied' %}<span class="text-red-500 font-semibold">Denied</span>
+            {% else %}<span class="text-muted">Unverified</span>
+            {% endif %}
+          </p>
+        </div>
+        <div>
+          <label class="block text-primary text-xs mb-1">Rejection Note <span class="text-muted">(only shown for "Denied")</span></label>
+          <textarea name="id_verification_note" rows="3" placeholder="e.g. ID photo is blurred — please resubmit a clearer scan."
+                    class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ jobseeker.id_verification_note }}</textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit"
+                class="bg-amber text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-amber/90 transition">
+          Save Verification Status
+        </button>
+      </div>
+    </form>
   </div>
 
   <!-- ── Disable / Enable Account ──────────────────────────────── -->

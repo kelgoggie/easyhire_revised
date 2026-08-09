@@ -177,6 +177,53 @@
 
       /* Font family fallback while Google Fonts loads */
       body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+      /* Footer fallbacks — when Tailwind CDN is slow on flaky mobile
+         connections the footer was rendering as light-on-white because
+         none of these were in the base fallback set. */
+      .bg-gray-900 { background-color: #111827; }
+      .text-white\/60 { color: rgba(255, 255, 255, 0.6); }
+      .text-white\/90 { color: rgba(255, 255, 255, 0.9); }
+      .bg-white\/10 { background-color: rgba(255, 255, 255, 0.1); }
+      .border-white\/20 { border-color: rgba(255, 255, 255, 0.2); }
+      .pt-10 { padding-top: 2.5rem; }
+      .pt-16 { padding-top: 4rem; }
+      .pb-8  { padding-bottom: 2rem; }
+      .py-8  { padding-top: 2rem; padding-bottom: 2rem; }
+      .px-4  { padding-left: 1rem; padding-right: 1rem; }
+      .px-8  { padding-left: 2rem; padding-right: 2rem; }
+      .max-w-6xl { max-width: 72rem; }
+      .items-start   { align-items: flex-start; }
+      .flex-row      { flex-direction: row; }
+      .flex-1        { flex: 1 1 0%; }
+      .min-w-0       { min-width: 0; }
+      .gap-3 { gap: 0.75rem; }
+      .gap-4 { gap: 1rem; }
+      .gap-6 { gap: 1.5rem; }
+      .gap-8 { gap: 2rem; }
+      .space-y-1 > * + * { margin-top: 0.25rem; }
+      .mb-2 { margin-bottom: 0.5rem; }
+      .tracking-wide { letter-spacing: 0.025em; }
+      .leading-relaxed { line-height: 1.625; }
+      @media (min-width: 640px) {
+        .sm\:pt-16 { padding-top: 4rem; }
+        .sm\:px-8 { padding-left: 2rem; padding-right: 2rem; }
+        .sm\:gap-4  { gap: 1rem; }
+        .sm\:gap-12 { gap: 3rem; }
+        .sm\:flex-row { flex-direction: row; }
+        .sm\:items-start { align-items: flex-start; }
+        .sm\:text-left { text-align: left; }
+        .sm\:justify-start { justify-content: flex-start; }
+        .sm\:w-20 { width: 5rem; }
+        .sm\:h-20 { height: 5rem; }
+      }
+      @media (min-width: 768px) {
+        .md\:px-12 { padding-left: 3rem; padding-right: 3rem; }
+        .md\:flex-row { flex-direction: row; }
+        .md\:items-start { align-items: flex-start; }
+        .md\:gap-10 { gap: 2.5rem; }
+        .md\:contents { display: contents; }
+      }
     </style>
 
     {% block extra_head %}{% endblock %}

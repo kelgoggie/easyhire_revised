@@ -5,17 +5,17 @@ register = template.Library()
 
 # (min_score, label, pill_classes, icon_color_class, emoji_type)
 # emoji_type maps to an SVG smiley/frown variant rendered by the {% match_badge %} tag
-# Palette note: Decent uses the same amber palette as Unmatched so the lower
-# tier still reads as "not the strongest fit" without a red-alarm negative.
-# Anything below 70 collapses into a single "Unmatched" bucket — nicer to
-# jobseekers than a graded Partial/Poor split, and employers still get a
-# clean triage signal via the smiley.
+# Palette note: Decent uses amber (still a "warm/warning" positive), while
+# Unmatched drops to a neutral gray — the two tiers previously shared amber
+# and got visually confused. Anything below 70 collapses into a single
+# "Unmatched" bucket — nicer to jobseekers than a graded Partial/Poor split,
+# and employers still get a clean triage signal via the smiley.
 TIERS = [
-    (98, 'Perfect Match',  'bg-emerald-500 text-white',                         'text-white',   'beam'),
-    (90, 'Great Match',    'bg-teal text-white',                                'text-white',   'smile'),
-    (80, 'Good Match',     'bg-teal/15 text-teal border border-teal/30',        'text-teal',    'smile'),
-    (70, 'Decent Match',   'bg-amber/15 text-amber border border-amber/30',     'text-amber',   'mild'),
-    (0,  'Unmatched',      'bg-amber/15 text-amber border border-amber/30',     'text-amber',   'sad'),
+    (98, 'Perfect Match',  'bg-emerald-500 text-white',                             'text-white',    'beam'),
+    (90, 'Great Match',    'bg-teal text-white',                                    'text-white',    'smile'),
+    (80, 'Good Match',     'bg-teal/15 text-teal border border-teal/30',            'text-teal',     'smile'),
+    (70, 'Decent Match',   'bg-amber/15 text-amber border border-amber/30',         'text-amber',    'mild'),
+    (0,  'Unmatched',      'bg-gray-100 text-gray-500 border border-gray-300',      'text-gray-400', 'sad'),
 ]
 
 
