@@ -9,7 +9,7 @@
 <div>
 
   <!-- Navbar -->
-  <nav class="bg-surface px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
+  <nav class="bg-surface px-3 sm:px-8 py-3 flex items-center justify-between gap-2 shadow-sm">
     <a href="/employers/" class="flex items-center gap-2 min-w-0">
       <img src="{% static 'images/navbar_logo.svg' %}" alt="EasyHire" class="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0">
       <span class="font-bold text-lg sm:text-xl truncate">
@@ -24,7 +24,7 @@
         <a href="/analytics/" class="text-muted hover:text-primary transition">Analytics</a>
         <a href="/login/" class="text-primary font-semibold hover:text-teal transition">EasyHire for Jobseekers</a>
       </div>
-      <a href="/login/" class="md:hidden text-primary text-xs font-semibold hover:text-teal transition">For Jobseekers</a>
+      <a href="/login/" class="md:hidden text-primary text-xs font-semibold hover:text-teal transition whitespace-nowrap">For Jobseekers</a>
     </div>
   </nav>
 
@@ -32,9 +32,10 @@
   <div class="flex flex-col md:flex-row min-h-[calc(100vh_-_3.75rem)]">
 
     <!-- Left panel -->
-    <div class="w-full md:w-1/2 bg-surface flex items-center justify-center py-8 md:py-12 px-4 sm:px-8">
-      {# Fixed 288px card + mx-auto centering, matching the jobseeker login. #}
-      <div class="bg-white border border-gray-200 rounded-2xl p-8 w-72 mx-auto shadow-sm relative">
+    <div class="w-full md:w-1/2 bg-surface flex items-center justify-center py-8 md:py-12 px-3 sm:px-8">
+      {# 288px card + mx-auto centering; w-full+max-w allows it to shrink   #}
+      {# on sub-320px viewports instead of overflowing the panel.           #}
+      <div class="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 w-full max-w-[288px] mx-auto shadow-sm relative">
 
         <!-- eH icon -->
         <div class="absolute top-4 right-4 w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center overflow-hidden">
