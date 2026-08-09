@@ -219,9 +219,14 @@
 
     <p class="text-sm font-bold text-primary mb-2">Main Branch Address <span class="text-red-500">*</span></p>
     <div class="mb-4">
-      <input type="text" name="main_branch_address" value="{{ company.main_branch_address }}" required disabled
+      <input type="text" name="main_branch_address" id="admin_main_branch_address"
+             value="{{ company.main_branch_address }}" required disabled
              placeholder="Free-text branch address (used for non-Iloilo / overseas)"
-             class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+             class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed read-only:bg-gray-50 read-only:cursor-not-allowed">
+      <label class="inline-flex items-center gap-1.5 text-xs text-muted mt-1.5 cursor-pointer">
+        <input type="checkbox" id="admin_same_as_iloilo" class="company-field accent-primary w-3.5 h-3.5" disabled>
+        Same as Iloilo City Branch Address
+      </label>
     </div>
 
     <p class="text-sm font-bold text-primary mb-2">Iloilo City Branch Address</p>
@@ -238,11 +243,104 @@
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Barangay <span class="text-red-500">*</span></label>
-        <input type="text" name="iloilo_barangay_name" value="{{ company.iloilo_barangay_name|default:'' }}"
-               placeholder="e.g. Jaro" required disabled
-               class="company-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+        <div class="relative">
+          <select name="iloilo_barangay" id="admin_iloilo_barangay" required disabled
+                  class="company-field w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 pr-9 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+            <option value="">Loading...</option>
+          </select>
+          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+        {# Backend reads iloilo_barangay_name; JS keeps it in sync with the #}
+        {# selected option's display text so we don't need a code→name     #}
+        {# lookup server-side.                                              #}
+        <input type="hidden" name="iloilo_barangay_name" id="admin_iloilo_barangay_name"
+               value="{{ company.iloilo_barangay_name|default:'' }}">
       </div>
     </div>
+
+    <script>
+    (function() {
+      const ILOILO_CITY_CODE = '063022000';
+      const bgySel  = document.getElementById('admin_iloilo_barangay');
+      const bgyName = document.getElementById('admin_iloilo_barangay_name');
+      const bldg    = document.querySelector('#company-form [name="iloilo_bldg_unit"]');
+      const street  = document.querySelector('#company-form [name="iloilo_street"]');
+      const main    = document.getElementById('admin_main_branch_address');
+      const cb      = document.getElementById('admin_same_as_iloilo');
+      if (!bgySel) return;
+
+      const savedBgyName = '{{ company.iloilo_barangay_name|default:""|escapejs }}';
+
+      // Populate the dropdown, preselecting the saved barangay by NAME
+      // (we don't store the PSGC code on Company today, so name-match is
+      // the only signal available — same approach the admin edit-resume
+      // dropdowns use).
+      fetch('/api/barangays/' + ILOILO_CITY_CODE + '/')
+        .then(function(r){ return r.json(); })
+        .then(function(barangays) {
+          bgySel.innerHTML = '<option value="">Select Barangay...</option>';
+          barangays.forEach(function(b) {
+            const opt = document.createElement('option');
+            opt.value = b.code;
+            opt.textContent = b.name;
+            if (savedBgyName && b.name === savedBgyName) opt.selected = true;
+            bgySel.appendChild(opt);
+          });
+        });
+
+      function syncBgyName() {
+        if (bgySel.value) {
+          bgyName.value = bgySel.options[bgySel.selectedIndex].text;
+        } else {
+          bgyName.value = '';
+        }
+      }
+      bgySel.addEventListener('change', syncBgyName);
+      // Also sync on form submit so a fresh page-load without a change
+      // event still writes the current text into the hidden field.
+      document.getElementById('company-form').addEventListener('submit', syncBgyName);
+
+      // ── "Same as Iloilo branch address" sync ─────────────────────
+      // Mirrors the registration-page checkbox. When checked, Main
+      // Branch Address is built from Bldg/Street/Barangay + Iloilo City
+      // and locked read-only. Unchecking restores whatever the admin
+      // had typed before.
+      function buildIloiloAddress() {
+        const parts = [];
+        if (bldg && bldg.value.trim())   parts.push(bldg.value.trim());
+        if (street && street.value.trim()) parts.push(street.value.trim());
+        const bgText = bgySel.selectedIndex >= 0
+          ? (bgySel.options[bgySel.selectedIndex].text || '').replace(/^(Loading|Select).*/, '')
+          : '';
+        if (bgText) parts.push(bgText);
+        parts.push('Iloilo City');
+        return parts.join(', ');
+      }
+      function syncIfChecked() {
+        if (cb && cb.checked && main) main.value = buildIloiloAddress();
+      }
+      if (cb && main) {
+        cb.addEventListener('change', function() {
+          if (cb.checked) {
+            main.dataset.priorValue = main.value;
+            main.value = buildIloiloAddress();
+            main.readOnly = true;
+          } else {
+            main.readOnly = false;
+            if (main.dataset.priorValue !== undefined) {
+              main.value = main.dataset.priorValue;
+              delete main.dataset.priorValue;
+            }
+          }
+        });
+        [bldg, street, bgySel].forEach(function(el) {
+          if (!el) return;
+          el.addEventListener('input',  syncIfChecked);
+          el.addEventListener('change', syncIfChecked);
+        });
+      }
+    })();
+    </script>
 
     <div class="mb-4">
       <label class="block text-primary text-xs mb-1">Description</label>
