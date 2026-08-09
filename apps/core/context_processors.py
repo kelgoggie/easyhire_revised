@@ -83,23 +83,35 @@ def notifications_baseline(request):
 
 def _count_inbox_items(user):
     """Lightweight count — mirrors the kinds of items inbox() renders for
-    each user type. Uses COUNT(*) queries rather than building full rows."""
+    each user type. Uses COUNT(*) queries rather than building full rows.
+
+    Subtracts rows the user has personally dismissed so the "new inbox"
+    dot doesn't light up as a side effect of the user deleting their own
+    messages. The seen_count in the session tracks the ACTIVE inbox size,
+    so `current` must reflect the same denominator.
+    """
     from apps.admin_panel.models import AdminAnnouncement
     from apps.employers.models import EmployerContact
     from apps.jobs.models import Application
+    from apps.core.models import InboxUserState
+
+    dismissed = InboxUserState.objects.filter(
+        user=user, is_dismissed=True,
+    ).count()
 
     if getattr(user, 'is_jobseeker', False):
         try:
             profile = user.jobseeker_profile
         except Exception:
             return 0
-        return (
+        total = (
             Application.objects.filter(jobseeker=profile).count()
             + EmployerContact.objects.filter(recipient=profile).count()
             + AdminAnnouncement.objects.filter(
                 audience__in=[AdminAnnouncement.AUDIENCE_ALL, AdminAnnouncement.AUDIENCE_JOBSEEKERS]
             ).count()
         )
+        return max(0, total - dismissed)
 
     if getattr(user, 'is_employer', False):
         try:
@@ -107,7 +119,7 @@ def _count_inbox_items(user):
         except Exception:
             return 0
         from apps.notifications.models import Notification
-        return (
+        total = (
             Application.objects.filter(job__company=company).count()
             + EmployerContact.objects.filter(company=company).count()
             + AdminAnnouncement.objects.filter(
@@ -118,5 +130,6 @@ def _count_inbox_items(user):
                 liker_preview='an account verification update',
             ).count()
         )
+        return max(0, total - dismissed)
 
     return 0

@@ -32,9 +32,12 @@
 
 {# Bulk-action bar — appears when at least one row checkbox is ticked.  #}
 {# Ships hidden; JS below toggles visibility + updates the count label. #}
+{# On the Deleted tab the destructive-vs-restore choices flip: instead   #}
+{# of a single "Delete selected" that would no-op (rows are already      #}
+{# dismissed), we render "Restore selected" + "Permanent delete".        #}
 <div id="inbox-bulk-bar" class="hidden mb-3 flex items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-2xl px-4 py-2.5">
   <p class="text-primary text-xs font-semibold"><span id="inbox-bulk-count">0</span> selected</p>
-  <div class="flex items-center gap-3">
+  <div class="flex items-center gap-2">
     <button type="button" id="inbox-bulk-select-all"
             class="inline-flex items-center gap-1.5 text-muted text-xs font-semibold hover:text-primary transition">
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -44,10 +47,21 @@
     </button>
     <button type="button" id="inbox-bulk-clear"
             class="text-muted text-xs font-semibold hover:text-primary transition">Clear</button>
+    {% if show_deleted %}
+    <button type="button" id="inbox-bulk-restore"
+            class="bg-teal text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-teal/90 transition">
+      Restore selected
+    </button>
+    <button type="button" id="inbox-bulk-permanent"
+            class="bg-red-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-600 transition">
+      Permanent delete
+    </button>
+    {% else %}
     <button type="button" id="inbox-bulk-delete"
             class="bg-red-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-red-600 transition">
       Delete selected
     </button>
+    {% endif %}
   </div>
 </div>
 
@@ -168,6 +182,11 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v6h6M20 20v-6h-6M20 8A8 8 0 006.34 6.34M4 16a8 8 0 0013.66 1.66"/></svg>
             <span>Restore</span>
           </button>
+          <button type="button" data-inbox-action="permanent-delete"
+                  class="w-full text-left px-3 py-2 text-red-500 hover:bg-red-50 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+            <span>Permanent delete</span>
+          </button>
           {% else %}
           <button type="button" data-inbox-action="delete"
                   class="w-full text-left px-3 py-2 text-red-500 hover:bg-red-50 flex items-center gap-2">
@@ -202,7 +221,6 @@
         {# label on the location line (Venue / Link / Phone Number). Sender  #}
         {# name falls back to just the company when the User row is gone.    #}
         <div class="text-primary text-sm leading-relaxed">
-          <p class="mb-3">Dear {{ item.detail_recipient_name|default:"Jobseeker" }},</p>
           <p class="whitespace-pre-line mb-4">{{ item.detail_body }}</p>
 
           <div class="my-5">
@@ -334,6 +352,31 @@ function toggleInboxDetail(idx) {
           toast('Could not restore. Try again.', 'error');
         }
       });
+    } else if (action === 'permanent-delete') {
+      function firePerm() {
+        const fd = new FormData();
+        fd.append('source_type', st); fd.append('source_id', sid);
+        postForm('/inbox/permanent-delete/', fd).then(function(d) {
+          if (d && d.ok) {
+            row.style.transition = 'opacity 180ms ease';
+            row.style.opacity = '0';
+            setTimeout(function() { row.remove(); refreshBulkBar(); }, 200);
+            toast('Permanently deleted.', 'success');
+          } else {
+            toast('Could not permanently delete. Try again.', 'error');
+          }
+        });
+      }
+      if (window.confirmAction) {
+        window.confirmAction({
+          title: 'Permanently delete this message?',
+          body: 'It will be gone from your inbox for good — no way to restore it later.',
+          ctaLabel: 'Permanent delete', ctaClass: 'bg-red-500 hover:bg-red-600',
+          onConfirm: firePerm,
+        });
+      } else if (confirm('Permanently delete this message?')) {
+        firePerm();
+      }
     } else if (action === 'report') {
       if (typeof window.openReportModal === 'function') {
         window.openReportModal({
@@ -392,6 +435,8 @@ function toggleInboxDetail(idx) {
   const bulkAll    = document.getElementById('inbox-bulk-select-all');
   const bulkClear  = document.getElementById('inbox-bulk-clear');
   const bulkDel    = document.getElementById('inbox-bulk-delete');
+  const bulkRest   = document.getElementById('inbox-bulk-restore');
+  const bulkPerm   = document.getElementById('inbox-bulk-permanent');
 
   function checkedBoxes() {
     return Array.from(document.querySelectorAll('.inbox-row-check:checked'));
@@ -443,6 +488,56 @@ function toggleInboxDetail(idx) {
       });
     } else if (confirm('Delete ' + boxes.length + ' messages?')) {
       fire();
+    }
+  });
+
+  // Deleted-tab bulk actions.
+  if (bulkRest) bulkRest.addEventListener('click', function() {
+    const boxes = checkedBoxes();
+    if (!boxes.length) return;
+    const fd = new FormData();
+    boxes.forEach(function(cb) { fd.append('keys', cb.dataset.key); });
+    postForm('/inbox/bulk-restore/', fd).then(function(d) {
+      if (d && d.ok) {
+        boxes.forEach(function(cb) {
+          const row = cb.closest('[data-inbox-row]');
+          if (row) row.remove();
+        });
+        refreshBulkBar();
+        toast('Restored ' + (d.restored || boxes.length) + ' to your inbox.', 'success');
+      } else {
+        toast('Could not restore. Try again.', 'error');
+      }
+    });
+  });
+  if (bulkPerm) bulkPerm.addEventListener('click', function() {
+    const boxes = checkedBoxes();
+    if (!boxes.length) return;
+    function firePerm() {
+      const fd = new FormData();
+      boxes.forEach(function(cb) { fd.append('keys', cb.dataset.key); });
+      postForm('/inbox/bulk-permanent-delete/', fd).then(function(d) {
+        if (d && d.ok) {
+          boxes.forEach(function(cb) {
+            const row = cb.closest('[data-inbox-row]');
+            if (row) row.remove();
+          });
+          refreshBulkBar();
+          toast('Permanently deleted ' + (d.purged || boxes.length) + '.', 'success');
+        } else {
+          toast('Could not permanently delete. Try again.', 'error');
+        }
+      });
+    }
+    if (window.confirmAction) {
+      window.confirmAction({
+        title: 'Permanently delete ' + boxes.length + ' messages?',
+        body: 'They will be gone from your inbox for good — no way to restore later.',
+        ctaLabel: 'Permanent delete', ctaClass: 'bg-red-500 hover:bg-red-600',
+        onConfirm: firePerm,
+      });
+    } else if (confirm('Permanently delete ' + boxes.length + ' messages?')) {
+      firePerm();
     }
   });
 })();

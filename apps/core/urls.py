@@ -13,4 +13,7 @@ urlpatterns = [
     path('inbox/restore/', views.inbox_restore, name='inbox_restore'),
     path('inbox/pin/', views.inbox_pin, name='inbox_pin'),
     path('inbox/bulk-dismiss/', views.inbox_bulk_dismiss, name='inbox_bulk_dismiss'),
+    path('inbox/permanent-delete/', views.inbox_permanent_delete, name='inbox_permanent_delete'),
+    path('inbox/bulk-restore/', views.inbox_bulk_restore, name='inbox_bulk_restore'),
+    path('inbox/bulk-permanent-delete/', views.inbox_bulk_permanent_delete, name='inbox_bulk_permanent_delete'),
 ]

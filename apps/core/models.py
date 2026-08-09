@@ -12,6 +12,9 @@ class InboxUserState(models.Model):
 
     - is_dismissed = True → row does not appear in this user's inbox.
     - is_pinned    = True → row floats above unpinned rows.
+    - is_permanent = True → row is permanently hidden. Implies is_dismissed
+      but also skips the Deleted tab AND the 30-day auto-purge, so the
+      source row never comes back into the user's view.
 
     (user, source_type, source_id) is unique.
     """
@@ -31,6 +34,7 @@ class InboxUserState(models.Model):
     source_id   = models.PositiveIntegerField()
     is_dismissed = models.BooleanField(default=False)
     is_pinned    = models.BooleanField(default=False)
+    is_permanent = models.BooleanField(default=False)
     updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:

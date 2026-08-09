@@ -1058,8 +1058,12 @@ def jobseeker_settings(request, pk):
             # Unified status picker — mirrors the company verification form
             # so the admin UI stays consistent. Dispatches based on the
             # target status. Reason is only stored when denying (matches
-            # how company rejection_note works).
+            # how company rejection_note works). Fires a jobseeker-facing
+            # notification when the status actually changes to verified or
+            # denied (silent for pending/unverified transitions and no-op
+            # saves).
             from django.utils import timezone
+            from apps.notifications.models import Notification as ActivityNotification
             new_status = (request.POST.get('id_verification_status') or '').strip().lower()
             note = (request.POST.get('id_verification_note') or '').strip()
             valid = {jobseeker.ID_UNVERIFIED, jobseeker.ID_PENDING,
@@ -1067,6 +1071,7 @@ def jobseeker_settings(request, pk):
             if new_status not in valid:
                 error = 'Please pick a valid verification status.'
             else:
+                previous_status = jobseeker.id_verification_status
                 jobseeker.id_verification_status = new_status
                 if new_status == jobseeker.ID_VERIFIED:
                     jobseeker.id_verified_at = timezone.now()
@@ -1099,6 +1104,16 @@ def jobseeker_settings(request, pk):
                     target_model='JobseekerProfile', target_id=jobseeker.id,
                     notes=audit_note,
                 )
+                # Notify the jobseeker on real transitions to verified/denied
+                if new_status != previous_status and new_status in (jobseeker.ID_VERIFIED, jobseeker.ID_DENIED):
+                    ActivityNotification.objects.create(
+                        recipient=jobseeker.user,
+                        notif_type=(ActivityNotification.ID_VERIFICATION_APPROVED
+                                    if new_status == jobseeker.ID_VERIFIED
+                                    else ActivityNotification.ID_VERIFICATION_DENIED),
+                        jobseeker=jobseeker,
+                        admin_message=(note if new_status == jobseeker.ID_DENIED else ''),
+                    )
 
     ctx = _admin_context(request)
     ctx.update({

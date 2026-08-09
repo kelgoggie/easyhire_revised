@@ -11,6 +11,9 @@ class Notification(models.Model):
     JOB_DELETED_BY_ADMIN = 'job_deleted_by_admin'
     PERSONAL_INFO_APPROVED = 'personal_info_approved'
     PERSONAL_INFO_REJECTED = 'personal_info_rejected'
+    # PESO reviewed the jobseeker's uploaded ID document.
+    ID_VERIFICATION_APPROVED = 'id_verification_approved'   # jobseeker-facing
+    ID_VERIFICATION_DENIED   = 'id_verification_denied'     # jobseeker-facing
     NEW_APPLICATION       = 'new_application'        # employer-facing: new job application received
     APPLICATION_ACCEPTED  = 'application_accepted'   # jobseeker-facing
     APPLICATION_REJECTED  = 'application_rejected'   # jobseeker-facing
@@ -40,6 +43,8 @@ class Notification(models.Model):
         (JOB_DELETED_BY_ADMIN,   'Job Deleted by Admin'),
         (PERSONAL_INFO_APPROVED, 'Personal Info Change Approved'),
         (PERSONAL_INFO_REJECTED, 'Personal Info Change Rejected'),
+        (ID_VERIFICATION_APPROVED, 'ID Verification Approved'),
+        (ID_VERIFICATION_DENIED,   'ID Verification Denied'),
         (NEW_APPLICATION,        'New Job Application'),
         (APPLICATION_ACCEPTED,   'Application Accepted'),
         (APPLICATION_REJECTED,   'Application Rejected'),

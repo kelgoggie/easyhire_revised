@@ -150,6 +150,8 @@ Enum notification_type_activity {
   job_deleted_by_admin
   personal_info_approved
   personal_info_rejected
+  id_verification_approved
+  id_verification_denied
   new_application
   application_accepted
   application_rejected
@@ -675,6 +677,7 @@ Table inbox_user_state {
   source_id integer [not null]
   is_dismissed boolean [not null, default: false]
   is_pinned boolean [not null, default: false]
+  is_permanent boolean [not null, default: false, note: 'Permanent delete: dismissed forever, skipped by Deleted tab and 30-day auto-purge']
   updated_at timestamp [not null]
   Indexes {
     (user_id, source_type, source_id) [unique]

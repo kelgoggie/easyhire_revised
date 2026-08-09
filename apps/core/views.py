@@ -333,23 +333,29 @@ def inbox(request):
     # Auto-purge: delete dismissed rows older than 30 days on every inbox
     # render. Cheap (one indexed DELETE) and runs on the user's own visit
     # so no cron/management-command is needed for the 30-day sweep.
+    # Permanent-delete rows are exempt — they stay forever so the source
+    # row never resurfaces in the user's inbox.
     InboxUserState.objects.filter(
-        user=user, is_dismissed=True,
+        user=user, is_dismissed=True, is_permanent=False,
         updated_at__lt=_tz2.now() - _timedelta(days=30),
     ).delete()
     state_rows = InboxUserState.objects.filter(user=user).values(
-        'source_type', 'source_id', 'is_dismissed', 'is_pinned',
+        'source_type', 'source_id', 'is_dismissed', 'is_pinned', 'is_permanent',
     )
     state_map = {(r['source_type'], r['source_id']): r for r in state_rows}
     def _state_key(it): return (it.get('source_type', ''), it.get('source_id', 0))
     # Deleted-tab support: ?kind=deleted flips the filter so we render ONLY
-    # dismissed rows (up to 30 days back, per the purge above). All other
-    # filters exclude dismissed rows as before.
+    # dismissed-but-not-permanent rows (up to 30 days back, per the purge
+    # above). All other filters exclude dismissed rows as before. Permanent
+    # rows are hidden from BOTH tabs — they're gone from the user's view.
     _show_deleted = (request.GET.get('kind') or '').strip().lower() == 'deleted'
     if _show_deleted:
-        items = [it for it in items if state_map.get(_state_key(it), {}).get('is_dismissed')]
+        items = [it for it in items
+                 if state_map.get(_state_key(it), {}).get('is_dismissed')
+                 and not state_map.get(_state_key(it), {}).get('is_permanent')]
     else:
-        items = [it for it in items if not state_map.get(_state_key(it), {}).get('is_dismissed')]
+        items = [it for it in items
+                 if not state_map.get(_state_key(it), {}).get('is_dismissed')]
     for it in items:
         it['is_pinned']    = bool(state_map.get(_state_key(it), {}).get('is_pinned'))
         it['is_dismissed'] = bool(state_map.get(_state_key(it), {}).get('is_dismissed'))
@@ -386,12 +392,17 @@ def inbox(request):
         it['is_unread'] = bool(last_seen_at and ts and ts > last_seen_at)
 
     # Snapshot BEFORE filtering so the sidebar dot tracks "anything new at all",
-    # not "anything new in the currently selected filter".
-    request.session['inbox_seen_count'] = total_items
-    # Bump the last-seen timestamp so per-row unread dots clear on next visit.
-    # We do it AFTER computing is_unread above so the current render still
-    # shows the dots — they'll clear on the next inbox load.
-    request.session['inbox_last_seen_at'] = _tz.now().isoformat()
+    # not "anything new in the currently selected filter". Skip the update
+    # when the user is on the Deleted tab — that view is a recycle bin, not
+    # the active inbox, so it should not baseline the "seen" count against
+    # only the dismissed rows (which would leave the dot lit up as soon as
+    # any non-dismissed row exists).
+    if not _show_deleted:
+        request.session['inbox_seen_count'] = total_items
+        # Bump the last-seen timestamp so per-row unread dots clear on next
+        # visit. Done AFTER computing is_unread above so the current render
+        # still shows the dots — they'll clear on the next inbox load.
+        request.session['inbox_last_seen_at'] = _tz.now().isoformat()
 
     # ── Text search ────────────────────────────────────────────────
     # Substring match (case-insensitive) across the text a user is likely
@@ -427,8 +438,9 @@ def inbox(request):
                    for key, members in KIND_GROUPS.items()}
     # Deleted count comes straight from the state table (independent of the
     # normal item list, which excludes dismissed rows on the default tab).
+    # Permanents are excluded — they don't show in the Deleted tab either.
     deleted_count = InboxUserState.objects.filter(
-        user=user, is_dismissed=True,
+        user=user, is_dismissed=True, is_permanent=False,
     ).count()
 
     kind_filter = (request.GET.get('kind') or '').strip().lower()
@@ -456,6 +468,7 @@ def inbox(request):
         'kind_filter': kind_filter,
         'kind_counts': kind_counts,
         'deleted_count': deleted_count,
+        'show_deleted': _show_deleted,
         'total_items': filtered_total,
         'sort': sort,
         'search': search,
@@ -559,6 +572,63 @@ def inbox_bulk_dismiss(request):
         except Exception:
             continue
     return JsonResponse({'ok': True, 'dismissed': dismissed})
+
+
+@login_required
+def inbox_permanent_delete(request):
+    """Hide a Deleted-tab row forever. Sets is_permanent so the 30-day
+    auto-purge skips it AND both tabs filter it out, so the source row
+    never resurfaces in this user's inbox."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+    st = (request.POST.get('source_type') or '').strip().lower()
+    sid = (request.POST.get('source_id') or '').strip()
+    if st not in _VALID_SOURCES or not sid.isdigit():
+        return JsonResponse({'ok': False, 'error': 'Bad source'}, status=400)
+    _upsert_inbox_state(request.user, st, sid, is_dismissed=True, is_permanent=True)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def inbox_bulk_restore(request):
+    """Undo dismiss for many rows at once. Same key format as
+    inbox_bulk_dismiss ('source_type:source_id' repeated in `keys`)."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+    raw_keys = request.POST.getlist('keys')
+    restored = 0
+    for raw in raw_keys:
+        try:
+            st, _, sid = raw.partition(':')
+            st = (st or '').strip().lower()
+            if st not in _VALID_SOURCES or not sid.isdigit():
+                continue
+            _upsert_inbox_state(request.user, st, sid, is_dismissed=False, is_permanent=False)
+            restored += 1
+        except Exception:
+            continue
+    return JsonResponse({'ok': True, 'restored': restored})
+
+
+@login_required
+def inbox_bulk_permanent_delete(request):
+    """Permanent-delete many rows at once. Same key format as the other
+    bulk endpoints."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+    raw_keys = request.POST.getlist('keys')
+    purged = 0
+    for raw in raw_keys:
+        try:
+            st, _, sid = raw.partition(':')
+            st = (st or '').strip().lower()
+            if st not in _VALID_SOURCES or not sid.isdigit():
+                continue
+            _upsert_inbox_state(request.user, st, sid, is_dismissed=True, is_permanent=True)
+            purged += 1
+        except Exception:
+            continue
+    return JsonResponse({'ok': True, 'purged': purged})
 
 
 def _dedupe_locations(rows):

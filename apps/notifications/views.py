@@ -99,21 +99,34 @@ def notifications_api(request):
             item['actor']  = 'PESO Admin'
             item['verb']   = f'disabled your job post "{n.liker_preview or "Untitled"}".'
             item['quoted'] = n.admin_message or 'No reason provided.'
-            item['icon']   = 'briefcase'
+            item['icon']   = 'warning'
             item['meta']   = ''
             item['url']    = '/employers/jobs/' if n.recipient.is_employer else '#'
         elif n.notif_type == Notification.PERSONAL_INFO_APPROVED:
             item['actor'] = 'PESO Admin'
             item['verb']  = 'approved your personal information change request.'
-            item['icon']  = 'sparkle'
+            item['icon']  = 'check'
             item['meta']  = ''
             item['url']   = '/settings/'
         elif n.notif_type == Notification.PERSONAL_INFO_REJECTED:
             item['actor'] = 'PESO Admin'
             item['verb']  = 'denied your personal information change request.'
-            item['icon']  = 'sparkle'
+            item['icon']  = 'xmark'
             item['meta']  = ''
             item['url']   = '/settings/'
+        elif n.notif_type == Notification.ID_VERIFICATION_APPROVED:
+            item['actor'] = 'PESO Admin'
+            item['verb']  = 'approved your ID verification. You now have the PESO Verified badge.'
+            item['icon']  = 'check'
+            item['meta']  = ''
+            item['url']   = '/settings/'
+        elif n.notif_type == Notification.ID_VERIFICATION_DENIED:
+            item['actor']  = 'PESO Admin'
+            item['verb']   = 'denied your ID verification. Please review the note and resubmit.'
+            item['quoted'] = n.admin_message or ''
+            item['icon']   = 'xmark'
+            item['meta']   = ''
+            item['url']    = '/settings/verify-id/'
         elif n.notif_type == Notification.NEW_APPLICATION:
             # `liker_preview` carries the grouped label ("X and 2 others")
             # when set by notify_new_application. Falls back to the latest
@@ -131,12 +144,12 @@ def notifications_api(request):
         elif n.notif_type == Notification.APPLICATION_ACCEPTED:
             item['actor'] = n.company.name if n.company else 'Employer'
             item['verb']  = 'is moving forward with your application.'
-            item['icon']  = 'sparkle'
+            item['icon']  = 'check'
             item['url']   = '/applications/'
         elif n.notif_type == Notification.APPLICATION_REJECTED:
             item['actor'] = n.company.name if n.company else 'Employer'
             item['verb']  = 'declined your application.'
-            item['icon']  = 'sparkle'
+            item['icon']  = 'xmark'
             item['url']   = '/applications/'
         elif n.notif_type == Notification.APPLICATION_HIRED:
             item['actor'] = n.company.name if n.company else 'Employer'
@@ -147,7 +160,7 @@ def notifications_api(request):
             item['actor'] = n.company.name if n.company else 'An employer'
             job_title = n.job.title if n.job else 'a position'
             item['verb']  = f'sent you a job offer for {job_title}.'
-            item['icon']  = 'sparkle'
+            item['icon']  = 'briefcase'
             # Find the underlying application so the inline Accept/Decline
             # buttons can target it. Bell renders these buttons when
             # `hire_app_hashid` is non-empty.
@@ -173,14 +186,14 @@ def notifications_api(request):
                    if n.jobseeker else 'The jobseeker')
             item['actor'] = who
             item['verb']  = 'declined your job offer.'
-            item['icon']  = 'briefcase'
+            item['icon']  = 'xmark'
             item['url']   = (f'/employers/jobs/{_hashid(n.job.id)}/candidates/?tab=applicants'
                              if n.job else '/employers/jobs/')
         elif n.notif_type == Notification.APPLICATION_UNHIRED:
             item['actor'] = n.company.name if n.company else 'An employer'
             job_title = n.job.title if n.job else 'a role'
             item['verb'] = f'marked your employment as ended for {job_title}.'
-            item['icon'] = 'briefcase'
+            item['icon'] = 'warning'
             item['url']  = '/applications/'
         elif n.notif_type == Notification.EMPLOYER_CONTACTED:
             item['actor']  = n.company.name if n.company else 'An employer'
@@ -189,7 +202,7 @@ def notifications_api(request):
             # source of truth. The message body is under Inbox → open row.
             item['verb']   = f'sent you {n.liker_preview or "a message"}.'
             item['quoted'] = n.admin_message or ''
-            item['icon']   = 'briefcase'
+            item['icon']   = 'envelope'
             item['url']    = '/inbox/'
         elif n.notif_type == Notification.NEW_ANNOUNCEMENT:
             # PESO admin broadcast. Subject line lives in liker_preview; the
@@ -197,7 +210,7 @@ def notifications_api(request):
             # announcements. Click sends them straight to Inbox.
             item['actor']  = 'PESO Iloilo City'
             item['verb']   = f'sent an announcement: {n.liker_preview or ""}'.strip()
-            item['icon']   = 'sparkle'
+            item['icon']   = 'megaphone'
             item['meta']   = ''
             item['url']    = '/inbox/'
         elif n.notif_type == Notification.INVITED_TO_APPLY:
