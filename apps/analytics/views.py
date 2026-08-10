@@ -288,28 +288,25 @@ def get_analytics_context(request):
         for g in in_demand_top
     ]
 
-    # Hard to Fill: aggregate hard-to-fill posts by title. Rank by average
-    # days open (a title that stays open longer on average is a stronger
-    # skills-gap signal than one with lots of posts). Top 10 titles only.
+    # Hard to Fill: aggregate hard-to-fill posts by title. Ranked by the
+    # number of open posts sharing that title (a bigger slice = a bigger
+    # skills-gap signal for that role). Days-open ranking retired — Kelly
+    # asked that hard-to-fill classification track qualification barriers,
+    # not shelf life. Top 10 titles only.
     hard_groups = {}
-    now = _tz.now()
     for j in hard_to_fill:
         key = _norm_title(j.title)
         if not key:
             continue
-        days_open = max((now - j.created_at).days, 1)
         g = hard_groups.setdefault(key, {
-            'display': j.title.strip(), 'post_count': 0, 'total_days': 0,
+            'display': j.title.strip(), 'post_count': 0,
         })
         g['post_count'] += 1
-        g['total_days'] += days_open
-    for g in hard_groups.values():
-        g['avg_days'] = round(g['total_days'] / g['post_count'], 1) if g['post_count'] else 0
     hard_to_fill_top = sorted(
-        hard_groups.values(), key=lambda g: g['avg_days'], reverse=True,
+        hard_groups.values(), key=lambda g: g['post_count'], reverse=True,
     )[:10]
     hard_to_fill_chart = [
-        {'label': g['display'], 'count': g['avg_days']}
+        {'label': g['display'], 'count': g['post_count']}
         for g in hard_to_fill_top
     ]
 
@@ -735,9 +732,9 @@ def analytics_csv(request):
         w.writerow([row['display'], row['post_count'],
                     row['total_interactions'], row['avg_interactions']])
 
-    section('Hard to Fill Jobs (open 30+ days, <3 applicants)')
-    w.writerow(['Job Title', 'Stuck Posts', 'Avg Days Open'])
+    section('Hard to Fill Jobs (higher qualification barriers)')
+    w.writerow(['Job Title', 'Open Posts'])
     for row in ctx.get('hard_to_fill_top', []):
-        w.writerow([row['display'], row['post_count'], row['avg_days']])
+        w.writerow([row['display'], row['post_count']])
 
     return response

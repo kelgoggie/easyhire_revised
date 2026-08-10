@@ -75,7 +75,12 @@
     {# + bookmark-toggle affordances as the recommendations grid. Empty   #}
     {# state below the partial covers "no open jobs".                      #}
     {% if ranked_jobs %}
-      {% include "jobseekers/_jobs_grid.html" %}
+      {# Pass from_param so the shared card partial links to the job detail #}
+      {# with ?from=company:<hashid> — the job detail template parses that #}
+      {# to render a "Back to Company Profile" link.                         #}
+      {% with cid_hashed=company.id|hashid %}
+      {% include "jobseekers/_jobs_grid.html" with from_param="company:"|add:cid_hashed %}
+      {% endwith %}
     {% else %}
     <div class="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
       <p class="text-primary font-semibold text-sm mb-1">No open job posts.</p>

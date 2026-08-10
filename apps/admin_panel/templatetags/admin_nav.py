@@ -81,12 +81,21 @@ def _resolve_from_referer(request):
     # a "Back to <same page>" link.
     if path.rstrip('/') == request.path.rstrip('/'):
         return None, None
-    # Ignore *edit* pages as referers. After saving an edit form the view
-    # redirects the admin to the detail page, and the browser's Referer is
-    # the edit form's URL — so the Back button on the detail page would
-    # send them right back into the edit form. Fall through to the caller's
-    # sensible default (usually the list / parent page) instead.
-    if path.rstrip('/').endswith('/edit'):
+    # Ignore *edit-shaped* referers so the back-link on a detail page never
+    # bounces the admin right back into the form they came from. Covers:
+    #   /admin-panel/jobs/<id>/edit               — job edit form
+    #   /admin-panel/companies/<id>/settings      — company edit surface
+    #   /admin-panel/jobseekers/<id>/settings     — jobseeker admin form
+    #   /admin-panel/jobseekers/<id>/edit-resume  — résumé editor
+    # After a save + redirect back to the detail page, the referer sits on
+    # one of these, and without this guard we'd loop the admin between
+    # detail ↔ form endlessly (Kelly's "back to settings ↔ back to
+    # company profile" ping-pong). Falls through to the caller's default
+    # (usually the list root), which is always safe.
+    _stripped = path.rstrip('/')
+    if (_stripped.endswith('/edit')
+            or _stripped.endswith('/settings')
+            or _stripped.endswith('/edit-resume')):
         return None, None
     # Analytics lives at /analytics/ but staff see it in the admin shell —
     # `path.startswith('/admin-panel/')` above already filters that out. If

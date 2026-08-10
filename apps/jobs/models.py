@@ -152,18 +152,40 @@ class JobPosting(models.Model):
 
     @property
     def is_hard_to_fill(self):
-        """PESO definition: jobs requiring high qualifications with
-        licenses (registered nurse, teacher, engineer, etc.). Detected
-        from the title's profession or from a license-shaped certification
-        requirement — either signal alone is enough."""
+        """Jobs with higher barriers to entry — the analytics use this to
+        surface roles that filter out a large share of the jobseeker pool.
+
+        Any ONE of these signals is enough:
+          - Title names a licensed profession (nurse, teacher, engineer…)
+          - A certification requirement of any kind (license, PRC, board
+            exam, TESDA NC, etc.)
+          - Education requirement of bachelor's or higher
+          - Experience requirement of at least 24 months
+        """
+        # Signal 1 — profession in title implies a license.
         title = ' ' + (self.title or '').lower() + ' '
         if any(prof in title for prof in self._LICENSED_PROFESSION_KEYWORDS):
             return True
+        # Signal 2 — any certification requirement (previously we only
+        # counted license-shaped certs, but ANY cert requirement narrows
+        # the applicant pool meaningfully).
         try:
-            for cert in self.certification_requirements.all():
-                n = ' ' + (cert.name or '').lower() + ' '
-                if any(k in n for k in self._LICENSE_CERT_KEYWORDS):
+            if self.certification_requirements.exists():
+                return True
+        except Exception:
+            pass
+        # Signal 3 — high education floor (associate+ is graduate/college).
+        try:
+            for edu in self.education_requirements.all():
+                if edu.level in ('associate', 'bachelor', 'master', 'doctorate'):
                     return True
+        except Exception:
+            pass
+        # Signal 4 — long experience requirement (2+ years).
+        try:
+            exp = self.experience_requirement
+            if exp and exp.months_required and exp.months_required >= 24:
+                return True
         except Exception:
             pass
         return False

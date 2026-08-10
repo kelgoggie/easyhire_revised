@@ -113,7 +113,13 @@
     {% if jobs %}
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
       {% for job in jobs %}
-      <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
+      {# Card is a clickable <div>: whole surface navigates to the job     #}
+      {# detail (employer view). The dot menu still handles Edit / View    #}
+      {# Applicants / Close / Delete via the closest() guard on the        #}
+      {# onclick, so clicks inside a, button, or form don't trigger nav.   #}
+      <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col cursor-pointer"
+           data-href="/employers/jobs/{{ job.id|hashid }}/"
+           onclick="if (event.target.closest('a, button, form')) return; window.location=this.dataset.href;">
 
         <!-- Top row: title block + settings menu -->
         <div class="flex items-start justify-between mb-3">
@@ -195,17 +201,8 @@
           <p class="text-muted text-xs leading-relaxed line-clamp-4">{{ job.description|truncatechars:280 }}</p>
         </div>
 
-        <!-- Bottom actions -->
-        <div class="flex items-center justify-between gap-3">
-          <a href="/employers/jobs/{{ job.id|hashid }}/candidates/"
-             class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
-            View Applicants ({{ job.applicants_count|default:0 }})
-          </a>
-          <a href="/employers/jobs/{{ job.id|hashid }}/edit/"
-             class="flex-1 text-center bg-surface border border-taupe/40 text-primary text-xs font-semibold py-2.5 rounded-full hover:bg-taupe/30 transition">
-            Edit Job
-          </a>
-        </div>
+        {# Bottom action buttons removed — the whole card is now clickable    #}
+        {# and Edit / View Applicants live in the top-right dot menu.        #}
 
       </div>
       {% endfor %}

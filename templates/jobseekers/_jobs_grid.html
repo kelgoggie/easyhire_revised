@@ -1,12 +1,13 @@
 {% load match_tags %}
+{# `from_param` (context var) drives the job-detail back-link — default is #}
+{# "recommended" for the Jobs For You grid; company_public.html sets it   #}
+{# to "company:<hashid>" so the back link resolves to "Back to Company    #}
+{# Profile" pointing at that company's public page.                        #}
+{% with from_param=from_param|default:"recommended" %}
 {% if ranked_jobs %}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
   {% for item in ranked_jobs %}
-  {# ?from=recommended lets the job detail template surface a "Back to    #}
-  {# Jobs for You" link. This grid partial is only rendered from          #}
-  {# recommended_jobs.html today; if it gets reused elsewhere later, the  #}
-  {# `from` value should become a template variable.                       #}
-  <a href="/jobs/view/{{ item.job.id|hashid }}/?from=recommended"
+  <a href="/jobs/view/{{ item.job.id|hashid }}/?from={{ from_param }}"
      class="job-card bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col"
      data-job-id="{{ item.job.id|hashid }}">
 
@@ -98,3 +99,4 @@
   </p>
 </div>
 {% endif %}
+{% endwith %}

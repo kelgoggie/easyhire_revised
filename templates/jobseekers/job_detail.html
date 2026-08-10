@@ -7,10 +7,12 @@
 {% block page_content %}
 <div class="py-8">
 
-  {# Contextual back link — set when the jobseeker landed here from       #}
-  {# /jobs/for-you/ (the "Jobs for You" grid appends ?from=recommended    #}
-  {# to each card link). Kept lightweight so we don't fight browser Back. #}
-  {% if request.GET.from == 'recommended' %}
+  {# Contextual back link keyed off the ?from= query param the cards use.  #}
+  {#   from=recommended                → Jobs For You grid                 #}
+  {#   from=company:<company-hashid>   → that company's public profile     #}
+  {# Kept lightweight so we don't fight browser Back.                       #}
+  {% with from_val=request.GET.from|default:"" %}
+  {% if from_val == 'recommended' %}
   <a href="/jobs/for-you/"
      class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -18,7 +20,16 @@
     </svg>
     Back to Jobs for You
   </a>
+  {% elif from_val|slice:":8" == 'company:' %}
+  <a href="/companies/{{ from_val|slice:'8:' }}/"
+     class="inline-flex items-center gap-1 text-muted text-sm hover:text-primary transition mb-4">
+    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Back to Company Profile
+  </a>
   {% endif %}
+  {% endwith %}
 
   <!-- ── Title row ──────────────────────────────────────────────── -->
   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-2">
