@@ -397,7 +397,7 @@ const D = {
                unit:   'interaction' },
   hard:      { labels: [{% for x in hard_to_fill_chart %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                data:   [{% for x in hard_to_fill_chart %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
-               unit:   'day' },
+               unit:   'post' },
   hired:      {{ hired_monthly|safe }},
   newJobs:    {{ new_jobs_monthly|safe }},
   extHired:   {{ external_hires_monthly|safe }},
