@@ -264,8 +264,10 @@ def get_analytics_context(request):
     def _norm_title(title):
         return ' '.join((title or '').strip().split()).lower()
 
-    # In Demand: aggregate by title, sum interactions, avg per post. Rank
-    # by total interactions descending. Top 10 titles only.
+    # In Demand: aggregate by title, ranked by number of open posts sharing
+    # that title (a bigger slice = more employers listing that role right
+    # now). Interactions-based ranking retired — Kelly asked the metric to
+    # reflect job POSTS, matching Hard to Fill. Top 10 titles only.
     demand_groups = {}
     for j in in_demand_open:
         key = _norm_title(j.title)
@@ -274,17 +276,19 @@ def get_analytics_context(request):
         g = demand_groups.setdefault(key, {
             'display': j.title.strip(), 'total_interactions': 0, 'post_count': 0,
         })
+        # Kept for the CSV export + card tooltip, even though the chart
+        # no longer ranks on this signal.
         g['total_interactions'] += (j.interaction_count or 0)
         g['post_count'] += 1
     in_demand_top = sorted(
         demand_groups.values(),
-        key=lambda g: (g['total_interactions'], g['post_count']),
+        key=lambda g: g['post_count'],
         reverse=True,
     )[:10]
     for g in in_demand_top:
         g['avg_interactions'] = round(g['total_interactions'] / g['post_count'], 1) if g['post_count'] else 0
     in_demand_chart = [
-        {'label': g['display'], 'count': g['total_interactions']}
+        {'label': g['display'], 'count': g['post_count']}
         for g in in_demand_top
     ]
 

@@ -394,7 +394,7 @@ const D = {
                data:   [{% for x in jobs_of_interest %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}] },
   demand:    { labels: [{% for x in in_demand_chart %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                data:   [{% for x in in_demand_chart %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
-               unit:   'interaction' },
+               unit:   'post' },
   hard:      { labels: [{% for x in hard_to_fill_chart %}'{{ x.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                data:   [{% for x in hard_to_fill_chart %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
                unit:   'post' },
