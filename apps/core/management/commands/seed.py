@@ -335,7 +335,8 @@ class Command(BaseCommand):
                 type_of_company=company_data['type'],
                 nature_of_company=company_data['nature'],
                 main_branch_address=f"{company_data['name']}, Iloilo City",
-                iloilo_street_barangay='Bonifacio Drive, Iloilo City',
+                iloilo_street='Bonifacio Drive',
+                iloilo_barangay_name='Iloilo City Proper',
                 company_email=f"info@{slugify(company_data['name'])}.com",
                 recruitment_email=f"hr@{slugify(company_data['name'])}.com",
                 description=f"{company_data['name']} is a leading organization in Iloilo City committed to excellence and growth.",
@@ -369,7 +370,7 @@ class Command(BaseCommand):
                     title=job_data['title'],
                     description=job_data['description'],
                     location_type='iloilo',
-                    street_barangay='Bonifacio Drive',
+                    street='Bonifacio Drive',
                     slots=random.randint(1, 5),
                     status='open',
                 )
@@ -386,7 +387,8 @@ class Command(BaseCommand):
                 if job_data.get('exp_years') is not None:
                     JobExperienceRequirement.objects.create(
                         job=job,
-                        years_required=job_data['exp_years'],
+                        months_required=job_data['exp_years'] * 12,
+                        any_experience_accepted=True,
                     )
 
                 # Skills
