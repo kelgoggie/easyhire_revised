@@ -31,7 +31,7 @@
       </p>
       <p class="text-muted text-xs italic mb-3">{{ item.job.location_display }}</p>
 
-      <div class="flex flex-col gap-1.5">
+      <div class="flex flex-wrap items-center gap-1.5">
         {% if item.job.education_requirement %}
         <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20 w-fit max-w-full">
           <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
@@ -40,16 +40,12 @@
         {% endif %}
 
         {% with skills=item.job.skill_requirements.all %}
-        {% if skills %}
-        <div class="grid grid-cols-2 gap-1">
-          {% for skill in skills|slice:":2" %}
-          <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2 py-0.5 rounded-full border border-green-200 truncate">
-            <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
-            <span class="truncate">{{ skill.name }}</span>
-          </span>
-          {% endfor %}
-        </div>
-        {% endif %}
+        {% for skill in skills|slice:":2" %}
+        <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2 py-0.5 rounded-full border border-green-200 w-fit max-w-full">
+          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+          <span class="truncate">{{ skill.name }}</span>
+        </span>
+        {% endfor %}
         {% endwith %}
 
         {% if item.job.experience_requirement %}

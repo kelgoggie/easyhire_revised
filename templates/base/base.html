@@ -1,9 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}EasyHire{% endblock %}</title>
+
+    <!-- Favicon (eH brand mark) -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/Logo.svg' %}">
+    <link rel="alternate icon" href="{% static 'images/Logo.svg' %}">
 
     <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -22,6 +27,7 @@
                     surface:   '#F5F2EB',   // warm off-white
                     taupe:     '#C4B9B0',   // taupe
                     olive:     '#C0C195',   // olive
+                    background: '#FDFCF8',   // off-white background
                 },
                 fontFamily: {
                     sans: ['Inter', 'sans-serif'],

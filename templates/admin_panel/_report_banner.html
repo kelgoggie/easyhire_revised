@@ -1,27 +1,5 @@
 {% load hashid_tags %}
-{% comment %}
-Rendered on any admin detail page when the admin arrived via a User
-Reports row (URL carries ?report=<hashid>). Expects `active_report`
-in context — a UserReport instance or None.
 
-Two parts:
-  1. Amber urgency header row: "Back to User Reports" · reason · filer
-     info · Dismiss / Take Action buttons.
-  2. A Take Action modal whose buttons are contextual to the report's
-     scope. Each destructive button routes through confirmAction() so
-     the admin sees an explicit "are you sure" confirmation before the
-     form actually POSTs.
-
-Actions per scope:
-  - Account (jobseeker) → Disable Account
-  - Account (company)   → Disable Company
-  - Job                 → Disable Job Post · Disable Company (escalation)
-  - Message             → Disable Sender  · Disable Company (escalation)
-
-Every non-dismiss action also stores a short resolution_note on the
-report (surfaced in the reports-list Notes column) and audit-logs
-the change.
-{% endcomment %}
 {% if active_report %}
 {# Amber urgency banner — matches the "Verification Pending" and       #}
 {# upload-rejection banners used elsewhere in the site.               #}
