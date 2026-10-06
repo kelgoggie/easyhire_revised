@@ -335,12 +335,12 @@
     transition: all 0.15s;
   }
   .nav-pill:hover {
-    background: rgba(74, 155, 142, 0.08);
-    color: #2D4A3E;
+    background: rgba(34, 169, 224, 0.08);
+    color: #114A91;
   }
   .nav-pill.active {
-    background: rgba(74, 155, 142, 0.15);
-    color: #2D4A3E;
+    background: rgba(34, 169, 224, 0.15);
+    color: #114A91;
     font-weight: 600;
   }
 
@@ -356,12 +356,12 @@
 <script>
 // ── Palette (matches the monthly charts you liked) ──────────────────
 const MONTH_COLORS = [
-  '#2D4A3E', '#5BA3A0', '#E8DCC4', '#E8A838',
+  '#114A91', '#22A9E0', '#E8DCC4', '#E8A838',
   '#9B9B4A', '#C0C195', '#EFE7C8', '#D6E4D1',
   '#8B5E3C', '#E8A8A8', '#E8C5A8', '#D14848',
 ];
 const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const PALETTE = ['#2D4A3E', '#5BA3A0', '#E8A838', '#C0C195', '#D6E4D1', '#8B5E3C', '#E8A8A8', '#9B9B4A', '#EFE7C8', '#D14848'];
+const PALETTE = ['#114A91', '#22A9E0', '#E8A838', '#C0C195', '#D6E4D1', '#8B5E3C', '#E8A8A8', '#9B9B4A', '#EFE7C8', '#D14848'];
 
 // ── Data from Django ────────────────────────────────────────────────
 const D = {
@@ -446,16 +446,16 @@ const AlwaysOnDataLabels = {
         if (kind === 'bar') {
           if (chart.options.indexAxis === 'y') {
             ctx.textAlign = 'left';
-            ctx.fillStyle = '#2D4A3E';
+            ctx.fillStyle = '#114A91';
             ctx.fillText(label, el.x + 6, el.y);
           } else {
             ctx.textAlign = 'center';
-            ctx.fillStyle = '#2D4A3E';
+            ctx.fillStyle = '#114A91';
             ctx.fillText(label, el.x, el.y - 8);
           }
         } else if (kind === 'line') {
           ctx.textAlign = 'center';
-          ctx.fillStyle = '#2D4A3E';
+          ctx.fillStyle = '#114A91';
           ctx.fillText(label, el.x, el.y - 10);
         } else if (kind === 'pie' || kind === 'doughnut') {
           // Draw label OUTSIDE the slice near its midpoint. Uses the
@@ -467,7 +467,7 @@ const AlwaysOnDataLabels = {
           const x = el.x + Math.cos(angle) * r;
           const y = el.y + Math.sin(angle) * r;
           ctx.textAlign = Math.cos(angle) >= 0 ? 'left' : 'right';
-          ctx.fillStyle = '#2D4A3E';
+          ctx.fillStyle = '#114A91';
           ctx.fillText(label, x, y);
         }
       });
@@ -620,7 +620,7 @@ function comparisonBar(canvasId, labels, data, colors) {
 
 function monthlyLine(canvasId, data, color) {
   const ctx = document.getElementById(canvasId); if (!ctx) return;
-  color = color || '#2D4A3E';
+  color = color || '#114A91';
   return new Chart(ctx, {
     type: 'line',
     data: {
@@ -732,17 +732,17 @@ function init(key) {
     return;
   }
   switch (key) {
-    case 'js-accounts':    charts[key] = monthlyLine('chart-js-accounts', D.newJobseekers, '#2D4A3E'); break;
+    case 'js-accounts':    charts[key] = monthlyLine('chart-js-accounts', D.newJobseekers, '#114A91'); break;
     case 'js-sex':         charts[key] = pie('chart-js-sex', D.sex.labels, D.sex.data, ['#3B82F6', '#E8A8A8']); break;
     case 'js-age':         charts[key] = barV('chart-js-age', D.age.labels, D.age.data, '#5BA3A0'); break;
     case 'js-civil':       charts[key] = pie('chart-js-civil', D.civil.labels, D.civil.data); break;
-    case 'js-experience':  charts[key] = pie('chart-js-experience', D.experience.labels, D.experience.data, ['#2D4A3E', '#A8D4B8']); break;
-    case 'js-edu':         charts[key] = barH('chart-js-edu', D.edu.labels, D.edu.data, '#2D4A3E'); break;
+    case 'js-experience':  charts[key] = pie('chart-js-experience', D.experience.labels, D.experience.data, ['#114A91', '#6CC4EC']); break;
+    case 'js-edu':         charts[key] = barH('chart-js-edu', D.edu.labels, D.edu.data, '#114A91'); break;
     case 'js-location':    charts[key] = barH('chart-js-location', D.jsLoc.labels, D.jsLoc.data, '#5BA3A0'); break;
     case 'js-sectors':     charts[key] = barH('chart-js-sectors', D.sectors.labels, D.sectors.data, '#E8A838'); break;
     case 'emp-accounts':   charts[key] = monthlyLine('chart-emp-accounts', D.newEmployers, '#5BA3A0'); break;
     case 'emp-type':       charts[key] = pie('chart-emp-type', D.empType.labels, D.empType.data); break;
-    case 'emp-nature':     charts[key] = barH('chart-emp-nature', D.empNat.labels, D.empNat.data, '#2D4A3E'); break;
+    case 'emp-nature':     charts[key] = barH('chart-emp-nature', D.empNat.labels, D.empNat.data, '#114A91'); break;
     case 'emp-location':   charts[key] = barH('chart-emp-location', D.empLoc.labels, D.empLoc.data, '#5BA3A0'); break;
     case 'lab-applications': charts[key] = monthlyBar('chart-lab-applications', D.apps); break;
     case 'lab-filled':     charts[key] = monthlyBar('chart-lab-filled', D.placements); break;
@@ -753,25 +753,25 @@ function init(key) {
     case 'lab-hard':       charts[key] = pie('chart-lab-hard',     D.hard.labels,   D.hard.data,   null, D.hard.unit);   break;
     case 'cmp-apps-hired': charts[key] = monthlyMultiLine('chart-cmp-apps-hired', [
                              { label: 'Applications', data: D.apps,  color: '#5BA3A0' },
-                             { label: 'Hired',        data: D.hired, color: '#2D4A3E' },
+                             { label: 'Hired',        data: D.hired, color: '#114A91' },
                            ]); break;
     case 'cmp-jobs-apps':  charts[key] = monthlyMultiLine('chart-cmp-jobs-apps', [
                              { label: 'New Jobs Posted', data: D.newJobs, color: '#E8A838' },
                              { label: 'Applications',    data: D.apps,    color: '#5BA3A0' },
                            ]); break;
     case 'cmp-eh-ext':     charts[key] = monthlyMultiLine('chart-cmp-eh-ext', [
-                             { label: 'Hired via EasyHire', data: D.hired,    color: '#2D4A3E' },
+                             { label: 'Hired via EasyHire', data: D.hired,    color: '#114A91' },
                              { label: 'Hired externally',   data: D.extHired, color: '#E8A838' },
                            ]); break;
     case 'cmp-place-rej':  charts[key] = monthlyMultiLine('chart-cmp-place-rej', [
-                             { label: 'Placements',              data: D.hired,    color: '#2D4A3E' },
+                             { label: 'Placements',              data: D.hired,    color: '#114A91' },
                              { label: 'Unsuccessful applications', data: D.rejected, color: '#C4453A' },
                            ]); break;
     case 'cmp-hires-compat': charts[key] = barV(
                              'chart-cmp-hires-compat',
                              D.hiresByTier.labels,
                              D.hiresByTier.data,
-                             '#2D4A3E'
+                             '#114A91'
                            ); break;
   }
 }
