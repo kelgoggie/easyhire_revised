@@ -63,10 +63,26 @@ class JobseekerLoginView(View):
         return response
 
 
+@method_decorator(never_cache, name='dispatch')
 class RegisterStep1JobseekerView(View):
     template_name = 'public/register_step1_jobseeker.html'
 
     def get(self, request):
+        # Same guard as JobseekerLoginView — without it, the browser's back
+        # button after a completed signup lands an already-logged-in user
+        # back on a blank "create account" form (never_cache above stops
+        # the browser from just replaying a cached copy without even
+        # asking the server).
+        if request.user.is_authenticated:
+            if request.user.is_staff:
+                return redirect('/admin-panel/')
+            if request.user.is_employer:
+                return redirect('/employers/dashboard/')
+            try:
+                request.user.jobseeker_profile
+                return redirect('/dashboard/')
+            except Exception:
+                return redirect('/register/info/')
         return render(request, self.template_name)
 
     def post(self, request):
@@ -124,12 +140,22 @@ class RegisterStep1JobseekerView(View):
         return redirect('/register/info/')
 
 
+@method_decorator(never_cache, name='dispatch')
 class RegisterStep2JobseekerView(View):
     template_name = 'public/register_step2_jobseeker.html'
 
     def get(self, request):
         if not request.user.is_authenticated or not request.user.is_jobseeker:
             return redirect('/login/')
+        # Already finished this step (e.g. navigated back after completing
+        # registration) — JobseekerProfile.user is a OneToOneField, so
+        # letting this form render again and get resubmitted would crash
+        # with an IntegrityError on the duplicate row, not just look odd.
+        try:
+            request.user.jobseeker_profile
+            return redirect('/dashboard/')
+        except Exception:
+            pass
 
         # If the user signed up via Google, pre-fill first/last name from the
         # OAuth profile so they don't have to re-type it. Still fully editable.
@@ -164,6 +190,14 @@ class RegisterStep2JobseekerView(View):
         from apps.jobseekers.models import JobseekerProfile
         from apps.core.models import CityMunicipality, Barangay
         from datetime import datetime
+
+        if not request.user.is_authenticated or not request.user.is_jobseeker:
+            return redirect('/login/')
+        try:
+            request.user.jobseeker_profile
+            return redirect('/dashboard/')  # already submitted — don't double-create
+        except Exception:
+            pass
 
         raw_date = request.POST.get('date_of_birth', '')
         try:
@@ -276,10 +310,24 @@ class EmployerLoginView(View):
         return response
 
 
+@method_decorator(never_cache, name='dispatch')
 class EmployerRegisterStep1View(View):
     template_name = 'employers/register_step1.html'
 
     def get(self, request):
+        # Same guard as EmployerLoginView/RegisterStep1JobseekerView — an
+        # employer who already finished registering shouldn't land back on
+        # a blank "create account" form via the browser's back button.
+        if request.user.is_authenticated:
+            if request.user.is_staff:
+                return redirect('/admin-panel/')
+            if request.user.is_jobseeker:
+                return redirect('/dashboard/')
+            try:
+                request.user.employer_profile
+                return redirect('/employers/dashboard/')
+            except Exception:
+                return redirect('/employers/register/info/')
         return render(request, self.template_name)
 
     def post(self, request):
@@ -326,6 +374,7 @@ class EmployerRegisterStep1View(View):
         return redirect('/employers/register/info/')
 
 
+@method_decorator(never_cache, name='dispatch')
 class EmployerRegisterStep2View(View):
     template_name = 'employers/register_step2.html'
 

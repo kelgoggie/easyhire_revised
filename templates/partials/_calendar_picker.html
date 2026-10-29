@@ -12,9 +12,9 @@ Optional: data-min-age="18", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-
 <div id="dp-backdrop" class="fixed inset-0 z-[55] hidden"></div>
 <div id="dp-popup" class="fixed z-[60] bg-white border border-gray-200 rounded-2xl shadow-xl p-4 hidden" style="width:280px;">
     <div class="flex items-center justify-between mb-3">
-        <button type="button" data-dp-action="prev" class="text-muted hover:text-primary px-2 text-lg leading-none">&#8249;</button>
+        <button type="button" data-dp-action="prev" class="text-muted hover:text-primary px-2 text-lg leading-none disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:text-muted">&#8249;</button>
         <span id="dp-label" class="text-sm font-semibold text-primary"></span>
-        <button type="button" data-dp-action="next" class="text-muted hover:text-primary px-2 text-lg leading-none">&#8250;</button>
+        <button type="button" data-dp-action="next" class="text-muted hover:text-primary px-2 text-lg leading-none disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:text-muted">&#8250;</button>
     </div>
     <div class="flex justify-center mb-3">
         <select id="dp-year" class="text-xs border border-gray-200 rounded-full px-3 py-1 text-primary focus:outline-none focus:border-teal"></select>
@@ -164,8 +164,25 @@ Optional: data-min-age="18", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-
     return true;
   }
 
+  function updateNavButtons() {
+    // Without this, prev/next let you arrow past the min/max bound into a
+    // month or year where every single cell is grayed out — no feedback
+    // that you've hit the edge, just a dead screen you have to arrow back
+    // out of. Disable the button instead once going further is pointless.
+    const prevBtn = popup.querySelector('[data-dp-action="prev"]');
+    const nextBtn = popup.querySelector('[data-dp-action="next"]');
+    if (mode === 'month') {
+      if (prevBtn) prevBtn.disabled = !!(minDate && viewYear <= minDate.getFullYear());
+      if (nextBtn) nextBtn.disabled = !!(maxDate && viewYear >= maxDate.getFullYear());
+    } else {
+      if (prevBtn) prevBtn.disabled = !!(minDate && viewYear === minDate.getFullYear() && viewMonth <= minDate.getMonth());
+      if (nextBtn) nextBtn.disabled = !!(maxDate && viewYear === maxDate.getFullYear() && viewMonth >= maxDate.getMonth());
+    }
+  }
+
   function render() {
     grid.innerHTML = '';
+    updateNavButtons();
     if (mode === 'month') {
       label.textContent = String(viewYear);
       dowRow.classList.add('hidden');
@@ -225,7 +242,7 @@ Optional: data-min-age="18", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-
   });
   popup.addEventListener('click', function(e) {
     const a = e.target.closest('[data-dp-action]');
-    if (!a) return;
+    if (!a || a.disabled) return;
     if (a.dataset.dpAction === 'prev') {
       if (mode === 'month') viewYear--;
       else { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } }

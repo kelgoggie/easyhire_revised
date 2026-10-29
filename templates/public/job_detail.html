@@ -131,6 +131,20 @@
           {% endwith %}
         </div>
 
+        {% with customs=job.custom_criteria.all %}
+        {% if customs %}
+        <!-- Additional Criteria (employer-defined) -->
+        <div>
+          <p class="text-sm font-bold text-primary mb-2">Additional Criteria:</p>
+          <div class="flex flex-wrap gap-1.5">
+            {% for c in customs %}
+            <span class="inline-flex items-center bg-amber/15 text-amber text-xs px-3 py-1 rounded-full" title="{{ c.requirement_text }}">{{ c.name }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
         <!-- Hiring Sectors -->
         {% with sectors=job.company.sector_badges.all %}
         {% if sectors %}

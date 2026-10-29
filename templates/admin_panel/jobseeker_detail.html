@@ -112,7 +112,7 @@
         {% if j.last_name != p.last_name %}<p class="text-muted italic text-[10px]">was {{ j.last_name }}</p>{% endif %}
       </div>
       <div>
-        <p class="text-muted">Suffix</p>
+        <p class="text-muted">Suffix (Jr./Sr./III)</p>
         <p class="text-primary {% if j.suffix != p.suffix %}font-bold{% endif %}">{{ p.suffix|default:"—" }}</p>
         {% if j.suffix != p.suffix %}<p class="text-muted italic text-[10px]">was {{ j.suffix|default:"(empty)" }}</p>{% endif %}
       </div>

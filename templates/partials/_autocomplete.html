@@ -19,9 +19,34 @@ window.createAutocomplete = function(inputEl, endpoint, getExtraParams) {
   dropdown.className = 'absolute left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 mt-1 hidden max-h-48 overflow-y-auto';
   wrapper.appendChild(dropdown);
   let timer;
+  // Arrow-key navigation state. -1 = nothing highlighted yet (the common
+  // "just typed, haven't arrowed" state) — kept distinct from 0 so Enter
+  // only intercepts once the user has actually pressed an arrow, instead
+  // of hijacking Enter on inputs that already use it for something else
+  // (e.g. the skill chip input's "Enter adds a chip" behavior).
+  let activeIndex = -1;
+
+  function items() { return Array.from(dropdown.querySelectorAll('li')); }
+  function setActive(idx) {
+    const list = items();
+    if (!list.length) { activeIndex = -1; return; }
+    activeIndex = ((idx % list.length) + list.length) % list.length;  // wraps both ends
+    list.forEach(function(li, i) { li.classList.toggle('bg-surface', i === activeIndex); });
+    list[activeIndex].scrollIntoView({ block: 'nearest' });
+  }
+  function selectActive() {
+    const list = items();
+    if (activeIndex < 0 || activeIndex >= list.length) return false;
+    inputEl.value = list[activeIndex].textContent;
+    dropdown.classList.add('hidden');
+    inputEl.dispatchEvent(new Event('change', {bubbles: true}));
+    return true;
+  }
+
   inputEl.addEventListener('input', function() {
     clearTimeout(timer);
     const q = this.value.trim();
+    activeIndex = -1;
     if (q.length < 1) { dropdown.classList.add('hidden'); return; }
     timer = setTimeout(function() {
       let url = endpoint + '?q=' + encodeURIComponent(q);
@@ -35,6 +60,7 @@ window.createAutocomplete = function(inputEl, endpoint, getExtraParams) {
         .then(function(r){ return r.json(); })
         .then(function(results) {
           dropdown.innerHTML = '';
+          activeIndex = -1;
           if (!results.length) { dropdown.classList.add('hidden'); return; }
           results.forEach(function(item) {
             const li = document.createElement('li');
@@ -50,6 +76,22 @@ window.createAutocomplete = function(inputEl, endpoint, getExtraParams) {
         });
     }, 250);
   });
+
+  inputEl.addEventListener('keydown', function(e) {
+    if (dropdown.classList.contains('hidden')) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActive(activeIndex + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActive(activeIndex - 1);
+    } else if (e.key === 'Enter') {
+      if (selectActive()) e.preventDefault();  // only intercepts once something's highlighted
+    } else if (e.key === 'Escape') {
+      dropdown.classList.add('hidden');
+    }
+  });
+
   inputEl.addEventListener('blur', function() {
     setTimeout(function() { dropdown.classList.add('hidden'); }, 150);
   });

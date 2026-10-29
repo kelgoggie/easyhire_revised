@@ -356,6 +356,60 @@ def _find_skills(text: str, known: list[str]) -> list[str]:
     return found[:25]
 
 
+# Splits a skills-section line into candidate phrases — commas, bullets,
+# slashes, and newlines are the usual separators resumes use between
+# individual skills ("Python, SQL, Git" / "Python • SQL • Git").
+_SKILL_SPLIT_RE = re.compile(r'[,;•●‣▪◦·/\n]+')
+
+
+def _suggest_skills_semantic(section_text: str, known: list[str], already_found: list[str],
+                              limit: int = 8) -> list[str]:
+    """Catch skills `_find_skills` missed because the resume phrases them
+    differently than the canonical vocab name — "ReactJS" vs "React",
+    "proficient in Excel" vs "Microsoft Excel". Splits the skills section
+    into candidate phrases and semantically matches each against the known
+    vocab, returning the CANONICAL vocab names (not the raw resume text) so
+    suggestions stay consistent with the rest of the skill catalog.
+
+    These are meant to be shown to the jobseeker as "tap to add" chips, not
+    auto-added — semantic matching is confident enough to suggest, not
+    confident enough to silently add to someone's profile. Returns []
+    (never raises) if the ML deps aren't installed on this host.
+    """
+    if not section_text or not known:
+        return []
+    try:
+        from apps.jobseekers.nlp_service import semantic_rank
+    except Exception:
+        return []
+
+    found_lower = {s.lower() for s in already_found}
+    # Short, skill-shaped phrases only — a long sentence here is bio text
+    # that drifted into the skills section, not a skill name, and would
+    # just waste a model call without ever matching anything sensible.
+    phrases = [p.strip() for p in _SKILL_SPLIT_RE.split(section_text) if p.strip()]
+    phrases = [p for p in phrases if 2 <= len(p) <= 40][:30]
+    if not phrases:
+        return []
+
+    suggestions = []
+    seen = set(found_lower)
+    for phrase in phrases:
+        if phrase.lower() in seen:
+            continue
+        matches = semantic_rank(phrase, known, top_k=1, min_similarity=0.55)
+        if not matches:
+            continue
+        canonical, _score = matches[0]
+        if canonical.lower() in seen:
+            continue
+        seen.add(canonical.lower())
+        suggestions.append(canonical)
+        if len(suggestions) >= limit:
+            break
+    return suggestions
+
+
 def _find_education_level(line: str) -> Optional[str]:
     lower = line.lower()
     for level, patterns in DEGREE_KEYWORDS:
@@ -505,7 +559,9 @@ def parse_resume_text(text: str, known_skills: Optional[list[str]] = None,
     summary = sections.get('summary') or sections.get('_top', '')
     summary = re.sub(r'\s+', ' ', summary).strip()[:280]
 
-    skills = _find_skills(sections.get('skills', '') or text, known_skills or [])
+    skills_text = sections.get('skills', '') or text
+    skills = _find_skills(skills_text, known_skills or [])
+    suggested_skills = _suggest_skills_semantic(skills_text, known_skills or [], skills)
     education = _extract_education(sections.get('education', ''))
     experiences = _extract_experiences(sections.get('experience', ''))
 
@@ -517,6 +573,11 @@ def parse_resume_text(text: str, known_skills: Optional[list[str]] = None,
         'address': _extract_address(text),
         'bio': summary,
         'skills': skills,
+        # Semantically-matched but not literally present — shown to the
+        # jobseeker as "tap to add" suggestions rather than auto-added,
+        # since this tier is confident-but-not-certain. See
+        # _suggest_skills_semantic.
+        'suggested_skills': suggested_skills,
         'education': education,
         'experiences': experiences,
         'raw_chars': len(text),

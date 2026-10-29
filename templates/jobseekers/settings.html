@@ -23,7 +23,7 @@
         Edit
       </button>
       <button type="button" id="submit-personal-btn"
-              class="hidden bg-amber border border-amber text-white text-xs font-semibold px-5 py-1.5 rounded-full hover:bg-amber/90 transition">
+              class="hidden bg-amber border border-amber text-white text-sm font-semibold px-7 py-2.5 rounded-full hover:bg-amber/90 transition">
         Submit &amp; Confirm
       </button>
     </div>
@@ -40,38 +40,35 @@
     <input type="hidden" name="form_type" value="personal_change">
     <input type="file"   name="id_document" id="personal-id-doc" class="hidden" accept="image/*,.heic,.heif,application/pdf">
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4 items-end">
       <div>
         <label class="block text-primary text-xs mb-1">First Name</label>
         <input type="text" name="first_name" value="{{ display.first_name|default:'' }}" required disabled
-               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Middle Name</label>
         <input type="text" name="middle_name" value="{{ display.middle_name|default:'' }}" disabled
-               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Last Name</label>
         <input type="text" name="last_name" value="{{ display.last_name|default:'' }}" required disabled
-               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Suffix</label>
         <input type="text" name="suffix" value="{{ display.suffix|default:'' }}" disabled
-               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
       <div>
         <label class="block text-primary text-xs mb-1">Birthday</label>
         <div class="relative">
           <input type="text" name="date_of_birth" data-datepicker="date" data-min-age="18" data-display-format="long" disabled
                  value="{% if display.date_of_birth %}{{ display.date_of_birth|date:'F j, Y' }}{% endif %}"
                  placeholder="Select date" readonly autocomplete="off"
-                 class="personal-field w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
-          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                 class="personal-field w-full bg-white border border-gray-200 rounded-full pl-3 pr-9 py-1.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
         </div>
@@ -80,11 +77,11 @@
         <label class="block text-primary text-xs mb-1">Sex</label>
         <div class="relative">
           <select name="sex" disabled
-                  class="personal-field w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+                  class="personal-field w-full appearance-none bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
             <option value="M" {% if display.sex == 'M' %}selected{% endif %}>Male</option>
             <option value="F" {% if display.sex == 'F' %}selected{% endif %}>Female</option>
           </select>
-          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </div>
       </div>
     </div>
@@ -280,16 +277,16 @@
     {# radio — the actual input is sr-only so the styling isn't fighting   #}
     {# native browser chrome.                                              #}
     <p class="text-sm text-primary mb-2">Profile Visibility</p>
-    <div class="flex flex-wrap gap-2 mb-5">
-      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
+    <div class="space-y-2 mb-5">
+      <label class="flex items-center gap-2 cursor-pointer text-sm text-primary">
         <input type="radio" name="profile_visibility" value="public"
-               class="sr-only"
+               class="accent-teal"
                {% if profile.profile_visibility != 'hidden' %}checked{% endif %}>
         Show my profile after being hired
       </label>
-      <label class="inline-flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 text-xs text-primary cursor-pointer transition bg-white hover:border-teal has-[:checked]:bg-teal has-[:checked]:text-white has-[:checked]:border-teal">
+      <label class="flex items-center gap-2 cursor-pointer text-sm text-primary">
         <input type="radio" name="profile_visibility" value="hidden"
-               class="sr-only"
+               class="accent-teal"
                {% if profile.profile_visibility == 'hidden' %}checked{% endif %}>
         Hide my profile after being hired
       </label>

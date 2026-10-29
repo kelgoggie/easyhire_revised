@@ -227,6 +227,7 @@ class JobPosting(models.Model):
 class JobEducationRequirement(models.Model):
     LEVELS = [
         ("elementary", "Elementary"),
+        ("als", "Alternative Learning System"),
         ("junior_high", "High School / Junior High School"),
         ("senior_high", "Senior High School"),
         ("vocational", "Vocational / TESDA"),
@@ -278,6 +279,48 @@ class JobCertificationRequirement(models.Model):
 
     def __str__(self):
         return f"{self.name} — {self.job.title}"
+
+
+class JobCustomCriterion(models.Model):
+    """An employer-defined extra matching criterion for this specific job
+    — e.g. "Licensing" or "Training" — beyond the standard education,
+    skills, experience, and certifications requirements above.
+
+    There's no structured jobseeker-side field to check these against, so
+    `requirement_text` is matched via fuzzy text comparison against the
+    applicant's skills, certifications, work experience, and bio. See
+    apps.matching.engine.score_custom_criterion.
+    """
+    job = models.ForeignKey(
+        "JobPosting", on_delete=models.CASCADE, related_name="custom_criteria"
+    )
+    name = models.CharField(max_length=100,
+        help_text="Short label shown on the job card and candidate breakdown, e.g. 'Licensing'.")
+    requirement_text = models.TextField(
+        help_text="What you're looking for, in plain language — matched against the applicant's "
+                   "skills, certifications, work experience, and bio.")
+    weight = models.FloatField(default=0.10,
+        help_text="How much this counts toward the overall compatibility score (0.0-1.0).")
+    is_required = models.BooleanField(default=True,
+        help_text="Required vs preferred — mirrors the other requirement types' flag.")
+    order = models.PositiveIntegerField(default=0,
+        help_text="Display order on the job posting form and job card.")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "job_custom_criteria"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.name} — {self.job.title}"
+
+    @property
+    def weight_percent(self):
+        """Weight as a whole-number percent (0-100) — what the post-a-job
+        form and job cards display; `weight` itself stays 0.0-1.0 for the
+        scoring engine's math."""
+        return round(self.weight * 100)
 
 
 class JobExperienceRequirement(models.Model):

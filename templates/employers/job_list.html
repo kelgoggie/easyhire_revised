@@ -170,12 +170,18 @@
                       class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">
                 Mark Hired externally
               </button>
-              <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/close/">
+              <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/close/" id="close-job-form-jl-{{ job.id|hashid }}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="/employers/jobs/">
-                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">
-                  {% if job.status == 'closed' %}Reopen Job{% else %}Close Job{% endif %}
-                </button>
+                {% if job.status == 'closed' %}
+                <button type="button"
+                        onclick="confirmAction({title:'Reopen this job post?',body:'It becomes visible on public job listings again and starts accepting new applications.',ctaLabel:'Yes, reopen job',ctaClass:'bg-teal hover:bg-teal/90',onConfirm:function(){document.getElementById('close-job-form-jl-{{ job.id|hashid }}').submit();}})"
+                        class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">Reopen Job</button>
+                {% else %}
+                <button type="button"
+                        onclick="confirmAction({title:'Close this job post?',body:'It stops accepting new applications and disappears from public job listings. Applicants already in your pipeline stay there — you can still review and act on them.',ctaLabel:'Yes, close job',ctaClass:'bg-red-500 hover:bg-red-600',onConfirm:function(){document.getElementById('close-job-form-jl-{{ job.id|hashid }}').submit();}})"
+                        class="block w-full text-left px-4 py-2 text-sm text-primary hover:bg-surface">Close Job</button>
+                {% endif %}
               </form>
               <hr class="my-1 border-gray-100">
               <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/delete/" id="delete-job-form-jl-{{ job.id|hashid }}">
@@ -217,6 +223,12 @@
         </span>
         {% endif %}
         {% endwith %}
+        {% for c in job.custom_criteria.all|slice:":2" %}
+        <span class="inline-flex items-center gap-1 bg-amber/15 text-amber text-xs px-2.5 py-0.5 rounded-full border border-amber/30" title="{{ c.requirement_text }}">
+          <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0011 2H4a2 2 0 00-2 2v7a2 2 0 00.59 1.41l9 9a2 2 0 002.82 0l7-7a2 2 0 000-2.83zM6.5 8A1.5 1.5 0 118 6.5 1.5 1.5 0 016.5 8z"/></svg>
+          {{ c.name|truncatechars:18 }}
+        </span>
+        {% endfor %}
       </div>
 
       <!-- Description preview -->

@@ -50,6 +50,22 @@
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
         </summary>
         <div class="absolute right-0 mt-1 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-sm">
+          {# A trashed job gets ONLY Restore (or nothing, for a PESO       #}
+          {# take-down) — same branching as the Trash tab on the jobs     #}
+          {# list. Otherwise Edit/Close-Open/Delete would stay reachable  #}
+          {# straight off a bookmarked or cached URL to this page even    #}
+          {# after the job's been deleted, which defeats the point of     #}
+          {# deleting it.                                                 #}
+          {% if job.deleted_at %}
+            {% if job.admin_deleted %}
+            <p class="px-4 py-2 text-xs text-muted italic">No actions available.</p>
+            {% else %}
+            <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/restore/">
+              {% csrf_token %}
+              <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-teal hover:bg-teal/5">Restore</button>
+            </form>
+            {% endif %}
+          {% else %}
           {# Edit Job — same confirm-first flow as before.                #}
           <button type="button"
                   onclick="confirmAction({title:'Edit this job post?',body:'Editing a live job may change the requirements applicants have already been scored against. Save carefully — your changes go live as soon as you hit Save.',ctaLabel:'Yes, edit',ctaClass:'bg-amber hover:bg-amber/90',onConfirm:function(){window.location='/employers/jobs/{{ job.id|hashid }}/edit/';}})"
@@ -60,13 +76,17 @@
           {# from the employer side (view rejects it), so hide the      #}
           {# option in that case.                                        #}
           {% if not job.admin_disabled %}
-          <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/close/" class="block">
+          <form method="POST" action="/employers/jobs/{{ job.id|hashid }}/close/" class="block" id="close-job-form-{{ job.id|hashid }}">
             {% csrf_token %}
             <input type="hidden" name="next" value="/employers/jobs/{{ job.id|hashid }}/">
             {% if job.status == 'open' %}
-            <button type="submit" class="w-full text-left block px-4 py-2 text-primary hover:bg-surface">Close Job</button>
+            <button type="button"
+                    onclick="confirmAction({title:'Close this job post?',body:'It stops accepting new applications and disappears from public job listings. Applicants already in your pipeline stay there — you can still review and act on them.',ctaLabel:'Yes, close job',ctaClass:'bg-red-500 hover:bg-red-600',onConfirm:function(){document.getElementById('close-job-form-{{ job.id|hashid }}').submit();}})"
+                    class="w-full text-left block px-4 py-2 text-primary hover:bg-surface">Close Job</button>
             {% elif job.status == 'closed' %}
-            <button type="submit" class="w-full text-left block px-4 py-2 text-teal hover:bg-teal/10">Reopen Job</button>
+            <button type="button"
+                    onclick="confirmAction({title:'Reopen this job post?',body:'It becomes visible on public job listings again and starts accepting new applications.',ctaLabel:'Yes, reopen job',ctaClass:'bg-teal hover:bg-teal/90',onConfirm:function(){document.getElementById('close-job-form-{{ job.id|hashid }}').submit();}})"
+                    class="w-full text-left block px-4 py-2 text-teal hover:bg-teal/10">Reopen Job</button>
             {% endif %}
           </form>
           {% endif %}
@@ -88,6 +108,7 @@
                     onclick="confirmAction({title:'Delete this job post?', body:'The post moves to your Trash tab and stops accepting applications immediately. You can restore it within 30 days.', ctaLabel:'Yes, delete', ctaClass:'bg-red-500 hover:bg-red-600', onConfirm:function(){document.getElementById('delete-job-form').submit();}});"
                     class="w-full text-left block px-4 py-2 text-red-500 hover:bg-red-50">Delete Job</button>
           </form>
+          {% endif %}
           {% endif %}
         </div>
       </details>
@@ -178,6 +199,19 @@
         {% endif %}
         {% endwith %}
       </div>
+
+      {% with customs=job.custom_criteria.all %}
+      {% if customs %}
+      <div>
+        <p class="text-sm font-bold text-primary mb-2">Additional Criteria:</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for c in customs %}
+          <span class="inline-flex items-center bg-amber/15 text-amber text-xs px-2.5 py-0.5 rounded-full border border-amber/30" title="{{ c.requirement_text }}">{{ c.name }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% endwith %}
     </div>
   </div>
 

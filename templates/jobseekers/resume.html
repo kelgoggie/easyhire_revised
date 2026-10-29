@@ -63,6 +63,41 @@
     #resume-form:not(.resume-locked) .resume-field:not(.sr-only) {
       border-color: #cbd5d5 !important;  /* between gray-200 and gray-300 */
     }
+    /* Sector checkboxes rendered as circles — matches the radio-button
+       "pick a shape" language already used for sector_badge_visibility
+       just below them. Native checkbox styling can't be reshaped with
+       accent-color alone, so this repaints it from scratch: appearance:none
+       drops the browser's square box, the rest redraws a filled dot when
+       checked. */
+    .circle-check {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+      border: 1.5px solid #C4B9B0;  /* taupe/40-ish, matches border-taupe/40 */
+      border-radius: 9999px;
+      cursor: pointer;
+      position: relative;
+      transition: background-color 150ms, border-color 150ms;
+    }
+    .circle-check:checked {
+      background-color: #22A9E0;  /* teal accent */
+      border-color: #22A9E0;
+    }
+    .circle-check:checked::after {
+      content: '';
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 0.35rem; height: 0.35rem;
+      background: #fff;
+      border-radius: 9999px;
+      transform: translate(-50%, -50%);
+    }
+    .circle-check:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   </style>
 
   <form method="POST" action="/resume/" enctype="multipart/form-data" id="resume-form">
@@ -215,7 +250,7 @@
             <label class="flex items-center gap-2 cursor-pointer text-xs text-primary">
               <input type="checkbox" name="sectors" value="{{ sector.id }}"
                      {% if sector in profile.sectors.all %}checked{% endif %}
-                     class="resume-field accent-teal">
+                     class="resume-field circle-check">
               {{ sector.label }}
             </label>
             {% endfor %}
@@ -316,6 +351,7 @@
                   <select name="edu_level" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none">
                     <option value="">Select Educational Level...</option>
                     <option value="elementary" {% if edu.level == 'elementary' %}selected{% endif %}>Elementary</option>
+                    <option value="als" {% if edu.level == 'als' %}selected{% endif %}>Alternative Learning System</option>
                     <option value="junior_high" {% if edu.level == 'junior_high' %}selected{% endif %}>High School / JHS</option>
                     <option value="senior_high" {% if edu.level == 'senior_high' %}selected{% endif %}>Senior High School</option>
                     <option value="vocational" {% if edu.level == 'vocational' %}selected{% endif %}>Vocational / TESDA</option>
@@ -369,7 +405,7 @@
                 <div class="relative">
                   <select name="edu_level" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none">
                     <option value="">Select Educational Level...</option>
-                    <option value="elementary">Elementary</option><option value="junior_high">High School / JHS</option>
+                    <option value="elementary">Elementary</option><option value="als">Alternative Learning System</option><option value="junior_high">High School / JHS</option>
                     <option value="senior_high">Senior High School</option><option value="vocational">Vocational / TESDA</option>
                     <option value="associate">Associate Degree</option><option value="bachelor">Bachelor's Degree</option>
                     <option value="master">Master's Degree</option><option value="doctorate">Doctorate</option>
@@ -493,6 +529,15 @@
             <input type="text" id="skill-input"
                    placeholder="Type a skill and press Enter to add"
                    class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition mb-3">
+
+            {# Semantic suggestions from résumé parsing — phrased differently #}
+            {# than the canonical vocab ("ReactJS" vs "React.js"), confident  #}
+            {# enough to suggest but not to silently add. Tap a chip to       #}
+            {# confirm it as a real skill row; it then disappears from here.  #}
+            <div id="suggested-skills" class="hidden mb-3">
+              <p class="text-[11px] text-muted mb-1.5">We also noticed these on your résumé — tap to add:</p>
+              <div id="suggested-skills-chips" class="flex flex-wrap gap-1.5"></div>
+            </div>
 
             {# Cap the list to ~two rows so the Skills card doesn't stretch    #}
             {# taller than Education/Certifications beside it — scroll after.  #}
@@ -1093,6 +1138,13 @@ function addRow(type) {
     const gate = ADD_BTN_RULES[type];
     if (gate && template) {
         const missing = gate.required.some(function(name) {
+            // Course/Strand is locked (not applicable) for Elementary/ALS —
+            // don't block adding another entry over a field that's
+            // deliberately empty.
+            if (type === 'education' && name === 'edu_course') {
+                const levelEl = template.querySelector('[name="edu_level"]');
+                if (levelEl && (levelEl.value === 'elementary' || levelEl.value === 'als')) return false;
+            }
             const el = template.querySelector('[name="' + name + '"]');
             return !el || !(el.value || '').trim();
         });
@@ -1123,6 +1175,14 @@ function addRow(type) {
         s.dataset.active = (i === 0) ? 'true' : 'false';
     });
     watchEntry(clone);
+    // cloneNode copies the `readonly` attribute + lock styling along with
+    // everything else — if the template row happened to be locked (level
+    // was Elementary/ALS) when cloned, re-sync against the now-blanked
+    // edu_level select so the new row starts unlocked.
+    if (type === 'education') {
+        const levelEl = clone.querySelector('[name="edu_level"]');
+        if (levelEl) syncEduCourseLock(levelEl);
+    }
     renderCarousel(cfg.containerId);
     setTimeout(initAutocompletes, 50);
 }
@@ -1134,6 +1194,37 @@ const ADD_BTN_RULES = {
     certification: { required: ['cert_name'] },
     experience:    { required: ['exp_position', 'exp_company'] },
 };
+
+// ── Lock Course/Strand for Elementary / Alternative Learning System ──
+// Neither level has a meaningful "course" — a course/strand field only
+// makes sense from senior high (strand) onward or vocational/college
+// (course/degree). Readonly rather than disabled: a disabled field is
+// dropped from form submission entirely, which would misalign the
+// edu_level[]/edu_course[] parallel arrays the backend zips together by
+// position — readonly keeps it in the POST as an empty string instead.
+function syncEduCourseLock(levelSelect) {
+    const row = levelSelect.closest('.education-row');
+    if (!row) return;
+    const courseEl = row.querySelector('[name="edu_course"]');
+    if (!courseEl) return;
+    const locked = (levelSelect.value === 'elementary' || levelSelect.value === 'als');
+    courseEl.readOnly = locked;
+    courseEl.classList.toggle('bg-gray-50', locked);
+    courseEl.classList.toggle('text-muted', locked);
+    courseEl.classList.toggle('cursor-not-allowed', locked);
+    if (locked) {
+        courseEl.value = '';
+        courseEl.placeholder = 'Not applicable';
+    } else if (courseEl.placeholder === 'Not applicable') {
+        courseEl.placeholder = 'e.g. BS Agriculture, STEM';
+    }
+}
+document.getElementById('education-container').addEventListener('change', function(e) {
+    if (e.target.matches('[name="edu_level"]')) syncEduCourseLock(e.target);
+});
+// Initialize lock state for any rows already on the page (edit mode / a
+// résumé that already has an Elementary or ALS entry saved).
+document.querySelectorAll('#education-container [name="edu_level"]').forEach(syncEduCourseLock);
 
 // ── "Present" checkbox for experience ───────────────────────────
 document.addEventListener('change', function(e) {
@@ -1274,6 +1365,36 @@ watchAllEntries();
     });
   }
 
+  // Semantic matches — phrased differently on the résumé than the
+  // canonical vocab name, so confident enough to suggest but not to
+  // silently add. Each chip adds itself as a real skill row on tap, same
+  // as typing it manually, then removes itself from the suggestion row.
+  function applySuggestedSkills(suggested) {
+    const wrap  = document.getElementById('suggested-skills');
+    const chips = document.getElementById('suggested-skills-chips');
+    if (!wrap || !chips || !Array.isArray(suggested) || !suggested.length) return;
+    const existing = new Set(Array.from(skillList.querySelectorAll('input[name="skill_name"]'))
+                                  .map(i => i.value.toLowerCase()));
+    chips.innerHTML = '';
+    let shown = 0;
+    suggested.forEach(function(s) {
+      if (typeof s !== 'string' || existing.has(s.toLowerCase())) return;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'inline-flex items-center gap-1 bg-amber/10 text-amber text-xs px-2.5 py-1 rounded-full border border-amber/30 hover:bg-amber/20 transition';
+      chip.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">'
+        + '<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>' + escapeHtml(s);
+      chip.addEventListener('click', function() {
+        addSkillRow(s, '');
+        chip.remove();
+        if (!chips.children.length) wrap.classList.add('hidden');
+      });
+      chips.appendChild(chip);
+      shown++;
+    });
+    if (shown) wrap.classList.remove('hidden');
+  }
+
   // Capture a blank row before wiping so we have something to clone from.
   // Without this, addRow() silently no-ops (it clones .education-row, but
   // we just innerHTML='d the container) and the section ends up empty.
@@ -1402,6 +1523,7 @@ watchAllEntries();
       setIfEmpty('street_barangay', data.address);
       setIfEmpty('bio', data.bio);
       applySkills(data.skills);
+      applySuggestedSkills(data.suggested_skills);
       applyEducation(data.education);
       applyExperiences(data.experiences);
       setDone(filename);

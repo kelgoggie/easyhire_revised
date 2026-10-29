@@ -37,7 +37,12 @@ def dashboard(request):
     certifications = Certification.objects.filter(profile=profile)
 
     if profile.profile_complete:
-        ranked_jobs = get_ranked_jobs(profile)[:5]
+        # Only surface genuinely good matches here — "Good Match" (80+) and
+        # up, i.e. the top two bands of the 5-tier scale in match_tags.py
+        # (Good/Great/Perfect). Decent (70-79) and Unmatched don't belong
+        # under a "recommended for you" heading; better to show fewer rows
+        # (or none) than pad it out with mediocre matches.
+        ranked_jobs = [r for r in get_ranked_jobs(profile) if r['score'] >= 80][:5]
     else:
         ranked_jobs = JobPosting.objects.filter(status='open', deleted_at__isnull=True, admin_disabled=False).order_by('-created_at').select_related('company')[:5]
         ranked_jobs = [{'job': j, 'score': None} for j in ranked_jobs]

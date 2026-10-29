@@ -8,8 +8,23 @@ WEIGHT_EXPERIENCE = 0.25
 WEIGHT_CERTIFICATIONS = 0.10
 
 
-def get_weights():
-    """Return current matching weights from SiteSettings, with safe fallbacks."""
+def get_weights(job=None):
+    """Return the (skills, education, experience, certifications) weights
+    to score `job` with.
+
+    If `job` has its own JobMatchingWeights row with use_custom_weights=True,
+    those take priority. Otherwise (no job passed, no override row, or the
+    override is switched off) falls back to PESO's site-wide SiteSettings
+    defaults — so every job that hasn't opted into custom weights keeps
+    scoring exactly as it did before this feature existed.
+    """
+    if job is not None:
+        try:
+            jmw = job.matching_weights
+        except Exception:
+            jmw = None
+        if jmw is not None and jmw.use_custom_weights:
+            return (jmw.weight_skills, jmw.weight_education, jmw.weight_experience, jmw.weight_certifications)
     try:
         from apps.admin_panel.models import SiteSettings
         s = SiteSettings.get()
@@ -318,9 +333,20 @@ def score_education(job, profile):
         req = job.education_requirement
     except Exception:
         return 1.0
+    if req is None:
+        # job.education_requirement is a `.first()`-backed property (unlike
+        # experience_requirement's OneToOneField, it returns None rather
+        # than raising when the job has no education requirement row).
+        return 1.0
 
+    # "als" (Alternative Learning System) sits right after junior_high —
+    # DepEd's ALS Accreditation & Equivalency track is the non-formal
+    # equivalent of completing basic education, roughly on par with a
+    # junior-high-level credential. There's no finer-grained "which ALS
+    # level" data on the Education model to place it more precisely than
+    # that; adjust this placement if PESO's actual policy differs.
     LEVEL_ORDER = [
-        "elementary", "junior_high", "senior_high", "vocational",
+        "elementary", "junior_high", "als", "senior_high", "vocational",
         "associate", "bachelor", "master", "doctorate",
     ]
 
@@ -497,6 +523,76 @@ def score_certifications(job, profile):
     return round(matched / required_certs.count(), 2)
 
 
+def score_custom_criterion(criterion, profile):
+    """Score an employer-defined custom criterion (e.g. "Licensing") against
+    a jobseeker. There's no dedicated jobseeker-side field for an arbitrary
+    employer-typed requirement, so this checks everything we know about
+    them in three tiers:
+      1. Lexical — requirement matches a skill/certification NAME (strong
+         signal, full credit) — same `fuzzy_match` as the rest of this file.
+      2. Lexical — mentioned in a skill description, work experience, or
+         bio (weaker signal, partial credit) — same two-tier pattern
+         `_skill_match_strength` uses above.
+      3. Semantic — nothing lexically overlapped, but the requirement might
+         still mean the same thing as something the jobseeker wrote (e.g.
+         "comfortable under pressure" vs. "thrives in a fast-paced
+         environment" share zero words). Reuses the sentence-transformers
+         model already loaded for autocomplete — degrades to 0.0 if the ML
+         deps aren't installed on this host, same as everywhere else that
+         touches nlp_service.
+
+    Returns a 0.0-1.0 score.
+    """
+    requirement = (criterion.requirement_text or '').strip()
+    if not requirement:
+        return 1.0  # nothing to check against — don't penalize an empty requirement
+
+    seeker_pairs = _seeker_skill_pairs(profile)
+    cert_names = list(Certification.objects.filter(profile=profile).values_list('name', flat=True))
+
+    # Strong signal — requirement matches a skill or certification NAME.
+    for name, _ in seeker_pairs:
+        if name and fuzzy_match(requirement, name):
+            return 1.0
+    for cert_name in cert_names:
+        if cert_name and fuzzy_match(requirement, cert_name):
+            return 1.0
+
+    # Weaker signal — mentioned in a skill description, work experience,
+    # or the profile bio.
+    longer_texts = [desc for _, desc in seeker_pairs if desc]
+    for exp in WorkExperience.objects.filter(profile=profile):
+        if exp.position:
+            longer_texts.append(exp.position)
+        if exp.description:
+            longer_texts.append(exp.description)
+    bio = getattr(profile, 'bio', '')
+    if bio:
+        longer_texts.append(bio)
+
+    req_l = requirement.lower()
+    for text in longer_texts:
+        if text and fuzz.token_set_ratio(req_l, text.lower()) >= FUZZY_THRESHOLD:
+            return SKILL_DESCRIPTION_CREDIT
+
+    # Semantic fallback — no shared words anywhere above, but the meaning
+    # might still match. Compare against every text snippet we have (skill
+    # names + the weaker-signal pool already built above) and take the
+    # single best similarity as the score.
+    candidates = [name for name, _ in seeker_pairs] + cert_names + longer_texts
+    candidates = [c for c in candidates if c]
+    if candidates:
+        try:
+            from apps.jobseekers.nlp_service import semantic_rank
+            matches = semantic_rank(requirement, candidates, top_k=1, min_similarity=0.45)
+        except Exception:
+            matches = []
+        if matches:
+            return round(matches[0][1], 2)
+
+    return 0.0
+
+
 def score_query_boost(job, profile):
     query = getattr(profile, 'job_search_query', '').strip()
     if not query:
@@ -538,13 +634,27 @@ def compute_match_score(job, profile):
     skills = score_skills(job, profile)
     certs = score_certifications(job, profile)
 
-    w_skills, w_edu, w_exp, w_certs = get_weights()
-    base_score = (
-        skills * w_skills +
-        edu    * w_edu +
-        exp    * w_exp +
-        certs  * w_certs
-    )
+    w_skills, w_edu, w_exp, w_certs = get_weights(job)
+
+    # ── Combine every active criterion — the 4 standard ones plus any     ──
+    # employer-defined custom criteria on this job — into one weighted
+    # average. Normalizing by the total weight (instead of assuming the
+    # weights already sum to 1.0) means an employer's custom weights don't
+    # have to add up perfectly, and a job with extra custom criteria just
+    # dilutes the standard four proportionally rather than overweighting
+    # the total. See JobMatchingWeights / JobCustomCriterion.
+    criteria = [
+        (skills, w_skills),
+        (edu,    w_edu),
+        (exp,    w_exp),
+        (certs,  w_certs),
+    ]
+    custom_criteria = list(job.custom_criteria.all())
+    custom_results = [(c, score_custom_criterion(c, profile)) for c in custom_criteria]
+    criteria += [(c_score, c.weight) for c, c_score in custom_results]
+
+    total_weight = sum(w for _, w in criteria)
+    base_score = (sum(s * w for s, w in criteria) / total_weight) if total_weight > 0 else 0.0
 
     query_boost = score_query_boost(job, profile)
     location_raw = score_location(job, profile)
@@ -635,6 +745,19 @@ def compute_match_score(job, profile):
             exp_label = f'{req_months} month{"" if req_months == 1 else "s"} experience'
         exp_items = [{'name': exp_label, 'met': exp >= 1.0}]
 
+    # Employer-defined custom criteria (e.g. "Licensing") — kept as its own
+    # list rather than flattened into the fixed keys above so existing
+    # callers/templates reading breakdown['skills'] etc. are unaffected by
+    # a job that has zero custom criteria (the list is just empty).
+    custom_breakdown = [
+        {'id': c.id, 'name': c.name, 'score': round(c_score * 100), 'weight': round(c.weight * 100)}
+        for c, c_score in custom_results
+    ]
+    custom_items = [
+        {'name': c.name, 'met': c_score >= 1.0, 'requirement_text': c.requirement_text}
+        for c, c_score in custom_results
+    ]
+
     return {
         'total': round(total * 100),
         'breakdown': {
@@ -644,12 +767,14 @@ def compute_match_score(job, profile):
             'certifications': round(certs * 100),
             'query_boost': round(query_boost * 100),
             'location_boost': round(location_boost * 100),
+            'custom': custom_breakdown,
         },
         'matched_items': {
             'skills':         skill_items,
             'education':      edu_items,
             'experience':     exp_items,
             'certifications': cert_items,
+            'custom':         custom_items,
         },
         'counts': {
             'skills_matched': matched_skills,
@@ -701,8 +826,8 @@ def get_ranked_jobseekers(job, sector_filter=False):
 def get_ranked_jobs(profile, sector_filter=False):
     from apps.jobs.models import JobPosting
     jobs = JobPosting.objects.filter(status='open', deleted_at__isnull=True, admin_disabled=False).select_related(
-        'company', 'experience_requirement'
-    ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements')
+        'company', 'experience_requirement', 'matching_weights'
+    ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements', 'custom_criteria')
 
     results = []
     for job in jobs:

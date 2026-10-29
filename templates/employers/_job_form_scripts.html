@@ -224,6 +224,105 @@ function addCert() {
   initAutocompletes();
 }
 
+// -- Matching Criteria: custom weights toggle ------------------------
+const useCustomWeightsCb = document.getElementById('use-custom-weights');
+const weightsPanel = document.getElementById('weights-panel');
+if (useCustomWeightsCb && weightsPanel) {
+  useCustomWeightsCb.addEventListener('change', function() {
+    weightsPanel.classList.toggle('hidden', !this.checked);
+    updateWeightTotal();
+  });
+}
+
+// -- Matching Criteria: live weight total (standard + custom) --------
+// Purely a UX nudge toward 100% -- the engine normalizes whatever's
+// actually submitted, so this never blocks saving, it just helps the
+// employer not accidentally leave things wildly unbalanced.
+function updateWeightTotal() {
+  const badge = document.getElementById('weight-total-badge');
+  const valueEl = document.getElementById('weight-total-value');
+  if (!badge || !valueEl) return;
+  let total = 0;
+  document.querySelectorAll('#weights-panel .weight-input').forEach(el => {
+    total += parseFloat(el.value) || 0;
+  });
+  valueEl.textContent = total;
+  badge.classList.remove('bg-gray-100', 'text-muted', 'bg-teal/10', 'text-teal', 'bg-red-50', 'text-red-500');
+  if (!useCustomWeightsCb || !useCustomWeightsCb.checked) {
+    badge.classList.add('bg-gray-100', 'text-muted');
+  } else if (Math.abs(total - 100) <= 1) {
+    badge.classList.add('bg-teal/10', 'text-teal');
+  } else {
+    badge.classList.add('bg-red-50', 'text-red-500');
+  }
+}
+document.querySelectorAll('#weights-panel .weight-input').forEach(el => el.addEventListener('input', updateWeightTotal));
+updateWeightTotal();
+
+// -- Matching Criteria: add/remove a custom criterion row -------------
+function removeCriterion(btn) {
+  btn.closest('.criterion-row').remove();
+  updateWeightTotal();
+}
+function addCriterion() {
+  const container = document.getElementById('criteria-container');
+  // Gate on the LAST existing card (not a fixed "template" row like edu/
+  // cert have, since this list starts empty) — don't let a second blank
+  // criterion pile up before the first one has a name.
+  const existing = container.querySelectorAll('.criterion-row');
+  const last = existing[existing.length - 1];
+  if (last && !_gateOk(last, ['criterion_name'])) return;
+
+  const div = document.createElement('div');
+  div.className = 'criterion-row relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2';
+  div.innerHTML = `
+    <button type="button" onclick="removeCriterion(this)" title="Remove"
+            class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <input type="text" name="criterion_name" placeholder="Label, e.g. Licensing"
+           class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+    <input type="text" name="criterion_text" placeholder="What are you looking for?"
+           class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+    <div class="relative">
+      <input type="number" name="criterion_weight" min="0" max="100" step="1" value="10"
+             class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-xs text-primary focus:outline-none focus:border-teal transition">
+      <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
+    </div>
+  `;
+  container.appendChild(div);
+  div.querySelectorAll('.weight-input').forEach(el => el.addEventListener('input', updateWeightTotal));
+  watchEntry(div);
+  updateWeightTotal();
+}
+
+// -- Matching Criteria: block submit on a named-but-empty gap, silently --
+// drop a card nobody touched at all. HTML5 `required` can't cover this
+// (criteria are optional — zero of them is valid), so this runs explicitly
+// from the submit handler in _job_form_body.html before the confirm modal.
+function validateCriteria() {
+  const rows = Array.from(document.querySelectorAll('.criterion-row'));
+  for (const row of rows) {
+    const nameEl = row.querySelector('[name="criterion_name"]');
+    const textEl = row.querySelector('[name="criterion_text"]');
+    const name = ((nameEl && nameEl.value) || '').trim();
+    const text = ((textEl && textEl.value) || '').trim();
+    if (!name && !text) {
+      row.remove();  // untouched blank card — just drop it, nothing to save
+      continue;
+    }
+    if (!name) {
+      nameEl.focus();
+      const msg = 'Give this criterion a name, or remove it.';
+      if (typeof window.showToast === 'function') window.showToast(msg, { kind: 'error' });
+      else alert(msg);
+      return false;
+    }
+  }
+  updateWeightTotal();
+  return true;
+}
+
 // â”€â”€ Add-Entry gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Check the FRONT row's required fields BEFORE cloning a new row, and
 // toast a friendly nudge if the user hasn't filled it in yet. We check
@@ -326,6 +425,17 @@ document.getElementById('job-form').addEventListener('submit', function() {
   let dirty = false;
   form.addEventListener('input',  () => { dirty = true; });
   form.addEventListener('change', () => { dirty = true; });
+
+  // Browser-level navigation (back button, refresh, closing the tab,
+  // typing a new URL) doesn't go through the Cancel link at all, so it
+  // needs its own guard. Most browsers ignore the custom message text and
+  // show their own generic "leave site?" wording — returnValue just needs
+  // to be set to something to trigger the native prompt.
+  window.addEventListener('beforeunload', function(e) {
+    if (!dirty || window.__jobFormSubmitting) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
 
   cancel.addEventListener('click', function(e) {
     if (!dirty || window.__jobFormSubmitting) return;

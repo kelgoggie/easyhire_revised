@@ -295,12 +295,23 @@ def submit_verification(request):
 def dashboard(request):
     profile = request.user.employer_profile
     company = profile.company
-    from apps.jobs.models import JobPosting
+    from apps.jobs.models import JobPosting, Application
     from django.db.models import Count
 
     recent_jobs = (
         JobPosting.objects.filter(company=company)
         .annotate(applicants_count=Count('applications'))
+        .order_by('-created_at')[:5]
+    )
+
+    # Most recent applicants across ALL of this employer's job posts (not
+    # just one) — the per-job "N applicants" link in the table above only
+    # shows a count, not who, so this gives an at-a-glance "who applied
+    # recently" view without clicking into each job individually.
+    recent_applicants = (
+        Application.objects
+        .filter(job__company=company)
+        .select_related('jobseeker', 'job')
         .order_by('-created_at')[:5]
     )
 
@@ -311,6 +322,7 @@ def dashboard(request):
         'profile': profile,
         'company': company,
         'recent_jobs': recent_jobs,
+        'recent_applicants': recent_applicants,
         'pending_block_msg': pending_block_msg,
         'unread_notifications': False,
         'unread_messages': False,
@@ -320,8 +332,10 @@ def dashboard(request):
 from apps.jobs.models import (
     JobPosting, JobEducationRequirement,
     JobSkillRequirement, JobCertificationRequirement,
-    JobExperienceRequirement
+    JobExperienceRequirement, JobCustomCriterion
 )
+from apps.matching.models import JobMatchingWeights
+from apps.matching.engine import get_weights
 
 
 @employer_required
@@ -392,6 +406,53 @@ def job_list(request):
         'unread_messages': False,
     })
 
+def _save_matching_criteria(request, job):
+    """Parse the Matching Criteria section of the job form (weights override
+    + employer-defined custom criteria) and persist it. Shared by job_create
+    and job_edit: update_or_create the weights override either way, and
+    wholesale-replace the custom criteria rows (same delete-then-recreate
+    pattern already used above for skills/certifications/education — on a
+    brand-new job the delete is just a no-op).
+    """
+    use_custom = 'use_custom_weights' in request.POST
+
+    def _pct(name, fallback):
+        raw = request.POST.get(name)
+        try:
+            return max(0.0, min(1.0, float(raw) / 100.0))
+        except (TypeError, ValueError):
+            return fallback
+
+    w_skills, w_edu, w_exp, w_certs = get_weights(None)  # site defaults, used as a fallback only
+    JobMatchingWeights.objects.update_or_create(
+        job=job,
+        defaults=dict(
+            use_custom_weights=use_custom,
+            weight_skills=_pct('weight_skills', w_skills),
+            weight_education=_pct('weight_education', w_edu),
+            weight_experience=_pct('weight_experience', w_exp),
+            weight_certifications=_pct('weight_certifications', w_certs),
+        ),
+    )
+
+    JobCustomCriterion.objects.filter(job=job).delete()
+    names   = request.POST.getlist('criterion_name')
+    texts   = request.POST.getlist('criterion_text')
+    weights = request.POST.getlist('criterion_weight')
+    for i, name in enumerate(names):
+        name = name.strip()
+        if not name:
+            continue
+        text = texts[i].strip() if i < len(texts) else ''
+        try:
+            w = max(0.0, min(1.0, float(weights[i]) / 100.0)) if i < len(weights) else 0.1
+        except (TypeError, ValueError):
+            w = 0.1
+        JobCustomCriterion.objects.create(
+            job=job, name=name, requirement_text=text, weight=w, order=i,
+        )
+
+
 @employer_verified_required
 @email_verified_required
 def job_create(request):
@@ -399,13 +460,23 @@ def job_create(request):
     company = profile.company
 
     if request.method == 'POST':
+        # Backstop behind the form's client-side `reportValidity()` check —
+        # that covers normal browser use, this covers anything that bypasses
+        # JS entirely (direct POST, JS disabled, etc.) so a blank-titled job
+        # can't get created either way.
+        title = request.POST.get('title', '').strip()
+        if not title:
+            from django.contrib import messages
+            messages.error(request, 'Job title is required.')
+            return redirect('/employers/jobs/create/')
+
         # Core job
         vis = (request.POST.get('visibility') or '').strip()
         if vis not in {JobPosting.VISIBILITY_PUBLIC, JobPosting.VISIBILITY_MEMBERS}:
             vis = JobPosting.VISIBILITY_PUBLIC
         job = JobPosting.objects.create(
             company=company,
-            title=request.POST.get('title', ''),
+            title=title,
             description=request.POST.get('description', ''),
             location_type=request.POST.get('location_type', 'iloilo'),
             bldg_unit=request.POST.get('bldg_unit', ''),
@@ -466,6 +537,8 @@ def job_create(request):
                 preferred_position=', '.join(positions),
             )
 
+        _save_matching_criteria(request, job)
+
         # Notify every jobseeker whose match score against this newly-
         # posted job clears 80. Runs synchronously — fine at Iloilo scale
         # (couple thousand seekers max); if it ever starts to add latency
@@ -497,11 +570,17 @@ def job_create(request):
         'barangay_code': company.iloilo_barangay_code or (last_job.barangay_code if last_job else '') or '',
         'barangay_name': company.iloilo_barangay_name or (last_job.barangay_name if last_job else '') or '',
     }
+    w_skills, w_edu, w_exp, w_certs = get_weights(None)
+    weight_defaults = {
+        'skills': round(w_skills * 100), 'education': round(w_edu * 100),
+        'experience': round(w_exp * 100), 'certifications': round(w_certs * 100),
+    }
     return render(request, 'employers/job_form.html', {
         'company': company,
         'action': 'Create',
         'job': None,
         'location_defaults': location_defaults,
+        'weight_defaults': weight_defaults,
         # Job creation always runs under the employer chrome; admins don't
         # create jobs for a company, they just moderate existing ones.
         'base_template': 'base/base_dashboard_employer.html',
@@ -610,6 +689,8 @@ def job_edit(request, job_id):
                 preferred_position=', '.join(positions),
             )
 
+        _save_matching_criteria(request, job)
+
         # Admin edits return to the admin job detail; employer edits go to
         # the employer's job list (existing behavior).
         if is_admin_edit:
@@ -617,10 +698,16 @@ def job_edit(request, job_id):
             return redirect(f'/admin-panel/companies/{_hashid(company.id)}/jobs/{_hashid(job.id)}/')
         return redirect('/employers/jobs/')
 
+    w_skills, w_edu, w_exp, w_certs = get_weights(job)
+    weight_defaults = {
+        'skills': round(w_skills * 100), 'education': round(w_edu * 100),
+        'experience': round(w_exp * 100), 'certifications': round(w_certs * 100),
+    }
     return render(request, 'employers/job_form.html', {
         'company': company,
         'action': 'Edit',
         'job': job,
+        'weight_defaults': weight_defaults,
         'is_admin_edit': is_admin_edit,
         # Route the template through the admin chrome when a PESO admin is
         # editing — the employer sidebar's tabs (Dashboard / My Job Posts /
@@ -698,9 +785,18 @@ def job_close(request, job_id):
     profile = request.user.employer_profile
     job = get_object_or_404(JobPosting, id=job_id, company=profile.company)
     if request.method == 'POST':
+        # A trashed job shouldn't be independently toggleable between open/
+        # closed — that's a separate axis from deletion, and flipping it
+        # while the job is sitting in Trash defeats the point of deleting
+        # it in the first place. Restore it first, then open/close as normal.
+        if job.deleted_at:
+            messages.error(
+                request,
+                'This job is in your Trash. Restore it first before changing its open/closed status.',
+            )
         # Block re-open attempts on admin take-downs. Closing is also blocked
         # (already closed) but the bounce message is what matters.
-        if job.admin_disabled:
+        elif job.admin_disabled:
             messages.error(
                 request,
                 'This job was disabled by PESO Admin and can\'t be re-opened from your side. '

@@ -194,6 +194,13 @@
           </span>
           {% endif %}
           {% endwith %}
+
+          {% for c in item.app.job.custom_criteria.all|slice:":2" %}
+          <span class="inline-flex items-center gap-1 bg-amber/15 text-amber text-xs px-2.5 py-0.5 rounded-full border border-amber/30 max-w-full" title="{{ c.requirement_text }}">
+            <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0011 2H4a2 2 0 00-2 2v7a2 2 0 00.59 1.41l9 9a2 2 0 002.82 0l7-7a2 2 0 000-2.83zM6.5 8A1.5 1.5 0 118 6.5 1.5 1.5 0 016.5 8z"/></svg>
+            <span class="truncate">{{ c.name }}</span>
+          </span>
+          {% endfor %}
         </div>
 
         <!-- Your application message -->

@@ -132,6 +132,7 @@ class JobseekerProfile(models.Model):
 class Education(models.Model):
     LEVELS = [
         ("elementary", "Elementary"),
+        ("als", "Alternative Learning System"),
         ("junior_high", "High School / Junior High School"),
         ("senior_high", "Senior High School"),
         ("vocational", "Vocational / TESDA"),

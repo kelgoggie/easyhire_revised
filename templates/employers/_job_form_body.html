@@ -121,6 +121,7 @@
                         class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition">
                   <option value="">Select Educational Level...</option>
                   <option value="elementary"  {% if edu.level == 'elementary' %}selected{% endif %}>Elementary</option>
+                  <option value="als"         {% if edu.level == 'als' %}selected{% endif %}>Alternative Learning System</option>
                   <option value="junior_high" {% if edu.level == 'junior_high' %}selected{% endif %}>High School / JHS</option>
                   <option value="senior_high" {% if edu.level == 'senior_high' %}selected{% endif %}>Senior High School</option>
                   <option value="vocational"  {% if edu.level == 'vocational' %}selected{% endif %}>Vocational / TESDA</option>
@@ -153,6 +154,7 @@
                         class="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition">
                   <option value="">Select Educational Level...</option>
                   <option value="elementary">Elementary</option>
+                  <option value="als">Alternative Learning System</option>
                   <option value="junior_high">High School / JHS</option>
                   <option value="senior_high">Senior High School</option>
                   <option value="vocational">Vocational / TESDA</option>
@@ -240,6 +242,102 @@
                    class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
             <input type="text" name="cert_org" placeholder="Issuing organization"
                    class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Matching Criteria & Weights ──────────────────────────────── -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 mb-4" data-section="matching">
+      <div class="flex items-center justify-between mb-1 gap-2">
+        <h2 class="text-lg font-bold text-primary">Matching Criteria</h2>
+        <span id="weight-total-badge"
+              class="text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-muted flex-shrink-0">
+          Total: <span id="weight-total-value">100</span>%
+        </span>
+      </div>
+      <p class="text-xs text-muted mb-4">
+        Controls how applicants are ranked against this job.
+      </p>
+
+      <label class="inline-flex items-center gap-2 text-sm text-primary cursor-pointer mb-4">
+        <input type="checkbox" id="use-custom-weights" name="use_custom_weights"
+               {% if job.matching_weights.use_custom_weights %}checked{% endif %}
+               class="accent-teal w-4 h-4">
+        Customize weighting for this job
+      </label>
+
+      <div id="weights-panel" class="{% if not job.matching_weights.use_custom_weights %}hidden{% endif %}">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          <div>
+            <label class="block text-xs text-muted mb-1">Skills</label>
+            <div class="relative">
+              <input type="number" name="weight_skills" min="0" max="100" step="1"
+                     value="{{ weight_defaults.skills }}"
+                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-muted mb-1">Education</label>
+            <div class="relative">
+              <input type="number" name="weight_education" min="0" max="100" step="1"
+                     value="{{ weight_defaults.education }}"
+                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-muted mb-1">Experience</label>
+            <div class="relative">
+              <input type="number" name="weight_experience" min="0" max="100" step="1"
+                     value="{{ weight_defaults.experience }}"
+                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-muted mb-1">Certifications</label>
+            <div class="relative">
+              <input type="number" name="weight_certifications" min="0" max="100" step="1"
+                     value="{{ weight_defaults.certifications }}"
+                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mb-2 gap-2">
+          <p class="text-sm font-bold text-primary">Additional Criteria</p>
+          <button type="button" id="add-criterion-btn" onclick="addCriterion()"
+                  class="inline-flex items-center gap-1 text-xs font-semibold text-teal border border-teal/30 bg-teal/5 px-3 py-1 rounded-full hover:bg-teal/10 transition flex-shrink-0">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Criterion
+          </button>
+        </div>
+        <p class="text-xs text-muted mb-3">
+          Anything beyond the standard four — e.g. &ldquo;Licensing&rdquo; or &ldquo;Training.&rdquo;
+          Describe what you're looking for in plain language; EasyHire matches it against each
+          applicant's skills, certifications, work history, and bio.
+        </p>
+
+        <div id="criteria-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {% for c in job.custom_criteria.all %}
+          <div class="criterion-row relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2">
+            <button type="button" onclick="removeCriterion(this)" title="Remove"
+                    class="remove-x absolute top-2 right-2 w-5 h-5 rounded-full bg-taupe/40 hover:bg-taupe/70 text-muted flex items-center justify-center transition">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <input type="text" name="criterion_name" value="{{ c.name }}" placeholder="Label, e.g. Licensing"
+                   class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+            <input type="text" name="criterion_text" value="{{ c.requirement_text }}" placeholder="What are you looking for?"
+                   class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+            <div class="relative">
+              <input type="number" name="criterion_weight" min="0" max="100" step="1" value="{{ c.weight_percent }}"
+                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-xs text-primary focus:outline-none focus:border-teal transition">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
+            </div>
           </div>
           {% endfor %}
         </div>
@@ -375,6 +473,19 @@
     // by then, and fall back to native confirm() if it never loads.
     const isCreate = {% if action == 'Create' %}true{% else %}false{% endif %};
     submitBtn.addEventListener('click', function() {
+      // This button is type="button" (not a real submit button) and the
+      // confirm flow below calls requestSubmit() manually — neither of
+      // those triggers HTML5 `required` validation on its own, so a blank
+      // title/description could slip through silently. Check explicitly,
+      // before the confirm modal even opens, so the browser's native
+      // "please fill this in" bubble points at the actual problem field.
+      if (!form.reportValidity()) return;
+      // Custom criteria aren't HTML-required (zero of them is valid), so
+      // they need their own check: a card can't have a requirement typed
+      // in with no name, though an entirely untouched card is just quietly
+      // dropped rather than blocking the save.
+      if (typeof validateCriteria === 'function' && !validateCriteria()) return;
+
       const title = isCreate ? 'Post this job now?' : 'Save these changes?';
       const body  = isCreate
         ? 'The job will appear on the public jobs page (or to registered EasyHire users only, depending on your Visibility choice) as soon as you confirm.'
@@ -385,10 +496,10 @@
           body:  body,
           ctaLabel: isCreate ? 'Yes, post job' : 'Yes, save changes',
           ctaClass: 'bg-amber hover:bg-amber/90',
-          onConfirm: function() { form.submit(); },
+          onConfirm: function() { form.requestSubmit(); },
         });
       } else if (confirm(title + '\n\n' + body)) {
-        form.submit();
+        form.requestSubmit();
       }
     });
   })();

@@ -102,49 +102,46 @@
     {% csrf_token %}
     <input type="hidden" name="form" value="personal">
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4 items-end">
       <div>
         <label class="block text-primary text-xs mb-1">First Name</label>
         <input type="text" name="first_name" value="{{ jobseeker.first_name }}" required disabled
-               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Middle Name</label>
         <input type="text" name="middle_name" value="{{ jobseeker.middle_name }}" disabled
-               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Last Name</label>
         <input type="text" name="last_name" value="{{ jobseeker.last_name }}" required disabled
-               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
       <div>
-        <label class="block text-primary text-xs mb-1">Suffix</label>
+        <label class="block text-primary text-xs mb-1">Suffix(Jr./Sr./III)</label>
         <input type="text" name="suffix" value="{{ jobseeker.suffix }}" disabled
-               class="personal-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+               class="personal-field w-full bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
       </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
       <div>
         <label class="block text-primary text-xs mb-1">Birthday</label>
         <div class="relative">
           <input type="text" name="date_of_birth" data-datepicker="date" data-display-format="long"
                  value="{% if jobseeker.date_of_birth %}{{ jobseeker.date_of_birth|date:'F j, Y' }}{% endif %}"
                  placeholder="Select date" readonly autocomplete="off" disabled
-                 class="personal-field w-full bg-white border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
-          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                 class="personal-field w-full bg-white border border-gray-200 rounded-full pl-3 pr-9 py-1.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition cursor-pointer disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         </div>
       </div>
       <div>
         <label class="block text-primary text-xs mb-1">Sex</label>
         <div class="relative">
           <select name="sex" disabled
-                  class="personal-field w-full appearance-none bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
+                  class="personal-field w-full appearance-none bg-white border border-gray-200 rounded-full px-3 py-1.5 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted disabled:cursor-not-allowed">
             <option value="M" {% if jobseeker.sex == 'M' %}selected{% endif %}>Male</option>
             <option value="F" {% if jobseeker.sex == 'F' %}selected{% endif %}>Female</option>
           </select>
-          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </div>
       </div>
       {# Edit / Save buttons for this form moved up to the header row —    #}
