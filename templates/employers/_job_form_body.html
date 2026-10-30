@@ -264,45 +264,62 @@
       <label class="inline-flex items-center gap-2 text-sm text-primary cursor-pointer mb-4">
         <input type="checkbox" id="use-custom-weights" name="use_custom_weights"
                {% if job.matching_weights.use_custom_weights %}checked{% endif %}
-               class="accent-teal w-4 h-4">
+               class="circle-check">
         Customize weighting for this job
       </label>
 
-      <div id="weights-panel" class="{% if not job.matching_weights.use_custom_weights %}hidden{% endif %}">
+      <div id="weights-panel">
+        <p class="text-xs text-muted mb-2">Check "Customize weighting" to edit these — uncheck any single criterion to exclude it entirely.</p>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          <div>
-            <label class="block text-xs text-muted mb-1">Skills</label>
+          <div class="criterion-card border border-gray-100 rounded-xl p-3">
+            <label class="flex items-center gap-1.5 text-xs text-muted mb-1 cursor-pointer">
+              <input type="checkbox" class="criterion-toggle circle-check" style="width:0.875rem;height:0.875rem;" data-target="weight_skills"
+                     {% if weight_defaults.skills > 0 %}checked{% endif %}>
+              Skills
+            </label>
             <div class="relative">
               <input type="number" name="weight_skills" min="0" max="100" step="1"
                      value="{{ weight_defaults.skills }}"
-                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
               <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
             </div>
           </div>
-          <div>
-            <label class="block text-xs text-muted mb-1">Education</label>
+          <div class="criterion-card border border-gray-100 rounded-xl p-3">
+            <label class="flex items-center gap-1.5 text-xs text-muted mb-1 cursor-pointer">
+              <input type="checkbox" class="criterion-toggle circle-check" style="width:0.875rem;height:0.875rem;" data-target="weight_education"
+                     {% if weight_defaults.education > 0 %}checked{% endif %}>
+              Education
+            </label>
             <div class="relative">
               <input type="number" name="weight_education" min="0" max="100" step="1"
                      value="{{ weight_defaults.education }}"
-                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
               <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
             </div>
           </div>
-          <div>
-            <label class="block text-xs text-muted mb-1">Experience</label>
+          <div class="criterion-card border border-gray-100 rounded-xl p-3">
+            <label class="flex items-center gap-1.5 text-xs text-muted mb-1 cursor-pointer">
+              <input type="checkbox" class="criterion-toggle circle-check" style="width:0.875rem;height:0.875rem;" data-target="weight_experience"
+                     {% if weight_defaults.experience > 0 %}checked{% endif %}>
+              Experience
+            </label>
             <div class="relative">
               <input type="number" name="weight_experience" min="0" max="100" step="1"
                      value="{{ weight_defaults.experience }}"
-                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
               <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
             </div>
           </div>
-          <div>
-            <label class="block text-xs text-muted mb-1">Certifications</label>
+          <div class="criterion-card border border-gray-100 rounded-xl p-3">
+            <label class="flex items-center gap-1.5 text-xs text-muted mb-1 cursor-pointer">
+              <input type="checkbox" class="criterion-toggle circle-check" style="width:0.875rem;height:0.875rem;" data-target="weight_certifications"
+                     {% if weight_defaults.certifications > 0 %}checked{% endif %}>
+              Certifications
+            </label>
             <div class="relative">
               <input type="number" name="weight_certifications" min="0" max="100" step="1"
                      value="{{ weight_defaults.certifications }}"
-                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
+                     class="weight-input w-full bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
               <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
             </div>
           </div>
@@ -322,7 +339,7 @@
           applicant's skills, certifications, work history, and bio.
         </p>
 
-        <div id="criteria-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div id="criteria-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {% for c in job.custom_criteria.all %}
           <div class="criterion-row relative border border-gray-100 rounded-xl p-3 pt-6 space-y-2">
             <button type="button" onclick="removeCriterion(this)" title="Remove"

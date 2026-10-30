@@ -225,14 +225,63 @@ function addCert() {
 }
 
 // -- Matching Criteria: custom weights toggle ------------------------
+// The four standard-criteria cards stay visible but go inert (disabled,
+// grayed) until "Customize weighting" is checked, instead of vanishing
+// entirely — lets an employer see what the site-wide defaults are even
+// before opting in. Additional Criteria is NOT gated by this checkbox —
+// adding a custom criterion doesn't require also touching the standard
+// four, so it stays independently usable either way.
 const useCustomWeightsCb = document.getElementById('use-custom-weights');
-const weightsPanel = document.getElementById('weights-panel');
-if (useCustomWeightsCb && weightsPanel) {
-  useCustomWeightsCb.addEventListener('change', function() {
-    weightsPanel.classList.toggle('hidden', !this.checked);
-    updateWeightTotal();
+const criterionCards = document.querySelectorAll('.criterion-card');
+function syncCustomWeightsGate() {
+  const on = !!(useCustomWeightsCb && useCustomWeightsCb.checked);
+  criterionCards.forEach(function(card) {
+    card.querySelectorAll('.weight-input, .criterion-toggle').forEach(function(el) {
+      el.disabled = !on;
+    });
+    card.classList.toggle('opacity-50', !on);
   });
+  updateWeightTotal();
 }
+if (useCustomWeightsCb) {
+  useCustomWeightsCb.addEventListener('change', syncCustomWeightsGate);
+}
+
+// -- Matching Criteria: per-criterion enable/disable toggle -----------
+// Unchecking one of the standard four fully excludes it from scoring for
+// this job, same as a custom criterion at weight 0 — readonly (not
+// disabled) so the field still submits as "0" instead of dropping out of
+// the POST entirely and silently falling back to the site default weight.
+// This layers UNDER the outer "Customize weighting" gate above — both can
+// independently keep a field inert; `disabled` (set by the outer gate)
+// always wins visually/functionally over `readOnly` when both apply.
+document.querySelectorAll('.criterion-toggle').forEach(function(cb) {
+  const input = document.querySelector('[name="' + cb.dataset.target + '"]');
+  if (!input) return;
+  function sync() {
+    if (cb.checked) {
+      input.readOnly = false;
+      input.classList.remove('bg-gray-50', 'text-muted', 'cursor-not-allowed');
+      if (input.value === '0' || input.value.trim() === '') {
+        input.value = input.dataset.lastValue || '10';
+      }
+    } else {
+      input.dataset.lastValue = input.value;
+      input.readOnly = true;
+      input.value = '0';
+      input.classList.add('bg-gray-50', 'text-muted', 'cursor-not-allowed');
+    }
+    updateWeightTotal();
+  }
+  cb.addEventListener('change', sync);
+  sync();  // apply initial state on load (handles a saved weight of 0)
+});
+
+// Apply the outer gate's initial state now that the inner per-criterion
+// toggles have set their own state — disabled (outer) layers on top
+// cleanly regardless of order, but doing this last keeps the two in sync
+// on first paint rather than relying on incidental call order.
+syncCustomWeightsGate();
 
 // -- Matching Criteria: live weight total (standard + custom) --------
 // Purely a UX nudge toward 100% -- the engine normalizes whatever's

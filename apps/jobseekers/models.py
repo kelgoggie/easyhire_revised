@@ -197,6 +197,47 @@ class WorkExperience(models.Model):
         db_table = "jobseeker_experiences"
 
 
+class Project(models.Model):
+    """A personal/school/freelance project the jobseeker wants to show off —
+    distinct from WorkExperience since it's not necessarily paid employment.
+    Feeds the matching engine's semantic candidate pool (see
+    apps.matching.engine._profile_extra_texts) so a project description can
+    surface a relevant skill even if the jobseeker never listed it directly."""
+    profile = models.ForeignKey(JobseekerProfile, on_delete=models.CASCADE, related_name="projects")
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    link = models.URLField(blank=True, help_text="Optional — GitHub repo, live demo, portfolio page, etc.")
+    month_started = models.CharField(max_length=20, blank=True)
+    year_started = models.PositiveIntegerField(null=True, blank=True)
+    month_ended = models.CharField(max_length=20, blank=True)
+    year_ended = models.PositiveIntegerField(null=True, blank=True)
+    is_current = models.BooleanField(default=False,
+        help_text="Still working on this project.")
+
+    class Meta:
+        db_table = "jobseeker_projects"
+
+
+class Extracurricular(models.Model):
+    """A club, organization, volunteer role, or other activity outside paid
+    work — e.g. "Student Council — President" or "Habitat for Humanity —
+    Volunteer". Same matching-engine role as Project: feeds the semantic
+    candidate pool, not scored as a standard criterion of its own."""
+    profile = models.ForeignKey(JobseekerProfile, on_delete=models.CASCADE, related_name="extracurriculars")
+    name = models.CharField(max_length=200, help_text="The organization or activity, e.g. 'Student Council'.")
+    role = models.CharField(max_length=200, blank=True, help_text="Your role, e.g. 'President', 'Member'.")
+    description = models.TextField(blank=True)
+    month_started = models.CharField(max_length=20, blank=True)
+    year_started = models.PositiveIntegerField(null=True, blank=True)
+    month_ended = models.CharField(max_length=20, blank=True)
+    year_ended = models.PositiveIntegerField(null=True, blank=True)
+    is_current = models.BooleanField(default=False,
+        help_text="Still active in this role.")
+
+    class Meta:
+        db_table = "jobseeker_extracurriculars"
+
+
 class PersonalInfoChangeRequest(models.Model):
     """Jobseeker-submitted edit to their core personal info, pending PESO review."""
     STATUS_PENDING  = "pending"

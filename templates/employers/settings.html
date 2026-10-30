@@ -43,10 +43,15 @@
     {% csrf_token %}
     <input type="hidden" name="form_type" value="representative">
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label class="block text-primary text-xs mb-1">First Name</label>
         <input type="text" name="first_name" value="{{ profile.first_name|default:'' }}" required disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Position at {{ company.name|truncatechars:30 }}</label>
+        <input type="text" name="position" value="{{ profile.position|default:'' }}" required disabled
                class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
@@ -55,39 +60,23 @@
                class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
+        <label class="block text-primary text-xs mb-1">Phone <span class="text-red-500">*</span></label>
+        <input type="text" name="phone" value="{{ profile.phone|default:'' }}" required disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+      <div>
         <label class="block text-primary text-xs mb-1">Last Name</label>
         <input type="text" name="last_name" value="{{ profile.last_name|default:'' }}" required disabled
                class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
       <div>
-        <label class="block text-primary text-xs mb-1">Suffix</label>
-        <input type="text" name="suffix" value="{{ profile.suffix|default:'' }}" disabled
-               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 mb-4">
-      <div>
-        <label class="block text-primary text-xs mb-1">Position at {{ company.name|truncatechars:30 }}</label>
-        <input type="text" name="position" value="{{ profile.position|default:'' }}" required disabled
-               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
-      </div>
-      <div>
-        <label class="block text-primary text-xs mb-1">Phone <span class="text-red-500">*</span></label>
-        <input type="text" name="phone" value="{{ profile.phone|default:'' }}" required disabled
-               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-primary text-xs mb-1">Login Email <span class="text-muted italic">— used to sign in</span></label>
-        <input type="email" name="rep_login_email" value="{{ user.email|default:'' }}" required disabled
-               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
-      </div>
-      <div>
         <label class="block text-primary text-xs mb-1">Contact Email <span class="text-red-500">*</span> <span class="text-muted italic">— where jobseekers reach you</span></label>
         <input type="email" name="rep_contact_email" value="{{ profile.email|default:'' }}" required disabled
+               class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
+      </div>
+      <div>
+        <label class="block text-primary text-xs mb-1">Suffix</label>
+        <input type="text" name="suffix" value="{{ profile.suffix|default:'' }}" disabled
                class="rep-field w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-primary focus:outline-none focus:border-teal transition disabled:bg-gray-50 disabled:text-muted">
       </div>
     </div>
@@ -113,7 +102,7 @@
     <input type="hidden" name="form_type" value="company_contact">
 
     {# Editable contact emails #}
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 mb-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
       <div>
         <label class="block text-primary text-xs mb-1">Company Email</label>
         <input type="email" name="company_email" value="{{ company.company_email|default:'' }}" required disabled
@@ -127,7 +116,7 @@
     </div>
 
     {# Locked identifying fields — always disabled, no data submitted #}
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-2">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
       <div>
         <label class="block text-primary text-xs mb-1">Company Name</label>
         <input type="text" value="{{ company.name }}" disabled

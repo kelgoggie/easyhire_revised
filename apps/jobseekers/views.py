@@ -5,7 +5,8 @@ from django.utils import timezone
 from apps.jobs.models import JobPosting
 from apps.jobseekers.models import (
     JobseekerProfile, Education, Skill,
-    Certification, WorkExperience, Sector
+    Certification, WorkExperience, Sector,
+    Project, Extracurricular,
 )
 from datetime import datetime
 import json
@@ -1033,6 +1034,62 @@ def resume(request):
                 is_current=is_current,
             )
 
+        # Projects — same shape/parsing as Work Experience above.
+        Project.objects.filter(profile=profile).delete()
+        proj_titles      = request.POST.getlist('proj_title')
+        proj_links       = request.POST.getlist('proj_link')
+        proj_descs       = request.POST.getlist('proj_description')
+        proj_starts      = request.POST.getlist('proj_start_month_year')
+        proj_ends        = request.POST.getlist('proj_end_month_year')
+        proj_is_currents = request.POST.getlist('proj_is_current')
+        for i, title in enumerate(proj_titles):
+            if not title:
+                continue
+            start_val = proj_starts[i] if i < len(proj_starts) else ''
+            end_val   = proj_ends[i]   if i < len(proj_ends)   else ''
+            s_month, s_year = _split_month_year(start_val)
+            e_month, e_year = _split_month_year(end_val)
+            is_current = str(i) in proj_is_currents
+            Project.objects.create(
+                profile=profile,
+                title=title,
+                link=proj_links[i] if i < len(proj_links) else '',
+                description=proj_descs[i] if i < len(proj_descs) else '',
+                month_started=s_month,
+                year_started=int(s_year) if s_year else None,
+                month_ended=e_month if not is_current else '',
+                year_ended=int(e_year) if e_year and not is_current else None,
+                is_current=is_current,
+            )
+
+        # Extracurriculars — same shape/parsing as Work Experience above.
+        Extracurricular.objects.filter(profile=profile).delete()
+        extra_names       = request.POST.getlist('extra_name')
+        extra_roles       = request.POST.getlist('extra_role')
+        extra_descs       = request.POST.getlist('extra_description')
+        extra_starts      = request.POST.getlist('extra_start_month_year')
+        extra_ends        = request.POST.getlist('extra_end_month_year')
+        extra_is_currents = request.POST.getlist('extra_is_current')
+        for i, name in enumerate(extra_names):
+            if not name:
+                continue
+            start_val = extra_starts[i] if i < len(extra_starts) else ''
+            end_val   = extra_ends[i]   if i < len(extra_ends)   else ''
+            s_month, s_year = _split_month_year(start_val)
+            e_month, e_year = _split_month_year(end_val)
+            is_current = str(i) in extra_is_currents
+            Extracurricular.objects.create(
+                profile=profile,
+                name=name,
+                role=extra_roles[i] if i < len(extra_roles) else '',
+                description=extra_descs[i] if i < len(extra_descs) else '',
+                month_started=s_month,
+                year_started=int(s_year) if s_year else None,
+                month_ended=e_month if not is_current else '',
+                year_ended=int(e_year) if e_year and not is_current else None,
+                is_current=is_current,
+            )
+
         # Sectors: manual (user-chosen) + auto-computed
         manual_ids = set(request.POST.getlist('sectors'))
         auto_codes = _compute_auto_sectors(profile, Education.objects.filter(profile=profile))
@@ -1052,6 +1109,8 @@ def resume(request):
     skills       = Skill.objects.filter(profile=profile)
     certifications = Certification.objects.filter(profile=profile)
     experiences  = WorkExperience.objects.filter(profile=profile)
+    projects     = Project.objects.filter(profile=profile)
+    extracurriculars = Extracurricular.objects.filter(profile=profile)
 
     MANUAL_CODES = ['osy', 'solo_parent', 'pwd', 'lgbtqia']
     manual_sectors = Sector.objects.filter(code__in=MANUAL_CODES)
@@ -1064,6 +1123,8 @@ def resume(request):
         'skills': skills,
         'certifications': certifications,
         'experiences': experiences,
+        'projects': projects,
+        'extracurriculars': extracurriculars,
         'manual_sectors': manual_sectors,
         'auto_sectors': auto_sectors,
         # Start years / cert years can't be in the future. End years allow

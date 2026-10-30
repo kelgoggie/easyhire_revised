@@ -314,9 +314,23 @@
     </div>
 
     <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 space-y-5">
-      <p class="text-base font-extrabold text-primary border-b border-gray-100 pb-3 -mt-1">Job Requirements</p>
+      <div class="flex items-center justify-between gap-3 border-b border-gray-100 pb-3 -mt-1">
+        <p class="text-base font-extrabold text-primary">Job Requirements</p>
+        {% if job.matching_weights.use_custom_weights %}
+        <span class="inline-flex items-center gap-1 bg-amber/10 text-amber text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full border border-amber/20" title="This employer set their own weighting for this job instead of PESO's site-wide defaults.">
+          Custom Weighting
+        </span>
+        {% else %}
+        <span class="inline-flex items-center gap-1 bg-gray-100 text-muted text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full border border-gray-200" title="This job uses PESO's site-wide default weights.">
+          Default Weighting
+        </span>
+        {% endif %}
+      </div>
       <div>
-        <p class="text-sm font-bold text-primary mb-2">Skills</p>
+        <p class="text-sm font-bold text-primary mb-2">
+          Skills
+          {% if job.matching_weights.use_custom_weights %}<span class="text-muted text-xs font-normal">— {% widthratio job.matching_weights.weight_skills 1 100 %}% weight</span>{% endif %}
+        </p>
         {% with skills=job.skill_requirements.all %}
         {% if skills %}
         <div class="flex flex-wrap gap-1.5">
@@ -331,7 +345,10 @@
       </div>
 
       <div>
-        <p class="text-sm font-bold text-primary mb-2">Education</p>
+        <p class="text-sm font-bold text-primary mb-2">
+          Education
+          {% if job.matching_weights.use_custom_weights %}<span class="text-muted text-xs font-normal">— {% widthratio job.matching_weights.weight_education 1 100 %}% weight</span>{% endif %}
+        </p>
         {% if job.education_requirement %}
         <span class="inline-flex items-center bg-[#D6E4D1] text-primary text-xs px-3 py-1 rounded-full">
           {{ job.education_requirement.get_level_display }}{% if job.education_requirement.course_degree %} — {{ job.education_requirement.course_degree }}{% endif %}
@@ -342,14 +359,20 @@
       </div>
 
       <div>
-        <p class="text-sm font-bold text-primary mb-2">Experience</p>
+        <p class="text-sm font-bold text-primary mb-2">
+          Experience
+          {% if job.matching_weights.use_custom_weights %}<span class="text-muted text-xs font-normal">— {% widthratio job.matching_weights.weight_experience 1 100 %}% weight</span>{% endif %}
+        </p>
         <span class="inline-flex items-center bg-purple-100 text-primary text-xs px-3 py-1 rounded-full">
           {% if job.experience_requirement %}{{ job.experience_requirement.display_experience }}{% else %}None Required{% endif %}
         </span>
       </div>
 
       <div>
-        <p class="text-sm font-bold text-primary mb-2">Certifications</p>
+        <p class="text-sm font-bold text-primary mb-2">
+          Certifications
+          {% if job.matching_weights.use_custom_weights %}<span class="text-muted text-xs font-normal">— {% widthratio job.matching_weights.weight_certifications 1 100 %}% weight</span>{% endif %}
+        </p>
         {% with certs=job.certification_requirements.all %}
         {% if certs %}
         <div class="flex flex-wrap gap-1.5">
@@ -369,7 +392,10 @@
         <p class="text-sm font-bold text-primary mb-2">Additional Criteria</p>
         <div class="flex flex-wrap gap-1.5">
           {% for c in customs %}
-          <span class="inline-flex items-center bg-amber/15 text-amber text-xs px-3 py-1 rounded-full" title="{{ c.requirement_text }}">{{ c.name }}</span>
+          <span class="inline-flex items-center gap-1 bg-amber/15 text-amber text-xs px-3 py-1 rounded-full" title="{{ c.requirement_text }}">
+            {{ c.name }}
+            <span class="text-amber/70">({% widthratio c.weight 1 100 %}%)</span>
+          </span>
           {% endfor %}
         </div>
       </div>

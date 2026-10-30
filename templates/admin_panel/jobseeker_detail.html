@@ -195,7 +195,7 @@
       {% endif %}
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
       <!-- Education -->
       <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
         <p class="font-bold text-primary text-base mb-3">Education</p>
@@ -249,6 +249,34 @@
         <p class="text-muted text-xs italic">No skills listed.</p>
         {% endif %}
       </div>
+
+      <!-- Projects -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-base mb-3">Projects</p>
+        {% for proj in projects %}
+        <p class="font-bold text-primary text-xs leading-tight">{{ proj.title }}</p>
+        {% if proj.description %}
+        <p class="text-muted text-xs leading-snug mt-0.5 whitespace-pre-line">{{ proj.description|truncatechars:90 }}</p>
+        {% endif %}
+        <p class="text-muted text-xs mb-2">{{ proj.year_started|default:"—" }}-{% if proj.is_current %}Ongoing{% else %}{{ proj.year_ended|default:"—" }}{% endif %}</p>
+        {% empty %}
+        <p class="text-muted text-xs italic">No projects listed.</p>
+        {% endfor %}
+      </div>
+
+      <!-- Extracurriculars -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">
+        <p class="font-bold text-primary text-base mb-3">Extracurriculars</p>
+        {% for extra in extracurriculars %}
+        <p class="font-bold text-primary text-xs leading-tight">{{ extra.name }}{% if extra.role %} — {{ extra.role }}{% endif %}</p>
+        {% if extra.description %}
+        <p class="text-muted text-xs leading-snug mt-0.5 whitespace-pre-line">{{ extra.description|truncatechars:90 }}</p>
+        {% endif %}
+        <p class="text-muted text-xs mb-2">{{ extra.year_started|default:"—" }}-{% if extra.is_current %}Current{% else %}{{ extra.year_ended|default:"—" }}{% endif %}</p>
+        {% empty %}
+        <p class="text-muted text-xs italic">No extracurriculars listed.</p>
+        {% endfor %}
+      </div>
     </div>
   </div>
 
@@ -279,7 +307,7 @@
             <p class="text-muted text-xs truncate">{{ item.job.company.name }}</p>
           </div>
           <div class="flex items-center gap-1 flex-shrink-0">
-            <span class="text-primary text-sm font-extrabold">{{ item.score }}%</span>
+            {% match_badge item.score compact=True %}
             {# Three-dots menu — Edit Job / Disable Job / View Applicants / #}
             {# View Recommended Jobseekers.                                  #}
             <details class="relative" onclick="event.stopPropagation();">
@@ -307,13 +335,16 @@
           </div>
         </div>
         <p class="text-muted text-xs italic truncate">{{ item.job.location_display|truncatechars:30 }}</p>
-        {% if item.job.education_requirement or item.job.skill_requirements.exists %}
+        {% if item.job.education_requirement or item.job.skill_requirements.exists or item.job.custom_criteria.exists %}
         <div class="flex flex-wrap gap-1 mt-2">
           {% if item.job.education_requirement %}
           <span class="inline-flex items-center bg-teal/10 text-teal text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-teal/20 truncate max-w-full">{{ item.job.education_requirement.get_level_display|truncatechars:20 }}</span>
           {% endif %}
           {% for skill in item.job.skill_requirements.all|slice:":2" %}
           <span class="inline-flex items-center bg-green-50 text-green-600 text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-green-200 truncate max-w-full">{{ skill.name|truncatechars:18 }}</span>
+          {% endfor %}
+          {% for c in item.job.custom_criteria.all|slice:":2" %}
+          <span class="inline-flex items-center bg-amber/10 text-amber text-[10px] leading-tight px-1.5 py-[1px] rounded-full border border-amber/20 truncate max-w-full" title="{{ c.requirement_text }}">{{ c.name|truncatechars:18 }}</span>
           {% endfor %}
         </div>
         {% endif %}

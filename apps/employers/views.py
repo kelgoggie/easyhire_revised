@@ -1850,7 +1850,6 @@ def employer_settings(request):
       - Company info: contact fields editable; name/type/nature locked
         (admin-only, requires re-verification with additional docs).
     """
-    from django.db import IntegrityError
     profile = request.user.employer_profile
     company = profile.company
     saved_section = None
@@ -1869,21 +1868,6 @@ def employer_settings(request):
             profile.position    = request.POST.get('position',    profile.position).strip()
             profile.phone       = request.POST.get('phone',       profile.phone).strip()
             profile.email       = request.POST.get('rep_contact_email', profile.email).strip()
-
-            # Login email (User.email). Enforce uniqueness manually since a
-            # duplicate would raise IntegrityError deep in save() — friendlier
-            # to catch it here and surface a form error.
-            new_login_email = (request.POST.get('rep_login_email') or '').strip()
-            if new_login_email and new_login_email != request.user.email:
-                from apps.accounts.models import User
-                if User.objects.filter(email__iexact=new_login_email).exclude(pk=request.user.pk).exists():
-                    error = 'That login email is already in use by another EasyHire account.'
-                else:
-                    request.user.email = new_login_email
-                    try:
-                        request.user.save(update_fields=['email'])
-                    except IntegrityError:
-                        error = 'That login email is already in use by another EasyHire account.'
 
             if error is None:
                 profile.save()

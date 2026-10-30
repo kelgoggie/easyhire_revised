@@ -2,10 +2,30 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from apps.core.hashids import encode as _hashid
 from apps.employers.models import Company, VerificationDocument
+
+
+# Brute-force protection for the admin login form. Keyed by client IP (not
+# email) so an attacker can't dodge the lockout by cycling through emails.
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 15 * 60
+
+
+def _client_ip(request):
+    # Render sits behind a proxy (see SECURE_PROXY_SSL_HEADER in settings),
+    # so REMOTE_ADDR alone would just be the proxy's address in production.
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', 'unknown')
+
+
+def _login_attempts_key(request):
+    return f'admin_login_attempts:{_client_ip(request)}'
 
 
 @never_cache
@@ -14,16 +34,35 @@ def admin_login(request):
         return redirect('/admin-panel/')
 
     if request.method == 'POST':
+        attempts_key = _login_attempts_key(request)
+        attempts = cache.get(attempts_key, 0)
+
+        if attempts >= LOGIN_MAX_ATTEMPTS:
+            ttl = cache.ttl(attempts_key) if hasattr(cache, 'ttl') else LOGIN_LOCKOUT_SECONDS
+            minutes = max(1, (ttl or LOGIN_LOCKOUT_SECONDS) // 60 + 1)
+            return render(request, 'admin_panel/login.html', {
+                'error': f'Too many failed login attempts. Try again in about {minutes} minute(s).',
+                'email': request.POST.get('email', '').strip(),
+            })
+
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
         user = authenticate(request, username=email, password=password)
 
         if user is None or not user.is_staff:
+            if attempts == 0:
+                cache.set(attempts_key, 1, LOGIN_LOCKOUT_SECONDS)
+            else:
+                try:
+                    cache.incr(attempts_key)
+                except ValueError:
+                    cache.set(attempts_key, 1, LOGIN_LOCKOUT_SECONDS)
             return render(request, 'admin_panel/login.html', {
                 'error': 'Invalid credentials or insufficient permissions.',
                 'email': email,
             })
 
+        cache.delete(attempts_key)
         login(request, user)
         return redirect('/admin-panel/')
 
@@ -618,6 +657,7 @@ def _surrounding_jobseeker_ids(pk):
 def jobseeker_detail(request, pk):
     from apps.jobseekers.models import (
         JobseekerProfile, Education, Skill, Certification, WorkExperience,
+        Project, Extracurricular,
     )
     from apps.core.pagination import paginate, querystring_without
 
@@ -626,6 +666,8 @@ def jobseeker_detail(request, pk):
     skills        = Skill.objects.filter(profile=jobseeker)
     certifications = Certification.objects.filter(profile=jobseeker)
     experiences   = WorkExperience.objects.filter(profile=jobseeker).order_by('-year_started', '-id')
+    projects        = Project.objects.filter(profile=jobseeker).order_by('-year_started', '-id')
+    extracurriculars = Extracurricular.objects.filter(profile=jobseeker).order_by('-year_started', '-id')
 
     from apps.jobs.models import Application, JobPosting
     applications = (Application.objects.filter(jobseeker=jobseeker)
@@ -671,6 +713,8 @@ def jobseeker_detail(request, pk):
         'skills':         skills,
         'certifications': certifications,
         'experiences':    experiences,
+        'projects':         projects,
+        'extracurriculars': extracurriculars,
         'applications':   applications,
         'prev_id':        prev_id,
         'next_id':        next_id,
@@ -1992,47 +2036,14 @@ def report_submit(request):
 def algorithm_settings(request):
     from .models import SiteSettings, AuditLog
     settings = SiteSettings.get()
-    saved_form = None   # 'weights' | 'site' on success — drives the success modal + active tab
+    saved_form = None   # 'site' on success — drives the success modal
     error = None
-    active_tab = request.GET.get('tab', 'algorithm')
+    active_tab = request.GET.get('tab', 'site')
 
     if request.method == 'POST':
-        form_name = request.POST.get('form_name', 'weights')
+        form_name = request.POST.get('form_name', 'site')
 
-        if form_name == 'weights':
-            active_tab = 'algorithm'
-            try:
-                sk = int(request.POST.get('weight_skills', 0))
-                ed = int(request.POST.get('weight_education', 0))
-                ex = int(request.POST.get('weight_experience', 0))
-                ce = int(request.POST.get('weight_certifications', 0))
-            except (TypeError, ValueError):
-                error = 'Weights must be whole numbers.'
-                sk = ed = ex = ce = 0
-
-            if error is None:
-                if any(v < 0 or v > 100 for v in (sk, ed, ex, ce)):
-                    error = 'Each weight must be between 0 and 100.'
-                elif (sk + ed + ex + ce) != 100:
-                    error = f"Weights must add up to 100% (currently {sk + ed + ex + ce}%)."
-                else:
-                    settings.weight_skills         = sk / 100.0
-                    settings.weight_education      = ed / 100.0
-                    settings.weight_experience     = ex / 100.0
-                    settings.weight_certifications = ce / 100.0
-                    settings.updated_by = request.user
-                    settings.save(update_fields=[
-                        'weight_skills', 'weight_education', 'weight_experience',
-                        'weight_certifications', 'updated_by', 'updated_at',
-                    ])
-                    AuditLog.objects.create(
-                        admin=request.user, action=AuditLog.ACTION_EDIT,
-                        target_model='SiteSettings', target_id=settings.id,
-                        notes=f'Updated matching weights to S{sk}/E{ed}/X{ex}/C{ce}.',
-                    )
-                    saved_form = 'weights'
-
-        elif form_name == 'site':
+        if form_name == 'site':
             active_tab = 'site'
             office  = (request.POST.get('office_address') or '').strip()[:255]
             email   = (request.POST.get('contact_email') or '').strip()[:254]
@@ -2084,10 +2095,6 @@ def algorithm_settings(request):
     ctx = _admin_context(request)
     ctx.update({
         'settings': settings,
-        'weight_skills_pct':         round(settings.weight_skills * 100),
-        'weight_education_pct':      round(settings.weight_education * 100),
-        'weight_experience_pct':     round(settings.weight_experience * 100),
-        'weight_certifications_pct': round(settings.weight_certifications * 100),
         'active_tab':  active_tab,
         'saved_form':  saved_form,
         'error':       error,

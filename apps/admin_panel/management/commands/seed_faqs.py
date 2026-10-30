@@ -19,7 +19,8 @@ EMPLOYER_FAQS = [
         "How do I post a new job?",
         "From your dashboard, click <strong>My Job Posts</strong> in the sidebar, then <strong>Create New Job</strong>. "
         "Fill in the title, description, location, requirements (skills, education, experience, certifications), "
-        "and the number of slots. Save to publish.",
+        "and the number of slots. In <strong>Matching Criteria</strong> you can also customize how each requirement is "
+        "weighted or add your own <strong>Additional Criteria</strong> — see the next question for details. Save to publish.",
     ),
     (
         "How do I review applications?",
@@ -39,7 +40,9 @@ EMPLOYER_FAQS = [
         "How do I close a job that's been filled?",
         "On <strong>My Job Posts</strong>, open the dot menu (top right of each card) and pick <strong>Close Job</strong>. "
         "Closed jobs stop receiving new applications and disappear from jobseeker recommendations, but stay on record so you "
-        "can reopen them anytime from the same menu. EasyHire also auto-decrements your slot count each time you mark someone Hired.",
+        "can reopen them anytime from the same menu. EasyHire also auto-decrements your slot count each time you mark someone Hired. "
+        "<strong>Delete Job</strong> is different and permanent — a deleted job can't be reopened, so use Close Job instead if "
+        "there's any chance you'll need the listing again.",
     ),
     (
         "Someone we hired has left — what do I do?",
@@ -57,6 +60,14 @@ EMPLOYER_FAQS = [
         "<strong>Decent Match</strong> (70-79), and "
         "<strong>Unmatched</strong> (below 70). "
         "The Recommended Candidates list surfaces jobseekers who haven't applied but match strongly — useful when you have a hard-to-fill role.",
+    ),
+    (
+        "Can I customize how applicants are matched to my job?",
+        "Yes. When creating or editing a job, open <strong>Matching Criteria</strong>. By default, candidates are scored against "
+        "PESO's standard weighting of Skills, Education, Experience, and Certifications. Check <strong>Customize weighting</strong> "
+        "to turn any of those on or off and set your own weights, and use <strong>Additional Criteria</strong> to add free-text "
+        "requirements specific to your job (e.g. &ldquo;must be willing to work night shifts&rdquo; or &ldquo;has own "
+        "transportation&rdquo;) — these are scored by the same matching engine alongside the standard criteria.",
     ),
     (
         "How do I update my company information?",
@@ -88,15 +99,18 @@ JOBSEEKER_FAQS = [
         "<strong>Good Match</strong> (80-89), "
         "<strong>Decent Match</strong> (70-79), and "
         "<strong>Unmatched</strong> (below 70). "
-        "The algorithm weighs your skills, education, experience, certifications, location, and sector profile. "
+        "The algorithm weighs your skills, education, experience, certifications, location, and sector profile — including "
+        "relevant skills mentioned in your projects or extracurricular activities. "
         "<strong>Unmatched</strong> doesn't mean you did anything wrong — it just means this particular job isn't a strong fit for your résumé today. "
         "The more complete your résumé, the more accurate every score becomes.",
     ),
     (
         "How do I edit my résumé?",
         "Go to <strong>Résumé</strong> in the sidebar and click <strong>Edit Résumé</strong>. You can add or remove education, "
-        "skills, work experience, and certifications. If you have an existing PDF résumé, use <strong>Upload PDF</strong> to "
-        "autofill the form — you can still review and tweak the fields before saving.",
+        "skills, work experience, certifications, projects, and extracurricular activities. Projects and extracurriculars are a "
+        "great place to show skills you haven't used on the job yet — they're factored into your match scores too. If you have "
+        "an existing PDF résumé, use <strong>Upload PDF</strong> to autofill the form — you can still review and tweak the "
+        "fields before saving.",
     ),
     (
         "How do I update my personal information?",

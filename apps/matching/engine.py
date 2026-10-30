@@ -1,5 +1,5 @@
 from rapidfuzz import fuzz
-from apps.jobseekers.models import Education, Skill, Certification, WorkExperience
+from apps.jobseekers.models import Education, Skill, Certification, WorkExperience, Project, Extracurricular
 
 
 WEIGHT_SKILLS = 0.40
@@ -427,20 +427,46 @@ def score_experience(job, profile):
     # Employers can list multiple acceptable prior roles; a jobseeker with
     # experience in ANY of them qualifies. Fuzzy match on both axes so
     # spelling variants ("Sec." vs "Secretary") still hit.
-    position_matched = any(
+    position_strength = 1.0 if any(
         fuzzy_match(req_pos, seeker_pos)
         for req_pos in required_positions
         for seeker_pos in jobseeker_positions
-    )
+    ) else 0.0
 
-    if duration_score >= 1.0 and position_matched:
-        return 1.0
-    elif duration_score >= 1.0 and not position_matched:
-        return 0.0
-    elif duration_score < 1.0 and position_matched:
-        return round(duration_score * 0.8, 2)
-    else:
-        return 0.0
+    # Semantic fallback — no lexical title match, but a required position
+    # might still conceptually match a seeker's title, the free-text
+    # description of any of their roles, or a project/extracurricular
+    # (e.g. required "Legal Secretary" vs a seeker titled "Paralegal
+    # Assistant" whose description covers the same ground, or who ran
+    # their school's Moot Court Society — zero shared words in the title
+    # alone). Checked against every required position, best similarity wins.
+    if position_strength == 0.0:
+        candidates = (
+            list(jobseeker_positions)
+            + [exp.description for exp in experiences if exp.description]
+            + _profile_extra_texts(profile)
+        )
+        candidates = [c for c in candidates if c]
+        if candidates:
+            try:
+                from apps.jobseekers.nlp_service import semantic_rank
+                best = 0.0
+                for req_pos in required_positions:
+                    matches = semantic_rank(req_pos, candidates, top_k=1, min_similarity=SEMANTIC_THRESHOLD)
+                    if matches and matches[0][1] > best:
+                        best = matches[0][1]
+                position_strength = round(best, 2)
+            except Exception:
+                position_strength = 0.0
+
+    # Same combination shape as before (full credit at full duration + a
+    # real position match, 80%-of-duration credit at partial duration),
+    # just driven by a continuous position_strength now instead of a
+    # True/False — a lexical match still behaves exactly as before
+    # (strength=1.0 reduces to the old formula), a semantic-only match
+    # gets scaled by how confident that match actually is.
+    multiplier = 1.0 if duration_score >= 1.0 else duration_score * 0.8
+    return round(position_strength * multiplier, 2)
 
 
 # Credit given when a required skill's name shows up in a jobseeker skill's
@@ -450,30 +476,64 @@ def score_experience(job, profile):
 SKILL_DESCRIPTION_CREDIT = 0.5
 
 
-def _skill_match_strength(req_name: str, seeker_skills):
+# Semantic similarity floor for skills/experience. Lower than the 0.45 used
+# for custom criteria — this compares short phrases (skill names, job
+# titles) rather than full sentences, and this embedding model scores
+# short-phrase pairs lower across the board even when clearly related
+# ("Legal Secretary"/"Paralegal Assistant" ≈ 0.51, "Customer Service"/
+# "Client Relations" ≈ 0.39) — genuinely unrelated short pairs sampled
+# around 0.15-0.28, so 0.35 sits in the gap between the two.
+SEMANTIC_THRESHOLD = 0.35
+
+
+def _skill_match_strength(req_name: str, seeker_skills, extra_texts=None):
     """Return the strongest match strength for a required skill against a
-    list of the seeker's (name, description) pairs.
+    list of the seeker's (name, description) pairs, plus optional extra
+    free-text evidence (project/extracurricular text — see
+    _profile_extra_texts).
 
     - 1.0 → any seeker skill NAME fuzzy-matches the requirement.
     - SKILL_DESCRIPTION_CREDIT → no name match, but the requirement is
-      mentioned in some description (fuzzy token_set_ratio ≥ threshold).
+      literally mentioned in a skill description OR in extra_texts (fuzzy
+      token_set_ratio ≥ threshold) — e.g. a project description that
+      happens to name-drop the exact skill.
+    - semantic similarity (0.0-1.0) → nothing lexical fired, but the
+      requirement might mean the same thing as a skill name, a skill
+      description, or a project/extracurricular the seeker wrote (e.g.
+      required "Customer Service" vs a seeker skill named "Client
+      Relations" — zero shared words). Checked against all of the above
+      together, best score wins. Same embedding model as
+      score_custom_criterion; degrades to 0.0 if the ML deps aren't
+      installed on this host.
     - 0.0 → no evidence at all.
     """
-    if not req_name or not seeker_skills:
+    if not req_name:
         return 0.0
+    seeker_skills = seeker_skills or []
+    extra_texts = extra_texts or []
     for name, _ in seeker_skills:
         if fuzzy_match(req_name, name):
             return 1.0
     # Description fallback. Use token_set_ratio because descriptions are
     # sentence-shaped ("2 years using Adobe Illustrator on print ads") —
     # substring/whole-word doesn't cut it. Same fuzzy threshold as names
-    # so the bar for a description hit is comparable.
+    # so the bar for a description hit is comparable. extra_texts (project/
+    # extracurricular text) gets the same treatment as a skill description.
     req_l = req_name.lower()
-    for _, desc in seeker_skills:
-        if not desc:
-            continue
-        if fuzz.token_set_ratio(req_l, desc.lower()) >= FUZZY_THRESHOLD:
+    description_pool = [desc for _, desc in seeker_skills if desc] + list(extra_texts)
+    for desc in description_pool:
+        if desc and fuzz.token_set_ratio(req_l, desc.lower()) >= FUZZY_THRESHOLD:
             return SKILL_DESCRIPTION_CREDIT
+
+    candidates = [name for name, _ in seeker_skills] + description_pool
+    if candidates:
+        try:
+            from apps.jobseekers.nlp_service import semantic_rank
+            matches = semantic_rank(req_name, candidates, top_k=1, min_similarity=SEMANTIC_THRESHOLD)
+        except Exception:
+            matches = []
+        if matches:
+            return round(matches[0][1], 2)
     return 0.0
 
 
@@ -483,11 +543,43 @@ def _seeker_skill_pairs(profile):
     return [(s.name, s.description or '') for s in Skill.objects.filter(profile=profile)]
 
 
+def _profile_extra_texts(profile):
+    """Free-text evidence beyond skills/certs/experience that can still back
+    up a skill, experience, or custom-criterion match: project titles +
+    descriptions, extracurricular names/roles/descriptions. A project
+    description like "Built a dashboard using React and Node.js" can
+    surface a relevant skill even if the jobseeker never listed it as a
+    skill directly. Checked at the same lexical-description and semantic
+    tiers as skill descriptions — never a tier-1 (name) match on its own,
+    since there's no "name" here comparable to a skill/cert name.
+
+    One query per model, reused across every criterion's scoring call for
+    this profile so callers don't re-hit the DB per required skill."""
+    texts = []
+    for p in Project.objects.filter(profile=profile):
+        if p.title:
+            texts.append(p.title)
+        if p.description:
+            texts.append(p.description)
+    for e in Extracurricular.objects.filter(profile=profile):
+        if e.name:
+            texts.append(e.name)
+        if e.role:
+            texts.append(e.role)
+        if e.description:
+            texts.append(e.description)
+    return texts
+
+
 def score_skills(job, profile):
     required_skills = job.skill_requirements.filter(is_required=True)
     seeker_pairs = _seeker_skill_pairs(profile)
+    extra_texts = _profile_extra_texts(profile)
 
-    if not seeker_pairs:
+    # A seeker with zero skills listed but rich projects/extracurriculars
+    # can still earn credit via those — only bail if there's truly nothing
+    # to check against.
+    if not seeker_pairs and not extra_texts:
         return 0.0
 
     if required_skills.exists():
@@ -495,7 +587,7 @@ def score_skills(job, profile):
         # requirement count → same 0-1 range as before, but description
         # hits now nudge the score above 0.
         total_strength = sum(
-            _skill_match_strength(rs.name, seeker_pairs) for rs in required_skills
+            _skill_match_strength(rs.name, seeker_pairs, extra_texts) for rs in required_skills
         )
         required_score = total_strength / required_skills.count()
     else:
@@ -530,9 +622,9 @@ def score_custom_criterion(criterion, profile):
     them in three tiers:
       1. Lexical — requirement matches a skill/certification NAME (strong
          signal, full credit) — same `fuzzy_match` as the rest of this file.
-      2. Lexical — mentioned in a skill description, work experience, or
-         bio (weaker signal, partial credit) — same two-tier pattern
-         `_skill_match_strength` uses above.
+      2. Lexical — mentioned in a skill description, work experience, bio,
+         project, or extracurricular (weaker signal, partial credit) —
+         same two-tier pattern `_skill_match_strength` uses above.
       3. Semantic — nothing lexically overlapped, but the requirement might
          still mean the same thing as something the jobseeker wrote (e.g.
          "comfortable under pressure" vs. "thrives in a fast-paced
@@ -559,7 +651,7 @@ def score_custom_criterion(criterion, profile):
             return 1.0
 
     # Weaker signal — mentioned in a skill description, work experience,
-    # or the profile bio.
+    # bio, project, or extracurricular.
     longer_texts = [desc for _, desc in seeker_pairs if desc]
     for exp in WorkExperience.objects.filter(profile=profile):
         if exp.position:
@@ -569,6 +661,7 @@ def score_custom_criterion(criterion, profile):
     bio = getattr(profile, 'bio', '')
     if bio:
         longer_texts.append(bio)
+    longer_texts += _profile_extra_texts(profile)
 
     req_l = requirement.lower()
     for text in longer_texts:
@@ -665,13 +758,15 @@ def compute_match_score(job, profile):
     # ── Counts for tooltip display ──
     required_skills = job.skill_requirements.filter(is_required=True)
     seeker_pairs = _seeker_skill_pairs(profile)
+    extra_texts = _profile_extra_texts(profile)
     jobseeker_skills = [name for name, _ in seeker_pairs]
     # A skill counts as "matched" for the tooltip's "X of Y" line if we
-    # found ANY evidence — name match or description mention. Keeping the
-    # count boolean here so the UI copy stays readable.
+    # found ANY evidence — name match, description mention, or a project/
+    # extracurricular that covers it. Keeping the count boolean here so
+    # the UI copy stays readable.
     matched_skills = sum(
         1 for rs in required_skills
-        if _skill_match_strength(rs.name, seeker_pairs) > 0
+        if _skill_match_strength(rs.name, seeker_pairs, extra_texts) > 0
     )
 
     required_certs = job.certification_requirements.filter(is_required=True)
@@ -713,7 +808,7 @@ def compute_match_score(job, profile):
     # employers only see must-haves.
     skill_items = [
         {'name': rs.name,
-         'met': _skill_match_strength(rs.name, seeker_pairs) > 0}
+         'met': _skill_match_strength(rs.name, seeker_pairs, extra_texts) > 0}
         for rs in required_skills
     ]
     cert_items = [

@@ -246,6 +246,43 @@
         .md\:gap-10 { gap: 2.5rem; }
         .md\:contents { display: contents; }
       }
+
+      /* Circular checkbox — used wherever a checkbox reads better as a
+         "pick a shape" circle than the browser's native square (sector
+         badges, matching-criteria toggles, etc.). Native checkbox styling
+         can't be reshaped with accent-color alone, so this repaints it
+         from scratch: appearance:none drops the square box, the rest
+         redraws a filled dot when checked. Shared here (not per-page) so
+         every page gets the same look without duplicating the rules. */
+      .circle-check {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 1rem;
+        height: 1rem;
+        flex-shrink: 0;
+        border: 1.5px solid #C4B9B0;  /* taupe/40-ish, matches border-taupe/40 */
+        border-radius: 9999px;
+        cursor: pointer;
+        position: relative;
+        transition: background-color 150ms, border-color 150ms;
+      }
+      .circle-check:checked {
+        background-color: #22A9E0;  /* teal accent */
+        border-color: #22A9E0;
+      }
+      .circle-check:checked::after {
+        content: '';
+        position: absolute;
+        left: 50%; top: 50%;
+        width: 0.35rem; height: 0.35rem;
+        background: #fff;
+        border-radius: 9999px;
+        transform: translate(-50%, -50%);
+      }
+      .circle-check:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
     </style>
 
     {% block extra_head %}{% endblock %}
