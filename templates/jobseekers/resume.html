@@ -232,7 +232,7 @@
             <div class="grid grid-cols-2 gap-2">
               {% for sector in auto_sectors %}
               <label class="flex items-center gap-2 text-xs text-teal opacity-90 cursor-not-allowed">
-                <input type="checkbox" checked disabled class="accent-teal">
+                <input type="checkbox" checked disabled class="accent-teal auto-sector-cb">
                 {{ sector.label }}
               </label>
               {% endfor %}
@@ -365,8 +365,8 @@
               <div class="document-field">
                 <label class="block text-xs text-muted mb-1">Diploma / Certificate <span class="text-muted/70">(optional)</span></label>
                 <div class="document-current flex items-center gap-2 mb-1 {% if not edu.document %}hidden{% endif %}">
-                  <a href="{{ edu.document.url|default:'' }}" target="_blank" rel="noopener" class="document-current-link text-teal text-xs hover:underline truncate max-w-[10rem]">View current file</a>
-                  <button type="button" class="document-remove-btn text-red-500 text-xs hover:underline" title="Remove uploaded file">Remove</button>
+                  <a href="{% if edu.document %}{{ edu.document.url }}{% endif %}" target="_blank" rel="noopener" class="document-current-link text-teal text-xs hover:underline truncate max-w-[10rem]">View current file</a>
+                  <button type="button" class="document-remove-btn add-remove-btn text-red-500 text-xs hover:underline" title="Remove uploaded file">Remove</button>
                 </div>
                 <input type="file" name="edu_document" accept=".pdf,.jpg,.jpeg,.png" class="resume-field document-input w-full bg-white border border-gray-200 rounded-lg text-xs text-primary file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-teal/10 file:text-teal file:text-xs file:font-semibold focus:outline-none focus:border-teal transition">
                 <input type="hidden" name="edu_document_keep" value="{{ edu.document.name|default:'' }}" class="document-keep">
@@ -473,8 +473,8 @@
               <div class="document-field">
                 <label class="block text-xs text-muted mb-1">Certificate File <span class="text-muted/70">(optional)</span></label>
                 <div class="document-current flex items-center gap-2 mb-1 {% if not cert.document %}hidden{% endif %}">
-                  <a href="{{ cert.document.url|default:'' }}" target="_blank" rel="noopener" class="document-current-link text-teal text-xs hover:underline truncate max-w-[10rem]">View current file</a>
-                  <button type="button" class="document-remove-btn text-red-500 text-xs hover:underline" title="Remove uploaded file">Remove</button>
+                  <a href="{% if cert.document %}{{ cert.document.url }}{% endif %}" target="_blank" rel="noopener" class="document-current-link text-teal text-xs hover:underline truncate max-w-[10rem]">View current file</a>
+                  <button type="button" class="document-remove-btn add-remove-btn text-red-500 text-xs hover:underline" title="Remove uploaded file">Remove</button>
                 </div>
                 <input type="file" name="cert_document" accept=".pdf,.jpg,.jpeg,.png" class="resume-field document-input w-full bg-white border border-gray-200 rounded-lg text-xs text-primary file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-teal/10 file:text-teal file:text-xs file:font-semibold focus:outline-none focus:border-teal transition">
                 <input type="hidden" name="cert_document_keep" value="{{ cert.document.name|default:'' }}" class="document-keep">
@@ -994,8 +994,20 @@ const saveBtn     = document.getElementById('save-confirm-btn');
 const formActions = document.getElementById('form-actions');
 const editBtn     = document.getElementById('edit-resume-btn');
 function getAllFields() {
+    // .auto-sector-cb is excluded — it's a read-only "Fresh Graduate"-style
+    // badge the system derives from education, not something the jobseeker
+    // sets. It starts disabled so it visually matches the other checkboxes;
+    // without this exclusion, unlockForm() below re-enables it along with
+    // everything else the moment Edit Resume is clicked, letting it be
+    // toggled even though it has no `name` and never actually submits.
+    //
+    // File inputs are included here EXCEPT #pdf-upload-input — that one is
+    // the "Upload PDF to autofill" shortcut and deliberately stays usable
+    // in view mode (picking a file calls ensureUnlocked() itself). The
+    // per-entry diploma/certificate document inputs (.document-input) have
+    // no such shortcut behavior, so they should lock like every other field.
     return document.querySelectorAll(
-        '#resume-form input:not([type="file"]):not([type="hidden"]), #resume-form select, #resume-form textarea'
+        '#resume-form input:not(#pdf-upload-input):not([type="hidden"]):not(.auto-sector-cb), #resume-form select, #resume-form textarea'
     );
 }
 

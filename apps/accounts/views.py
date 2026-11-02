@@ -471,6 +471,11 @@ class EmployerRegisterStep2View(View):
                 'form': request.POST,
                 # Preserve checked sector boxes on form re-render.
                 'selected_sector_ids': set(request.POST.getlist('sectors')),
+                # Without this, an OAuth signup that fails validation
+                # re-renders with oauth_flow missing from context, which
+                # would re-lock the Name of Company field as readonly right
+                # when the user needs to fix it.
+                'oauth_flow': oauth_flow,
             })
 
         try:

@@ -10,7 +10,7 @@ Optional: data-min-age="18", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-
 {# future modal that also needs to be above the datepicker should go   #}
 {# z-[70] or higher.                                                    #}
 <div id="dp-backdrop" class="fixed inset-0 z-[55] hidden"></div>
-<div id="dp-popup" class="fixed z-[60] bg-white border border-gray-200 rounded-2xl shadow-xl p-4 hidden" style="width:280px;">
+<div id="dp-popup" class="fixed z-[60] bg-white border border-gray-200 rounded-2xl shadow-xl p-4 hidden overflow-y-auto" style="width:280px; max-height:calc(100vh - 16px);">
     <div class="flex items-center justify-between mb-3">
         <button type="button" data-dp-action="prev" class="text-muted hover:text-primary px-2 text-lg leading-none disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:text-muted">&#8249;</button>
         <span id="dp-label" class="text-sm font-semibold text-primary"></span>
@@ -120,12 +120,21 @@ Optional: data-min-age="18", data-min-date="YYYY-MM-DD", data-max-date="YYYY-MM-
     const POPW = 280;
     // popup height varies (date vs month, weeks rendered), measure live but
     // fall back to a generous estimate so the first calc is reasonable.
-    const POPH = popup.offsetHeight || 340;
+    // Capped to the viewport (minus margin) since the popup itself now
+    // scrolls internally past that height — see max-height on #dp-popup.
+    const POPH = Math.min(popup.offsetHeight || 340, window.innerHeight - 16);
     const left = Math.min(rect.left, window.innerWidth - POPW - 8);
     let top = rect.bottom + 6;
     // Flip above the input if showing below would overflow the viewport.
     if (top + POPH > window.innerHeight - 8) {
-      top = Math.max(8, rect.top - POPH - 6);
+      top = rect.top - POPH - 6;
+      // Neither below nor above cleanly fits (short viewport, e.g. mobile
+      // with the on-screen keyboard open) — clamp inside the viewport but
+      // anchor near the input's own position instead of snapping to a
+      // fixed top that can land far from the field that opened it.
+      if (top < 8) {
+        top = Math.max(8, Math.min(rect.top, window.innerHeight - POPH - 8));
+      }
     }
     popup.style.top  = top + 'px';
     popup.style.left = Math.max(8, left) + 'px';

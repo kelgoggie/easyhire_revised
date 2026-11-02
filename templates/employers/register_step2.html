@@ -65,9 +65,17 @@
 
             <div>
               <label class="block text-primary text-xs font-medium mb-1">Name of Company*</label>
+              {% if oauth_flow %}
+              {# Google sign-up skips the step-1 form entirely, so there's  #}
+              {# no company name to lock in yet — this has to be editable. #}
+              <input type="text" name="company_name" value="{{ form.company_name|default:'' }}"
+                     placeholder="Your company's name" required
+                     class="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition">
+              {% else %}
               <input type="text" name="company_name" value="{{ form.company_name|default:'' }}"
                      readonly title="Company name was set during sign-up and cannot be changed here."
                      class="w-full bg-gray-50 border border-gray-200 rounded-full px-4 py-2.5 text-sm text-primary cursor-not-allowed">
+              {% endif %}
             </div>
 
             <div>
