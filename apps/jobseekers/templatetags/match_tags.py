@@ -63,11 +63,16 @@ def month_name(value):
 
 
 @register.inclusion_tag('jobseekers/_match_badge.html')
-def match_badge(score, compact=False):
+def match_badge(score, compact=False, show_score=False):
     """Render a match score badge.
 
     compact=True → just the smiley circle (no label pill).
-    compact=False → full pill with smiley + label.
+    compact=False → full pill with smiley + label (or the numeric score,
+    see show_score).
+    show_score=True → pill text is the numeric score ("92%") instead of the
+    tier label ("Highly Recommended") — same tier background color either
+    way. Used on admin pages, where PESO staff want the actual number
+    rather than the jobseeker/employer-facing descriptor.
     """
     tier = _tier(score)
     if tier is None:
@@ -76,6 +81,8 @@ def match_badge(score, compact=False):
     return {
         'has_score': True,
         'label': label,
+        'score': int(score),
+        'show_score': show_score,
         'pill_classes': pill,
         'icon_color': icon,
         'emoji': emoji,

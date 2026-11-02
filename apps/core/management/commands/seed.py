@@ -18,16 +18,22 @@ from apps.jobs.models import (
 # ── Seed data ──────────────────────────────────────────────────────────────────
 
 COMPANIES = [
-    {"name": "Iloilo Central Hospital", "nature": "Hospital", "type": "local"},
-    {"name": "SM City Iloilo", "nature": "Retail Mall", "type": "local"},
-    {"name": "Convergys Philippines", "nature": "BPO / Call Center", "type": "bpo"},
-    {"name": "Iloilo Science and Technology University", "nature": "University", "type": "local"},
-    {"name": "Globe Telecom Iloilo", "nature": "Telecommunications", "type": "local"},
-    {"name": "Robinsons Place Iloilo", "nature": "Retail Mall", "type": "local"},
-    {"name": "Accenture Iloilo", "nature": "IT Services / BPO", "type": "bpo"},
-    {"name": "Department of Health Region VI", "nature": "Government Agency", "type": "local"},
-    {"name": "Iloilo Merchant Marine School", "nature": "Maritime School", "type": "overseas"},
-    {"name": "Megaworld Iloilo", "nature": "Real Estate", "type": "local"},
+    # "barangay" roughly matches each company's real-world Iloilo City
+    # location — drives both iloilo_barangay_name on the Company AND
+    # barangay_name on its jobs, which is what the analytics district
+    # breakdown (resolve_district()) actually keys off of. Without this,
+    # every company/job landed in the "Other" bucket — city="Iloilo City"
+    # alone isn't specific enough to resolve to one of the 7 districts.
+    {"name": "Iloilo Central Hospital", "nature": "Hospital", "type": "local", "barangay": "Jaro"},
+    {"name": "SM City Iloilo", "nature": "Retail Mall", "type": "local", "barangay": "Mandurriao"},
+    {"name": "Convergys Philippines", "nature": "BPO / Call Center", "type": "bpo", "barangay": "City Proper"},
+    {"name": "Iloilo Science and Technology University", "nature": "University", "type": "local", "barangay": "La Paz"},
+    {"name": "Globe Telecom Iloilo", "nature": "Telecommunications", "type": "local", "barangay": "City Proper"},
+    {"name": "Robinsons Place Iloilo", "nature": "Retail Mall", "type": "local", "barangay": "City Proper"},
+    {"name": "Accenture Iloilo", "nature": "IT Services / BPO", "type": "bpo", "barangay": "Mandurriao"},
+    {"name": "Department of Health Region VI", "nature": "Government Agency", "type": "local", "barangay": "City Proper"},
+    {"name": "Iloilo Merchant Marine School", "nature": "Maritime School", "type": "overseas", "barangay": "Molo"},
+    {"name": "Megaworld Iloilo", "nature": "Real Estate", "type": "local", "barangay": "Mandurriao"},
 ]
 
 REPRESENTATIVES = [
@@ -374,9 +380,9 @@ class Command(BaseCommand):
                 slug=slug,
                 type_of_company=company_data['type'],
                 nature_of_company=company_data['nature'],
-                main_branch_address=f"{company_data['name']}, Iloilo City",
+                main_branch_address=f"{company_data['name']}, {company_data['barangay']}, Iloilo City",
                 iloilo_street='Bonifacio Drive',
-                iloilo_barangay_name='Iloilo City Proper',
+                iloilo_barangay_name=company_data['barangay'],
                 company_email=f"info@{slugify(company_data['name'])}.com",
                 recruitment_email=f"hr@{slugify(company_data['name'])}.com",
                 description=f"{company_data['name']} is a leading organization in Iloilo City committed to excellence and growth.",
@@ -415,6 +421,7 @@ class Command(BaseCommand):
                     description=job_data['description'],
                     location_type='iloilo',
                     street='Bonifacio Drive',
+                    barangay_name=company_data['barangay'],
                     slots=random.randint(1, 5),
                     status='open',
                 )
@@ -452,7 +459,7 @@ class Command(BaseCommand):
                         is_required=True,
                     )
 
-            self.stdout.write(f'  ✓ {company.name} ({len(job_pool)} jobs)')
+            self.stdout.write(f'  + {company.name} ({len(job_pool)} jobs)')
 
     def _seed_jobseekers(self):
         from datetime import date
@@ -531,4 +538,4 @@ class Command(BaseCommand):
                 except Sector.DoesNotExist:
                     pass
 
-            self.stdout.write(f'  ✓ {js_data["first"]} {js_data["last"]}')
+            self.stdout.write(f'  + {js_data["first"]} {js_data["last"]}')

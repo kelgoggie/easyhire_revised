@@ -544,7 +544,11 @@ class EmployerRegisterStep2View(View):
                 iloilo_barangay_name=request.POST.get('iloilo_barangay_name', ''),
                 company_email=request.POST.get('company_email') or request.POST.get('recruitment_email'),
                 recruitment_email=request.POST.get('recruitment_email'),
-                verification_status=Company.PENDING,
+                # Starts UNVERIFIED (the model default) rather than PENDING —
+                # PESO shouldn't see "awaiting partnership approval" until the
+                # employer has actually uploaded their verification documents
+                # and hit Submit for Verification (see submit_verification()
+                # in apps.employers.views), not the instant they register.
             )
 
             sector_ids = request.POST.getlist('sectors')

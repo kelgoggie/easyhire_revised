@@ -5,10 +5,10 @@
       {% include "jobseekers/_match_smiley.html" with emoji=emoji color=icon_color size="w-4 h-4" %}
     </span>
   {% else %}
-    {# Full pill with smiley + label #}
-    <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 {{ pill_classes }}">
+    {# Full pill with smiley + label (or the raw score, see show_score) #}
+    <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 {{ pill_classes }}" {% if show_score %}title="{{ label }}"{% endif %}>
       {% include "jobseekers/_match_smiley.html" with emoji=emoji color=icon_color size="w-3.5 h-3.5" %}
-      {{ label }}
+      {% if show_score %}{{ score }}%{% else %}{{ label }}{% endif %}
     </span>
   {% endif %}
 {% endif %}
