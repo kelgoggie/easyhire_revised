@@ -61,6 +61,13 @@
             <p class="text-muted text-xs italic mb-4">No bio yet. <a href="/resume/" class="text-teal hover:underline">Add one</a></p>
           {% endif %}
 
+          {% if profile.other_details %}
+          <div class="bg-white border border-gray-100 rounded-xl px-3 py-2.5 mb-4">
+            <p class="text-primary text-xs font-semibold mb-1">Other</p>
+            <p class="text-muted text-xs leading-relaxed break-words whitespace-pre-line">{{ profile.other_details|truncatechars:240 }}</p>
+          </div>
+          {% endif %}
+
           <div class="border-t border-gray-200 pt-3 space-y-1.5">
             {% if profile.date_of_birth %}
             <p class="flex items-center gap-2 text-xs text-muted">

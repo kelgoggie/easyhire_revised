@@ -315,3 +315,25 @@ class AdminAnnouncement(models.Model):
 
     def __str__(self):
         return f"{self.subject} → {self.get_audience_display()} ({self.sent_at:%Y-%m-%d})"
+
+
+class AdminNotificationRead(models.Model):
+    """Per-admin read-state for an attention-feed item (pending company
+    verification, personal-info change request, ID verification, or user
+    report). The underlying items are live queries over other models'
+    pending states, not rows of their own — this table is what lets
+    "mark as read" / "mark all as read" persist independently of whether
+    the item has actually been resolved yet.
+
+    `key` is a stable string like "company:42" or "report:17" — see
+    apps.admin_panel.views._build_admin_notification_feed for how it's
+    built. Admin-scoped (not global) so two admins reviewing the same
+    queue each have their own read state.
+    """
+    admin = models.ForeignKey(User, on_delete=models.CASCADE, related_name="read_admin_notifications")
+    key = models.CharField(max_length=64)
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "admin_notification_reads"
+        unique_together = ("admin", "key")

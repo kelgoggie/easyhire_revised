@@ -59,6 +59,25 @@ def _label_for(path_after_admin):
     return 'Back'
 
 
+# Pages that belong to ONE specific resource rather than a list. List
+# cards (jobseeker_list.html, company_list.html) have a direct "Settings"
+# shortcut in their 3-dot menu that jumps straight here, bypassing the
+# detail page — so the Referer on these pages is genuinely the list root,
+# and a naive smart_back would honestly report "Back to Jobseekers"/
+# "Back to Companies". But a settings page is always a child of ONE
+# resource, never of the list, so that's the wrong place to send someone
+# back to (they lose their spot and have to re-find the person). The
+# caller's own fallback on these pages is always "Back to <resource>", so
+# we discard a list-root referer match here and let that default win.
+_RESOURCE_SUBPAGE = re.compile(r'^(jobseekers|companies)/[^/]+/(settings|edit-resume|verify)/?$')
+_LIST_LABELS = {
+    'Back to Companies', 'Back to Jobseekers', 'Back to Jobs',
+    'Back to User Reports', 'Back to FAQs', 'Back to Announcements',
+    'Back to Audit Log', 'Back to Algorithm Settings', 'Back to Site Settings',
+    'Back to Sectors', 'Back to Admin Dashboard',
+}
+
+
 def _resolve_from_referer(request):
     """Returns (url, label) when the Referer is a same-origin admin URL,
     else (None, None). Same-origin check compares the host header so a link
@@ -103,6 +122,15 @@ def _resolve_from_referer(request):
     # allowlist here.
     subpath = path[len('/admin-panel/'):]
     label = _label_for(subpath + (('?' + parsed.query) if parsed.query else ''))
+    # A list-root referer on a resource sub-page (settings/edit-resume/
+    # verify) means a list card's shortcut was used — the caller's own
+    # "Back to <resource>" default is always more useful here than
+    # bouncing back to the full list. See _RESOURCE_SUBPAGE above.
+    current_path = request.path
+    if current_path.startswith('/admin-panel/'):
+        current_subpath = current_path[len('/admin-panel/'):]
+        if _RESOURCE_SUBPAGE.match(current_subpath) and label in _LIST_LABELS:
+            return None, None
     # Reattach the query string so filter/pagination state is preserved
     # ('/admin-panel/jobseekers/?page=3' → back link lands on page 3).
     url = path

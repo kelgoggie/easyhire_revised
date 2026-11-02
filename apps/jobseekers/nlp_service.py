@@ -19,6 +19,7 @@ from typing import Iterable, Sequence
 _model = None
 _model_failed = False
 _embedding_cache: dict[str, object] = {}  # cache_key -> torch tensor
+_query_embedding_cache: dict[str, object] = {}  # query text -> torch tensor
 
 
 # ── Canonical industry buckets for analytics ─────────────────────────
@@ -53,6 +54,15 @@ def get_model():
     if _model_failed:
         return None
     try:
+        import os
+        # The model is already cached locally (~/.cache/huggingface) after
+        # the first successful load, but without this, every process start
+        # still makes a network call to the Hub to check for a newer
+        # revision before using the cache — on a flaky/offline connection
+        # that call can hang for a very long time instead of failing fast,
+        # which is what made pages that trigger matching feel like they
+        # loaded forever. Once cached, we never need that check again.
+        os.environ.setdefault('HF_HUB_OFFLINE', '1')
         from sentence_transformers import SentenceTransformer
         _model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
     except Exception:
@@ -94,7 +104,10 @@ def semantic_rank(
         return []
     try:
         from sentence_transformers import util
-        query_emb = model.encode(query, convert_to_tensor=True, show_progress_bar=False)
+        query_emb = _query_embedding_cache.get(query)
+        if query_emb is None:
+            query_emb = model.encode(query, convert_to_tensor=True, show_progress_bar=False)
+            _query_embedding_cache[query] = query_emb
         cand_embs = _get_or_compute_embeddings(candidates, cache_key)
         sims = util.cos_sim(query_emb, cand_embs)[0]
         scored = [

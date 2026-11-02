@@ -23,16 +23,16 @@
   <!-- Header with Prev/Next -->
   <div class="flex items-start justify-between gap-4 mb-2">
     <h1 class="text-3xl sm:text-4xl font-extrabold text-primary leading-tight">Jobseekers</h1>
-    <div class="flex items-center gap-2 pt-2">
+    <div class="flex items-center gap-4 pt-2">
       {% if prev_id %}
-      <a href="/admin-panel/jobseekers/{{ prev_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">&lt; Previous</a>
+      <a href="/admin-panel/jobseekers/{{ prev_id|hashid }}/" class="text-primary text-sm font-semibold hover:text-teal transition">&lt; Previous</a>
       {% else %}
-      <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">&lt; Previous</span>
+      <span class="text-gray-300 text-sm font-semibold cursor-not-allowed">&lt; Previous</span>
       {% endif %}
       {% if next_id %}
-      <a href="/admin-panel/jobseekers/{{ next_id|hashid }}/" class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition">Next &gt;</a>
+      <a href="/admin-panel/jobseekers/{{ next_id|hashid }}/" class="text-primary text-sm font-semibold hover:text-teal transition">Next &gt;</a>
       {% else %}
-      <span class="bg-surface border border-taupe/40 text-muted/50 text-sm font-semibold px-5 py-2 rounded-full cursor-not-allowed">Next &gt;</span>
+      <span class="text-gray-300 text-sm font-semibold cursor-not-allowed">Next &gt;</span>
       {% endif %}
     </div>
   </div>
@@ -202,7 +202,13 @@
         {% for edu in educations %}
         <p class="font-bold text-primary text-xs leading-tight">{{ edu.course_degree|default:edu.get_level_display }}</p>
         <p class="text-muted text-xs">{{ edu.institution|default:"—" }}</p>
-        <p class="text-muted text-xs mb-2">{{ edu.year_started|default:"—" }}-{% if edu.is_current %}Present{% else %}{{ edu.year_ended|default:"—" }}{% endif %}</p>
+        <p class="text-muted text-xs {% if edu.document %}mb-1{% else %}mb-2{% endif %}">{{ edu.year_started|default:"—" }}-{% if edu.is_current %}Present{% else %}{{ edu.year_ended|default:"—" }}{% endif %}</p>
+        {% if edu.document %}
+        <a href="{{ edu.document.url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-teal text-[11px] font-semibold hover:underline mb-2">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          View document
+        </a>
+        {% endif %}
         {% empty %}
         <p class="text-muted text-xs italic">No education listed.</p>
         {% endfor %}
@@ -225,7 +231,13 @@
         <p class="font-bold text-primary text-base mb-3">Certifications</p>
         {% for cert in certifications %}
         <p class="font-bold text-primary text-xs leading-tight">{{ cert.name }}</p>
-        <p class="text-muted text-xs mb-2">{{ cert.issuing_org|default:"" }}</p>
+        <p class="text-muted text-xs {% if cert.document %}mb-1{% else %}mb-2{% endif %}">{{ cert.issuing_org|default:"" }}</p>
+        {% if cert.document %}
+        <a href="{{ cert.document.url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-teal text-[11px] font-semibold hover:underline mb-2">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          View document
+        </a>
+        {% endif %}
         {% empty %}
         <p class="text-muted text-xs italic">No Certifications Added</p>
         {% endfor %}

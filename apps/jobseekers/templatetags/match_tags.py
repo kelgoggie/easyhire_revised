@@ -3,19 +3,22 @@ from django import template
 register = template.Library()
 
 
+# Scores below this never surface to jobseekers or employers — PESO decided
+# a sub-65 match isn't a meaningful recommendation. apps.matching.engine's
+# get_ranked_jobs()/get_ranked_jobseekers() enforce this at the data layer;
+# admin audit views intentionally bypass it (PESO staff need full visibility).
+VISIBILITY_THRESHOLD = 65
+
 # (min_score, label, pill_classes, icon_color_class, emoji_type)
 # emoji_type maps to an SVG smiley/frown variant rendered by the {% match_badge %} tag
-# Palette note: Decent uses amber (still a "warm/warning" positive), while
-# Unmatched drops to a neutral gray — the two tiers previously shared amber
-# and got visually confused. Anything below 70 collapses into a single
-# "Unmatched" bucket — nicer to jobseekers than a graded Partial/Poor split,
-# and employers still get a clean triage signal via the smiley.
+# Only the top two tiers are ever shown to jobseekers/employers (anything
+# below VISIBILITY_THRESHOLD is filtered out before it reaches them). The
+# 'Below Threshold' tier still renders correctly wherever a raw score sneaks
+# through on an admin-only page — those are PESO's internal audit views.
 TIERS = [
-    (98, 'Perfect Match',  'bg-emerald-500 text-white',                             'text-white',    'beam'),
-    (90, 'Great Match',    'bg-teal text-white',                                    'text-white',    'smile'),
-    (80, 'Good Match',     'bg-teal/15 text-teal border border-teal/30',            'text-teal',     'smile'),
-    (70, 'Decent Match',   'bg-amber/15 text-amber border border-amber/30',         'text-amber',    'mild'),
-    (0,  'Unmatched',      'bg-gray-100 text-gray-500 border border-gray-300',      'text-gray-400', 'sad'),
+    (85, 'Highly Recommended', 'bg-emerald-500 text-white',                        'text-white',    'beam'),
+    (65, 'Recommended',        'bg-teal/15 text-teal border border-teal/30',       'text-teal',     'smile'),
+    (0,  'Below Threshold',    'bg-gray-100 text-gray-500 border border-gray-300', 'text-gray-400', 'sad'),
 ]
 
 

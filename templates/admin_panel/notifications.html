@@ -1,0 +1,62 @@
+{% extends "admin_panel/base_admin.html" %}
+{% block title %}Notifications — EasyHire Admin{% endblock %}
+
+{% with active_nav="notifications" %}
+{% block admin_content %}
+<div class="py-8">
+
+  <div class="flex items-end justify-between gap-6 mb-2">
+    <div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-primary">Notifications</h1>
+      <p class="text-muted text-sm mt-1">
+        Pending company verifications, personal-info change requests, ID verifications, and user reports —
+        {% if unread_count %}<strong class="text-primary">{{ unread_count }} unread</strong>.{% else %}all caught up.{% endif %}
+      </p>
+    </div>
+    <button type="button" onclick="adminMarkAllRead()"
+            class="bg-surface border border-taupe/40 text-primary text-sm font-semibold px-5 py-2 rounded-full hover:bg-taupe/30 transition flex-shrink-0 {% if not unread_count %}opacity-40 pointer-events-none{% endif %}">
+      Mark all as read
+    </button>
+  </div>
+  <div class="border-b border-taupe/40 mb-6"></div>
+
+  {% if notifications %}
+  <div class="space-y-2">
+    {% for n in notifications %}
+    <a href="{{ n.url }}" onclick="adminMarkRead('{{ n.key }}')"
+       class="flex items-start gap-3 bg-white border rounded-xl px-5 py-3.5 hover:shadow-sm hover:border-teal/30 transition
+              {% if n.is_read %}border-gray-200{% else %}border-teal/30{% endif %}">
+      <span class="w-10 h-10 rounded-full bg-taupe/40 flex items-center justify-center flex-shrink-0 text-primary mt-0.5">
+        {% if n.icon == 'company' %}
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-4V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H4a2 2 0 00-2 2v11a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 0h-4V4h4v2z"/></svg>
+        {% elif n.icon == 'flag' %}
+        <svg class="w-4 h-4 text-amber" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+        {% else %}
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+        {% endif %}
+      </span>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm text-primary leading-snug">
+          <span class="font-bold">{{ n.actor }}</span> {{ n.verb }}
+        </p>
+        {% if n.quoted %}
+        <p class="text-xs text-muted leading-snug mt-0.5 italic">&ldquo;{{ n.quoted }}&rdquo;</p>
+        {% endif %}
+        <p class="text-xs text-muted italic mt-0.5">{{ n.when }}</p>
+      </div>
+      {% if not n.is_read %}
+      <span class="mt-2 flex-shrink-0 w-2.5 h-2.5 rounded-full bg-teal" title="Unread"></span>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+    <p class="text-primary font-semibold text-sm mb-1">Nothing needs your attention right now.</p>
+    <p class="text-muted text-xs">New pending verifications, change requests, and reports will show up here.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+{% endwith %}

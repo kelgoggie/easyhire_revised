@@ -450,9 +450,16 @@ def score_experience(job, profile):
         if candidates:
             try:
                 from apps.jobseekers.nlp_service import semantic_rank
+                # Content-addressed cache key: this exact candidate list (this
+                # profile's positions/descriptions/extras) gets re-embedded
+                # once and reused across every required_positions check below,
+                # instead of once per check — was the dominant cost in
+                # get_ranked_jobseekers (re-embedding the same list per
+                # requirement, per candidate, on every request).
+                cand_key = 'exp:' + '|'.join(candidates)
                 best = 0.0
                 for req_pos in required_positions:
-                    matches = semantic_rank(req_pos, candidates, top_k=1, min_similarity=SEMANTIC_THRESHOLD)
+                    matches = semantic_rank(req_pos, candidates, cache_key=cand_key, top_k=1, min_similarity=SEMANTIC_THRESHOLD)
                     if matches and matches[0][1] > best:
                         best = matches[0][1]
                 position_strength = round(best, 2)
@@ -529,7 +536,12 @@ def _skill_match_strength(req_name: str, seeker_skills, extra_texts=None):
     if candidates:
         try:
             from apps.jobseekers.nlp_service import semantic_rank
-            matches = semantic_rank(req_name, candidates, top_k=1, min_similarity=SEMANTIC_THRESHOLD)
+            # This candidate list (this seeker's skill names/descriptions/
+            # extras) is identical across every required skill check for the
+            # same profile — content-addressed key lets semantic_rank embed
+            # it once and reuse it instead of re-embedding per requirement.
+            cand_key = 'skills:' + '|'.join(candidates)
+            matches = semantic_rank(req_name, candidates, cache_key=cand_key, top_k=1, min_similarity=SEMANTIC_THRESHOLD)
         except Exception:
             matches = []
         if matches:
@@ -546,12 +558,15 @@ def _seeker_skill_pairs(profile):
 def _profile_extra_texts(profile):
     """Free-text evidence beyond skills/certs/experience that can still back
     up a skill, experience, or custom-criterion match: project titles +
-    descriptions, extracurricular names/roles/descriptions. A project
-    description like "Built a dashboard using React and Node.js" can
-    surface a relevant skill even if the jobseeker never listed it as a
-    skill directly. Checked at the same lexical-description and semantic
-    tiers as skill descriptions — never a tier-1 (name) match on its own,
-    since there's no "name" here comparable to a skill/cert name.
+    descriptions, extracurricular names/roles/descriptions, and the
+    jobseeker's own "Other" résumé field (availability, languages, etc.).
+    A project description like "Built a dashboard using React and Node.js"
+    — or an Other note like "Fluent in Hiligaynon and English" — can
+    surface a relevant skill or custom criterion even if the jobseeker
+    never listed it as a skill directly. Checked at the same
+    lexical-description and semantic tiers as skill descriptions — never a
+    tier-1 (name) match on its own, since there's no "name" here comparable
+    to a skill/cert name.
 
     One query per model, reused across every criterion's scoring call for
     this profile so callers don't re-hit the DB per required skill."""
@@ -568,6 +583,8 @@ def _profile_extra_texts(profile):
             texts.append(e.role)
         if e.description:
             texts.append(e.description)
+    if profile.other_details:
+        texts.append(profile.other_details)
     return texts
 
 
@@ -677,7 +694,11 @@ def score_custom_criterion(criterion, profile):
     if candidates:
         try:
             from apps.jobseekers.nlp_service import semantic_rank
-            matches = semantic_rank(requirement, candidates, top_k=1, min_similarity=0.45)
+            # This candidate list depends only on the profile, so it's
+            # identical across every custom criterion checked for this job —
+            # content-addressed key lets it get embedded once and reused.
+            cand_key = 'criteria:' + '|'.join(candidates)
+            matches = semantic_rank(requirement, candidates, cache_key=cand_key, top_k=1, min_similarity=0.45)
         except Exception:
             matches = []
         if matches:
@@ -891,6 +912,7 @@ def compute_match_score(job, profile):
 
 def get_ranked_jobseekers(job, sector_filter=False):
     from apps.jobseekers.models import JobseekerProfile
+    from apps.jobseekers.templatetags.match_tags import VISIBILITY_THRESHOLD
     # Honor privacy: hide deactivated accounts, and hide profiles that have
     # been tagged Hired anywhere when the user opted to disappear after-hire.
     hidden_after_hire_ids = (
@@ -906,6 +928,8 @@ def get_ranked_jobseekers(job, sector_filter=False):
     results = []
     for profile in jobseekers:
         score = compute_match_score(job, profile)
+        if score['total'] < VISIBILITY_THRESHOLD:
+            continue
         if sector_filter and not score['sector_match']:
             continue
         results.append({
@@ -920,6 +944,7 @@ def get_ranked_jobseekers(job, sector_filter=False):
 
 def get_ranked_jobs(profile, sector_filter=False):
     from apps.jobs.models import JobPosting
+    from apps.jobseekers.templatetags.match_tags import VISIBILITY_THRESHOLD
     jobs = JobPosting.objects.filter(status='open', deleted_at__isnull=True, admin_disabled=False).select_related(
         'company', 'experience_requirement', 'matching_weights'
     ).prefetch_related('skill_requirements', 'certification_requirements', 'education_requirements', 'custom_criteria')
@@ -927,6 +952,8 @@ def get_ranked_jobs(profile, sector_filter=False):
     results = []
     for job in jobs:
         score = compute_match_score(job, profile)
+        if score['total'] < VISIBILITY_THRESHOLD:
+            continue
         if sector_filter and not score['sector_match']:
             continue
         results.append({

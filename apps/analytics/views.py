@@ -130,16 +130,19 @@ def get_analytics_context(request):
     # lines up across the platform. We recompute against current job
     # requirements since we don't snapshot the score at hire time —
     # accurate as long as requirements haven't changed since the hire.
+    # Unlike the jobseeker/employer-facing lists, this analytics view keeps
+    # the "Below Threshold" bucket (scores under VISIBILITY_THRESHOLD never
+    # surface as recommendations, but employers can still hire someone who
+    # applied directly at a low score — PESO wants to see that it happens).
     from apps.matching.engine import compute_match_score as _compute_match_score
+    from apps.jobseekers.templatetags.match_tags import VISIBILITY_THRESHOLD as _VIS_THRESHOLD
     from django.db.models import Q as _Q
     # Tier labels & thresholds — ordered lowest → highest for x-axis
-    # left-to-right ("Unmatched" on the left, "Perfect" on the right).
+    # left-to-right ("Below Threshold" on the left, "Highly Recommended" on the right).
     _TIER_BUCKETS = [
-        ('Unmatched', 0,  70),
-        ('Decent',    70, 80),
-        ('Good',      80, 90),
-        ('Great',     90, 98),
-        ('Perfect',   98, 101),
+        ('Below Threshold',    0,            _VIS_THRESHOLD),
+        ('Recommended',        _VIS_THRESHOLD, 85),
+        ('Highly Recommended', 85,           101),
     ]
     _hires_by_tier = [0] * len(_TIER_BUCKETS)
     _hires_for_year = (
@@ -579,6 +582,10 @@ def get_analytics_context(request):
 def analytics(request):
     context = get_analytics_context(request)
     context['is_authenticated'] = request.user.is_authenticated
+    # Drives which dashboard panels _dashboard_body.html shows — some
+    # breakdowns (jobseeker demographics, applications-vs-hired) are
+    # PESO-internal and hidden from jobseeker/employer/public viewers.
+    context['is_admin'] = request.user.is_authenticated and getattr(request.user, 'is_staff', False)
     # Logged-in jobseekers get the sidebar-style dashboard view; everyone else
     # gets the public page with its own navbar.
     # Jobseekers and employers see the same analytics body wrapped in

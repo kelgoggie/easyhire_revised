@@ -164,53 +164,27 @@ def _generate_temp_password(length=12):
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
-def _admin_context(request):
-    """Shared context for every admin page — sidebar counts + notification feed.
+def _build_admin_notification_feed(per_category=5):
+    """Build the full attention feed — pending company verifications,
+    personal-info change requests, ID verifications, and open reports.
+    Each item gets a stable `key` (e.g. "company:42") used for read-state
+    tracking (AdminNotificationRead) and as a React-style list key.
 
-    Notifications fire on four things (per spec):
-      1. Pending company verification
-      2. Pending personal-info change requests
-      3. New user reports
-      4. Pending jobseeker ID verifications (PESO Verified badge submissions)
+    `per_category` caps how many of EACH of the 4 categories get pulled in
+    (so one category spamming the queue can't crowd out the others) — pass
+    None for no cap, used by the full notifications page.
     """
     from apps.employers.models import Company
     from apps.jobseekers.models import PersonalInfoChangeRequest, JobseekerProfile
     from .models import UserReport
 
-    pending_companies = Company.objects.filter(verification_status=Company.PENDING).count()
-    pending_jobseekers = PersonalInfoChangeRequest.objects.filter(
-        status=PersonalInfoChangeRequest.STATUS_PENDING).count()
-    pending_ids = JobseekerProfile.objects.filter(
-        id_verification_status=JobseekerProfile.ID_PENDING).count()
-    open_reports = UserReport.objects.filter(status=UserReport.STATUS_OPEN).count()
-
-    # ── Bell-dot debounce ─────────────────────────────────────────
-    # Same session-baseline pattern used for jobseeker/employer inbox
-    # dots (see apps.core.context_processors.inbox_status). Without
-    # this, pre-existing pending work fires the amber dot on every
-    # page reload — annoying because most admin activity is background
-    # queue processing.
-    #
-    # Rules:
-    #   - First admin hit of a session: baseline = current, dot off.
-    #   - Later hit with current > baseline: dot on, then baseline
-    #     bumps to current so a plain reload clears it.
-    #   - current < baseline (admin resolved items): silently bump
-    #     baseline down so a subsequent new item still fires the dot.
-    attention_total = pending_companies + pending_jobseekers + pending_ids + open_reports
-    session = request.session
-    if 'admin_attention_seen' not in session:
-        session['admin_attention_seen'] = attention_total
-        show_attention_dot = False
-    else:
-        seen = session['admin_attention_seen']
-        show_attention_dot = attention_total > seen
-        if attention_total != seen:
-            session['admin_attention_seen'] = attention_total
+    def _slice(qs):
+        return qs if per_category is None else qs[:per_category]
 
     feed = []
-    for c in Company.objects.filter(verification_status=Company.PENDING).order_by('-created_at')[:5]:
+    for c in _slice(Company.objects.filter(verification_status=Company.PENDING).order_by('-created_at')):
         feed.append({
+            'key':   f'company:{c.id}',
             'icon': 'company',
             'actor': c.name,
             'verb':  'is awaiting partnership approval.',
@@ -218,10 +192,11 @@ def _admin_context(request):
             'url':   f'/admin-panel/employers/{_hashid(c.id)}/',
             'at':    c.created_at,
         })
-    for r in (PersonalInfoChangeRequest.objects
+    for r in _slice(PersonalInfoChangeRequest.objects
               .filter(status=PersonalInfoChangeRequest.STATUS_PENDING)
-              .select_related('profile').order_by('-submitted_at')[:5]):
+              .select_related('profile').order_by('-submitted_at')):
         feed.append({
+            'key':   f'pinfo:{r.id}',
             'icon': 'user',
             'actor': f'{r.profile.first_name} {r.profile.last_name}',
             'verb':  'requested a change of personal information.',
@@ -231,11 +206,12 @@ def _admin_context(request):
         })
     # Pending PESO Verified badge submissions — a jobseeker uploaded a
     # government ID and is awaiting the admin's approve/deny decision.
-    for js in (JobseekerProfile.objects
+    for js in _slice(JobseekerProfile.objects
                .filter(id_verification_status=JobseekerProfile.ID_PENDING)
-               .order_by('-id_submitted_at')[:5]):
+               .order_by('-id_submitted_at')):
         submitted_at = js.id_submitted_at or js.created_at
         feed.append({
+            'key':   f'idverify:{js.id}',
             'icon':  'user',
             'actor': f'{js.first_name} {js.last_name}',
             'verb':  'submitted an ID for PESO Verified review.',
@@ -243,14 +219,14 @@ def _admin_context(request):
             'url':   f'/admin-panel/jobseekers/{_hashid(js.id)}/settings/',
             'at':    submitted_at,
         })
-    for ur in (UserReport.objects
+    for ur in _slice(UserReport.objects
                .filter(status=UserReport.STATUS_OPEN)
                .select_related(
                    'reported_jobseeker', 'reported_company',
                    'reported_job', 'reported_job__company',
                    'reported_contact',
                )
-               .order_by('-created_at')[:5]):
+               .order_by('-created_at')):
         # Trim description for inline display; full text is on the reports page.
         reason = (ur.description or '').strip()
         reason_short = reason if len(reason) <= 120 else reason[:117] + '…'
@@ -270,6 +246,7 @@ def _admin_context(request):
         else:
             report_url = '/admin-panel/reports/?status=open'
         feed.append({
+            'key':   f'report:{ur.id}',
             'icon': 'flag',
             'actor': ur.filed_by_label,
             'verb':  f'filed a report against {ur.account_label}.',
@@ -279,6 +256,36 @@ def _admin_context(request):
             'at':    ur.created_at,
         })
     feed.sort(key=lambda x: x['at'], reverse=True)
+    return feed
+
+
+def _admin_context(request):
+    """Shared context for every admin page — sidebar counts + notification feed.
+
+    Notifications fire on four things (per spec):
+      1. Pending company verification
+      2. Pending personal-info change requests
+      3. New user reports
+      4. Pending jobseeker ID verifications (PESO Verified badge submissions)
+    """
+    from apps.employers.models import Company
+    from apps.jobseekers.models import PersonalInfoChangeRequest, JobseekerProfile
+    from .models import UserReport, AdminNotificationRead
+
+    pending_companies = Company.objects.filter(verification_status=Company.PENDING).count()
+    pending_jobseekers = PersonalInfoChangeRequest.objects.filter(
+        status=PersonalInfoChangeRequest.STATUS_PENDING).count()
+    pending_ids = JobseekerProfile.objects.filter(
+        id_verification_status=JobseekerProfile.ID_PENDING).count()
+    open_reports = UserReport.objects.filter(status=UserReport.STATUS_OPEN).count()
+
+    feed = _build_admin_notification_feed(per_category=5)
+    read_keys = set(
+        AdminNotificationRead.objects.filter(admin=request.user).values_list('key', flat=True)
+    ) if request.user.is_authenticated else set()
+    for item in feed:
+        item['is_read'] = item['key'] in read_keys
+    unread_count = sum(1 for item in feed if not item['is_read'])
 
     return {
         'pending_companies':     pending_companies,
@@ -286,11 +293,9 @@ def _admin_context(request):
         'pending_ids':           pending_ids,
         'open_reports':          open_reports,
         'admin_notifications':   feed[:10],
-        # attention_count is still passed for the dropdown copy / counts,
-        # but the DOT is now driven by show_attention_dot so it only
-        # fires on genuinely new items (see baseline logic above).
-        'admin_attention_count': attention_total,
-        'show_attention_dot':    show_attention_dot,
+        # Drives both the dropdown copy and the bell badge number — counts
+        # only UNREAD items, not every pending item (see AdminNotificationRead).
+        'admin_attention_count': unread_count,
         # Auto-derived from URL so child templates don't have to thread it
         # explicitly. Views that need a different highlight (e.g.
         # company_job_detail's came_from_jobs flip) overwrite this in
@@ -335,6 +340,70 @@ def admin_notifications_api(request):
             'url':        url,
         })
     return JsonResponse({'notifications': out})
+
+
+@staff_required
+def admin_notifications_list(request):
+    """Full notifications page — the sidebar's "Notifications" entry.
+    Uncapped (unlike the bell dropdown's 10-item preview), with a visible
+    read/unread state per row and a "Mark all as read" action.
+    """
+    from .models import AdminNotificationRead
+
+    feed = _build_admin_notification_feed(per_category=None)
+    read_keys = set(
+        AdminNotificationRead.objects.filter(admin=request.user).values_list('key', flat=True)
+    )
+    for item in feed:
+        item['is_read'] = item['key'] in read_keys
+    unread_count = sum(1 for item in feed if not item['is_read'])
+
+    ctx = _admin_context(request)
+    ctx.update({
+        'notifications': feed,
+        'unread_count':  unread_count,
+        'active_nav':    'notifications',
+    })
+    return render(request, 'admin_panel/notifications.html', ctx)
+
+
+@staff_required
+def admin_notification_mark_read(request):
+    """Mark a single notification key as read for the current admin.
+    POST-only, called via fetch() right before/alongside following the
+    notification's link — fire-and-forget, doesn't block navigation."""
+    from .models import AdminNotificationRead
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    key = (request.POST.get('key') or '').strip()
+    if not key:
+        return JsonResponse({'ok': False, 'error': 'Missing key.'}, status=400)
+    AdminNotificationRead.objects.get_or_create(admin=request.user, key=key)
+    return JsonResponse({'ok': True})
+
+
+@staff_required
+def admin_notifications_mark_all_read(request):
+    """Mark every currently-pending attention item as read for the current
+    admin. POST-only. New items that show up later (e.g. a fresh company
+    registration) still fire the badge normally — this only clears what's
+    pending right now."""
+    from .models import AdminNotificationRead
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    feed = _build_admin_notification_feed(per_category=None)
+    existing = set(
+        AdminNotificationRead.objects.filter(admin=request.user).values_list('key', flat=True)
+    )
+    new_reads = [
+        AdminNotificationRead(admin=request.user, key=item['key'])
+        for item in feed if item['key'] not in existing
+    ]
+    if new_reads:
+        AdminNotificationRead.objects.bulk_create(new_reads, ignore_conflicts=True)
+    return JsonResponse({'ok': True, 'marked': len(new_reads)})
 
 
 @staff_required
@@ -913,10 +982,8 @@ def company_job_all_matches(request, pk, job_id):
         'min_match':  min_match,
         'min_match_choices': [
             {'value': 0,  'label': 'Any match'},
-            {'value': 98, 'label': 'Perfect'},
-            {'value': 90, 'label': 'Great+'},
-            {'value': 80, 'label': 'Good+'},
-            {'value': 70, 'label': 'Decent+'},
+            {'value': 85, 'label': 'Highly Recommended'},
+            {'value': 65, 'label': 'Recommended+'},
         ],
         'total':      len(ranked),
     })
@@ -992,10 +1059,8 @@ def jobseeker_compatible_jobs(request, pk):
         'min_match': min_match,
         'min_match_choices': [
             {'value': 0,  'label': 'Any match'},
-            {'value': 98, 'label': 'Perfect'},
-            {'value': 90, 'label': 'Great+'},
-            {'value': 80, 'label': 'Good+'},
-            {'value': 70, 'label': 'Decent+'},
+            {'value': 85, 'label': 'Highly Recommended'},
+            {'value': 65, 'label': 'Recommended+'},
         ],
     })
     return render(request, 'admin_panel/jobseeker_compatible_jobs.html', ctx)
@@ -1323,7 +1388,7 @@ JOB_DELETION_REASONS = [
 @staff_required
 def company_list(request):
     from django.core.paginator import Paginator
-    from django.db.models import Q
+    from django.db.models import Q, Count
     search = (request.GET.get('q') or '').strip()
     sort   = (request.GET.get('sort') or 'newest').strip()
     tab    = (request.GET.get('tab')  or 'all').strip()
@@ -1340,16 +1405,32 @@ def company_list(request):
         raw = (request.GET.get(name) or '').strip()
         return [x for x in (v.strip() for v in raw.split(',')) if x]
 
-    natures_selected = _csv('nature')
+    # Location filter — Iloilo City district (same 7-district rollup the
+    # analytics dashboard uses) plus an "Outside Iloilo" bucket for
+    # overseas/other-province companies and any blank/unresolved address.
+    from apps.analytics.iloilo_districts import resolve_district, DISTRICTS
+    LOCATION_CHOICES = DISTRICTS + ['Outside Iloilo']
+    districts_selected = [d for d in _csv('district') if d in LOCATION_CHOICES]
 
-    qs = Company.objects.all()
+    qs = Company.objects.annotate(job_count=Count('job_postings', distinct=True))
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(company_email__icontains=search))
 
     if type_filter:
         qs = qs.filter(type_of_company=type_filter)
-    if natures_selected:
-        qs = qs.filter(nature_of_company__in=natures_selected)
+    if districts_selected:
+        # resolve_district() is Python logic (fuzzy token/substring
+        # matching), not something Postgres can evaluate — so resolve it
+        # once per distinct barangay value present, then filter by the
+        # matching raw values. Company counts here are small (tens, not
+        # thousands), so this stays cheap.
+        present_barangays = Company.objects.values_list('iloilo_barangay_name', flat=True).distinct()
+        wanted_barangays = [
+            b for b in present_barangays
+            if (resolve_district(b) if b else 'Other') in
+               [('Other' if d == 'Outside Iloilo' else d) for d in districts_selected]
+        ]
+        qs = qs.filter(iloilo_barangay_name__in=wanted_barangays)
 
     # Counts before the tab filter so pills reflect real bucket totals
     # under the current search + filter set.
@@ -1371,38 +1452,31 @@ def company_list(request):
     paginator = Paginator(qs, 24)
     page = paginator.get_page(request.GET.get('page') or 1)
 
-    type_choices   = [{'code': c, 'label': l} for c, l in Company.COMPANY_TYPE_CHOICES]
-    natures_present = list(
-        Company.objects
-        .exclude(nature_of_company='')
-        .values_list('nature_of_company', flat=True)
-        .distinct()
-        .order_by('nature_of_company')
-    )
-    nature_choices = [{'code': n, 'label': n} for n in natures_present]
+    type_choices     = [{'code': c, 'label': l} for c, l in Company.COMPANY_TYPE_CHOICES]
+    location_choices = [{'code': d, 'label': d} for d in LOCATION_CHOICES]
 
     from urllib.parse import urlencode
     _fp = {}
-    if type_filter:      _fp['type']   = type_filter
-    if natures_selected: _fp['nature'] = ','.join(natures_selected)
+    if type_filter:        _fp['type']     = type_filter
+    if districts_selected: _fp['district'] = ','.join(districts_selected)
     filter_qs = ('&' + urlencode(_fp)) if _fp else ''
 
     ctx = _admin_context(request)
     ctx.update({
-        'page':              page,
-        'search':            search,
-        'sort':              sort,
-        'tab':               tab,
-        'all_count':         all_count,
-        'deactivated_count': deactivated_count,
-        'unverified_count':  unverified_count,
-        'qs_base':           querystring_without(request, 'page'),
-        'type_filter':       type_filter,
-        'natures_selected':  natures_selected,
-        'type_choices':      type_choices,
-        'nature_choices':    nature_choices,
-        'has_filters':       bool(_fp),
-        'filter_qs':         filter_qs,
+        'page':               page,
+        'search':             search,
+        'sort':               sort,
+        'tab':                tab,
+        'all_count':          all_count,
+        'deactivated_count':  deactivated_count,
+        'unverified_count':   unverified_count,
+        'qs_base':            querystring_without(request, 'page'),
+        'type_filter':        type_filter,
+        'districts_selected': districts_selected,
+        'type_choices':       type_choices,
+        'location_choices':   location_choices,
+        'has_filters':        bool(_fp),
+        'filter_qs':          filter_qs,
     })
     return render(request, 'admin_panel/company_list.html', ctx)
 

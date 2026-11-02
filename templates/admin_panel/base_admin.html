@@ -40,6 +40,10 @@
 {% endblock %}
 
 {% block content %}
+{# Guarantees the csrftoken cookie is set on every admin page, even one  #}
+{# with no form of its own — the notification bell's mark-read/mark-all #}
+{# fetch() calls (global, present on every page) need it to exist.       #}
+{% csrf_token %}
 <div class="min-h-screen flex flex-col bg-surface">
 
   <!-- ── Topbar ───────────────────────────────────────────────────── -->
@@ -63,24 +67,27 @@
       <!-- Bell -->
       <div class="relative" id="admin-notif-container">
         <button id="admin-notif-btn" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary/8 transition relative">
-          <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          <svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 24 24">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M5.25 9a6.75 6.75 0 0113.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 01-.297 1.206 24.585 24.585 0 01-4.831 1.243 3.75 3.75 0 11-7.48 0 24.585 24.585 0 01-4.831-1.243.75.75 0 01-.298-1.207A8.217 8.217 0 005.25 9.75V9zm4.502 8.9a2.25 2.25 0 104.496 0 25.057 25.057 0 01-4.496 0z"/>
           </svg>
-          {# Dot only fires when the attention queue grew since the admin's #}
-          {# last visit — see the session-baseline logic in _admin_context. #}
-          {% if show_attention_dot %}
-          <span id="admin-notif-dot" class="absolute top-1 right-1 w-3 h-3 bg-amber rounded-full ring-2 ring-white"></span>
+          {# Badge shows the live count of items needing attention (pending  #}
+          {# verifications, change requests, reports) — a real pending      #}
+          {# total, not a one-time "something changed" ping, so it stays up #}
+          {# until the admin actually resolves those items elsewhere.       #}
+          {% if admin_attention_count %}
+          <span id="admin-notif-dot" class="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 flex items-center justify-center bg-amber text-white text-[10px] font-bold leading-none rounded-full ring-2 ring-white">{% if admin_attention_count > 9 %}9+{% else %}{{ admin_attention_count }}{% endif %}</span>
           {% endif %}
         </button>
-        <div id="admin-notif-dropdown" class="absolute right-0 top-11 bg-surface rounded-2xl shadow-xl w-[340px] max-w-[calc(100vw-1rem)] max-h-[480px] z-50 border border-taupe/30 hidden overflow-hidden flex-col">
+        <div id="admin-notif-dropdown" class="absolute right-0 top-11 bg-surface rounded-2xl shadow-xl w-[340px] max-w-[calc(100vw-1rem)] max-h-[480px] z-50 border border-taupe/30 hidden overflow-hidden flex flex-col">
           <div class="px-5 pt-4 pb-2 flex items-center justify-between">
             <p class="font-bold text-primary text-sm">Notifications</p>
+            <button type="button" onclick="adminMarkAllRead()" class="text-muted text-[11px] hover:text-primary transition">Mark all as read</button>
           </div>
           <div class="mx-5 border-b border-taupe/40"></div>
           <div id="admin-notif-list" class="overflow-y-auto py-2 max-h-[420px]">
             {% if admin_notifications %}
               {% for n in admin_notifications %}
-              <a href="{{ n.url }}" class="flex items-start gap-3 px-5 py-2.5 hover:bg-white/40 transition">
+              <a href="{{ n.url }}" onclick="adminMarkRead('{{ n.key }}')" class="flex items-start gap-3 px-5 py-2.5 hover:bg-white/40 transition">
                 <span class="w-9 h-9 rounded-full bg-taupe/40 flex items-center justify-center flex-shrink-0 text-primary mt-0.5">
                   {% if n.icon == 'company' %}
                   <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-4V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H4a2 2 0 00-2 2v11a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 0h-4V4h4v2z"/></svg>
@@ -101,11 +108,17 @@
                   {% endif %}
                   <p class="text-[11px] text-muted italic mt-0.5">{{ n.when }}</p>
                 </div>
+                {% if not n.is_read %}
+                <span class="mt-2 flex-shrink-0 w-2 h-2 rounded-full bg-teal" title="Unread"></span>
+                {% endif %}
               </a>
               {% endfor %}
             {% else %}
               <p class="text-muted text-xs text-center py-8">No new admin notifications</p>
             {% endif %}
+          </div>
+          <div class="px-5 py-2.5 border-t border-taupe/40 text-center">
+            <a href="/admin-panel/notifications/" class="text-teal text-xs font-semibold hover:underline">View all notifications</a>
           </div>
         </div>
       </div>
@@ -125,7 +138,7 @@
         </button>
         <div id="admin-avatar-dropdown" class="absolute right-0 top-11 bg-white rounded-2xl shadow-lg w-52 z-50 border border-gray-100 hidden py-2">
           <div class="px-4 py-2 mb-1 border-b border-gray-100">
-            <p class="font-semibold text-primary text-sm">{{ request.user.email }}</p>
+            <p class="font-semibold text-primary text-sm truncate" title="{{ request.user.email }}">{{ request.user.email }}</p>
             <p class="text-muted text-xs">PESO Administrator</p>
           </div>
           <button type="button"
@@ -187,6 +200,13 @@
                 {% if active == 'reports' %}text-primary font-bold{% else %}text-primary/80 hover:text-primary hover:bg-primary/5{% endif %}">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <span class="nav-label">Reports {% if open_reports %}<span class="text-muted font-normal">({% if open_reports >= 10 %}10+{% else %}{{ open_reports }}{% endif %})</span>{% endif %}</span>
+        </a>
+        <a href="/admin-panel/notifications/" title="Notifications" class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition
+                {% if active == 'notifications' %}text-primary font-bold{% else %}text-primary/80 hover:text-primary hover:bg-primary/5{% endif %}">
+          <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M5.25 9a6.75 6.75 0 0113.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 01-.297 1.206 24.585 24.585 0 01-4.831 1.243 3.75 3.75 0 11-7.48 0 24.585 24.585 0 01-4.831-1.243.75.75 0 01-.298-1.207A8.217 8.217 0 005.25 9.75V9zm4.502 8.9a2.25 2.25 0 104.496 0 25.057 25.057 0 01-4.496 0z"/>
+          </svg>
+          <span class="nav-label">Notifications {% if admin_attention_count %}<span class="text-muted font-normal">({% if admin_attention_count >= 10 %}9+{% else %}{{ admin_attention_count }}{% endif %})</span>{% endif %}</span>
         </a>
         <a href="/analytics/" title="Analytics" class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition
                 {% if active == 'analytics' %}text-primary font-bold{% else %}text-primary/80 hover:text-primary hover:bg-primary/5{% endif %}">
@@ -280,17 +300,8 @@
 // Dropdown toggles
 document.getElementById('admin-notif-btn').addEventListener('click', function(e) {
   e.stopPropagation();
-  const dropdown = document.getElementById('admin-notif-dropdown');
-  const wasHidden = dropdown.classList.contains('hidden');
-  dropdown.classList.toggle('hidden');
+  document.getElementById('admin-notif-dropdown').classList.toggle('hidden');
   document.getElementById('admin-avatar-dropdown').classList.add('hidden');
-  // Clear the amber dot the moment the user opens the dropdown — the items
-  // themselves are server-side queries (no read/unread per item), so the
-  // dot is purely a "you have new attention items" hint.
-  if (wasHidden) {
-    const dot = document.getElementById('admin-notif-dot');
-    if (dot) dot.remove();
-  }
 });
 document.getElementById('admin-more-btn').addEventListener('click', function(e) {
   e.stopPropagation();
@@ -301,6 +312,31 @@ document.addEventListener('click', function() {
   document.getElementById('admin-notif-dropdown').classList.add('hidden');
   document.getElementById('admin-avatar-dropdown').classList.add('hidden');
 });
+
+// ── Notification read-state ──────────────────────────────────────────
+function adminGetCookie(n) {
+  const v = '; ' + document.cookie, p = v.split('; ' + n + '=');
+  if (p.length === 2) return p.pop().split(';').shift();
+}
+// Fire-and-forget — doesn't preventDefault, the link's normal navigation
+// proceeds immediately alongside the request.
+function adminMarkRead(key) {
+  // keepalive lets this survive the same-tab navigation the click is
+  // about to trigger — without it, some browsers can cancel an in-flight
+  // fetch when the page starts unloading.
+  fetch('/admin-panel/notifications/mark-read/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': adminGetCookie('csrftoken'), 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'key=' + encodeURIComponent(key),
+    keepalive: true,
+  });
+}
+function adminMarkAllRead() {
+  fetch('/admin-panel/notifications/mark-all-read/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': adminGetCookie('csrftoken') },
+  }).then(function() { window.location.reload(); });
+}
 
 // ── Toast poller (admin) ─────────────────────────────────────────────
 // Polls the same feed the bell renders (pending companies + personal-info

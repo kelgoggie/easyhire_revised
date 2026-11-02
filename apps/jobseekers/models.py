@@ -78,6 +78,8 @@ class JobseekerProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     bio = models.TextField(blank=True)
+    other_details = models.TextField(blank=True,
+        help_text="Other details potential employers might like to know.")
 
     # ── Optional PESO ID verification ──────────────────────────────
     id_document = models.FileField(upload_to='jobseeker_ids/', null=True, blank=True,
@@ -150,6 +152,9 @@ class Education(models.Model):
     year_ended = models.PositiveIntegerField(null=True, blank=True)
     is_current = models.BooleanField(default=False,
         help_text="I'm still attending this institution.")
+    document = models.FileField(upload_to='education_documents/', null=True, blank=True,
+        storage=raw_media_storage,
+        help_text="Optional — scan/photo of a diploma, transcript, or similar. Visible to PESO admins and employers.")
 
     class Meta:
         db_table = "jobseeker_educations"
@@ -160,6 +165,9 @@ class Certification(models.Model):
     name = models.CharField(max_length=200)
     issuing_org = models.CharField(max_length=200, blank=True)
     year_received = models.PositiveIntegerField(null=True, blank=True)
+    document = models.FileField(upload_to='certification_documents/', null=True, blank=True,
+        storage=raw_media_storage,
+        help_text="Optional — scan/photo of the certificate. Visible to PESO admins and employers.")
 
     class Meta:
         db_table = "jobseeker_certifications"

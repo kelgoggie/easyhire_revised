@@ -1019,7 +1019,7 @@ def candidates(request, job_id):
         min_match = int(request.GET.get('min_match') or 0)
     except (TypeError, ValueError):
         min_match = 0
-    if min_match not in {0, 70, 80, 90, 98}:
+    if min_match not in {0, 65, 85}:
         min_match = 0
 
     liked_ids = list(CandidateInteraction.objects.filter(
@@ -1127,10 +1127,8 @@ def candidates(request, job_id):
 
     min_match_choices = [
         {'value': 0,  'label': 'Any match'},
-        {'value': 98, 'label': 'Perfect'},
-        {'value': 90, 'label': 'Great+'},
-        {'value': 80, 'label': 'Good+'},
-        {'value': 70, 'label': 'Decent+'},
+        {'value': 85, 'label': 'Highly Recommended'},
+        {'value': 65, 'label': 'Recommended+'},
     ]
 
     return render(request, 'employers/candidates.html', {

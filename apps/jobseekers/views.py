@@ -38,12 +38,11 @@ def dashboard(request):
     certifications = Certification.objects.filter(profile=profile)
 
     if profile.profile_complete:
-        # Only surface genuinely good matches here — "Good Match" (80+) and
-        # up, i.e. the top two bands of the 5-tier scale in match_tags.py
-        # (Good/Great/Perfect). Decent (70-79) and Unmatched don't belong
-        # under a "recommended for you" heading; better to show fewer rows
-        # (or none) than pad it out with mediocre matches.
-        ranked_jobs = [r for r in get_ranked_jobs(profile) if r['score'] >= 80][:5]
+        # get_ranked_jobs() already excludes anything below
+        # match_tags.VISIBILITY_THRESHOLD (65) — everything it returns is
+        # either "Recommended" or "Highly Recommended", so no extra filter
+        # is needed here beyond capping the preview to 5 rows.
+        ranked_jobs = get_ranked_jobs(profile)[:5]
     else:
         ranked_jobs = JobPosting.objects.filter(status='open', deleted_at__isnull=True, admin_disabled=False).order_by('-created_at').select_related('company')[:5]
         ranked_jobs = [{'job': j, 'score': None} for j in ranked_jobs]
@@ -925,9 +924,21 @@ def resume(request):
         profile.phone = request.POST.get('phone', '')
         profile.contact_email = request.POST.get('contact_email', '')
         profile.bio = request.POST.get('bio', '')
+        profile.other_details = request.POST.get('other_details', '')
         profile.save()
 
         # Education
+        # edu_document_<i> (unique per-row name, assigned client-side right
+        # before submit — see renumberDocumentInputs() in resume.html) lines
+        # up with this same loop index, since both come from the same DOM
+        # row. A plain shared `name="edu_document"` can't be used here: a
+        # file input with no file chosen is dropped from the request
+        # entirely, so getlist() would silently misalign against
+        # edu_level/edu_course the moment one row has a file and another
+        # doesn't. edu_document_keep carries the existing stored file's
+        # path for a row with no NEW upload, so re-saving the résumé
+        # (editing an unrelated field) doesn't wipe a previously uploaded
+        # diploma — the JS clears it to '' when the user clicks Remove.
         Education.objects.filter(profile=profile).delete()
         levels = request.POST.getlist('edu_level')
         courses = request.POST.getlist('edu_course')
@@ -935,12 +946,13 @@ def resume(request):
         starts = request.POST.getlist('edu_start')
         ends = request.POST.getlist('edu_end')
         is_currents = request.POST.getlist('edu_is_current')
+        edu_document_keeps = request.POST.getlist('edu_document_keep')
         for i, level in enumerate(levels):
             if not level:
                 continue
             s = starts[i] if i < len(starts) else ''
             e = ends[i]   if i < len(ends)   else ''
-            Education.objects.create(
+            edu_obj = Education.objects.create(
                 profile=profile,
                 level=level,
                 course_degree=courses[i] if i < len(courses) else '',
@@ -949,21 +961,36 @@ def resume(request):
                 year_ended=int(e) if e else None,
                 is_current=str(i) in is_currents,
             )
+            uploaded = request.FILES.get(f'edu_document_{i}')
+            if uploaded:
+                edu_obj.document = uploaded
+                edu_obj.save(update_fields=['document'])
+            elif i < len(edu_document_keeps) and edu_document_keeps[i]:
+                edu_obj.document.name = edu_document_keeps[i]
+                edu_obj.save(update_fields=['document'])
 
-        # Certifications
+        # Certifications — same document-handling pattern as Education above.
         Certification.objects.filter(profile=profile).delete()
         cert_names = request.POST.getlist('cert_name')
         cert_orgs = request.POST.getlist('cert_org')
         cert_years = request.POST.getlist('cert_year')
+        cert_document_keeps = request.POST.getlist('cert_document_keep')
         for i, name in enumerate(cert_names):
             if not name:
                 continue
-            Certification.objects.create(
+            cert_obj = Certification.objects.create(
                 profile=profile,
                 name=name,
                 issuing_org=cert_orgs[i] if i < len(cert_orgs) else '',
                 year_received=cert_years[i] if i < len(cert_years) and cert_years[i] else None,
             )
+            uploaded = request.FILES.get(f'cert_document_{i}')
+            if uploaded:
+                cert_obj.document = uploaded
+                cert_obj.save(update_fields=['document'])
+            elif i < len(cert_document_keeps) and cert_document_keeps[i]:
+                cert_obj.document.name = cert_document_keeps[i]
+                cert_obj.save(update_fields=['document'])
 
         # Skills — the resume form emits parallel `skill_name` and
         # `skill_description` lists, one entry per row. Descriptions are
@@ -1159,12 +1186,12 @@ def recommended_jobs(request):
 
     # Minimum match score — single value, 0 means "no min filter". Keys the
     # threshold to the same tier boundaries the badge pills use so the label
-    # reads consistently ("Decent+" chip → Decent Match badge tier).
+    # reads consistently ("Recommended+" chip → Recommended badge tier).
     try:
         min_match = int(request.GET.get('min_match') or 0)
     except (TypeError, ValueError):
         min_match = 0
-    if min_match not in {0, 70, 80, 90, 98}:
+    if min_match not in {0, 65, 85}:
         min_match = 0
 
     liked_ids = set(JobInteraction.objects.filter(
@@ -1302,10 +1329,8 @@ def recommended_jobs(request):
     # copy tracks the badges on each card.
     min_match_choices = [
         {'value': 0,  'label': 'Any match'},
-        {'value': 98, 'label': 'Perfect'},
-        {'value': 90, 'label': 'Great+'},
-        {'value': 80, 'label': 'Good+'},
-        {'value': 70, 'label': 'Decent+'},
+        {'value': 85, 'label': 'Highly Recommended'},
+        {'value': 65, 'label': 'Recommended+'},
     ]
 
     context = {

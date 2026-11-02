@@ -11,7 +11,7 @@
       <input type="hidden" name="sort" value="{{ sort }}">
       <input type="hidden" name="tab"  value="{{ tab }}">
       {% if type_filter %}<input type="hidden" name="type" value="{{ type_filter }}">{% endif %}
-      {% if natures_selected %}<input type="hidden" name="nature" value="{{ natures_selected|join:',' }}">{% endif %}
+      {% if districts_selected %}<input type="hidden" name="district" value="{{ districts_selected|join:',' }}">{% endif %}
       <div class="relative">
         <input type="text" name="q" value="{{ search }}" placeholder="Search Companies..."
                class="w-full bg-white border border-gray-200 rounded-full pl-5 pr-12 py-2.5 text-sm text-primary placeholder-gray-400 focus:outline-none focus:border-teal transition">
@@ -47,7 +47,8 @@
       {# Sort sits on the left, Filters on the right — flex-row-reverse      #}
       {# handles the swap without reordering the source.                     #}
       {# Filters — chip panel. Type is single-select (Local/Overseas/BPO);   #}
-      {# Nature is multi-select from distinct DB values.                     #}
+      {# Location is multi-select by Iloilo City district, plus an          #}
+      {# "Outside Iloilo" bucket for overseas/other-province companies.      #}
       <div class="relative" id="filters-wrapper">
         <button type="button" onclick="document.getElementById('filters-panel').classList.toggle('hidden')"
                 class="flex items-center gap-2 text-muted text-sm hover:text-primary transition">
@@ -62,7 +63,7 @@
         <div id="filters-panel" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-80 sm:w-[26rem] p-4 max-h-[80vh] overflow-y-auto"
              data-base="?tab={{ tab }}&sort={{ sort }}{% if search %}&q={{ search|urlencode }}{% endif %}"
              data-type="{{ type_filter }}"
-             data-nature="{{ natures_selected|join:',' }}">
+             data-district="{{ districts_selected|join:',' }}">
 
           <div class="mb-3">
             <p class="text-muted text-xs font-medium mb-1.5">Type of company</p>
@@ -77,15 +78,15 @@
             </div>
           </div>
 
-          {% if nature_choices %}
+          {% if location_choices %}
           <div class="mb-3">
-            <p class="text-muted text-xs font-medium mb-1.5">Nature of company</p>
+            <p class="text-muted text-xs font-medium mb-1.5">Location</p>
             <div class="flex flex-wrap gap-1.5">
-              {% for n in nature_choices %}
-              <button type="button" data-filter="nature" data-value="{{ n.code }}"
+              {% for l in location_choices %}
+              <button type="button" data-filter="district" data-value="{{ l.code }}"
                       class="filter-chip px-3 py-1 rounded-full text-xs font-semibold transition border
-                             {% if n.code in natures_selected %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
-                {{ n.label }}
+                             {% if l.code in districts_selected %}bg-primary text-white border-primary{% else %}bg-white text-muted border-gray-200 hover:text-primary hover:border-primary/30{% endif %}">
+                {{ l.label }}
               </button>
               {% endfor %}
             </div>
@@ -158,12 +159,18 @@
               {% endif %}
             </p>
             <p class="text-muted text-xs italic">Joined {{ c.created_at|date:"M j Y" }}</p>
+            {% if c.nature_of_company %}
+            <p class="text-muted text-xs truncate">{{ c.nature_of_company }}</p>
+            {% endif %}
           </div>
         </div>
 
         <div class="flex flex-wrap gap-1.5 mt-3">
           <span class="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-taupe/20 text-primary border border-taupe/30">
             {{ c.get_type_of_company_display|default:"—" }}
+          </span>
+          <span class="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-surface text-muted border border-gray-200">
+            {{ c.job_count }} job post{{ c.job_count|pluralize }}
           </span>
           {% with rep=c.representatives.first %}
           {% if rep and not rep.user.is_active %}
@@ -282,14 +289,14 @@ document.addEventListener('click', function(e) {
   if (!panel) return;
   const base = panel.dataset.base || '?';
   const state = {
-    type:   panel.dataset.type   || '',
-    nature: (panel.dataset.nature || '').split(',').filter(Boolean),
+    type:     panel.dataset.type     || '',
+    district: (panel.dataset.district || '').split(',').filter(Boolean),
   };
 
   function buildUrl() {
     let url = base;
-    if (state.type)          url += '&type=' + encodeURIComponent(state.type);
-    if (state.nature.length) url += '&nature=' + state.nature.map(encodeURIComponent).join(',');
+    if (state.type)            url += '&type=' + encodeURIComponent(state.type);
+    if (state.district.length) url += '&district=' + state.district.map(encodeURIComponent).join(',');
     return url;
   }
 
@@ -299,9 +306,9 @@ document.addEventListener('click', function(e) {
       const value = btn.dataset.value;
       if (kind === 'type') {
         state.type = (state.type === value) ? '' : value;
-      } else if (kind === 'nature') {
-        const i = state.nature.indexOf(value);
-        if (i === -1) state.nature.push(value); else state.nature.splice(i, 1);
+      } else if (kind === 'district') {
+        const i = state.district.indexOf(value);
+        if (i === -1) state.district.push(value); else state.district.splice(i, 1);
       }
       window.location.href = buildUrl();
     });

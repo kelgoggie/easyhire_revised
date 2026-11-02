@@ -33,32 +33,32 @@
 
       <div class="flex flex-wrap items-center gap-1.5">
         {% if item.job.education_requirement %}
-        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-xs px-2.5 py-0.5 rounded-full border border-teal/20 w-fit max-w-full">
-          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+        <span class="inline-flex items-center gap-1 bg-teal/10 text-teal text-[10px] px-2 py-0.5 rounded-full border border-teal/20 w-fit max-w-full">
+          <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
           <span class="truncate">{{ item.job.education_requirement.get_level_display }}</span>
         </span>
         {% endif %}
 
         {% with skills=item.job.skill_requirements.all %}
         {% for skill in skills|slice:":2" %}
-        <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs px-2 py-0.5 rounded-full border border-green-200 w-fit max-w-full">
-          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+        <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-[10px] px-2 py-0.5 rounded-full border border-green-200 w-fit max-w-full">
+          <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
           <span class="truncate">{{ skill.name }}</span>
         </span>
         {% endfor %}
         {% endwith %}
 
         {% if item.job.experience_requirement %}
-        <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-400 text-xs px-2.5 py-0.5 rounded-full border border-purple-200 w-fit max-w-full">
-          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-400 text-[10px] px-2 py-0.5 rounded-full border border-purple-200 w-fit max-w-full">
+          <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           <span class="truncate">{{ item.job.experience_requirement.display_experience }}</span>
         </span>
         {% endif %}
 
         {% with certs=item.job.certification_requirements.all %}
         {% if certs %}
-        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs px-2.5 py-0.5 rounded-full border border-gray-200 w-fit max-w-full">
-          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full border border-gray-200 w-fit max-w-full">
+          <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
           <span class="truncate">{{ certs.0.name }}</span>
         </span>
         {% endif %}
@@ -66,8 +66,8 @@
 
         {% with customs=item.job.custom_criteria.all %}
         {% for c in customs|slice:":2" %}
-        <span class="inline-flex items-center gap-1 bg-amber/10 text-amber text-xs px-2.5 py-0.5 rounded-full border border-amber/20 w-fit max-w-full">
-          <svg class="w-2.5 h-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0011 2H4a2 2 0 00-2 2v7a2 2 0 00.59 1.41l9 9a2 2 0 002.82 0l7-7a2 2 0 000-2.83zM6.5 8A1.5 1.5 0 118 6.5 1.5 1.5 0 016.5 8z"/></svg>
+        <span class="inline-flex items-center gap-1 bg-amber/10 text-amber text-[10px] px-2 py-0.5 rounded-full border border-amber/20 w-fit max-w-full">
+          <svg class="w-2 h-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0011 2H4a2 2 0 00-2 2v7a2 2 0 00.59 1.41l9 9a2 2 0 002.82 0l7-7a2 2 0 000-2.83zM6.5 8A1.5 1.5 0 118 6.5 1.5 1.5 0 016.5 8z"/></svg>
           <span class="truncate">{{ c.name }}</span>
         </span>
         {% endfor %}

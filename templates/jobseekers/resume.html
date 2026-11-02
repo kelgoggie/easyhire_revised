@@ -362,6 +362,15 @@
                   </div>
                 </div>
               </div>
+              <div class="document-field">
+                <label class="block text-xs text-muted mb-1">Diploma / Certificate <span class="text-muted/70">(optional)</span></label>
+                <div class="document-current flex items-center gap-2 mb-1 {% if not edu.document %}hidden{% endif %}">
+                  <a href="{{ edu.document.url|default:'' }}" target="_blank" rel="noopener" class="document-current-link text-teal text-xs hover:underline truncate max-w-[10rem]">View current file</a>
+                  <button type="button" class="document-remove-btn text-red-500 text-xs hover:underline" title="Remove uploaded file">Remove</button>
+                </div>
+                <input type="file" name="edu_document" accept=".pdf,.jpg,.jpeg,.png" class="resume-field document-input w-full bg-white border border-gray-200 rounded-lg text-xs text-primary file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-teal/10 file:text-teal file:text-xs file:font-semibold focus:outline-none focus:border-teal transition">
+                <input type="hidden" name="edu_document_keep" value="{{ edu.document.name|default:'' }}" class="document-keep">
+              </div>
             </div>
             {% empty %}
             <div class="education-row carousel-slide relative border border-gray-100 rounded-xl p-3 space-y-2">
@@ -392,6 +401,15 @@
                   <div class="relative flex-1"><select name="edu_start" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none"><option value="">Start Year</option>{% for y in year_range_start %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select><svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
                   <div class="relative flex-1"><select name="edu_end" class="resume-field w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary focus:outline-none focus:border-teal transition appearance-none"><option value="">End Year</option>{% for y in year_range %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select><svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
                 </div>
+              </div>
+              <div class="document-field">
+                <label class="block text-xs text-muted mb-1">Diploma / Certificate <span class="text-muted/70">(optional)</span></label>
+                <div class="document-current flex items-center gap-2 mb-1 hidden">
+                  <a href="" target="_blank" rel="noopener" class="document-current-link text-teal text-xs hover:underline truncate max-w-[10rem]">View current file</a>
+                  <button type="button" class="document-remove-btn text-red-500 text-xs hover:underline" title="Remove uploaded file">Remove</button>
+                </div>
+                <input type="file" name="edu_document" accept=".pdf,.jpg,.jpeg,.png" class="resume-field document-input w-full bg-white border border-gray-200 rounded-lg text-xs text-primary file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-teal/10 file:text-teal file:text-xs file:font-semibold focus:outline-none focus:border-teal transition">
+                <input type="hidden" name="edu_document_keep" value="" class="document-keep">
               </div>
             </div>
             {% endfor %}
@@ -452,6 +470,15 @@
                   <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </div>
               </div>
+              <div class="document-field">
+                <label class="block text-xs text-muted mb-1">Certificate File <span class="text-muted/70">(optional)</span></label>
+                <div class="document-current flex items-center gap-2 mb-1 {% if not cert.document %}hidden{% endif %}">
+                  <a href="{{ cert.document.url|default:'' }}" target="_blank" rel="noopener" class="document-current-link text-teal text-xs hover:underline truncate max-w-[10rem]">View current file</a>
+                  <button type="button" class="document-remove-btn text-red-500 text-xs hover:underline" title="Remove uploaded file">Remove</button>
+                </div>
+                <input type="file" name="cert_document" accept=".pdf,.jpg,.jpeg,.png" class="resume-field document-input w-full bg-white border border-gray-200 rounded-lg text-xs text-primary file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-teal/10 file:text-teal file:text-xs file:font-semibold focus:outline-none focus:border-teal transition">
+                <input type="hidden" name="cert_document_keep" value="{{ cert.document.name|default:'' }}" class="document-keep">
+              </div>
             </div>
             {% empty %}
             <div class="cert-row carousel-slide relative border border-gray-100 rounded-xl p-3 space-y-2">
@@ -471,6 +498,15 @@
                   </select>
                   <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </div>
+              </div>
+              <div class="document-field">
+                <label class="block text-xs text-muted mb-1">Certificate File <span class="text-muted/70">(optional)</span></label>
+                <div class="document-current flex items-center gap-2 mb-1 hidden">
+                  <a href="" target="_blank" rel="noopener" class="document-current-link text-teal text-xs hover:underline truncate max-w-[10rem]">View current file</a>
+                  <button type="button" class="document-remove-btn text-red-500 text-xs hover:underline" title="Remove uploaded file">Remove</button>
+                </div>
+                <input type="file" name="cert_document" accept=".pdf,.jpg,.jpeg,.png" class="resume-field document-input w-full bg-white border border-gray-200 rounded-lg text-xs text-primary file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-teal/10 file:text-teal file:text-xs file:font-semibold focus:outline-none focus:border-teal transition">
+                <input type="hidden" name="cert_document_keep" value="" class="document-keep">
               </div>
             </div>
             {% endfor %}
@@ -851,6 +887,15 @@
         </div>
       </div>
 
+      <!-- ── Other ─────────────────────────────────────────────── -->
+      <div class="bg-white border border-gray-200 rounded-2xl p-5">
+        <p class="text-sm font-bold text-primary mb-1">Other</p>
+        <p class="text-xs text-muted mb-3">Other details potential employers might like to know.</p>
+        <textarea name="other_details" id="field-other-details" rows="3"
+                  placeholder="e.g. availability, willingness to relocate, language fluency, anything else worth mentioning..."
+                  class="resume-field w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ profile.other_details }}</textarea>
+      </div>
+
       <!-- ── Preferences ───────────────────────────────────────── -->
       {# Chip-style preference input. The canonical value is a comma-       #}
       {# separated string on `job_search_query` (matches how analytics      #}
@@ -1004,6 +1049,7 @@ saveBtn.addEventListener('click', function() {
         // Clear the dirty flag before submit so beforeunload doesn't fire
         // on the redirect back to the resume page after save.
         resumeDirty = false;
+        renumberDocumentInputs();
         document.getElementById('resume-form').submit();
     });
 });
@@ -1354,6 +1400,13 @@ function addRow(type) {
         // widget's guard trips and cloned fields silently have no dropdown.
         delete el.dataset.autocomplete;
     });
+    // .document-keep is `type="hidden"` so the loop above skips it — but a
+    // brand-new row must never inherit the template row's existing-file
+    // reference, or saving would silently re-attach someone else's upload
+    // (the row it was cloned from) to this empty entry.
+    clone.querySelectorAll('.document-keep').forEach(el => { el.value = ''; });
+    clone.querySelectorAll('.document-current').forEach(el => { el.classList.add('hidden'); });
+    clone.querySelectorAll('.document-current-link').forEach(el => { el.href = ''; });
     container.insertBefore(clone, container.firstElementChild);
     // Active flag: only the new (front) slide is active.
     Array.from(container.querySelectorAll('.carousel-slide')).forEach((s, i) => {
@@ -1433,6 +1486,40 @@ document.addEventListener('change', function(e) {
         if (endMonth) endMonth.disabled = e.target.checked;
     }
 });
+
+// ── Diploma/Certificate upload — "Remove" clears the existing-file      ──
+// reference (document-keep) so a save with no new file wipes it, and     ──
+// hides the "View current file" link immediately for feedback.           ──
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.document-remove-btn');
+    if (!btn) return;
+    const field = btn.closest('.document-field');
+    if (!field) return;
+    const keep = field.querySelector('.document-keep');
+    if (keep) keep.value = '';
+    const current = field.querySelector('.document-current');
+    if (current) current.classList.add('hidden');
+    markDirty();
+});
+
+// File inputs only submit when a file is actually chosen — an empty one
+// is dropped from the request entirely, which would misalign the
+// edu_document/cert_document list against edu_level/cert_name if several
+// rows exist and only some have a file. Right before submit, give each
+// row's file input a unique, position-based name (edu_document_0,
+// edu_document_1, ...) matching the row's index among its siblings — the
+// same index the backend zips edu_level/cert_name against — so it can
+// look each one up directly instead of relying on list order.
+function renumberDocumentInputs() {
+    document.querySelectorAll('#education-container .education-row').forEach(function(row, i) {
+        const input = row.querySelector('input[name^="edu_document"]');
+        if (input) input.name = 'edu_document_' + i;
+    });
+    document.querySelectorAll('#certification-container .cert-row').forEach(function(row, i) {
+        const input = row.querySelector('input[name^="cert_document"]');
+        if (input) input.name = 'cert_document_' + i;
+    });
+}
 
 // ── City/Barangay cascade ────────────────────────────────────────
 const citySelect     = document.getElementById('resume_city');

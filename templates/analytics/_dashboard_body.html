@@ -51,13 +51,14 @@
         {# Comparison line charts folded into Labor & Employment — they    #}
         {# describe the same domain (applications, hires, external hires)  #}
         {# so a separate sidebar section was redundant.                    #}
+        {% if is_admin %}
         <li><a href="#cmp-apps-hired" class="nav-pill" data-key="cmp-apps-hired">Applications vs Hired</a></li>
-        <li><a href="#cmp-jobs-apps"  class="nav-pill" data-key="cmp-jobs-apps">New Jobs and Applications</a></li>
-        <li><a href="#cmp-eh-ext"     class="nav-pill" data-key="cmp-eh-ext">Hired via EasyHire vs Externally</a></li>
+        {% endif %}
         <li><a href="#cmp-place-rej"  class="nav-pill" data-key="cmp-place-rej">Application Status Ratio</a></li>
         <li><a href="#cmp-hires-compat" class="nav-pill" data-key="cmp-hires-compat">Hires by Compatibility</a></li>
       </ul>
 
+      {% if is_admin %}
       <p class="text-sm font-bold text-primary mb-1">
         <strong>Jobseeker</strong> <span class="font-normal text-primary/70">Demographics</span>
       </p>
@@ -71,6 +72,7 @@
         <li><a href="#js-location" class="nav-pill" data-key="js-location">Location</a></li>
         <li><a href="#js-sectors" class="nav-pill" data-key="js-sectors">Sectors</a></li>
       </ul>
+      {% endif %}
 
       <p class="text-sm font-bold text-primary mb-1">
         <strong>Company</strong> <span class="font-normal text-primary/70">Demographics</span>
@@ -87,6 +89,7 @@
     <!-- RIGHT: panel area -->
     <section class="flex-1 p-4 sm:p-6 bg-white flex flex-col">
 
+      {% if is_admin %}
       <!-- ── Jobseeker: Registered Accounts ────────────────────── -->
       <div data-panel="js-accounts" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Registered Accounts</h2>
@@ -146,6 +149,7 @@
         <p class="text-muted text-xs italic mb-4">Number of jobseekers in each sectoral group.</p>
         <div class="chart-box flex-1"><canvas id="chart-js-sectors"></canvas></div>
       </div>
+      {% endif %}
 
       <!-- ── Employer: Registered Accounts ────────────────────── -->
       <div data-panel="emp-accounts" class="analytics-panel hidden flex-1 flex flex-col">
@@ -248,6 +252,7 @@
         {% endif %}
       </div>
 
+      {% if is_admin %}
       <!-- ── Comparison: Applications vs Hired ──────────────────── -->
       <div data-panel="cmp-apps-hired" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Applications vs Hired</h2>
@@ -262,19 +267,7 @@
           <p class="text-sm text-primary">Conversion Rate: <strong>{% if applications_this_year %}{{ hired_this_year|floatformat:0 }} / {{ applications_this_year }}{% else %}—{% endif %}</strong></p>
         </div>
       </div>
-
-      <!-- ── Comparison: New Jobs vs Applications ───────────────── -->
-      <div data-panel="cmp-jobs-apps" class="analytics-panel hidden flex-1 flex flex-col">
-        <h2 class="text-2xl font-extrabold text-primary mb-1">New Jobs vs Applications</h2>
-        <p class="text-muted text-xs italic mb-4">
-          New jobs vs applications submitted per month in {{ selected_year }}
-        </p>
-        <div class="chart-box flex-1"><canvas id="chart-cmp-jobs-apps"></canvas></div>
-        <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
-          <p class="text-sm text-primary">New Jobs Posted (This Year): <strong>{{ new_jobs_this_year }}</strong></p>
-          <p class="text-sm text-primary">Applications Submitted (This Year): <strong>{{ applications_this_year }}</strong></p>
-        </div>
-      </div>
+      {% endif %}
 
       <!-- ── Comparison: Placements vs Unsuccessful Applications ── -->
       <div data-panel="cmp-place-rej" class="analytics-panel hidden flex-1 flex flex-col">
@@ -290,10 +283,11 @@
       </div>
 
       <!-- ── Hires by Compatibility Tier ────────────────────────── -->
-      {# Bar chart bucketing every hire in {{ selected_year }} by the     #}
-      {# match tier the hired jobseeker landed at (Unmatched → Perfect).  #}
-      {# Same tier vocabulary the jobseeker-facing match badge uses so    #}
-      {# admins and employers read the buckets the same way.               #}
+      {# Bar chart bucketing every hire in {{ selected_year }} by the         #}
+      {# match tier the hired jobseeker landed at (Below Threshold →          #}
+      {# Highly Recommended). Same tier vocabulary the jobseeker-facing       #}
+      {# match badge uses so admins and employers read the buckets the same  #}
+      {# way.                                                                 #}
       <div data-panel="cmp-hires-compat" class="analytics-panel hidden flex-1 flex flex-col">
         <h2 class="text-2xl font-extrabold text-primary mb-1">Hires by Compatibility</h2>
         <p class="text-muted text-xs italic mb-4">
@@ -302,21 +296,6 @@
         <div class="chart-box flex-1"><canvas id="chart-cmp-hires-compat"></canvas></div>
         <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
           <p class="text-sm text-primary">Hires (This Year): <strong>{{ hired_this_year }}</strong></p>
-        </div>
-      </div>
-
-      <!-- ── Comparison: Hired via EasyHire vs Externally ───────── -->
-      <div data-panel="cmp-eh-ext" class="analytics-panel hidden flex-1 flex flex-col">
-        <h2 class="text-2xl font-extrabold text-primary mb-1">Internal and External Placements</h2>
-        <p class="text-muted text-xs italic mb-4">
-          Job placements made on EasyHire vs placements recorded by the employer from referrals, job fairs, etc.
-        </p>
-        <div class="chart-box flex-1"><canvas id="chart-cmp-eh-ext"></canvas></div>
-        <div class="mt-3 pt-2 border-t border-gray-100 space-y-0.5">
-          <p class="text-sm text-primary">Hired via EasyHire (This Year): <strong>{{ hired_this_year }}</strong></p>
-          <p class="text-sm text-primary">Hired Externally (This Year): <strong>{{ external_hires_this_year }}</strong></p>
-          <p class="text-sm text-primary">Hired via EasyHire (All Time): <strong>{{ hired_all_time }}</strong></p>
-          <p class="text-sm text-primary">Hired Externally (All Time): <strong>{{ external_hires_all_time }}</strong></p>
         </div>
       </div>
 
@@ -399,8 +378,6 @@ const D = {
                data:   [{% for x in hard_to_fill_chart %}{{ x.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
                unit:   'post' },
   hired:      {{ hired_monthly|safe }},
-  newJobs:    {{ new_jobs_monthly|safe }},
-  extHired:   {{ external_hires_monthly|safe }},
   rejected:   {{ rejected_monthly|safe }},
   hiresByTier: {
     labels: [{% for l in hires_by_tier_labels %}'{{ l|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
@@ -598,6 +575,41 @@ function monthlyMultiLine(canvasId, series) {
   });
 }
 
+function monthlyMultiBar(canvasId, series) {
+  // Grouped bar chart, one bar per series per month. `series` is an array
+  // of { label, data, color } objects — same shape as monthlyMultiLine's
+  // input, so call sites can switch between line/bar without reshaping data.
+  const ctx = document.getElementById(canvasId); if (!ctx) return;
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: MONTH_LABELS,
+      datasets: series.map(function(s) {
+        return {
+          label: s.label,
+          data: s.data,
+          backgroundColor: s.color,
+          borderWidth: 0,
+          borderRadius: 4,
+          maxBarThickness: 22,
+        };
+      }),
+    },
+    options: {
+      plugins: {
+        legend: {
+          display: true, position: 'top', align: 'end',
+          labels: { boxWidth: 12, boxHeight: 12, padding: 12, usePointStyle: true },
+        },
+      },
+      scales: {
+        y: Y_AXIS_WITH_HEADROOM,
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
+
 function comparisonBar(canvasId, labels, data, colors) {
   // Small horizontal-bar comparison chart, one bar per label. Used for
   // the EasyHire-vs-External totals where per-month series aren't
@@ -751,17 +763,9 @@ function init(key) {
     case 'lab-searched':   charts[key] = barH('chart-lab-searched', D.searched.labels, D.searched.data, '#E8A838'); break;
     case 'lab-demand':     charts[key] = pie('chart-lab-demand',   D.demand.labels, D.demand.data, null, D.demand.unit); break;
     case 'lab-hard':       charts[key] = pie('chart-lab-hard',     D.hard.labels,   D.hard.data,   null, D.hard.unit);   break;
-    case 'cmp-apps-hired': charts[key] = monthlyMultiLine('chart-cmp-apps-hired', [
-                             { label: 'Applications', data: D.apps,  color: '#5BA3A0' },
-                             { label: 'Hired',        data: D.hired, color: '#1A365D' },
-                           ]); break;
-    case 'cmp-jobs-apps':  charts[key] = monthlyMultiLine('chart-cmp-jobs-apps', [
-                             { label: 'New Jobs Posted', data: D.newJobs, color: '#E8A838' },
-                             { label: 'Applications',    data: D.apps,    color: '#5BA3A0' },
-                           ]); break;
-    case 'cmp-eh-ext':     charts[key] = monthlyMultiLine('chart-cmp-eh-ext', [
-                             { label: 'Hired via EasyHire', data: D.hired,    color: '#1A365D' },
-                             { label: 'Hired externally',   data: D.extHired, color: '#E8A838' },
+    case 'cmp-apps-hired': charts[key] = monthlyMultiBar('chart-cmp-apps-hired', [
+                             { label: 'Applications', data: D.apps,  color: '#1A365D' },
+                             { label: 'Hired',        data: D.hired, color: '#6CC4EC' },
                            ]); break;
     case 'cmp-place-rej':  charts[key] = monthlyMultiLine('chart-cmp-place-rej', [
                              { label: 'Placements',              data: D.hired,    color: '#1A365D' },

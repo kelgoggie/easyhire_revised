@@ -52,14 +52,12 @@ EMPLOYER_FAQS = [
     ),
     (
         "What do the match scores mean?",
-        "Each applicant gets a score from 0-100 based on how closely their résumé matches your job's requirements "
-        "(skills, education, experience, certifications). There are five tiers: "
-        "<strong>Perfect Match</strong> (98+), "
-        "<strong>Great Match</strong> (90-97), "
-        "<strong>Good Match</strong> (80-89), "
-        "<strong>Decent Match</strong> (70-79), and "
-        "<strong>Unmatched</strong> (below 70). "
-        "The Recommended Candidates list surfaces jobseekers who haven't applied but match strongly — useful when you have a hard-to-fill role.",
+        "Each applicant and recommended candidate gets a score from 0-100 based on how closely their résumé matches your "
+        "job's requirements (skills, education, experience, certifications). There are two tiers: "
+        "<strong>Highly Recommended</strong> (85+) and <strong>Recommended</strong> (65-84). "
+        "The Recommended Candidates list only surfaces jobseekers who haven't applied but score 65 or above — useful when "
+        "you have a hard-to-fill role. Applicants who already submitted an application always show their real score, even "
+        "if it falls below that threshold, so you can still review everyone who applied.",
     ),
     (
         "Can I customize how applicants are matched to my job?",
@@ -93,15 +91,12 @@ JOBSEEKER_FAQS = [
     (
         "What does the match score mean?",
         "Every job you see comes with a score from 0-100 showing how well your résumé lines up with what the employer is looking for. "
-        "There are five tiers: "
-        "<strong>Perfect Match</strong> (98+), "
-        "<strong>Great Match</strong> (90-97), "
-        "<strong>Good Match</strong> (80-89), "
-        "<strong>Decent Match</strong> (70-79), and "
-        "<strong>Unmatched</strong> (below 70). "
+        "There are two tiers: "
+        "<strong>Highly Recommended</strong> (85+) and <strong>Recommended</strong> (65-84). "
+        "Only jobs scoring 65 or above ever show up in your recommendations — a job not appearing doesn't mean you did "
+        "anything wrong, it just means this particular job isn't a strong enough fit for your résumé today. "
         "The algorithm weighs your skills, education, experience, certifications, location, and sector profile — including "
         "relevant skills mentioned in your projects or extracurricular activities. "
-        "<strong>Unmatched</strong> doesn't mean you did anything wrong — it just means this particular job isn't a strong fit for your résumé today. "
         "The more complete your résumé, the more accurate every score becomes.",
     ),
     (

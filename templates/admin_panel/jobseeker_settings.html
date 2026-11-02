@@ -291,7 +291,7 @@
         Setting status to <strong class="text-primary">Verified</strong> grants the jobseeker the PESO Verified badge. Choosing <strong class="text-primary">Denied</strong> sends the reason back to the jobseeker so they can re-submit.
       </p>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 items-start">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
           <label class="block text-primary text-xs mb-1">Status</label>
           <div class="relative">
@@ -313,10 +313,10 @@
             {% endif %}
           </p>
         </div>
-        <div>
+        <div class="flex flex-col h-full">
           <label class="block text-primary text-xs mb-1">Rejection Note <span class="text-muted">(only shown for "Denied")</span></label>
-          <textarea name="id_verification_note" rows="3" placeholder="e.g. ID photo is blurred — please resubmit a clearer scan."
-                    class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ jobseeker.id_verification_note }}</textarea>
+          <textarea name="id_verification_note" placeholder="e.g. ID photo is blurred — please resubmit a clearer scan."
+                    class="w-full flex-1 bg-white border border-gray-200 rounded-2xl px-4 py-2 text-sm text-primary placeholder-gray-300 focus:outline-none focus:border-teal transition resize-none">{{ jobseeker.id_verification_note }}</textarea>
         </div>
       </div>
 

@@ -21,27 +21,15 @@
       </svg>
     </summary>
     <div class="text-muted text-sm leading-relaxed mt-3 space-y-3">
-      <p>Every job–jobseeker pairing is scored against four things: education, skills, experience, and certifications. The label is a plain-English summary of how close that pairing lands to a full fit.</p>
+      <p>Every job–jobseeker pairing is scored against four things: education, skills, experience, and certifications. The label is a plain-English summary of how close that pairing lands to a full fit. Only matches of 65% and above are ever shown — anything below that isn't a meaningful enough fit to surface as a recommendation.</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
-          <div class="flex-shrink-0 mt-0.5">{% match_badge 100 %}</div>
-          <p class="text-xs">The strongest possible fit for your qualifications.</p>
-        </div>
-        <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
           <div class="flex-shrink-0 mt-0.5">{% match_badge 92 %}</div>
-          <p class="text-xs">Almost perfect, just a few things missing</p>
-        </div>
-        <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
-          <div class="flex-shrink-0 mt-0.5">{% match_badge 82 %}</div>
-          <p class="text-xs">More than a few things missing, but the job still fits.</p>
+          <p class="text-xs">A strong fit for your qualifications (85% and up).</p>
         </div>
         <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
           <div class="flex-shrink-0 mt-0.5">{% match_badge 72 %}</div>
-          <p class="text-xs">Not the best fit for your qualifications, but still passable.</p>
-        </div>
-        <div class="flex items-start gap-3 p-3 rounded-xl bg-surface/40 border border-gray-100">
-          <div class="flex-shrink-0 mt-0.5">{% match_badge 30 %}</div>
-          <p class="text-xs">Not very compatible at all, likely not the right fit for your current qualifications.</p>
+          <p class="text-xs">A solid fit worth a look (65–84%).</p>
         </div>
       </div>
     </div>

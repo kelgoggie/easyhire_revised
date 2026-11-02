@@ -177,6 +177,46 @@ JOB_TEMPLATES = [
     },
 ]
 
+# Which JOB_TEMPLATES (by title) a given company is allowed to post — keeps
+# _seed_employers() from handing a hospital a Seafarer posting or a mall a
+# Registered Nurse role. Every company maps to at least 3 titles so the
+# existing random.sample(..., k=random.randint(2, 3)) pick still has room.
+COMPANY_JOB_FIT = {
+    "Iloilo Central Hospital": [
+        "Registered Nurse", "Administrative Assistant", "Security Guard", "Accounting Staff",
+    ],
+    "SM City Iloilo": [
+        "Sales Associate", "Customer Service Representative", "Security Guard",
+        "Cook / Kitchen Staff", "Warehouse Staff",
+    ],
+    "Convergys Philippines": [
+        "Customer Service Representative", "IT Support Specialist", "Data Analyst", "Administrative Assistant",
+    ],
+    "Iloilo Science and Technology University": [
+        "Teacher / Instructor", "Administrative Assistant", "IT Support Specialist", "Security Guard",
+    ],
+    "Globe Telecom Iloilo": [
+        "Customer Service Representative", "IT Support Specialist", "Sales Associate", "Data Analyst",
+    ],
+    "Robinsons Place Iloilo": [
+        "Sales Associate", "Customer Service Representative", "Security Guard",
+        "Cook / Kitchen Staff", "Warehouse Staff",
+    ],
+    "Accenture Iloilo": [
+        "Software Developer", "Data Analyst", "IT Support Specialist", "Customer Service Representative",
+    ],
+    "Department of Health Region VI": [
+        "Administrative Assistant", "Registered Nurse", "Data Analyst", "Accounting Staff",
+    ],
+    "Iloilo Merchant Marine School": [
+        "Seafarer / Ordinary Seaman", "Teacher / Instructor", "Administrative Assistant",
+    ],
+    "Megaworld Iloilo": [
+        "Sales Associate", "Marketing Coordinator", "Accounting Staff",
+        "Administrative Assistant", "Electrician",
+    ],
+}
+
 JOBSEEKERS = [
     {
         "first": "Juan", "last": "dela Cruz", "sex": "M",
@@ -362,8 +402,12 @@ class Command(BaseCommand):
                 sex='F' if rep['first'] in ['Maria', 'Ana', 'Liza', 'Grace', 'Sheila'] else 'M',
             )
 
-            # Create 2-3 jobs per company
-            job_pool = random.sample(JOB_TEMPLATES, k=random.randint(2, 3))
+            # Create 2-3 jobs per company — sampled only from titles that
+            # actually fit the company's industry (COMPANY_JOB_FIT), so a
+            # hospital never ends up posting a Seafarer role and vice versa.
+            fitting_titles = COMPANY_JOB_FIT.get(company_data['name'], [])
+            candidate_jobs = [jt for jt in JOB_TEMPLATES if jt['title'] in fitting_titles] or JOB_TEMPLATES
+            job_pool = random.sample(candidate_jobs, k=min(len(candidate_jobs), random.randint(2, 3)))
             for job_data in job_pool:
                 job = JobPosting.objects.create(
                     company=company,
