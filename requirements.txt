@@ -16,6 +16,13 @@ django-htmx>=1.17             # HTMX integration helpers
 # NLP / Matching
 spacy>=3.7                    # NLP pipeline for skill extraction
 rapidfuzz>=3.6                # Fast fuzzy string matching
+# CPU-only torch — sentence-transformers pulls torch transitively, and on
+# Linux (Render) the default PyPI wheel is the full CUDA build (much larger,
+# much heavier in memory) even though there's no GPU to use it. Pin to the
+# CPU wheel explicitly via PyTorch's own index. This line must stay ABOVE
+# sentence-transformers so pip resolves torch from this index first.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.0+cpu
 sentence-transformers>=2.5    # Semantic similarity for skill matching
 
 # PDF parsing (resume upload)

@@ -14,12 +14,41 @@ Design notes
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import Iterable, Sequence
 
 _model = None
 _model_failed = False
-_embedding_cache: dict[str, object] = {}  # cache_key -> torch tensor
-_query_embedding_cache: dict[str, object] = {}  # query text -> torch tensor
+
+# Bounded LRU caches (not plain dicts) — the embedding cache_keys built from
+# jobseeker skill/experience/criteria text in apps.matching.engine, and the
+# semantic_rank() query text itself, both have effectively unbounded
+# cardinality in production (every distinct résumé, every distinct job
+# requirement ever compared). An unbounded dict here is a slow memory leak
+# over a long-running process — this is what blew past Render's memory
+# limit. Capped at a few thousand entries; least-recently-used entries are
+# evicted first, which also keeps hot "static vocabulary" cache_keys (used
+# elsewhere for autocomplete/clustering) alive indefinitely since they're
+# reused constantly.
+_CACHE_MAX_SIZE = 4000
+
+
+class _LRUCache(OrderedDict):
+    def get_cached(self, key):
+        if key not in self:
+            return None
+        self.move_to_end(key)
+        return self[key]
+
+    def set_cached(self, key, value):
+        self[key] = value
+        self.move_to_end(key)
+        if len(self) > _CACHE_MAX_SIZE:
+            self.popitem(last=False)
+
+
+_embedding_cache = _LRUCache()        # cache_key -> torch tensor
+_query_embedding_cache = _LRUCache()  # query text -> torch tensor
 
 
 # ── Canonical industry buckets for analytics ─────────────────────────
@@ -76,11 +105,13 @@ def _get_or_compute_embeddings(candidates: Sequence[str], cache_key: str | None)
     model = get_model()
     if model is None:
         return None
-    if cache_key and cache_key in _embedding_cache:
-        return _embedding_cache[cache_key]
+    if cache_key:
+        cached = _embedding_cache.get_cached(cache_key)
+        if cached is not None:
+            return cached
     embs = model.encode(list(candidates), convert_to_tensor=True, show_progress_bar=False)
     if cache_key:
-        _embedding_cache[cache_key] = embs
+        _embedding_cache.set_cached(cache_key, embs)
     return embs
 
 
@@ -104,10 +135,10 @@ def semantic_rank(
         return []
     try:
         from sentence_transformers import util
-        query_emb = _query_embedding_cache.get(query)
+        query_emb = _query_embedding_cache.get_cached(query)
         if query_emb is None:
             query_emb = model.encode(query, convert_to_tensor=True, show_progress_bar=False)
-            _query_embedding_cache[query] = query_emb
+            _query_embedding_cache.set_cached(query, query_emb)
         cand_embs = _get_or_compute_embeddings(candidates, cache_key)
         sims = util.cos_sim(query_emb, cand_embs)[0]
         scored = [
