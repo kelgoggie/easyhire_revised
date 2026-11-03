@@ -112,6 +112,29 @@
       {% endif %}
     </div>
 
+    {# ── Additional Criteria (employer-defined, per-job) ── #}
+    {# Unlike the 4 standard categories above, each custom criterion IS its #}
+    {# own scored item (no separate aggregate-vs-items split) — so this     #}
+    {# renders one bar per criterion instead of one bar + met/unmet chips.  #}
+    {% if b.custom %}
+    <div class="pt-3 border-t border-gray-100">
+      <p class="text-primary font-semibold text-xs mb-2">Additional Criteria</p>
+      <div class="space-y-3">
+        {% for c in b.custom %}
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-primary font-semibold">{{ c.name }}:</span>
+            <span class="text-muted">{{ c.score|default:0 }}%</span>
+          </div>
+          <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full bg-amber" style="width: {{ c.score|default:0 }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
   </div>
   {% endwith %}
 </div>

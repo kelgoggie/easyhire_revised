@@ -103,6 +103,20 @@
               <div class="h-full bg-gray-400" style="width: {{ b.certifications|default:0 }}%"></div>
             </div>
           </div>
+          {# Each custom criterion is its own scored item (no aggregate-vs-  #}
+          {# items split like the 4 standard categories above), so it gets  #}
+          {# its own bar rather than a shared one.                          #}
+          {% for c in b.custom %}
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-primary font-semibold">{{ c.name }}:</span>
+              <span class="text-muted">{{ c.score|default:0 }}%</span>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full bg-amber" style="width: {{ c.score|default:0 }}%"></div>
+            </div>
+          </div>
+          {% endfor %}
         </div>
         {% endwith %}
       </div>

@@ -411,11 +411,6 @@ def dashboard(request):
     from apps.accounts.models import User
     from apps.jobs.models import JobPosting
     from .models import UserReport
-    # Read weights via get_weights() so the dashboard reflects whatever
-    # the admin edited on /admin-panel/settings/. The old code imported
-    # the module-level WEIGHT_* CONSTANTS which are only fallbacks; edits
-    # to SiteSettings never propagated back to the dashboard display.
-    from apps.matching.engine import get_weights
 
     pending_approvals = (
         Company.objects.filter(verification_status=Company.PENDING)
@@ -435,7 +430,6 @@ def dashboard(request):
         .order_by('-id_submitted_at')[:5]
     )
 
-    weights = get_weights()
     ctx = _admin_context(request)
     ctx.update({
         'total_users':       User.objects.count(),
@@ -445,12 +439,6 @@ def dashboard(request):
         'pending_approvals':         pending_approvals,
         'recent_reports':            recent_reports,
         'pending_id_verifications':  pending_id_verifications,
-        'algorithm_weights': {
-            'skills':         round(weights[0] * 100),
-            'education':      round(weights[1] * 100),
-            'experience':     round(weights[2] * 100),
-            'certifications': round(weights[3] * 100),
-        },
     })
     return render(request, 'admin_panel/dashboard.html', ctx)
 
