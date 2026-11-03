@@ -260,7 +260,7 @@
             </p>
           </div>
           <div class="flex items-center gap-1.5 flex-shrink-0">
-            {% match_badge item.score %}
+            {% match_badge item.score compact=True %}
             <span class="text-primary font-extrabold text-sm leading-none">{{ item.score }}%</span>
           </div>
         </div>
@@ -316,7 +316,7 @@
             </p>
           </div>
           <div class="flex items-center gap-1.5 flex-shrink-0">
-            {% match_badge item.score %}
+            {% match_badge item.score compact=True %}
             <span class="text-primary font-extrabold text-sm leading-none">{{ item.score }}%</span>
           </div>
         </div>

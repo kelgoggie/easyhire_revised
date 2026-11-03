@@ -164,7 +164,7 @@ def notify_new_application(job, jobseeker):
             )
 
 
-
+def notify_high_match_jobseekers(job, threshold=80):
     """When a new job is posted, notify every jobseeker whose match score
     against it clears `threshold` (default 80). Uses the existing MATCH
     notification type since the semantic is the same — a strong match

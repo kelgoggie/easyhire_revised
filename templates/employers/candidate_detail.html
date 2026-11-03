@@ -286,6 +286,15 @@
       </div>
     </div>
 
+    {% if jobseeker.other_details %}
+    <div class="mb-6">
+      <p class="text-sm font-bold text-primary mb-2">Other</p>
+      <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-primary leading-relaxed whitespace-pre-line">
+        {{ jobseeker.other_details }}
+      </div>
+    </div>
+    {% endif %}
+
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
       <!-- Education -->
@@ -551,8 +560,8 @@
 
         <div id="interview-fields" class="hidden space-y-3">
           <div>
-            <label class="block text-primary text-xs font-medium mb-1">Interview date &amp; time</label>
-            <input type="datetime-local" name="interview_at"
+            <label class="block text-primary text-xs font-medium mb-1">Interview date &amp; time*</label>
+            <input type="datetime-local" name="interview_at" required
                    class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-teal transition">
           </div>
 

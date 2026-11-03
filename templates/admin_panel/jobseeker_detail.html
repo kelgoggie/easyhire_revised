@@ -195,6 +195,15 @@
       {% endif %}
     </div>
 
+    {% if jobseeker.other_details %}
+    <div class="mt-4">
+      <p class="text-primary font-bold text-sm mb-2">Other</p>
+      <div class="bg-white border border-gray-200 rounded-xl px-4 py-3">
+        <p class="text-primary text-sm leading-relaxed whitespace-pre-line">{{ jobseeker.other_details }}</p>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
       <!-- Education -->
       <div class="bg-white border border-gray-200 rounded-xl p-4 min-h-[200px]">

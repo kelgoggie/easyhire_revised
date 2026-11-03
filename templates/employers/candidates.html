@@ -253,7 +253,11 @@
           </a>
           {% endif %}
           {% endwith %}
-          {% match_badge item.score %}
+          {# Compact (icon only, no text label) — the full "Highly        #}
+          {# Recommended"-style pill was colliding with longer names that  #}
+          {# wrap to 2 lines. The score number is the primary signal here; #}
+          {# the full descriptor is still on the candidate detail page.    #}
+          {% match_badge item.score compact=True %}
           <span class="text-primary font-extrabold text-sm leading-none">{{ item.score }}%</span>
           {# Card-level menu — Applicants tab only. View Profile always,   #}
           {# Proceed only when the application is still in a reviewable    #}

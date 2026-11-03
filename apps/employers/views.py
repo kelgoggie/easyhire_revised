@@ -1685,12 +1685,16 @@ def candidate_contact(request, jobseeker_id):
             return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
 
     interview_at = None
-    if kind == EmployerContact.KIND_INTERVIEW and interview_at_raw:
+    if kind == EmployerContact.KIND_INTERVIEW:
+        if not interview_at_raw:
+            messages.error(request, 'Pick an interview date and time before sending.')
+            return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
         try:
             naive = datetime.strptime(interview_at_raw, '%Y-%m-%dT%H:%M')
             interview_at = timezone.make_aware(naive)
         except Exception:
-            pass
+            messages.error(request, 'That interview date and time doesn\'t look valid — please pick it again.')
+            return redirect(f'/employers/candidates/{_hashid(jobseeker_id)}/')
 
     contact = EmployerContact.objects.create(
         sender=request.user,
