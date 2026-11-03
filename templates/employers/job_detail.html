@@ -234,7 +234,7 @@
     {% if applicants %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {% for item in applicants %}
-      <a href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}"
+      <a href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}&from=job_detail"
          class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-teal/30 transition flex flex-col">
 
         <div class="flex items-start justify-between gap-3 mb-3">

@@ -212,7 +212,7 @@
          data-applicant-name="{{ item.profile.first_name }} {{ item.profile.last_name }}"
          data-applicant-id="{{ item.profile.id|hashid }}"
          data-applied-at="{% if item.applied_at %}{{ item.applied_at|date:'F j, Y' }}{% endif %}"
-         {% if seeker_active %}data-href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}{% if tab == 'recommended' %}&from=recommended{% endif %}"
+         {% if seeker_active %}data-href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}&from={% if tab == 'recommended' %}recommended{% else %}applicants{% endif %}"
          onclick="if (event.target.closest('a, button, form, details, .applicant-card-menu')) return; window.location=this.dataset.href;"{% endif %}>
 
       <!-- Top row: name + match smiley -->
@@ -274,7 +274,7 @@
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4zm0 7a2 2 0 100-4 2 2 0 000 4z"/></svg>
             </summary>
             <div class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-xs">
-              <a href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}"
+              <a href="/employers/candidates/{{ item.profile.id|hashid }}/?job={{ job.id|hashid }}&from={% if tab == 'recommended' %}recommended{% else %}applicants{% endif %}"
                  class="flex items-center gap-2 px-3 py-2 text-primary hover:bg-surface transition">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                 View Jobseeker Profile
